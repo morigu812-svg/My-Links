@@ -34,11 +34,11 @@
     </header>
     <main>
       <section class="hero"><div class="eyebrow"><span class="status-dot"></span>システム稼働中</div><h2>あなたのデジタル<br><span>リンク司令室。</span></h2><p>よく使うサイトを、ひとつの場所に。<br>必要なリンクにすばやくアクセスしよう。</p></section>
-      <section class="toolbar" aria-label="リンク操作"><div class="search-wrap"><span class="search-icon" aria-hidden="true">⌕</span><input class="search" id="searchInput" type="search" placeholder="サイト名・URL・カテゴリで検索..." autocomplete="off" aria-label="リンクを検索"></div><button class="primary-btn" id="addButton" type="button"><span aria-hidden="true">＋</span> リンクを追加</button></section>
+      <section class="toolbar" aria-label="リンク操作"><div class="search-wrap"><span class="search-icon" aria-hidden="true">⌕</span><input class="search" id="searchInput" type="search" placeholder="サイト名・URL・カテゴリで検索..." autocomplete="off" aria-label="リンクを検索"></div><button class="secondary-btn" id="backupButton" type="button" title="現在のリンクをJSONファイルに書き出します">バックアップ</button><button class="primary-btn" id="addButton" type="button"><span aria-hidden="true">＋</span> リンクを追加</button></section>
       <section class="stats" aria-label="リンク統計"><div class="stat"><div class="stat-label">登録リンク数</div><div class="stat-value" id="totalCount">0</div></div><div class="stat"><div class="stat-label">カテゴリ数</div><div class="stat-value" id="categoryCount">0</div></div><div class="stat"><div class="stat-label">検索結果</div><div class="stat-value" id="matchingCount">0</div></div></section>
       <section aria-labelledby="linksHeading"><div class="section-head"><h2 class="section-title" id="linksHeading">▸ リンク一覧</h2><span class="section-count" id="resultLabel">0 LINKS</span></div><nav class="category-bar" id="categoryBar" aria-label="カテゴリフィルター"></nav><div class="link-grid" id="linkGrid"></div></section>
     </main>
-    <footer><div>MY LINKS <span>///</span> あなた専用のリンク集</div><div>あなたのリンク。あなたの場所。あなたの管理。</div><div>データはこのブラウザ内に保存されます。</div></footer>
+    <footer><div>MY LINKS <span>///</span> あなた専用のリンク集</div><div>あなたのリンク。あなたの場所。あなたの管理。</div><div id="storageNotice">データはこのブラウザ内に保存されます。</div><div>移行前に「バックアップ」でリンクデータを保管できます。</div></footer>
   </div>
   <div class="modal" id="linkModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" aria-hidden="true"><div class="modal-panel"><div class="modal-head"><h2 id="modalTitle">＋ 新しいリンク</h2><button class="close-btn" id="closeModal" type="button" aria-label="閉じる">×</button></div>
     <form id="linkForm">
@@ -83,7 +83,22 @@
     function render(){renderCategories();renderLinks();}
     function openModal(id=null){editingId=id;linkForm.reset();if(id!==null){const link=links.find(item=>item.id===id);if(!link){showToast("リンクが見つかりませんでした");return;}modalTitle.textContent="✎ リンクを編集";$("#siteName").value=link.name;$("#siteUrl").value=link.url;$("#siteDescription").value=link.description;$("#siteCategory").value=link.category;$("#siteIcon").value=link.icon;}else{modalTitle.textContent="＋ 新しいリンク";$("#siteIcon").value="🔗";}modal.classList.add("open");modal.setAttribute("aria-hidden","false");requestAnimationFrame(()=>$("#siteName").focus());}
     function closeModal(){modal.classList.remove("open");modal.setAttribute("aria-hidden","true");editingId=null;}
-    $("#addButton").addEventListener("click",()=>openModal());$("#closeModal").addEventListener("click",closeModal);$("#cancelButton").addEventListener("click",closeModal);
+    $("#addButton").addEventListener("click",()=>openModal());
+    $("#backupButton").addEventListener("click",exportBackup);
+    function exportBackup(){
+      try{
+        const payload={format:"my-links-backup",version:1,exportedAt:new Date().toISOString(),source:"my-links-data-v1",count:links.length,links:links.map(link=>({...link}))};
+        const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json;charset=utf-8"});
+        const url=URL.createObjectURL(blob);
+        const anchor=document.createElement("a");
+        anchor.href=url;
+        anchor.download="my-links-backup-"+new Date().toISOString().slice(0,10)+".json";
+        document.body.appendChild(anchor);anchor.click();anchor.remove();
+        setTimeout(()=>URL.revokeObjectURL(url),1000);
+        showToast("バックアップを書き出しました（"+links.length+"件）。ファイルを保管してください。");
+      }catch(error){console.error("バックアップの書き出しに失敗しました:",error);showToast("バックアップを書き出せませんでした。");}
+    }
+    $("#closeModal").addEventListener("click",closeModal);$("#cancelButton").addEventListener("click",closeModal);
     modal.addEventListener("click",event=>{if(event.target===modal)closeModal();});document.addEventListener("keydown",event=>{if(event.key==="Escape"&&modal.classList.contains("open"))closeModal();});
     linkForm.addEventListener("submit",event=>{event.preventDefault();const name=$("#siteName").value.trim(),rawUrl=$("#siteUrl").value.trim(),description=$("#siteDescription").value.trim(),category=$("#siteCategory").value.trim(),icon=$("#siteIcon").value.trim()||"🔗";if(!name||!rawUrl||!category){showToast("サイト名・URL・カテゴリを入力してください");return;}if(/[\u0000-\u001F\u007F]/.test(rawUrl)){showToast("URLに使用できない文字が含まれています");return;}let parsedUrl;try{parsedUrl=new URL(rawUrl);}catch{showToast("正しいURLを入力してください");return;}if(parsedUrl.protocol!=="https:"&&parsedUrl.protocol!=="http:"){showToast("URLは http:// または https:// で入力してください");return;}if(!parsedUrl.hostname.includes(".")){showToast("有効なドメイン名を入力してください");return;}const wasEditing=editingId!==null;const link={id:editingId||(typeof crypto!=="undefined"&&crypto.randomUUID?crypto.randomUUID():"link-"+Date.now()+"-"+Math.random().toString(36).slice(2)),name,url:parsedUrl.href,description,category,icon};const previousLinks=links.map(item=>({...item}));if(wasEditing){const index=links.findIndex(item=>item.id===editingId);if(index===-1){showToast("編集対象のリンクが見つかりませんでした");return;}links[index]=link;}else links.push(link);if(!saveLinks(false)){links=previousLinks;return;}activeCategory="すべて";closeModal();render();showToast(wasEditing?"✓ リンクを更新しました":"✓ リンクを追加しました");});
     function deleteLink(id){const link=links.find(item=>item.id===id);if(!link)return;if(!window.confirm("「"+link.name+"」を削除しますか？\nこの操作は取り消せません。"))return;const previousLinks=links.map(item=>({...item}));links=links.filter(item=>item.id!==id);if(!saveLinks(false)){links=previousLinks;return;}render();showToast("リンクを削除しました");}
