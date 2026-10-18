@@ -1,0 +1,15 @@
+<!doctype html><html><head><meta charset="utf-8"><title>MY LINKS Bridge</title></head><body><script>
+(function(){
+const ALLOWED_ORIGIN='https://morigu812-svg.github.io';
+window.addEventListener('message',function(event){
+ if(event.origin!==ALLOWED_ORIGIN||event.source!==window.parent)return;
+ const msg=event.data;
+ if(!msg||msg.source!=='MY_LINKS_PARENT'||!msg.id)return;
+ if(!['getLinks','saveLink','deleteLink'].includes(msg.method))return;
+ const runner=google.script.run.withSuccessHandler(function(data){event.source.postMessage({source:'MY_LINKS_BRIDGE',id:msg.id,ok:true,data:data},event.origin)}).withFailureHandler(function(error){event.source.postMessage({source:'MY_LINKS_BRIDGE',id:msg.id,ok:false,error:error&&error.message?error.message:String(error)},event.origin)});
+ if(msg.method==='getLinks')runner.getLinks();
+ else if(msg.method==='saveLink')runner.saveLink(msg.payload||{});
+ else if(msg.method==='deleteLink')runner.deleteLink(msg.payload||{});
+});
+})();
+</script><p>MY LINKS private bridge</p></body></html>
