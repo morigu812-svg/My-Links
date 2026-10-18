@@ -165,10 +165,6 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
 </style>
 </head>
 <body>
-<div class="width-control" aria-label="ウィンドウ幅の調整">
-  <label for="widthSlider"><span>ウィンドウ幅</span><strong id="widthValue">1180 px</strong></label>
-  <input id="widthSlider" type="range" min="600" max="1800" step="1" value="1180" aria-label="ウィンドウ幅を調整">
-</div>
 <div class="finder-window" id="finderWindow"><div class="resize-handle resize-left" data-resize="left" role="separator" aria-label="左端をドラッグして幅を変更"></div><div class="resize-handle resize-right" data-resize="right" role="separator" aria-label="右端をドラッグして幅を変更"></div>
   <header class="finder-toolbar">
     <div class="traffic-lights" aria-label="ウィンドウ操作"><span></span><span></span><span></span></div>
@@ -233,17 +229,12 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
   'use strict';
 
   const $ = id => document.getElementById(id);
-  const widthSlider = $('widthSlider');
   const finderWindow = $('finderWindow');
   function setFinderWidth(width) {
     const min = 600, max = 1800;
     width = Math.max(min, Math.min(max, Math.round(width)));
     finderWindow.style.maxWidth = width + 'px';
-    widthSlider.value = width;
-    $('widthValue').textContent = width + ' px';
-    document.querySelector('.width-control').style.maxWidth = width + 'px';
   }
-  widthSlider.addEventListener('input', () => setFinderWidth(Number(widthSlider.value)));
   document.querySelectorAll('.resize-handle').forEach(handle => {
     handle.addEventListener('pointerdown', event => {
       if (window.matchMedia('(max-width: 760px)').matches) return;
