@@ -10,7 +10,11 @@
 (() => {
   'use strict';
 
-  const ALLOWED_ORIGIN = 'https://morigu812-svg.github.io';
+  // 通信を許可するページのオリジン（末尾のスラッシュなし）。公開先を増やしたらここに追加する。
+  const ALLOWED_ORIGINS = [
+    'https://morigu812-svg.github.io',
+    'https://my-links-phdf.onrender.com'   // ← RenderのURLに書き換える
+  ];
   const ALLOWED_METHODS = new Set([
     'getLinks',
     'saveLink',
@@ -18,12 +22,12 @@
     'deleteLink'
   ]);
 
-  function send(target, message) {
-    target.postMessage(message, ALLOWED_ORIGIN);
+  function send(target, message, origin) {
+    target.postMessage(message, origin);
   }
 
   window.addEventListener('message', event => {
-    if (event.origin !== ALLOWED_ORIGIN) return;
+    if (ALLOWED_ORIGINS.indexOf(event.origin) === -1) return;
     if (event.source !== window.top) return;
 
     const request = event.data;
@@ -33,7 +37,7 @@
     if (typeof id !== 'string' || !ALLOWED_METHODS.has(method) || !Array.isArray(args)) {
       send(event.source, {
         type: 'DAILY_CORE_RESPONSE', id, ok: false, error: '不正なリクエストです。'
-      });
+      }, event.origin);
       return;
     }
 
@@ -41,23 +45,26 @@
       const runner = google.script.run
         .withSuccessHandler(result => send(event.source, {
           type: 'DAILY_CORE_RESPONSE', id, ok: true, result
-        }))
+        }, event.origin))
         .withFailureHandler(error => send(event.source, {
           type: 'DAILY_CORE_RESPONSE', id, ok: false,
           error: error && error.message ? error.message : String(error)
-        }));
+        }, event.origin));
 
       runner[method](...args);
     } catch (error) {
       send(event.source, {
         type: 'DAILY_CORE_RESPONSE', id, ok: false,
         error: error && error.message ? error.message : String(error)
-      });
+      }, event.origin);
     }
   });
 
   window.addEventListener('load', () => {
-    window.top.postMessage({ type: 'DAILY_CORE_BRIDGE_READY' }, ALLOWED_ORIGIN);
+    // 親ページのオリジンは読めないため、許可リストの各オリジン宛てに準備完了を通知する
+    ALLOWED_ORIGINS.forEach(origin => {
+      window.top.postMessage({ type: 'DAILY_CORE_BRIDGE_READY' }, origin);
+    });
   });
 })();
 </script>
