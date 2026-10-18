@@ -124,6 +124,9 @@ dialog input:focus,dialog textarea:focus{border-color:var(--accent);outline:2px 
 .resize-handle::after{content:"";position:absolute;top:45%;bottom:45%;left:6px;width:2px;border-radius:2px;background:rgba(180,205,230,0);transition:background .15s}
 .resize-handle:hover::after,.resize-handle:active::after{background:rgba(180,205,230,.8)}
 body.is-resizing{cursor:ew-resize!important;user-select:none}
+/* ドラッグ中は重いぼかし・影を止め、幅変更を軽くする */
+body.is-resizing .finder-window{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;box-shadow:none!important}
+body.is-resizing .finder-content{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 @media(max-width:760px){.resize-handle{display:none}}
 
 
