@@ -116,13 +116,29 @@ dialog input:focus,dialog textarea:focus{border-color:var(--accent);outline:2px 
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto;transition:none!important}}
 /* glass style */
 
-/* 暗所モード：ネオン色を抑え、画面全体を低彩度にする */
-body.night-mode{background:linear-gradient(145deg,#090a0d,#111216 52%,#08090b)}
-body.night-mode::before{opacity:.035}
-body.night-mode .finder-window{filter:grayscale(1) brightness(.78)}
-body.night-mode .site-footer{color:#777b82}
-body.night-mode .site-footer b,body.night-mode .site-footer i{color:#a6a9ae}
-body.night-mode .toolbar-tools button{color:#e0e1e3}
+/* 暗所モード：白・ネオン色を抑え、明るい面をほぼ黒にする */
+body.night-mode{background:#050505}
+body.night-mode::before{opacity:0}
+body.night-mode .finder-window{filter:grayscale(1) brightness(.52);background:#080808;border-color:#222}
+body.night-mode .finder-toolbar{background:#090909}
+body.night-mode .sidebar{background:#070707}
+body.night-mode .finder-content{background:#050505}
+body.night-mode .item{background:#090909;border-color:#242424;box-shadow:none}
+body.night-mode .item:hover{background:#101010;border-color:#444}
+body.night-mode .workspace,body.night-mode .width-control{background:#050505}
+body.night-mode .search-wrap,body.night-mode .toolbar-search,body.night-mode .btn,body.night-mode .acts button,body.night-mode .chip{background:#090909;border-color:#292929}
+body.night-mode .btn.primary{background:#171717;border-color:#444;color:#e0e0e0;box-shadow:none}
+body.night-mode .site-footer{color:#777}
+body.night-mode .site-footer b,body.night-mode .site-footer i{color:#aaa}
+body.night-mode .toolbar-tools button{color:#e0e0e0}
+body.night-mode .stat-card,body.night-mode .hero{background:#080808;border-color:#242424;box-shadow:none}
+body.night-mode .stat-icon,body.night-mode .star-icon,body.night-mode .folder-icon{background:#101010;border-color:#303030;color:#ccc}
+body.night-mode .chip[aria-pressed="true"],body.night-mode .side-item.selected{background:#181818;border-color:#3a3a3a;color:#eee;box-shadow:none}
+body.night-mode .tag{background:#101010;border-color:#303030;color:#ccc}
+body.night-mode .live-pill{background:#101010;border-color:#303030;color:#ccc}
+body.night-mode .live-dot{background:#aaa;box-shadow:none}
+body.night-mode .star,body.night-mode .star[aria-pressed="true"]{color:#aaa;text-shadow:none}
+body.night-mode h1 span,body.night-mode .section-kicker,body.night-mode .heading-dot,body.night-mode .search-wrap,body.night-mode .empty::before{color:#aaa;text-shadow:none}
 
 /* Finder-inspired desktop shell */
 
