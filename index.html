@@ -116,6 +116,14 @@ dialog input:focus,dialog textarea:focus{border-color:var(--accent);outline:2px 
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto;transition:none!important}}
 /* glass style */
 
+/* 暗所モード：ネオン色を抑え、画面全体を低彩度にする */
+body.night-mode{background:linear-gradient(145deg,#090a0d,#111216 52%,#08090b)}
+body.night-mode::before{opacity:.035}
+body.night-mode .finder-window{filter:grayscale(1) brightness(.78)}
+body.night-mode .site-footer{color:#777b82}
+body.night-mode .site-footer b,body.night-mode .site-footer i{color:#a6a9ae}
+body.night-mode .toolbar-tools button{color:#e0e1e3}
+
 /* Finder-inspired desktop shell */
 
 .finder-window{position:relative}
@@ -172,7 +180,7 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
   <header class="finder-toolbar">
     <div class="traffic-lights" aria-label="ウィンドウ操作"><span></span><span></span><span></span></div>
     <div class="finder-title"><span class="folder-glyph">▰</span> My Desktop <span class="toolbar-chevron">›</span></div>
-    <div class="toolbar-tools"><span>▤</span><span>☷</span><span>⚙</span></div>
+    <div class="toolbar-tools"><span>▤</span><span>☷</span><button id="nightModeBtn" type="button" aria-pressed="false" aria-label="暗所モードをオンにする" title="暗所モード">◐</button></div>
     <label class="toolbar-search" for="search"><span>⌕</span><input id="search" type="search" placeholder="検索" aria-label="検索"></label>
   </header>
   <div class="finder-layout">
@@ -262,6 +270,14 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
       handle.addEventListener('pointercancel', stop);
     });
   });
+  const nightModeBtn = $('nightModeBtn');
+  nightModeBtn.addEventListener('click', () => {
+    const enabled = document.body.classList.toggle('night-mode');
+    nightModeBtn.setAttribute('aria-pressed', String(enabled));
+    nightModeBtn.setAttribute('aria-label', enabled ? '暗所モードをオフにする' : '暗所モードをオンにする');
+    nightModeBtn.title = enabled ? '暗所モードをオフにする' : '暗所モード';
+  });
+
   const state = { links: [], categories: [], category: '', query: '', busy: false, view: 'all' };
 
   // GAS Webアプリ（?mode=bridge）を隠しiframeで読み込み、postMessageで通信する。
