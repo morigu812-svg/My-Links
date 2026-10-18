@@ -24,7 +24,7 @@
 
   window.addEventListener('message', event => {
     if (event.origin !== ALLOWED_ORIGIN) return;
-    if (event.source !== window.parent) return;
+    if (event.source !== window.top) return;
 
     const request = event.data;
     if (!request || request.type !== 'DAILY_CORE_REQUEST') return;
@@ -57,7 +57,7 @@
   });
 
   window.addEventListener('load', () => {
-    window.parent.postMessage({ type: 'DAILY_CORE_BRIDGE_READY' }, ALLOWED_ORIGIN);
+    window.top.postMessage({ type: 'DAILY_CORE_BRIDGE_READY' }, ALLOWED_ORIGIN);
   });
 })();
 </script>
