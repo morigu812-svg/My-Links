@@ -207,9 +207,33 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
 @media(max-width:760px){main{padding:8px}.finder-toolbar{grid-template-columns:60px 1fr;grid-template-rows:30px 32px;height:72px;padding:5px 10px}.finder-title{grid-column:2;grid-row:1;justify-self:start}.toolbar-tools{grid-column:1;grid-row:2}.toolbar-search{grid-column:2;grid-row:2}.finder-layout{grid-template-columns:145px minmax(0,1fr)}.sidebar{padding:10px 5px}.side-item{font-size:11px;padding:7px 5px;gap:5px}.side-label{margin:13px 5px 5px}.finder-content{padding:15px 10px}.list{grid-template-columns:repeat(auto-fill,minmax(125px,1fr));gap:9px}.item{min-height:115px;padding:9px}.file-preview{height:78px}.bar{flex-wrap:wrap}.bar>.btn{width:100%}.section-note{display:none}}
 @media(max-width:520px){main{padding:0}.finder-window{border-radius:0;min-height:100vh}.finder-layout{grid-template-columns:112px minmax(0,1fr)}.side-item{font-size:10px}.side-item>span{width:14px;font-size:14px}.finder-content{padding:12px 8px}.list{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.item .title{font-size:11px}.item .acts button{font-size:9px}.finder-title{font-size:13px}.toolbar-tools{display:none}.finder-toolbar{grid-template-columns:48px 1fr}}
 
+
+/* Simple client-side password gate (not secure access control) */
+.auth-locked .finder-window,.auth-locked .site-footer{display:none!important}
+.auth-gate{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;background:radial-gradient(ellipse at 20% 10%,rgba(95,145,255,.24),transparent 40%),linear-gradient(145deg,#080d18,#14182c);color:#f4f8fc}
+.auth-card{width:min(420px,100%);padding:30px;border:1px solid #344a60;border-radius:20px;background:rgba(17,24,39,.94);box-shadow:0 24px 80px rgba(0,0,0,.45)}
+.auth-mark{font-size:11px;letter-spacing:.16em;font-weight:800;color:#5af2d6}
+.auth-card h1{margin:12px 0 8px;font-size:28px;letter-spacing:.02em}
+.auth-card p{margin:0 0 20px;color:#aebfd0;font-size:13px}
+.auth-card label{display:block;margin-bottom:7px;font-size:12px;color:#d5e1ec}
+.auth-card input{width:100%;padding:13px;border:1px solid #40566b;border-radius:9px;background:#080f18;color:#fff}
+.auth-card button{width:100%;margin-top:13px;padding:12px;border:1px solid #5af2d6;border-radius:9px;background:#5af2d6;color:#071a18;font-weight:850}
+.auth-error{min-height:22px;margin-top:10px;color:#ff9eae;font-size:12px}
+
 </style>
 </head>
-<body>
+<body class="auth-locked">
+<section id="authGate" class="auth-gate" aria-labelledby="authTitle">
+  <form id="authForm" class="auth-card">
+    <div class="auth-mark">LINK CORE / PRIVATE ACCESS</div>
+    <h1 id="authTitle">パスワードを入力</h1>
+    <p>このページを開くにはパスワードが必要です。</p>
+    <label for="authPassword">パスワード</label>
+    <input id="authPassword" type="password" autocomplete="current-password" required autofocus>
+    <button type="submit">ロックを解除</button>
+    <div id="authError" class="auth-error" role="alert" aria-live="polite"></div>
+  </form>
+</section>
 <div class="finder-window" id="finderWindow"><div class="resize-handle resize-left" data-resize="left" role="separator" aria-label="左端をドラッグして幅を変更"></div><div class="resize-handle resize-right" data-resize="right" role="separator" aria-label="右端をドラッグして幅を変更"></div>
   <header class="finder-toolbar">
     <div class="traffic-lights" aria-label="ウィンドウ操作"><span></span><span></span><span></span></div>
@@ -272,6 +296,36 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
 <script>
 (() => {
   'use strict';
+  // 注意：これはブラウザ側の簡易ロックです。パスワードは公開HTMLから確認できるため、機密情報の保護には使えません。
+  const INITIAL_PASSWORD = 'Morityan0812';
+  const AUTH_KEY = 'myLinksUnlocked';
+  const gate = document.getElementById('authGate');
+  const form = document.getElementById('authForm');
+  const field = document.getElementById('authPassword');
+  const error = document.getElementById('authError');
+  if (sessionStorage.getItem(AUTH_KEY) === 'yes') {
+    document.body.classList.remove('auth-locked');
+    gate.remove();
+  }
+  form.addEventListener('submit', event => {
+    event.preventDefault();
+    if (field.value === INITIAL_PASSWORD) {
+      sessionStorage.setItem(AUTH_KEY, 'yes');
+      document.body.classList.remove('auth-locked');
+      gate.remove();
+      location.reload();
+    } else {
+      error.textContent = 'パスワードが違います。もう一度入力してください。';
+      field.select();
+    }
+  });
+})();
+</script>
+
+<script>
+(() => {
+  'use strict';
+  if (sessionStorage.getItem('myLinksUnlocked') !== 'yes') return;
 
   const $ = id => document.getElementById(id);
   const finderWindow = $('finderWindow');
