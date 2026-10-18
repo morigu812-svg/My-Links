@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DAILY CORE Bridge</title>
+</head>
+<body>
+<script>
+(() => {
+  'use strict';
+
+  const ALLOWED_ORIGIN = 'https://morigu812-svg.github.io';
+  const ALLOWED_METHODS = new Set([
+    'getDashboardData',
+    'saveTask',
+    'deleteTask'
+  ]);
+
+  function send(target, message) {
+    target.postMessage(message, ALLOWED_ORIGIN);
+  }
+
+  window.addEventListener('message', event => {
+    if (event.origin !== ALLOWED_ORIGIN) return;
+    if (event.source !== window.parent) return;
+
+    const request = event.data;
+    if (!request || request.type !== 'DAILY_CORE_REQUEST') return;
+
+    const { id, method, args } = request;
+    if (typeof id !== 'string' || !ALLOWED_METHODS.has(method) || !Array.isArray(args)) {
+      send(event.source, {
+        type: 'DAILY_CORE_RESPONSE',
+        id,
+        ok: false,
+        error: '不正なリクエストです。'
+      });
+      return;
+    }
+
+    try {
+      const runner = google.script.run
+        .withSuccessHandler(result => send(event.source, {
+          type: 'DAILY_CORE_RESPONSE',
+          id,
+          ok: true,
+          result
+        }))
+        .withFailureHandler(error => send(event.source, {
+          type: 'DAILY_CORE_RESPONSE',
+          id,
+          ok: false,
+          error: error && error.message ? error.message : String(error)
+        }));
+
+      runner[method](...args);
+    } catch (error) {
+      send(event.source, {
+        type: 'DAILY_CORE_RESPONSE',
+        id,
+        ok: false,
+        error: error && error.message ? error.message : String(error)
+      });
+    }
+  });
+
+  window.addEventListener('load', () => {
+    window.parent.postMessage({ type: 'DAILY_CORE_BRIDGE_READY' }, ALLOWED_ORIGIN);
+  });
+})();
+</script>
+</body>
+</html>
