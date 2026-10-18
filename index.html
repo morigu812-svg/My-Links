@@ -260,9 +260,6 @@ dialog input:focus,dialog textarea:focus{border-color:var(--accent);outline:2px 
   }
 
   function render() {
-    $('totalCount').textContent = state.links.length;
-    $('favoriteCount').textContent = state.links.filter(link => link.favorite).length;
-    $('categoryCount').textContent = state.categories.length;
     const cats = ['', ...state.categories].map(cat =>
       `<button type="button" class="chip" data-cat="${esc(cat)}" aria-pressed="${cat === state.category}">${cat ? esc(cat) : 'すべて'}</button>`
     ).join('');
