@@ -1,341 +1,334 @@
-const APP_TITLE = 'LINK CORE';
-// DAILY CORE と同じスプレッドシートを使う（スクリプトプロパティに登録済みのID）
-const SPREADSHEET_PROPERTY = 'DAILY_CORE_SPREADSHEET_ID';
-const SHEET_NAME = 'Links';
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LINK CORE</title>
+<style>
+:root {
+  --bg:#F2F5F7; --panel:#FFFFFF; --ink:#1B2430; --sub:#5B6775;
+  --line:#D5DBE1; --accent:#0F6E7A; --accent-ink:#FFFFFF;
+  --star:#B7791F; --danger:#B3261E; --tag:#E3EEF0;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:#12181E; --panel:#1B232B; --ink:#E6EBF0; --sub:#9AA7B4;
+    --line:#2D3844; --accent:#4FB3BF; --accent-ink:#0B1519;
+    --star:#E0A93B; --danger:#F2B8B5; --tag:#22333A;
+  }
+}
+* { box-sizing:border-box; }
+html, body { margin:0; }
+body {
+  background:var(--bg); color:var(--ink);
+  font:15px/1.6 "Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif;
+}
+main { max-width:720px; margin:0 auto; padding:20px 16px 64px; }
+h1 { font-size:20px; margin:0 0 14px; letter-spacing:.04em; }
+button, input, textarea { font:inherit; color:inherit; }
+button { cursor:pointer; }
+:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
 
-const HEADERS = [
-  'ID',
-  'タイトル',
-  'URL',
-  'カテゴリ',
-  'メモ',
-  'お気に入り',
-  '作成日時',
-  '更新日時'
-];
+.bar { display:flex; gap:8px; margin-bottom:10px; }
+.bar input {
+  flex:1; min-width:0; padding:9px 12px; border:1px solid var(--line);
+  border-radius:8px; background:var(--panel);
+}
+.btn {
+  padding:9px 14px; border:1px solid var(--line); border-radius:8px;
+  background:var(--panel);
+}
+.btn.primary { background:var(--accent); border-color:var(--accent); color:var(--accent-ink); font-weight:600; }
+.btn:disabled { opacity:.5; cursor:default; }
 
-/**
- * ?mode=bridge なら GitHub Pages 用の通信窓口、それ以外はGAS画面を返す。
- */
-function doGet(e) {
-  if (e && e.parameter && e.parameter.mode === 'bridge') {
-    return HtmlService
-      .createHtmlOutputFromFile('bridge')
-      .setTitle(APP_TITLE + ' Bridge')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+.cats { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px; }
+.chip {
+  padding:3px 11px; border:1px solid var(--line); border-radius:999px;
+  background:transparent; font-size:13px; color:var(--sub);
+}
+.chip[aria-pressed="true"] { background:var(--accent); border-color:var(--accent); color:var(--accent-ink); }
+
+#status { min-height:22px; font-size:13px; color:var(--sub); margin-bottom:6px; }
+#status.error { color:var(--danger); }
+
+.list { background:var(--panel); border:1px solid var(--line); border-radius:10px; }
+.item { display:flex; gap:10px; padding:12px 14px; border-top:1px solid var(--line); }
+.item:first-child { border-top:0; }
+.star { border:0; background:none; font-size:20px; line-height:1; padding:2px; color:var(--line); }
+.star[aria-pressed="true"] { color:var(--star); }
+.body { flex:1; min-width:0; }
+.title { font-weight:600; color:var(--ink); text-decoration:none; overflow-wrap:anywhere; }
+.title:hover { color:var(--accent); text-decoration:underline; }
+.meta { font-size:12px; color:var(--sub); overflow-wrap:anywhere; }
+.tag { display:inline-block; margin-left:6px; padding:0 8px; border-radius:999px; background:var(--tag); font-size:12px; color:var(--ink); }
+.memo { font-size:13px; color:var(--sub); margin-top:2px; white-space:pre-wrap; overflow-wrap:anywhere; }
+.acts { display:flex; gap:4px; align-items:flex-start; }
+.acts button { border:0; background:none; padding:2px 6px; font-size:13px; color:var(--sub); }
+.acts button:hover { color:var(--accent); }
+.acts .del:hover { color:var(--danger); }
+.empty { padding:28px 16px; text-align:center; color:var(--sub); }
+
+dialog { width:min(520px,calc(100% - 24px)); border:1px solid var(--line); border-radius:12px; background:var(--panel); color:var(--ink); padding:18px; }
+dialog::backdrop { background:rgba(0,0,0,.45); }
+dialog h2 { font-size:17px; margin:0 0 12px; }
+label { display:block; font-size:13px; color:var(--sub); margin:10px 0 3px; }
+dialog input[type=text], dialog input[type=url], dialog textarea {
+  width:100%; padding:8px 10px; border:1px solid var(--line); border-radius:8px; background:var(--bg);
+}
+.check { display:flex; align-items:center; gap:6px; margin-top:12px; color:var(--ink); font-size:14px; }
+.foot { display:flex; justify-content:flex-end; gap:8px; margin-top:16px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>LINK CORE</h1>
+
+  <div class="bar">
+    <input id="search" type="search" placeholder="タイトル・URL・メモを検索" aria-label="検索">
+    <button id="addBtn" class="btn primary" type="button">リンクを追加</button>
+  </div>
+  <div id="cats" class="cats" role="group" aria-label="カテゴリで絞り込む"></div>
+  <div id="status" role="status" aria-live="polite"></div>
+  <div id="list" class="list"></div>
+</main>
+
+<dialog id="dlg">
+  <form id="form" method="dialog">
+    <h2 id="dlgTitle">リンクを追加</h2>
+    <input type="hidden" id="fId">
+    <label for="fTitle">タイトル</label>
+    <input id="fTitle" type="text" maxlength="200" required>
+    <label for="fUrl">URL</label>
+    <input id="fUrl" type="text" inputmode="url" placeholder="https://example.com" required>
+    <label for="fCat">カテゴリ</label>
+    <input id="fCat" type="text" maxlength="50" list="catList">
+    <datalist id="catList"></datalist>
+    <label for="fMemo">メモ</label>
+    <textarea id="fMemo" rows="3"></textarea>
+    <label class="check"><input id="fFav" type="checkbox"> お気に入りにする</label>
+    <div class="foot">
+      <button id="cancelBtn" class="btn" type="button">キャンセル</button>
+      <button id="saveBtn" class="btn primary" type="submit">保存する</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(() => {
+  'use strict';
+
+  const $ = id => document.getElementById(id);
+  const state = { links: [], categories: [], category: '', query: '', busy: false };
+
+  // GAS Webアプリ（?mode=bridge）を隠しiframeで読み込み、postMessageで通信する。
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycbxjt4DTo0EmNqWZ5Mt5MgqlioxcLXmDhaBwaXwn91YC9XFkX8-HvKC2Nxfe7rQk98JMpA/exec';
+  const pending = new Map();
+  let bridgeWindow = null;
+  let bridgeOrigin = '';
+  let markReady;
+  const ready = new Promise(resolve => { markReady = resolve; });
+
+  function isGasOrigin(origin) {
+    return origin === 'https://script.google.com' ||
+      /^https:\/\/[a-z0-9-]+\.googleusercontent\.com$/.test(origin);
   }
 
-  ensureSheet_();
+  window.addEventListener('message', event => {
+    if (!isGasOrigin(event.origin)) return;
+    const data = event.data;
+    if (!data || typeof data !== 'object') return;
 
-  return HtmlService
-    .createHtmlOutputFromFile('index')
-    .setTitle(APP_TITLE)
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-}
-
-/**
- * 既存スプレッドシートを開き、Linksシートを返す。
- * スプレッドシートIDが未設定ならエラー（新規作成はしない）。
- * Linksシートだけは新規追加なので、無ければ作成する（既存シートは変更しない）。
- * 既存列の順序は変えず、不足列だけ末尾に追加する。
- */
-function ensureSheet_() {
-  const spreadsheetId = PropertiesService
-    .getScriptProperties()
-    .getProperty(SPREADSHEET_PROPERTY);
-
-  if (!spreadsheetId) {
-    throw new Error(
-      'スプレッドシートIDが未設定です。' +
-      'スクリプトプロパティ ' + SPREADSHEET_PROPERTY + ' を確認してください。'
-    );
-  }
-
-  const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
-  let sheet = spreadsheet.getSheetByName(SHEET_NAME);
-
-  if (!sheet) {
-    sheet = spreadsheet.insertSheet(SHEET_NAME);
-  }
-
-  const lastColumn = sheet.getLastColumn();
-
-  if (lastColumn === 0) {
-    sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);
-  } else {
-    const existing = sheet
-      .getRange(1, 1, 1, lastColumn)
-      .getDisplayValues()[0];
-
-    HEADERS.forEach(header => {
-      if (existing.indexOf(header) === -1) {
-        sheet.getRange(1, sheet.getLastColumn() + 1).setValue(header);
-        existing.push(header);
-      }
-    });
-  }
-
-  return sheet;
-}
-
-/**
- * ヘッダー名 → 列番号（1始まり）。
- */
-function getColumnMap_(sheet) {
-  const lastColumn = sheet.getLastColumn();
-
-  if (lastColumn < 1) {
-    throw new Error('シートのヘッダーがありません。');
-  }
-
-  const headers = sheet.getRange(1, 1, 1, lastColumn).getDisplayValues()[0];
-  const map = {};
-
-  headers.forEach((header, index) => {
-    if (header) map[header] = index + 1;
-  });
-
-  HEADERS.forEach(header => {
-    if (!map[header]) throw new Error('必要な列がありません: ' + header);
-  });
-
-  return map;
-}
-
-/**
- * 文字列を整形する。
- */
-function cleanText_(value, maxLength) {
-  const text = String(value == null ? '' : value).trim();
-
-  if (maxLength && text.length > maxLength) {
-    throw new Error('入力できる文字数は最大' + maxLength + '文字です。');
-  }
-
-  return text;
-}
-
-/**
- * URLを検証する。http / https のみ許可（javascript: などを防ぐ）。
- * スキームが無ければ https:// を補う。
- */
-function normalizeUrl_(value) {
-  let url = cleanText_(value, 2000);
-
-  if (!url) throw new Error('URLを入力してください。');
-
-  if (!/^[a-z][a-z0-9+.-]*:/i.test(url)) {
-    url = 'https://' + url;
-  }
-
-  if (!/^https?:\/\/[^\s/$.?#][^\s]*$/i.test(url)) {
-    throw new Error('URLの形式が正しくありません。http:// か https:// で始まるURLを入力してください。');
-  }
-
-  return url;
-}
-
-/**
- * セルに書く文字列の先頭が = + - @ だと数式として解釈されるため、
- * 先頭に ' を付けてテキストとして保存する。
- */
-function safeCell_(text) {
-  return /^[=+\-@]/.test(text) ? "'" + text : text;
-}
-
-function toIso_(value) {
-  return value instanceof Date && !isNaN(value.getTime())
-    ? value.toISOString()
-    : String(value || '');
-}
-
-/**
- * シートの1行をリンクオブジェクトに変換する。
- * 1行の不正値で全体が失敗しないよう、例外を出さない。
- */
-function rowToLink_(row, columns) {
-  const get = header => row[columns[header] - 1];
-  const favorite = get('お気に入り');
-
-  return {
-    id: String(get('ID') || ''),
-    title: String(get('タイトル') || ''),
-    url: String(get('URL') || ''),
-    category: String(get('カテゴリ') || ''),
-    memo: String(get('メモ') || ''),
-    favorite: favorite === true || String(favorite).toLowerCase() === 'true',
-    createdAt: toIso_(get('作成日時')),
-    updatedAt: toIso_(get('更新日時'))
-  };
-}
-
-/**
- * 全リンクと、カテゴリ一覧を返す。
- */
-function readLinks_(sheet, columns) {
-  const lastRow = sheet.getLastRow();
-  let links = [];
-
-  if (lastRow >= 2) {
-    links = sheet
-      .getRange(2, 1, lastRow - 1, sheet.getLastColumn())
-      .getValues()
-      .filter(row => row[columns['ID'] - 1] !== '')
-      .map(row => rowToLink_(row, columns));
-  }
-
-  const categories = Array.from(
-    new Set(links.map(link => link.category).filter(Boolean))
-  ).sort();
-
-  return { links: links, categories: categories };
-}
-
-/**
- * 画面表示用に全リンクを返す。
- */
-function getLinks() {
-  const sheet = ensureSheet_();
-  return readLinks_(sheet, getColumnMap_(sheet));
-}
-
-/**
- * リンクを新規作成または更新する。
- */
-function saveLink(input) {
-  if (!input || typeof input !== 'object') {
-    throw new Error('リンクの入力内容がありません。');
-  }
-
-  const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
-
-  try {
-    const sheet = ensureSheet_();
-    const columns = getColumnMap_(sheet);
-    const now = new Date();
-
-    const id = cleanText_(input.id, 200) || Utilities.getUuid();
-    const title = cleanText_(input.title, 200);
-    const url = normalizeUrl_(input.url);
-    const category = cleanText_(input.category, 50);
-    const memo = cleanText_(input.memo, 10000);
-
-    if (!title) throw new Error('タイトルを入力してください。');
-
-    const lastRow = sheet.getLastRow();
-    const width = sheet.getLastColumn();
-    let targetRow = 0;
-    let rowValues = new Array(width).fill('');
-    let createdAt = now;
-
-    if (lastRow >= 2) {
-      const ids = sheet
-        .getRange(2, columns['ID'], lastRow - 1, 1)
-        .getDisplayValues();
-
-      for (let i = 0; i < ids.length; i++) {
-        if (ids[i][0] === id) {
-          targetRow = i + 2;
-          // 既存行の値を保持し、HEADERS以外の列を壊さない
-          rowValues = sheet.getRange(targetRow, 1, 1, width).getValues()[0];
-          createdAt = rowValues[columns['作成日時'] - 1] || now;
-          break;
-        }
-      }
+    if (data.type === 'DAILY_CORE_BRIDGE_READY') {
+      bridgeWindow = event.source;
+      bridgeOrigin = event.origin;
+      markReady();
+      return;
     }
 
-    if (!targetRow) targetRow = lastRow + 1;
+    if (data.type === 'DAILY_CORE_RESPONSE' && event.source === bridgeWindow) {
+      const entry = pending.get(data.id);
+      if (!entry) return;
+      pending.delete(data.id);
+      clearTimeout(entry.timer);
+      data.ok ? entry.resolve(data.result) : entry.reject(new Error(data.error || '通信に失敗しました。'));
+    }
+  });
 
-    const valuesByHeader = {
-      'ID': id,
-      'タイトル': safeCell_(title),
-      'URL': url,
-      'カテゴリ': safeCell_(category),
-      'メモ': safeCell_(memo),
-      'お気に入り': input.favorite === true,
-      '作成日時': createdAt,
-      '更新日時': now
+  const frame = document.createElement('iframe');
+  frame.src = GAS_URL + '?mode=bridge';
+  frame.title = 'LINK CORE bridge';
+  frame.hidden = true;
+  document.body.appendChild(frame);
+
+  function serverCall(method, ...args) {
+    const wait = new Promise((_, reject) => setTimeout(
+      () => reject(new Error('GASに接続できません。デプロイの「アクセスできるユーザー」が「全員」か確認してください。')),
+      20000));
+
+    return Promise.race([ready, wait]).then(() => new Promise((resolve, reject) => {
+      const id = (crypto.randomUUID && crypto.randomUUID()) || String(Date.now() + Math.random());
+      const timer = setTimeout(() => {
+        pending.delete(id);
+        reject(new Error('GASからの応答がありません。'));
+      }, 30000);
+      pending.set(id, { resolve, reject, timer });
+      bridgeWindow.postMessage({ type: 'DAILY_CORE_REQUEST', id, method, args }, bridgeOrigin);
+    }));
+  }
+
+  function esc(text) {
+    return String(text).replace(/[&<>"']/g, ch => (
+      { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]
+    ));
+  }
+
+  // 保存済みでも、表示時に http / https 以外は無効化する。
+  function safeHref(url) {
+    return /^https?:\/\//i.test(url) ? url : '#';
+  }
+
+  function host(url) {
+    try { return new URL(url).hostname.replace(/^www\./, ''); } catch (_) { return url; }
+  }
+
+  function setStatus(text, kind) {
+    const el = $('status');
+    el.textContent = text || '';
+    el.className = kind || '';
+  }
+
+  function setBusy(value) {
+    state.busy = value;
+    $('addBtn').disabled = value;
+    $('saveBtn').disabled = value;
+  }
+
+  function apply(data) {
+    state.links = data.links;
+    state.categories = data.categories;
+    if (state.category && state.categories.indexOf(state.category) === -1) state.category = '';
+    render();
+  }
+
+  function visibleLinks() {
+    const q = state.query.trim().toLowerCase();
+
+    return state.links
+      .filter(link => !state.category || link.category === state.category)
+      .filter(link => !q || [link.title, link.url, link.memo, link.category]
+        .some(text => text.toLowerCase().includes(q)))
+      .sort((a, b) =>
+        (b.favorite - a.favorite) || b.createdAt.localeCompare(a.createdAt));
+  }
+
+  function render() {
+    const cats = ['', ...state.categories].map(cat =>
+      `<button type="button" class="chip" data-cat="${esc(cat)}" aria-pressed="${cat === state.category}">${cat ? esc(cat) : 'すべて'}</button>`
+    ).join('');
+    $('cats').innerHTML = cats;
+
+    $('catList').innerHTML = state.categories.map(c => `<option value="${esc(c)}">`).join('');
+
+    const links = visibleLinks();
+
+    if (!links.length) {
+      $('list').innerHTML = `<div class="empty">${
+        state.links.length ? '条件に合うリンクがありません。' : 'まだリンクがありません。「リンクを追加」から登録してください。'
+      }</div>`;
+      return;
+    }
+
+    $('list').innerHTML = links.map(link => `
+      <div class="item" data-id="${esc(link.id)}">
+        <button type="button" class="star" aria-pressed="${link.favorite}" aria-label="お気に入り">★</button>
+        <div class="body">
+          <a class="title" href="${esc(safeHref(link.url))}" target="_blank" rel="noopener noreferrer">${esc(link.title)}</a>
+          <div class="meta">${esc(host(link.url))}${link.category ? `<span class="tag">${esc(link.category)}</span>` : ''}</div>
+          ${link.memo ? `<div class="memo">${esc(link.memo)}</div>` : ''}
+        </div>
+        <div class="acts">
+          <button type="button" class="edit">編集</button>
+          <button type="button" class="del">削除</button>
+        </div>
+      </div>`).join('');
+  }
+
+  async function run(label, task, doneText) {
+    if (state.busy) return;
+    setBusy(true);
+    setStatus(label);
+    try {
+      apply(await task());
+      setStatus(doneText, '');
+    } catch (error) {
+      setStatus(label.replace('…', '') + 'に失敗しました：' + error.message, 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function openForm(link) {
+    $('form').reset();
+    $('fId').value = link ? link.id : '';
+    $('fTitle').value = link ? link.title : '';
+    $('fUrl').value = link ? link.url : '';
+    $('fCat').value = link ? link.category : state.category;
+    $('fMemo').value = link ? link.memo : '';
+    $('fFav').checked = link ? link.favorite : false;
+    $('dlgTitle').textContent = link ? 'リンクを編集' : 'リンクを追加';
+    $('saveBtn').textContent = link ? '変更を保存' : '保存する';
+    $('dlg').showModal();
+    $('fTitle').focus();
+  }
+
+  $('addBtn').addEventListener('click', () => openForm(null));
+  $('cancelBtn').addEventListener('click', () => $('dlg').close());
+
+  $('form').addEventListener('submit', event => {
+    event.preventDefault();
+    const input = {
+      id: $('fId').value,
+      title: $('fTitle').value,
+      url: $('fUrl').value,
+      category: $('fCat').value,
+      memo: $('fMemo').value,
+      favorite: $('fFav').checked
     };
+    $('dlg').close();
+    run('保存中…', () => serverCall('saveLink', input), '保存しました。');
+  });
 
-    Object.keys(valuesByHeader).forEach(header => {
-      rowValues[columns[header] - 1] = valuesByHeader[header];
-    });
+  $('search').addEventListener('input', event => {
+    state.query = event.target.value;
+    render();
+  });
 
-    // 1行分を一括で書き込む
-    sheet.getRange(targetRow, 1, 1, width).setValues([rowValues]);
+  $('cats').addEventListener('click', event => {
+    const chip = event.target.closest('.chip');
+    if (!chip) return;
+    state.category = chip.dataset.cat;
+    render();
+  });
 
-    return readLinks_(sheet, columns);
-  } finally {
-    lock.releaseLock();
-  }
-}
+  $('list').addEventListener('click', event => {
+    const item = event.target.closest('.item');
+    if (!item) return;
+    const link = state.links.find(l => l.id === item.dataset.id);
+    if (!link) return;
 
-/**
- * お気に入りだけを切り替える。
- */
-function toggleFavorite(id, favorite) {
-  const linkId = cleanText_(id, 200);
-  if (!linkId) throw new Error('リンクIDがありません。');
-
-  const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
-
-  try {
-    const sheet = ensureSheet_();
-    const columns = getColumnMap_(sheet);
-    const lastRow = sheet.getLastRow();
-
-    if (lastRow >= 2) {
-      const ids = sheet
-        .getRange(2, columns['ID'], lastRow - 1, 1)
-        .getDisplayValues();
-
-      for (let i = 0; i < ids.length; i++) {
-        if (ids[i][0] === linkId) {
-          sheet.getRange(i + 2, columns['お気に入り']).setValue(favorite === true);
-          sheet.getRange(i + 2, columns['更新日時']).setValue(new Date());
-          break;
-        }
+    if (event.target.closest('.star')) {
+      run('更新中…', () => serverCall('toggleFavorite', link.id, !link.favorite), '');
+    } else if (event.target.closest('.edit')) {
+      openForm(link);
+    } else if (event.target.closest('.del')) {
+      if (confirm(`「${link.title}」を削除しますか？`)) {
+        run('削除中…', () => serverCall('deleteLink', link.id), '削除しました。');
       }
     }
+  });
 
-    return readLinks_(sheet, columns);
-  } finally {
-    lock.releaseLock();
-  }
-}
-
-/**
- * リンクを削除する。
- */
-function deleteLink(id) {
-  const linkId = cleanText_(id, 200);
-  if (!linkId) throw new Error('削除するリンクIDがありません。');
-
-  const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
-
-  try {
-    const sheet = ensureSheet_();
-    const columns = getColumnMap_(sheet);
-    const lastRow = sheet.getLastRow();
-
-    if (lastRow >= 2) {
-      const ids = sheet
-        .getRange(2, columns['ID'], lastRow - 1, 1)
-        .getDisplayValues();
-
-      for (let i = ids.length - 1; i >= 0; i--) {
-        if (ids[i][0] === linkId) {
-          sheet.deleteRow(i + 2);
-          break;
-        }
-      }
-    }
-
-    return readLinks_(sheet, columns);
-  } finally {
-    lock.releaseLock();
-  }
-}
+  run('読み込み中…', () => serverCall('getLinks'), '');
+})();
+</script>
+</body>
+</html>
