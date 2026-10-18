@@ -118,6 +118,15 @@ dialog input:focus,dialog textarea:focus{border-color:var(--accent);outline:2px 
 
 /* Finder-inspired desktop shell */
 
+.finder-window{position:relative}
+.resize-handle{position:absolute;top:78px;bottom:0;width:8px;z-index:20;cursor:ew-resize;touch-action:none}
+.resize-left{left:0}.resize-right{right:0}
+.resize-handle::after{content:"";position:absolute;top:45%;bottom:45%;left:3px;width:2px;border-radius:2px;background:rgba(180,205,230,0);transition:background .15s}
+.resize-handle:hover::after,.resize-handle:active::after{background:rgba(180,205,230,.8)}
+body.is-resizing{cursor:ew-resize!important;user-select:none}
+@media(max-width:760px){.resize-handle{display:none}}
+
+
 .width-control{width:100%;max-width:var(--finder-width,1180px);margin:0 auto 10px;display:flex;align-items:center;gap:18px;padding:9px 14px;border:1px solid rgba(190,205,230,.18);border-radius:10px;background:rgba(20,26,39,.72);color:#cbd5e5;font-size:12px}
 .width-control label{display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:130px}
 .width-control strong{color:#8ff7e4;font-variant-numeric:tabular-nums}
@@ -160,7 +169,7 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
   <label for="widthSlider"><span>ウィンドウ幅</span><strong id="widthValue">1180 px</strong></label>
   <input id="widthSlider" type="range" min="600" max="1800" step="1" value="1180" aria-label="ウィンドウ幅を調整">
 </div>
-<div class="finder-window" id="finderWindow">
+<div class="finder-window" id="finderWindow"><div class="resize-handle resize-left" data-resize="left" role="separator" aria-label="左端をドラッグして幅を変更"></div><div class="resize-handle resize-right" data-resize="right" role="separator" aria-label="右端をドラッグして幅を変更"></div>
   <header class="finder-toolbar">
     <div class="traffic-lights" aria-label="ウィンドウ操作"><span></span><span></span><span></span></div>
     <div class="finder-title"><span class="folder-glyph">▰</span> My Desktop <span class="toolbar-chevron">›</span></div>
@@ -226,11 +235,38 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
   const $ = id => document.getElementById(id);
   const widthSlider = $('widthSlider');
   const finderWindow = $('finderWindow');
-  widthSlider.addEventListener('input', () => {
-    const width = Number(widthSlider.value);
+  function setFinderWidth(width) {
+    const min = 600, max = 1800;
+    width = Math.max(min, Math.min(max, Math.round(width)));
     finderWindow.style.maxWidth = width + 'px';
+    widthSlider.value = width;
     $('widthValue').textContent = width + ' px';
     document.querySelector('.width-control').style.maxWidth = width + 'px';
+  }
+  widthSlider.addEventListener('input', () => setFinderWidth(Number(widthSlider.value)));
+  document.querySelectorAll('.resize-handle').forEach(handle => {
+    handle.addEventListener('pointerdown', event => {
+      if (window.matchMedia('(max-width: 760px)').matches) return;
+      event.preventDefault();
+      handle.setPointerCapture(event.pointerId);
+      const startX = event.clientX;
+      const startWidth = finderWindow.getBoundingClientRect().width;
+      const side = handle.dataset.resize;
+      document.body.classList.add('is-resizing');
+      const move = e => {
+        const delta = e.clientX - startX;
+        setFinderWidth(startWidth + (side === 'right' ? delta * 2 : -delta * 2));
+      };
+      const stop = () => {
+        handle.removeEventListener('pointermove', move);
+        handle.removeEventListener('pointerup', stop);
+        handle.removeEventListener('pointercancel', stop);
+        document.body.classList.remove('is-resizing');
+      };
+      handle.addEventListener('pointermove', move);
+      handle.addEventListener('pointerup', stop);
+      handle.addEventListener('pointercancel', stop);
+    });
   });
   const state = { links: [], categories: [], category: '', query: '', busy: false, view: 'all' };
 
