@@ -120,6 +120,21 @@ dialog input:focus,dialog textarea:focus{border-color:var(--accent);outline:2px 
 body.night-mode{background:#050505}
 body.night-mode::before{opacity:0}
 body.night-mode .finder-window{filter:grayscale(1) brightness(.52);background:#080808;border-color:#222}
+body.night-mode .finder-window,
+body.night-mode .finder-window *{color:#a0a0a0!important;text-shadow:none!important}
+body.night-mode .finder-window h1,
+body.night-mode .finder-window h2,
+body.night-mode .finder-window h3,
+body.night-mode .finder-window strong,
+body.night-mode .finder-window .title{color:#b0b0b0!important}
+body.night-mode .finder-window input,
+body.night-mode .finder-window textarea,
+body.night-mode .finder-window select{color:#a0a0a0!important;background:#080808!important;border-color:#292929!important}
+body.night-mode .finder-window input::placeholder,
+body.night-mode .finder-window textarea::placeholder{color:#555!important}
+body.night-mode .finder-window button{color:#999!important}
+body.night-mode .finder-window button:hover{color:#c0c0c0!important}
+
 body.night-mode .finder-toolbar{background:#090909}
 body.night-mode .sidebar{background:#070707}
 body.night-mode .finder-content{background:#050505}
