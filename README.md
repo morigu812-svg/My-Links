@@ -1,38 +1,43 @@
 # MY LINKS
 
-DAILY CORE風の黒いサイバー系リンク集。GitHub Pagesを画面、Google Apps ScriptとGoogleスプレッドシートを保存先として使います。
+DAILY CORE風の黒いサイバー系リンク集。GitHub Pagesを画面として維持し、Firebase Authentication（Googleログイン）とFirestoreを保存先にする移行案です。
 
-## 個人専用にするための重要設定
-- GASウェブアプリは「実行ユーザー：自分」「アクセスできるユーザー：自分のみ」でデプロイしてください。
-- GitHub Pagesの画面自体は公開URLですが、データ操作はGASのGoogleアカウント制限で保護します。
-- DAILY COREとは別のApps Scriptプロジェクトと専用スプレッドシートを使用してください。
-- GASのアクセス範囲を「全員」に変更しないでください。
+## 現在の状態
+- `firebase-migration` ブランチにFirebase版の `index.html` と `firestore.rules` を用意しています。
+- これは準備用ブランチです。Firebaseの設定値がまだ入っていないため、`main` へマージ／公開しないでください。
+- 既存のGASファイルと専用スプレッドシートは削除・変更していません。DAILY COREにも触れていません。
+- Firebase版へは既存のGASデータは自動移行されません。データを移す場合は別途バックアップと件数照合が必要です。
 
-## 1. Apps Scriptの準備
-1. https://script.google.com/ で新しいプロジェクトを作成。
-2. このリポジトリの gas/Code.gs の内容をCode.gsへコピー。
-3. Apps ScriptでHTMLファイルを追加し、名前を bridge にして gas/bridge.html の内容をコピー。
-4. 関数一覧で setup を選んで実行し、権限を許可。
-5. 実行ログのURLを確認。専用の「My-Links Data (Private)」スプレッドシートが作成されます。DAILY COREの保存先は使用しません。
+## 1. Firebaseプロジェクトを用意
+1. https://console.firebase.google.com/ でMy-Links専用プロジェクトを新規作成します。DAILY COREで使うプロジェクトを流用しないでください。
+2. Project settings → Your apps でWebアプリを登録し、Firebase configの `apiKey`、`authDomain`、`projectId`、`appId` を取得します。
+3. Authentication → Sign-in method でGoogleプロバイダを有効にします。
+4. Authentication → Settings → Authorized domains に `morigu812-svg.github.io` を追加します（すでにあれば不要）。
+5. Firestore Databaseを作成します。
 
-## 2. デプロイ
-1. Apps Scriptの「デプロイ」→「新しいデプロイ」→「ウェブアプリ」。
-2. 実行ユーザー「自分」、アクセスできるユーザー「自分のみ」を選択してデプロイ。
-3. 末尾が /exec のウェブアプリURLをコピー。
+## 2. 設定値を入れる
+Firebase Consoleから取得した値を、`index.html` の `firebaseConfig` にある以下のプレースホルダーへ置き換えます。
+- `REPLACE_WITH_FIREBASE_API_KEY`
+- `REPLACE_WITH_FIREBASE_AUTH_DOMAIN`
+- `REPLACE_WITH_FIREBASE_PROJECT_ID`
+- `REPLACE_WITH_FIREBASE_APP_ID`
 
-## 3. GitHub Pages
-1. リポジトリの Settings → Pages を開く。
-2. Deploy from a branch、main、/(root) を選択して保存。
-3. https://morigu812-svg.github.io/My-Links/ を開く。
-4. 左側の「接続設定」にGASの /exec URLを貼り付け、「接続して読み込む」を押す。
+Firebase Web configはフロントエンド用の設定値で、秘密鍵ではありません。サービスアカウントの秘密鍵、OAuth client secret、アクセストークンは絶対にGitHubへ置かないでください。
 
-Googleアカウントや組織の設定によって「自分のみ」の埋め込み動作が異なる場合があります。エラーが出てもアクセス範囲を公開に変えず、まずエラーメッセージを確認してください。
+## 3. Firestoreルールを個人アカウントに限定
+1. いったんFirebase版をテスト用ブランチから確認できるようにし、Googleでログインして画面に表示されるUIDを取得します。設定値が未入力の間はログインできません。
+2. Firebase Console → Firestore Database → Rules で `firestore.rules` の内容を設定します。
+3. ルール中の `REPLACE_WITH_YOUR_UID` を自分のログインUIDに置き換えてから公開します。置き換えるままならアクセスは許可されません。
+4. ルールが有効になるまでは、アプリで保存・編集・削除をテストしないでください。
 
-## 機能
-- リンクの追加・編集・削除
-- カテゴリ分けとキーワード検索
-- スマホ・PC対応
-- データは専用スプレッドシートに保存され、GitHub Pagesの再デプロイでは消えません
+## 4. 公開前のチェック
+- Firebase configが実値になっている
+- Googleログインが成功する
+- Firestore Rulesに自分のUIDが設定されている
+- ログインした本人のデータだけ読み書きできる
+- テストリンクを追加し、再読み込み後も残る
+- 別アカウントからデータにアクセスできない
+- 既存GASのデータを必要に応じてバックアップし、Firebaseデータとの件数・内容を照合する
 
-## データ保護
-削除はスプレッドシートの該当行を削除します。大切なデータは時々バックアップしてください。個人情報や秘密のトークンは登録しないでください。
+## 重要
+Firebase版の準備が完了するまでは、`main` ブランチと現在公開中のGitHub Pagesは変更しません。GAS／スプレッドシートは切替が成功するまで残してください。DAILY COREのプロジェクトやデータは使用しません。
