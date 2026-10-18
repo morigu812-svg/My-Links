@@ -119,9 +119,9 @@ dialog input:focus,dialog textarea:focus{border-color:var(--accent);outline:2px 
 /* Finder-inspired desktop shell */
 
 .finder-window{position:relative}
-.resize-handle{position:absolute;top:78px;bottom:0;width:8px;z-index:20;cursor:ew-resize;touch-action:none}
+.resize-handle{position:absolute;top:78px;bottom:0;width:14px;z-index:20;cursor:ew-resize;touch-action:none}
 .resize-left{left:0}.resize-right{right:0}
-.resize-handle::after{content:"";position:absolute;top:45%;bottom:45%;left:3px;width:2px;border-radius:2px;background:rgba(180,205,230,0);transition:background .15s}
+.resize-handle::after{content:"";position:absolute;top:45%;bottom:45%;left:6px;width:2px;border-radius:2px;background:rgba(180,205,230,0);transition:background .15s}
 .resize-handle:hover::after,.resize-handle:active::after{background:rgba(180,205,230,.8)}
 body.is-resizing{cursor:ew-resize!important;user-select:none}
 @media(max-width:760px){.resize-handle{display:none}}
