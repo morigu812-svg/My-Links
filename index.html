@@ -118,25 +118,75 @@ dialog input:focus,dialog textarea:focus{border-color:var(--accent);outline:2px 
 @media(max-width:390px){.list{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.file-preview{height:78px}.live-pill{font-size:9px}.eyebrow{font-size:8px}.overview{grid-template-columns:repeat(3,minmax(0,1fr))}.stat-card{padding:10px 8px}.stat-icon{margin:0 0 6px}.stat-card>div{display:flex}.stat-label{font-size:10px}.stat-card strong{font-size:21px}.item{flex-wrap:wrap}.body{flex-basis:calc(100% - 42px)}.acts{margin-left:35px}.hero-line{font-size:8px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto;transition:none!important}}
 /* glass style */
+
+/* Finder-inspired desktop shell */
+main{max-width:none;margin:0;padding:22px;min-height:100vh}
+.finder-window{max-width:1500px;margin:0 auto;border:1px solid rgba(190,205,230,.25);border-radius:15px;overflow:hidden;background:rgba(17,22,31,.88);box-shadow:0 28px 90px rgba(0,0,0,.42),inset 0 1px rgba(255,255,255,.1);backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px)}
+.finder-toolbar{height:78px;display:grid;grid-template-columns:190px 1fr 220px;grid-template-rows:38px 32px;align-items:center;padding:7px 18px 8px;border-bottom:1px solid rgba(255,255,255,.09);background:linear-gradient(#292f3b,#202631)}
+.traffic-lights{grid-column:1;grid-row:1;display:flex;gap:8px;align-items:center}
+.traffic-lights span{width:13px;height:13px;border-radius:50%;box-shadow:inset 0 1px 1px rgba(255,255,255,.35)}
+.traffic-lights span:nth-child(1){background:#ff5f57}.traffic-lights span:nth-child(2){background:#febc2e}.traffic-lights span:nth-child(3){background:#28c840}
+.finder-title{grid-column:2;grid-row:1;justify-self:center;font-size:15px;font-weight:650;color:#e7edf7;display:flex;align-items:center;gap:9px}
+.folder-glyph{color:#65b8ff;font-size:20px}.toolbar-chevron{color:#8c9bad;font-size:22px}
+.toolbar-tools{grid-column:1;grid-row:2;display:flex;gap:6px;color:#d6deeb;font-size:16px}
+.toolbar-tools span{display:grid;place-items:center;width:29px;height:25px;border-radius:5px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.06)}
+.toolbar-search{grid-column:3;grid-row:1 / span 2;display:flex;align-items:center;gap:8px;padding:0 11px;height:32px;border:1px solid rgba(255,255,255,.09);border-radius:8px;background:rgba(5,9,16,.28);color:#bdc9da}
+.toolbar-search span{font-size:23px}.toolbar-search input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:#f3f6fc}.toolbar-search input::placeholder{color:#9aa8ba}
+.finder-layout{display:grid;grid-template-columns:220px minmax(0,1fr);min-height:650px}
+.sidebar{padding:14px 9px 20px;background:linear-gradient(180deg,rgba(45,53,67,.74),rgba(30,37,49,.76));border-right:1px solid rgba(255,255,255,.08)}
+.side-label{margin:17px 11px 7px;font-size:11px;color:#9caabd;font-weight:650}
+.side-item{width:100%;display:flex;align-items:center;gap:10px;text-align:left;padding:7px 11px;border:1px solid transparent;border-radius:7px;background:transparent;color:#dce5f2;font-size:13px}
+.side-item>span{width:18px;text-align:center;font-size:17px;color:#aab8ca}
+.side-item:hover{background:rgba(255,255,255,.07)}.side-item.selected{background:rgba(123,151,190,.25);border-color:rgba(255,255,255,.05);color:#fff}
+.side-item.selected>span{color:#f3f7ff}
+.side-cats{display:flex;flex-direction:column;gap:2px}.side-cats .side-item{font-size:12px;padding-top:5px;padding-bottom:5px}
+.finder-content{min-width:0;padding:20px 23px 26px;background:rgba(7,11,18,.28)}
+.workspace{padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
+.section-heading{align-items:center;margin-bottom:19px}.section-heading h2{font-size:23px;font-weight:650;letter-spacing:0}.section-kicker{font-size:9px}
+.bar{margin-bottom:12px}.bar .btn{min-width:145px}
+.list-heading{padding-top:10px}
+.site-footer{max-width:1500px;margin:0 auto;color:#8390a4;padding:12px 5px}
+@media(max-width:760px){main{padding:8px}.finder-toolbar{grid-template-columns:60px 1fr;grid-template-rows:30px 32px;height:72px;padding:5px 10px}.finder-title{grid-column:2;grid-row:1;justify-self:start}.toolbar-tools{grid-column:1;grid-row:2}.toolbar-search{grid-column:2;grid-row:2}.finder-layout{grid-template-columns:145px minmax(0,1fr)}.sidebar{padding:10px 5px}.side-item{font-size:11px;padding:7px 5px;gap:5px}.side-label{margin:13px 5px 5px}.finder-content{padding:15px 10px}.list{grid-template-columns:repeat(auto-fill,minmax(125px,1fr));gap:9px}.item{min-height:170px;padding:9px}.file-preview{height:78px}.bar{flex-wrap:wrap}.bar>.btn{width:100%}.section-note{display:none}}
+@media(max-width:520px){main{padding:0}.finder-window{border-radius:0;min-height:100vh}.finder-layout{grid-template-columns:112px minmax(0,1fr)}.side-item{font-size:10px}.side-item>span{width:14px;font-size:14px}.finder-content{padding:12px 8px}.list{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.item .title{font-size:11px}.file-preview{height:66px}.item .acts button{font-size:9px}.finder-title{font-size:13px}.toolbar-tools{display:none}.finder-toolbar{grid-template-columns:48px 1fr}}
+
 </style>
 </head>
 <body>
-<main>
+<div class="finder-window">
+  <header class="finder-toolbar">
+    <div class="traffic-lights" aria-label="ウィンドウ操作"><span></span><span></span><span></span></div>
+    <div class="finder-title"><span class="folder-glyph">▰</span> My Desktop <span class="toolbar-chevron">›</span></div>
+    <div class="toolbar-tools"><span>▤</span><span>☷</span><span>⚙</span></div>
+    <label class="toolbar-search" for="search"><span>⌕</span><input id="search" type="search" placeholder="検索" aria-label="検索"></label>
+  </header>
+  <div class="finder-layout">
+    <aside class="sidebar" aria-label="サイドバー">
+      <button class="side-item selected" type="button" data-view="all"><span>▣</span> My Desktop</button>
+      <div class="side-label">よく使う項目</div>
+      <button class="side-item" type="button" data-view="favorites"><span>★</span> お気に入り</button>
+      <button class="side-item" type="button" data-view="recent"><span>◷</span> 最近追加した項目</button>
+      <button class="side-item" type="button" data-view="all"><span>▦</span> すべてのリンク</button>
+      <div class="side-label">カテゴリ</div>
+      <div id="sideCats" class="side-cats"></div>
+      <div class="side-label">アクション</div>
+      <button class="side-item" type="button" id="sideAdd"><span>＋</span> リンクを追加</button>
+    </aside>
+    <main class="finder-content">
   <section class="workspace" aria-label="リンク一覧">
     <div class="section-heading">
-      <div><span class="section-kicker">01 / YOUR LIBRARY</span><h2>マイリンク<span class="heading-dot">.</span></h2></div>
-      <span class="section-note">EVERYTHING IN ONE PLACE</span>
+      <div><span class="section-kicker">MY DESKTOP / LINK LIBRARY</span><h2 id="viewTitle">My Desktop</h2></div>
+      <span class="section-note">ICON VIEW</span>
     </div>
     <div class="bar">
-      <label class="search-wrap" for="search"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="タイトル・URL・メモを検索" aria-label="検索"></label>
       <button id="addBtn" class="btn primary" type="button"><span class="plus" aria-hidden="true">＋</span> リンクを追加</button>
     </div>
-    <div class="filter-heading"><span>カテゴリで絞り込む</span><span class="filter-hint">FILTER BY CATEGORY</span></div>
-    <div id="cats" class="cats" role="group" aria-label="カテゴリで絞り込む"></div>
     <div class="list-heading"><span class="list-heading-title"><span class="heading-dot">◆</span> LINK FEED</span><span id="resultCount" class="result-count">読み込み中…</span></div>
     <div id="status" role="status" aria-live="polite"></div>
     <div id="list" class="list"></div>
   </section>
+    </main>
+  </div>
+  </div>
   <footer class="site-footer"><span><b>LC.</b> LINK CORE</span><span>YOUR LINKS. YOUR FLOW.</span><span>DESIGNED TO STAY ORGANIZED <i>✳</i></span></footer>
 </main>
 
@@ -166,7 +216,7 @@ dialog input:focus,dialog textarea:focus{border-color:var(--accent);outline:2px 
   'use strict';
 
   const $ = id => document.getElementById(id);
-  const state = { links: [], categories: [], category: '', query: '', busy: false };
+  const state = { links: [], categories: [], category: '', query: '', busy: false, view: 'all' };
 
   // GAS Webアプリ（?mode=bridge）を隠しiframeで読み込み、postMessageで通信する。
   const GAS_URL = 'https://script.google.com/macros/s/AKfycbxjt4DTo0EmNqWZ5Mt5MgqlioxcLXmDhaBwaXwn91YC9XFkX8-HvKC2Nxfe7rQk98JMpA/exec';
@@ -262,6 +312,8 @@ dialog input:focus,dialog textarea:focus{border-color:var(--accent);outline:2px 
     const q = state.query.trim().toLowerCase();
 
     return state.links
+      .filter(link => state.view !== 'favorites' || link.favorite)
+      .filter(link => state.view !== 'recent' || true)
       .filter(link => !state.category || link.category === state.category)
       .filter(link => !q || [link.title, link.url, link.memo, link.category]
         .some(text => text.toLowerCase().includes(q)))
@@ -270,11 +322,9 @@ dialog input:focus,dialog textarea:focus{border-color:var(--accent);outline:2px 
   }
 
   function render() {
-    const cats = ['', ...state.categories].map(cat =>
-      `<button type="button" class="chip" data-cat="${esc(cat)}" aria-pressed="${cat === state.category}">${cat ? esc(cat) : 'すべて'}</button>`
+    $('sideCats').innerHTML = state.categories.map(cat =>
+      `<button type="button" class="side-item ${state.category === cat ? 'selected' : ''}" data-side-cat="${esc(cat)}"><span>▸</span> ${esc(cat)}</button>`
     ).join('');
-    $('cats').innerHTML = cats;
-
     $('catList').innerHTML = state.categories.map(c => `<option value="${esc(c)}">`).join('');
 
     const links = visibleLinks();
@@ -353,12 +403,27 @@ dialog input:focus,dialog textarea:focus{border-color:var(--accent);outline:2px 
     render();
   });
 
-  $('cats').addEventListener('click', event => {
-    const chip = event.target.closest('.chip');
-    if (!chip) return;
-    state.category = chip.dataset.cat;
+  $('sideCats').addEventListener('click', event => {
+    const button = event.target.closest('[data-side-cat]');
+    if (!button) return;
+    state.category = button.dataset.sideCat;
+    state.view = 'all';
+    $('viewTitle').textContent = state.category;
+    updateSidebar();
     render();
   });
+
+  function updateSidebar() {
+    document.querySelectorAll('[data-view]').forEach(button => button.classList.toggle('selected', button.dataset.view === state.view && !state.category));
+  }
+  document.querySelectorAll('[data-view]').forEach(button => button.addEventListener('click', () => {
+    state.view = button.dataset.view;
+    state.category = '';
+    $('viewTitle').textContent = state.view === 'favorites' ? 'お気に入り' : state.view === 'recent' ? '最近追加した項目' : 'My Desktop';
+    updateSidebar();
+    render();
+  }));
+  $('sideAdd').addEventListener('click', () => openForm(null));
 
   $('list').addEventListener('click', event => {
     const item = event.target.closest('.item');
