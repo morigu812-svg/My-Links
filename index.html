@@ -199,6 +199,27 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
 .side-item.selected>span{color:#f3f7ff}
 .side-cats{display:flex;flex-direction:column;gap:2px}.side-cats .side-item{font-size:12px;padding-top:5px;padding-bottom:5px}
 .finder-content{min-width:0;padding:20px 23px 26px;background:rgba(7,11,18,.28)}
+/* Official links: intentionally separate launcher design */
+.official-panel{display:none;min-width:0;padding:clamp(22px,4vw,48px);color:#172033;background:linear-gradient(135deg,#f8fbff 0%,#edf3ff 48%,#f9f0ff 100%);font-family:Inter,"Yu Gothic UI",sans-serif}
+.official-panel.active{display:block}
+.finder-content.official-hidden{display:none}
+.official-hero{position:relative;overflow:hidden;padding:clamp(22px,4vw,38px);border-radius:26px;background:linear-gradient(120deg,#192b54,#3655a5 58%,#7046a8);color:#fff;box-shadow:0 18px 45px rgba(42,58,110,.2)}
+.official-hero:after{content:"";position:absolute;width:220px;height:220px;right:-60px;top:-95px;border:1px solid rgba(255,255,255,.2);border-radius:50%;box-shadow:0 0 0 24px rgba(255,255,255,.05),0 0 0 50px rgba(255,255,255,.035)}
+.official-eyebrow{font-size:11px;letter-spacing:.2em;font-weight:800;color:#c9d7ff}
+.official-hero h2{margin:8px 0;font-size:clamp(26px,4vw,40px);line-height:1.2;letter-spacing:-.04em}
+.official-hero p{margin:12px 0 0;max-width:560px;color:#e0e7ff;font-size:14px}
+.official-section-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:28px 0 14px}
+.official-section-title h3{margin:0;font-size:16px;color:#263452}
+.official-section-title span{font-size:11px;color:#697795;letter-spacing:.12em}
+.official-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,205px),1fr));gap:14px}
+.official-card{display:flex;align-items:center;gap:14px;min-height:118px;padding:18px;text-decoration:none;color:#202b43;background:rgba(255,255,255,.82);border:1px solid rgba(113,133,181,.2);border-radius:19px;box-shadow:0 7px 22px rgba(48,67,117,.06);transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
+.official-card:hover{transform:translateY(-3px);box-shadow:0 14px 28px rgba(48,67,117,.13);border-color:#a9baf0}
+.official-icon{display:grid;place-items:center;flex:0 0 52px;width:52px;height:52px;border-radius:16px;font-weight:850;font-size:20px;letter-spacing:-.05em}
+.official-icon.gmail{background:#fff0ed;color:#d74638}.official-icon.drive{background:#e8f7ed;color:#18864b}.official-icon.script{background:#fff3d9;color:#b56a08}.official-icon.github{background:#e9edf6;color:#202b43}
+.official-card-copy{min-width:0;flex:1}.official-card-title{display:block;font-size:15px;font-weight:800;letter-spacing:-.02em}.official-card-desc{display:block;margin-top:4px;font-size:12px;color:#77829a;line-height:1.5}.official-arrow{font-size:18px;color:#8995b1}
+.official-tip{margin-top:20px;padding:13px 16px;border-radius:14px;background:rgba(255,255,255,.56);color:#697795;font-size:12px}
+@media(max-width:760px){.official-panel{padding:16px 10px}.official-hero{border-radius:19px}.official-grid{grid-template-columns:1fr}.official-card{min-height:88px;padding:14px}.official-section-title{margin-top:21px}}
+
 .workspace{padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
 .section-heading{align-items:center;margin-bottom:19px}.section-heading h2{font-size:23px;font-weight:650;letter-spacing:0}.section-kicker{font-size:9px}
 .bar{margin-bottom:12px}.bar .btn{min-width:145px}
@@ -248,6 +269,8 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
       <button class="side-item" type="button" data-view="favorites"><span>★</span> お気に入り</button>
       <button class="side-item" type="button" data-view="recent"><span>◷</span> 最近追加した項目</button>
       <button class="side-item" type="button" data-view="all"><span>▦</span> すべてのリンク</button>
+      <div class="side-label">クイックアクセス</div>
+      <button class="side-item" type="button" data-view="official"><span>✦</span> 公式リンク</button>
       <div class="side-label">カテゴリ</div>
       <div id="sideCats" class="side-cats"></div>
       <div class="side-label">アクション</div>
@@ -267,6 +290,29 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
     <div id="list" class="list"></div>
   </section>
     </main>
+    <section id="officialPanel" class="official-panel" aria-label="公式リンク">
+      <div class="official-hero">
+        <div class="official-eyebrow">LINK CORE / QUICK LAUNCHER</div>
+        <h2>Official Links</h2>
+        <p>毎日使う公式サービスへ、ここからワンクリックで。</p>
+      </div>
+      <div class="official-section-title"><h3>仕事・開発ツール</h3><span>4 SHORTCUTS</span></div>
+      <div class="official-grid">
+        <a class="official-card" href="https://mail.google.com/" target="_blank" rel="noopener noreferrer">
+          <span class="official-icon gmail" aria-hidden="true">M</span><span class="official-card-copy"><span class="official-card-title">Gmail</span><span class="official-card-desc">メールを確認・送信する</span></span><span class="official-arrow" aria-hidden="true">↗</span>
+        </a>
+        <a class="official-card" href="https://drive.google.com/" target="_blank" rel="noopener noreferrer">
+          <span class="official-icon drive" aria-hidden="true">△</span><span class="official-card-copy"><span class="official-card-title">Google Drive</span><span class="official-card-desc">ファイルや資料を管理する</span></span><span class="official-arrow" aria-hidden="true">↗</span>
+        </a>
+        <a class="official-card" href="https://script.google.com/" target="_blank" rel="noopener noreferrer">
+          <span class="official-icon script" aria-hidden="true">GS</span><span class="official-card-copy"><span class="official-card-title">Google Apps Script</span><span class="official-card-desc">スクリプトを作成・実行する</span></span><span class="official-arrow" aria-hidden="true">↗</span>
+        </a>
+        <a class="official-card" href="https://github.com/" target="_blank" rel="noopener noreferrer">
+          <span class="official-icon github" aria-hidden="true">GH</span><span class="official-card-copy"><span class="official-card-title">GitHub</span><span class="official-card-desc">リポジトリとコードを管理する</span></span><span class="official-arrow" aria-hidden="true">↗</span>
+        </a>
+      </div>
+      <div class="official-tip">↗ カードをクリックすると、公式サイトが新しいタブで開きます。</div>
+    </section>
   </div>
   </div>
   <footer class="site-footer"><span><b>LC.</b> LINK CORE</span><span>YOUR LINKS. YOUR FLOW.</span><span>DESIGNED TO STAY ORGANIZED <i>✳</i></span></footer>
@@ -558,6 +604,10 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
     if (!button) return;
     state.category = button.dataset.sideCat;
     state.view = 'all';
+    document.querySelector('.finder-content').classList.remove('official-hidden');
+    $('officialPanel').classList.remove('active');
+    $('search').disabled = false;
+    $('search').placeholder = '検索';
     $('viewTitle').textContent = state.category;
     updateSidebar();
     render();
@@ -569,7 +619,13 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
   document.querySelectorAll('[data-view]').forEach(button => button.addEventListener('click', () => {
     state.view = button.dataset.view;
     state.category = '';
+    const isOfficial = state.view === 'official';
     $('viewTitle').textContent = state.view === 'favorites' ? 'お気に入り' : state.view === 'recent' ? '最近追加した項目' : 'My Desktop';
+    document.querySelector('.finder-content').classList.toggle('official-hidden', isOfficial);
+    $('officialPanel').classList.toggle('active', isOfficial);
+    document.querySelector('.finder-toolbar').classList.toggle('official-toolbar', isOfficial);
+    $('search').disabled = isOfficial;
+    $('search').placeholder = isOfficial ? '公式リンクページ' : '検索';
     updateSidebar();
     render();
   }));
