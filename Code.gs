@@ -339,3 +339,99 @@ function deleteLink(id) {
     lock.releaseLock();
   }
 }
+
+
+/* 公式リンク用クラウド保存。既存 Links シートは変更しない。 */
+const OFFICIAL_SHEET_NAME = 'OfficialLinks';
+const OFFICIAL_HEADERS = ['ID', 'サイト名', 'URL', '説明', 'アイコン', '種別', '作成日時', '更新日時'];
+
+function ensureOfficialSheet_() {
+  const spreadsheetId = PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY);
+  if (!spreadsheetId) throw new Error('スプレッドシートIDが未設定です。');
+  const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+  let sheet = spreadsheet.getSheetByName(OFFICIAL_SHEET_NAME);
+  if (!sheet) sheet = spreadsheet.insertSheet(OFFICIAL_SHEET_NAME);
+  const lastColumn = sheet.getLastColumn();
+  if (lastColumn === 0) {
+    sheet.getRange(1, 1, 1, OFFICIAL_HEADERS.length).setValues([OFFICIAL_HEADERS]);
+  } else {
+    const existing = sheet.getRange(1, 1, 1, lastColumn).getDisplayValues()[0];
+    OFFICIAL_HEADERS.forEach(header => {
+      if (existing.indexOf(header) === -1) {
+        sheet.getRange(1, sheet.getLastColumn() + 1).setValue(header);
+        existing.push(header);
+      }
+    });
+  }
+  return sheet;
+}
+
+function getOfficialLinks() {
+  const sheet = ensureOfficialSheet_();
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return { links: [] };
+  const rows = sheet.getRange(1, 1, lastRow, sheet.getLastColumn()).getValues();
+  const headers = rows.shift().map(String), col = {};
+  headers.forEach((h, i) => { if (h) col[h] = i; });
+  return { links: rows.filter(row => row[col['ID']] !== '').map(row => ({
+    id: String(row[col['ID']] || ''),
+    name: String(row[col['サイト名']] || ''),
+    url: String(row[col['URL']] || ''),
+    description: String(row[col['説明']] || ''),
+    icon: String(row[col['アイコン']] || ''),
+    kind: String(row[col['種別']] || 'custom'),
+    createdAt: toIso_(row[col['作成日時']]),
+    updatedAt: toIso_(row[col['更新日時']])
+  })) };
+}
+
+function saveOfficialLink(input) {
+  if (!input || typeof input !== 'object') throw new Error('公式リンクの入力内容がありません。');
+  const id = cleanText_(input.id, 200) || Utilities.getUuid();
+  const name = cleanText_(input.name, 200), url = normalizeUrl_(input.url);
+  const description = cleanText_(input.description, 1000);
+  const icon = cleanText_(input.icon, 20), kind = cleanText_(input.kind, 40) || 'custom';
+  if (!name) throw new Error('サイト名を入力してください。');
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const sheet = ensureOfficialSheet_();
+    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getDisplayValues()[0], col = {};
+    headers.forEach((h, i) => { if (h) col[h] = i; });
+    const lastRow = sheet.getLastRow();
+    let target = 0, values = new Array(headers.length).fill(''), createdAt = new Date();
+    if (lastRow >= 2) {
+      const rows = sheet.getRange(2, 1, lastRow - 1, headers.length).getValues();
+      for (let i = 0; i < rows.length; i++) {
+        if (String(rows[i][col['ID']]) === id) {
+          target = i + 2; values = rows[i]; createdAt = values[col['作成日時']] || createdAt; break;
+        }
+      }
+    }
+    if (!target) target = lastRow + 1;
+    const now = new Date();
+    const fields = {
+      'ID': id, 'サイト名': safeCell_(name), 'URL': url, '説明': safeCell_(description),
+      'アイコン': safeCell_(icon), '種別': safeCell_(kind), '作成日時': createdAt, '更新日時': now
+    };
+    Object.keys(fields).forEach(key => { values[col[key]] = fields[key]; });
+    sheet.getRange(target, 1, 1, headers.length).setValues([values]);
+    return getOfficialLinks();
+  } finally { lock.releaseLock(); }
+}
+
+function deleteOfficialLink(id) {
+  const linkId = cleanText_(id, 200);
+  if (!linkId) throw new Error('削除する公式リンクIDがありません。');
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const sheet = ensureOfficialSheet_(), headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getDisplayValues()[0];
+    const idColumn = headers.indexOf('ID') + 1, lastRow = sheet.getLastRow();
+    if (lastRow >= 2) {
+      const ids = sheet.getRange(2, idColumn, lastRow - 1, 1).getDisplayValues();
+      for (let i = ids.length - 1; i >= 0; i--) if (ids[i][0] === linkId) { sheet.deleteRow(i + 2); break; }
+    }
+    return getOfficialLinks();
+  } finally { lock.releaseLock(); }
+}
