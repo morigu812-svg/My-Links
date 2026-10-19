@@ -626,13 +626,28 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
     $('officialPanel').classList.toggle('active', isOfficial);
     document.querySelector('.finder-toolbar').classList.toggle('official-toolbar', isOfficial);
     $('addBtn').style.display = isOfficial ? 'none' : '';
-    $('sideAdd').disabled = isOfficial;
+    $('sideAdd').disabled = false;
     $('search').disabled = isOfficial;
     $('search').placeholder = isOfficial ? '公式リンクページ' : '検索';
     updateSidebar();
     render();
   }));
-  $('sideAdd').addEventListener('click', () => openForm(null));
+  $('sideAdd').addEventListener('click', () => {
+    if (state.view === 'official') {
+      state.view = 'all';
+      state.category = '';
+      document.querySelector('.finder-content').classList.remove('official-hidden');
+      $('officialPanel').classList.remove('active');
+      document.querySelector('.finder-toolbar').classList.remove('official-toolbar');
+      $('addBtn').style.display = '';
+      $('search').disabled = false;
+      $('search').placeholder = '検索';
+      $('viewTitle').textContent = 'My Desktop';
+      updateSidebar();
+      render();
+    }
+    openForm(null);
+  });
 
   const OFFICIAL_STORAGE_KEY = 'linkCoreOfficialLinks';
   const DEFAULT_OFFICIAL_LINKS = [
