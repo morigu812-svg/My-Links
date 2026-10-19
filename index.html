@@ -221,6 +221,7 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
 .official-add-form input{min-width:0;width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:7px;background:rgba(0,0,0,.16);color:var(--ink);font:inherit;font-size:12px;outline-color:var(--accent)}
 .official-add-form .btn{white-space:nowrap}
 .official-tip{margin-top:15px;color:var(--muted);font-size:11px}
+.official-status{margin:12px 0 0;padding:9px 12px;border:1px solid #27564f;border-radius:8px;background:rgba(20,72,61,.22);color:#a1ffed;font-size:12px;display:none}.official-status.visible{display:block}.official-status.error{color:#ffacb8;border-color:#6a3544;background:rgba(92,30,48,.2)}
 @media(max-width:760px){.official-panel{padding:15px 10px}.official-hero{padding:18px}.official-hero h2{font-size:21px}.official-grid{grid-template-columns:repeat(auto-fill,minmax(min(100%,145px),1fr));gap:8px}.official-card{min-height:82px;padding:10px;gap:8px}.official-icon{flex-basis:34px;width:34px;height:34px;font-size:14px}.official-card-title{font-size:12px}.official-add-form{grid-template-columns:1fr}.official-add-form .btn{width:100%}}
 
 .workspace{padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
@@ -301,6 +302,7 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
       </div>
       <div class="official-section-title"><h3>登録済みサイト</h3><span id="officialCount">4 SITES</span></div>
       <div id="officialGrid" class="official-grid"></div>
+      <div id="officialStatus" class="official-status" role="status" aria-live="polite"></div>
       <div class="official-section-title"><h3>サイトを追加</h3><span>ADD SHORTCUT</span></div>
       <form id="officialAddForm" class="official-add-form">
         <input id="officialName" type="text" maxlength="80" placeholder="サイト名（例：学校サイト）" aria-label="サイト名" required>
@@ -674,6 +676,12 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
     }).join('');
   }
 
+  function setOfficialStatus(text, kind) {
+    const el = $('officialStatus');
+    el.textContent = text || '';
+    el.className = 'official-status' + (text ? ' visible' : '') + (kind === 'error' ? ' error' : '');
+  }
+
   async function loadOfficialCloud() {
     try {
       const response = await serverCall('getOfficialLinks');
@@ -690,9 +698,9 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
       officialCloudReady = true;
       saveOfficialLinksLocal();
       renderOfficialLinks();
-      setStatus('公式リンクをクラウドから読み込みました。', '');
+      setOfficialStatus('✓ クラウドと同期しました。公式リンクはクラウドに保存されています。', '');
     } catch (error) {
-      setStatus('公式リンクのクラウド接続に失敗しました：' + error.message, 'error');
+      setOfficialStatus('クラウドとの同期に失敗しました：' + error.message, 'error');
       renderOfficialLinks();
     }
   }
@@ -717,8 +725,8 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
       const result = await serverCall('saveOfficialLink', site);
       officialLinks = Array.isArray(result.links) ? result.links : officialLinks.concat(site);
       saveOfficialLinksLocal(); $('officialAddForm').reset(); renderOfficialLinks();
-      setStatus('公式リンクをクラウドに保存しました。', '');
-    } catch (error) { setStatus('公式リンクの保存に失敗しました：' + error.message, 'error'); }
+      setOfficialStatus('✓ クラウドに保存しました。', '');
+    } catch (error) { setOfficialStatus('保存に失敗しました：' + error.message, 'error'); }
   });
 
   $('officialGrid').addEventListener('click', async event => {
@@ -733,8 +741,8 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
       const result = await serverCall('deleteOfficialLink', site.id);
       officialLinks = Array.isArray(result.links) ? result.links : officialLinks.filter(item => item.id !== site.id);
       saveOfficialLinksLocal(); renderOfficialLinks();
-      setStatus('公式リンクをクラウドから削除しました。', '');
-    } catch (error) { setStatus('公式リンクの削除に失敗しました：' + error.message, 'error'); }
+      setOfficialStatus('✓ クラウドから削除しました。', '');
+    } catch (error) { setOfficialStatus('削除に失敗しました：' + error.message, 'error'); }
   });
   renderOfficialLinks();
   loadOfficialCloud();
