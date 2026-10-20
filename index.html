@@ -422,12 +422,21 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
   const ready = new Promise(resolve => { markReady = resolve; });
 
   function isGasOrigin(origin) {
-    return origin === 'https://script.google.com' ||
-      /^https:\/\/[a-z0-9-]+\.googleusercontent\.com$/.test(origin);
+    if (origin === 'https://script.google.com' ||
+        origin === 'https://script.googleusercontent.com') return true;
+    try {
+      const host = new URL(origin).hostname;
+      return origin.startsWith('https://') &&
+        (host === 'googleusercontent.com' || host.endsWith('.googleusercontent.com'));
+    } catch (_) {
+      return false;
+    }
   }
 
   window.addEventListener('message', event => {
     if (!isGasOrigin(event.origin)) return;
+    // READY通知も応答も、実際に作成したGAS iframeからのものだけ受け付ける。
+    if (event.source !== frame.contentWindow) return;
     const data = event.data;
     if (!data || typeof data !== 'object') return;
 
