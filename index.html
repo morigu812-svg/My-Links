@@ -442,7 +442,6 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
       const entry = pending.get(data.id);
       if (!entry) return;
       pending.delete(data.id);
-      clearTimeout(entry.timer);
       data.ok ? entry.resolve(data.result) : entry.reject(new Error(data.error || '通信に失敗しました。'));
     }
   });
@@ -454,17 +453,10 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
   document.body.appendChild(frame);
 
   function serverCall(method, ...args) {
-    const wait = new Promise((_, reject) => setTimeout(
-      () => reject(new Error('GASに接続できません。デプロイの「アクセスできるユーザー」が「全員」か確認してください。')),
-      20000));
-
-    return Promise.race([ready, wait]).then(() => new Promise((resolve, reject) => {
+    // タイムアウトを設けず、GASの応答を待ち続ける。
+    return ready.then(() => new Promise((resolve, reject) => {
       const id = (crypto.randomUUID && crypto.randomUUID()) || String(Date.now() + Math.random());
-      const timer = setTimeout(() => {
-        pending.delete(id);
-        reject(new Error('GASからの応答がありません。'));
-      }, 30000);
-      pending.set(id, { resolve, reject, timer });
+      pending.set(id, { resolve, reject });
       bridgeWindow.postMessage({ type: 'DAILY_CORE_REQUEST', id, method, args }, bridgeOrigin);
     }));
   }
