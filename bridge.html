@@ -31,7 +31,7 @@
 
   window.addEventListener('message', event => {
     if (ALLOWED_ORIGINS.indexOf(event.origin) === -1) return;
-    if (event.source !== window.parent) return;
+    if (event.source !== window.top) return;
 
     const request = event.data;
     if (!request || request.type !== 'DAILY_CORE_REQUEST') return;
@@ -66,7 +66,7 @@
   window.addEventListener('load', () => {
     // 親ページのオリジンは読めないため、許可リストの各オリジン宛てに準備完了を通知する
     ALLOWED_ORIGINS.forEach(origin => {
-      window.parent.postMessage({ type: 'DAILY_CORE_BRIDGE_READY' }, origin);
+      window.top.postMessage({ type: 'DAILY_CORE_BRIDGE_READY' }, origin);
     });
   });
 })();
