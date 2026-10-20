@@ -462,12 +462,38 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
   frame.hidden = true;
   document.body.appendChild(frame);
 
+  const READY_TIMEOUT_MS = 10000;
+  const REQUEST_TIMEOUT_MS = 15000;
+
+  function waitForBridge() {
+    return Promise.race([
+      ready,
+      new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('GASブリッジの準備が10秒以内に完了しませんでした。GASのデプロイURLと公開設定を確認してください。')), READY_TIMEOUT_MS);
+      })
+    ]);
+  }
+
   function serverCall(method, ...args) {
-    // タイムアウトを設けず、GASの応答を待ち続ける。
-    return ready.then(() => new Promise((resolve, reject) => {
+    return waitForBridge().then(() => new Promise((resolve, reject) => {
       const id = (crypto.randomUUID && crypto.randomUUID()) || String(Date.now() + Math.random());
-      pending.set(id, { resolve, reject });
-      bridgeWindow.postMessage({ type: 'DAILY_CORE_REQUEST', id, method, args }, bridgeOrigin);
+      const timer = setTimeout(() => {
+        pending.delete(id);
+        reject(new Error('GASから15秒以内に応答がありませんでした。GASの実行ログとデプロイ版を確認してください。'));
+      }, REQUEST_TIMEOUT_MS);
+
+      pending.set(id, {
+        resolve: value => { clearTimeout(timer); resolve(value); },
+        reject: error => { clearTimeout(timer); reject(error); }
+      });
+
+      try {
+        bridgeWindow.postMessage({ type: 'DAILY_CORE_REQUEST', id, method, args }, bridgeOrigin);
+      } catch (error) {
+        clearTimeout(timer);
+        pending.delete(id);
+        reject(error);
+      }
     }));
   }
 
