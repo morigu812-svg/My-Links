@@ -435,11 +435,12 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
 
   window.addEventListener('message', event => {
     if (!isGasOrigin(event.origin)) return;
-    // READY通知も応答も、実際に作成したGAS iframeからのものだけ受け付ける。
-    if (event.source !== frame.contentWindow) return;
     const data = event.data;
     if (!data || typeof data !== 'object') return;
 
+    // Apps Script は内部でリダイレクト／ラッパーiframeを使う場合があるため、
+    // READY通知では frame.contentWindow との一致を必須にしない。
+    // 応答は READY で確定した送信元だけから受け付ける。
     if (data.type === 'DAILY_CORE_BRIDGE_READY') {
       bridgeWindow = event.source;
       bridgeOrigin = event.origin;
