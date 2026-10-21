@@ -254,15 +254,15 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
     <div class="auth-mark">LINK CORE / PRIVATE ACCESS</div>
     <h1 id="authTitle">管理者ログイン</h1>
     <p id="authDescription">リンクの追加・編集・削除を行うには管理者パスワードが必要です。</p>
-    <div id="setupCodeGroup" hidden>
-      <label for="setupCode">初回設定コード</label>
-      <input id="setupCode" type="password" autocomplete="off">
-    </div>
     <label id="passwordLabel" for="authPassword">管理者パスワード</label>
     <input id="authPassword" type="password" autocomplete="current-password" required autofocus>
     <div id="confirmPasswordGroup" hidden>
       <label for="confirmPassword">管理者パスワード（確認）</label>
       <input id="confirmPassword" type="password" autocomplete="new-password">
+      <label for="visitorPassword">利用者ページのパスワード（8文字以上）</label>
+      <input id="visitorPassword" type="password" autocomplete="new-password">
+      <label for="visitorPasswordConfirm">利用者ページのパスワード（確認）</label>
+      <input id="visitorPasswordConfirm" type="password" autocomplete="new-password">
     </div>
     <button id="authSubmit" type="submit">管理者としてログイン</button>
     <div id="authError" class="auth-error" role="alert" aria-live="polite"></div>
@@ -478,7 +478,7 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
     }));
   }
 
-  // 初回だけサイト上でパスワードを設定し、以降は通常ログインする。
+  // 管理者パスワードと利用者ページ用パスワードを初回に設定する。
   const AUTH_KEY = 'myLinksUnlocked';
   const ADMIN_TOKEN_KEY = 'linkCoreAdminToken';
   const authGate = $('authGate');
@@ -489,10 +489,10 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
   const authDescription = $('authDescription');
   const authSubmit = $('authSubmit');
   const passwordLabel = $('passwordLabel');
-  const setupCodeGroup = $('setupCodeGroup');
-  const setupCodeField = $('setupCode');
   const confirmPasswordGroup = $('confirmPasswordGroup');
   const confirmPasswordField = $('confirmPassword');
+  const visitorPasswordField = $('visitorPassword');
+  const visitorPasswordConfirmField = $('visitorPasswordConfirm');
   let setupMode = false;
 
   if (sessionStorage.getItem(AUTH_KEY) === 'yes' && sessionStorage.getItem(ADMIN_TOKEN_KEY)) {
@@ -500,45 +500,31 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
     if (authGate) authGate.remove();
   }
 
-  function setAuthMode(configured, setupAvailable) {
+  function setAuthMode(configured) {
     setupMode = !configured;
+    confirmPasswordGroup.hidden = !setupMode;
+    confirmPasswordField.required = setupMode;
+    visitorPasswordField.required = setupMode;
+    visitorPasswordConfirmField.required = setupMode;
     if (setupMode) {
-      authTitle.textContent = '管理者パスワード設定';
-      authDescription.textContent = '初回のみ設定します。設定後はこの画面からログインできます。';
-      setupCodeGroup.hidden = false;
-      setupCodeField.required = true;
-      confirmPasswordGroup.hidden = false;
-      confirmPasswordField.required = true;
-      confirmPasswordField.autocomplete = 'new-password';
+      authTitle.textContent = '初回セットアップ';
+      authDescription.textContent = '管理者パスワードと、利用者ページに入るためのパスワードを設定してください。';
       authField.autocomplete = 'new-password';
-      passwordLabel.textContent = '新しい管理者パスワード（12文字以上）';
+      passwordLabel.textContent = '管理者パスワード（12文字以上）';
       authSubmit.textContent = 'パスワードを設定';
-      if (!setupAvailable) {
-        authError.textContent = '初回設定コードがまだ登録されていません。Apps Scriptのスクリプトプロパティに LINK_CORE_SETUP_CODE を登録してから、このページを再読み込みしてください。';
-        authSubmit.disabled = true;
-      } else {
-        authError.textContent = '';
-        authSubmit.disabled = false;
-      }
     } else {
       authTitle.textContent = '管理者ログイン';
-      authDescription.textContent = 'リンクの追加・編集・削除を行うには管理者パスワードが必要です。';
-      setupCodeGroup.hidden = true;
-      setupCodeField.required = false;
-      confirmPasswordGroup.hidden = true;
-      confirmPasswordField.required = false;
+      authDescription.textContent = '管理者だけがリンクの追加・編集・削除を行えます。';
       authField.autocomplete = 'current-password';
       passwordLabel.textContent = '管理者パスワード';
       authSubmit.textContent = '管理者としてログイン';
-      authSubmit.disabled = false;
-      authError.textContent = '';
     }
   }
 
   async function checkAdminSetupStatus() {
     try {
       const status = await serverCall('getAdminSetupStatus');
-      setAuthMode(!!status.configured, !!status.setupAvailable);
+      setAuthMode(!!status.configured);
     } catch (error) {
       authError.textContent = '設定状態を確認できませんでした：' + (error.message || '通信エラー');
     }
@@ -551,21 +537,16 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
     try {
       if (setupMode) {
         if (authField.value.length < 12) throw new Error('管理者パスワードは12文字以上にしてください。');
-        if (authField.value !== confirmPasswordField.value) throw new Error('確認用パスワードが一致しません。');
-        await serverCall('setupAdminPassword', setupCodeField.value, authField.value);
-        authError.textContent = '設定しました。ログインしています…';
-        const result = await serverCall('authenticateAdmin', authField.value);
-        if (!result || !result.token) throw new Error('認証トークンを受け取れませんでした。');
-        sessionStorage.setItem(ADMIN_TOKEN_KEY, result.token);
-        sessionStorage.setItem(AUTH_KEY, 'yes');
-        location.reload();
-      } else {
-        const result = await serverCall('authenticateAdmin', authField.value);
-        if (!result || !result.token) throw new Error('認証トークンを受け取れませんでした。');
-        sessionStorage.setItem(ADMIN_TOKEN_KEY, result.token);
-        sessionStorage.setItem(AUTH_KEY, 'yes');
-        location.reload();
+        if (authField.value !== confirmPasswordField.value) throw new Error('管理者パスワードの確認が一致しません。');
+        if (visitorPasswordField.value.length < 8) throw new Error('利用者用パスワードは8文字以上にしてください。');
+        if (visitorPasswordField.value !== visitorPasswordConfirmField.value) throw new Error('利用者用パスワードの確認が一致しません。');
+        await serverCall('setupAdminPassword', authField.value, visitorPasswordField.value);
       }
+      const result = await serverCall('authenticateAdmin', authField.value);
+      if (!result || !result.token) throw new Error('認証トークンを受け取れませんでした。');
+      sessionStorage.setItem(ADMIN_TOKEN_KEY, result.token);
+      sessionStorage.setItem(AUTH_KEY, 'yes');
+      location.reload();
     } catch (error) {
       authError.textContent = error.message || (setupMode ? '設定に失敗しました。' : 'ログインに失敗しました。');
       authField.select();
