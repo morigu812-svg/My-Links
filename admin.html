@@ -248,7 +248,7 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
 
 </style>
 </head>
-<body class="auth-locked">
+<body>
 <section id="authGate" class="auth-gate" aria-labelledby="authTitle">
   <form id="authForm" class="auth-card">
     <div class="auth-mark">LINK CORE / PRIVATE ACCESS</div>
@@ -453,9 +453,6 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
   }
 
   function serverCall(method, ...args) {
-    if (['getLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'saveOfficialLink', 'deleteOfficialLink'].includes(method)) {
-      args.push(sessionStorage.getItem('linkCoreAdminToken') || '');
-    }
     return waitForBridge().then(() => new Promise((resolve, reject) => {
       const id = (crypto.randomUUID && crypto.randomUUID()) || String(Date.now() + Math.random());
       const timer = setTimeout(() => {
@@ -554,7 +551,9 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
     }
   });
 
-  checkAdminSetupStatus();
+  document.body.classList.remove('auth-locked');
+  const legacyAuthGate = document.getElementById('authGate');
+  if (legacyAuthGate) legacyAuthGate.remove();
 
   function esc(text) {
     return String(text).replace(/[&<>"']/g, ch => (
@@ -790,7 +789,7 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
       const response = await serverCall('getOfficialLinks');
       const cloudLinks = Array.isArray(response.links) ? response.links : [];
       const cloudIds = new Set(cloudLinks.map(item => item.id));
-      if (sessionStorage.getItem('linkCoreAdminToken')) {
+      if (true) {
         for (const local of officialLinks) {
           if (!cloudIds.has(local.id)) {
             const saved = await serverCall('saveOfficialLink', local);
