@@ -252,11 +252,11 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
 <section id="authGate" class="auth-gate" aria-labelledby="authTitle">
   <form id="authForm" class="auth-card">
     <div class="auth-mark">LINK CORE / PRIVATE ACCESS</div>
-    <h1 id="authTitle">パスワードを入力</h1>
-    <p>このページを開くにはパスワードが必要です。</p>
-    <label for="authPassword">パスワード</label>
+    <h1 id="authTitle">管理者ログイン</h1>
+    <p>リンクの追加・編集・削除を行うには管理者パスワードが必要です。</p>
+    <label for="authPassword">管理者パスワード</label>
     <input id="authPassword" type="password" autocomplete="current-password" required autofocus>
-    <button type="submit">ロックを解除</button>
+    <button type="submit">管理者としてログイン</button>
     <div id="authError" class="auth-error" role="alert" aria-live="polite"></div>
   </form>
 </section>
@@ -341,36 +341,6 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
 <script>
 (() => {
   'use strict';
-  // 注意：これはブラウザ側の簡易ロックです。パスワードは公開HTMLから確認できるため、機密情報の保護には使えません。
-  const INITIAL_PASSWORD = 'Morigu0812';
-  const AUTH_KEY = 'myLinksUnlocked';
-  const gate = document.getElementById('authGate');
-  const form = document.getElementById('authForm');
-  const field = document.getElementById('authPassword');
-  const error = document.getElementById('authError');
-  if (sessionStorage.getItem(AUTH_KEY) === 'yes') {
-    document.body.classList.remove('auth-locked');
-    gate.remove();
-  }
-  form.addEventListener('submit', event => {
-    event.preventDefault();
-    if (field.value === INITIAL_PASSWORD) {
-      sessionStorage.setItem(AUTH_KEY, 'yes');
-      document.body.classList.remove('auth-locked');
-      gate.remove();
-      location.reload();
-    } else {
-      error.textContent = 'パスワードが違います。もう一度入力してください。';
-      field.select();
-    }
-  });
-})();
-</script>
-
-<script>
-(() => {
-  'use strict';
-  if (sessionStorage.getItem('myLinksUnlocked') !== 'yes') return;
 
   const $ = id => document.getElementById(id);
   const finderWindow = $('finderWindow');
@@ -475,6 +445,9 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
   }
 
   function serverCall(method, ...args) {
+    if (['saveLink', 'toggleFavorite', 'deleteLink', 'saveOfficialLink', 'deleteOfficialLink'].includes(method)) {
+      args.push(sessionStorage.getItem('linkCoreAdminToken') || '');
+    }
     return waitForBridge().then(() => new Promise((resolve, reject) => {
       const id = (crypto.randomUUID && crypto.randomUUID()) || String(Date.now() + Math.random());
       const timer = setTimeout(() => {
@@ -496,6 +469,34 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
       }
     }));
   }
+
+  // 管理者認証はGAS側で検証し、サーバー側で期限管理するトークンを受け取る。
+  const AUTH_KEY = 'myLinksUnlocked';
+  const ADMIN_TOKEN_KEY = 'linkCoreAdminToken';
+  const authGate = $('authGate');
+  const authForm = $('authForm');
+  const authField = $('authPassword');
+  const authError = $('authError');
+
+  if (sessionStorage.getItem(AUTH_KEY) === 'yes' && sessionStorage.getItem(ADMIN_TOKEN_KEY)) {
+    document.body.classList.remove('auth-locked');
+    if (authGate) authGate.remove();
+  }
+
+  authForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    authError.textContent = '認証中…';
+    try {
+      const result = await serverCall('authenticateAdmin', authField.value);
+      if (!result || !result.token) throw new Error('認証トークンを受け取れませんでした。');
+      sessionStorage.setItem(ADMIN_TOKEN_KEY, result.token);
+      sessionStorage.setItem(AUTH_KEY, 'yes');
+      location.reload();
+    } catch (error) {
+      authError.textContent = error.message || 'ログインに失敗しました。';
+      authField.select();
+    }
+  });
 
   function esc(text) {
     return String(text).replace(/[&<>"']/g, ch => (
@@ -731,10 +732,12 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
       const response = await serverCall('getOfficialLinks');
       const cloudLinks = Array.isArray(response.links) ? response.links : [];
       const cloudIds = new Set(cloudLinks.map(item => item.id));
-      for (const local of officialLinks) {
-        if (!cloudIds.has(local.id)) {
-          const saved = await serverCall('saveOfficialLink', local);
-          (Array.isArray(saved.links) ? saved.links : []).forEach(item => cloudIds.add(item.id));
+      if (sessionStorage.getItem('linkCoreAdminToken')) {
+        for (const local of officialLinks) {
+          if (!cloudIds.has(local.id)) {
+            const saved = await serverCall('saveOfficialLink', local);
+            (Array.isArray(saved.links) ? saved.links : []).forEach(item => cloudIds.add(item.id));
+          }
         }
       }
       const latest = await serverCall('getOfficialLinks');
