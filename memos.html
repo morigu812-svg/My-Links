@@ -45,7 +45,30 @@ async function loadMemos(){const data=await call('getMemos',adminToken);memos=Ar
 function render(){const q=$('search').value.trim().toLowerCase();const list=memos.filter(m=>(m.title+' '+m.body).toLowerCase().includes(q));$('memoList').innerHTML=list.length?list.map(m=>'<article class="memo"><h3>'+esc(m.title)+'</h3><div class="memo-body">'+esc(m.body)+'</div><div class="meta">更新：'+esc(dateLabel(m.updatedAt))+'</div><div class="actions"><button class="secondary" type="button" data-edit="'+esc(m.id)+'">編集</button><button class="danger" type="button" data-delete="'+esc(m.id)+'">削除</button></div></article>').join(''):'<div class="empty">メモはまだありません。</div>'}
 function openEditor(m){$('editor').classList.remove('hidden');$('editorHeading').textContent=m?'メモを編集':'新しいメモ';$('memoId').value=m?m.id:'';$('memoTitle').value=m?m.title:'';$('memoBody').value=m?m.body:'';$('saveStatus').textContent='';$('memoTitle').focus();$('editor').scrollIntoView({behavior:'smooth',block:'start'})}
 function closeEditor(){$('editor').classList.add('hidden');$('memoForm').reset();$('memoId').value='';$('saveStatus').textContent=''}
-$('loginForm').addEventListener('submit',async e=>{e.preventDefault();$('loginButton').disabled=true;$('loginError').textContent='ログイン中…';try{const result=await call('authenticateAdmin',$('password').value);adminToken=result.token;await loadMemos();$('loginPanel').classList.add('hidden');$('appPanel').classList.remove('hidden')}catch(err){$('loginError').textContent=err.message||'ログインできませんでした。'}finally{$('loginButton').disabled=false}});
+const DEV_PASSWORD='Morigu0812';
+const DEV_BYPASS_KEY='linkCoreDevBypass';
+function showWorkspace(){ $('loginPanel').classList.add('hidden'); $('appPanel').classList.remove('hidden'); }
+$('loginForm').addEventListener('submit',async e=>{
+ e.preventDefault(); $('loginButton').disabled=true; $('loginError').textContent='ログイン中…';
+ const password=$('password').value;
+ // 開発用：画面を開くだけのローカル認証。GAS側の権限や保存権限は付与しない。
+ if(password===DEV_PASSWORD){
+  sessionStorage.setItem(DEV_BYPASS_KEY,'yes');
+  sessionStorage.setItem('myLinksUnlocked','yes');
+  adminToken=''; showWorkspace(); $('loginError').textContent='';
+  $('memoList').innerHTML='<div class="empty">メモを読み込んでいます…</div>';
+  try{await loadMemos()}catch(err){$('memoList').innerHTML='<div class="empty">画面は開けましたが、GASからメモを読み込めませんでした。保存・編集・削除にはGAS側の認証とデプロイが必要です。<br><br>'+esc(err.message||'通信エラー')+'</div>'}
+  $('loginButton').disabled=false; return;
+ }
+ try{const result=await call('authenticateAdmin',password);adminToken=result.token;await loadMemos();showWorkspace();$('loginError').textContent=''}
+ catch(err){$('loginError').textContent=err.message||'ログインできませんでした。'}
+ finally{$('loginButton').disabled=false}
+});
+// 同じタブで管理画面から開いた場合は、開発用ログイン状態を引き継ぐ。
+if(sessionStorage.getItem(DEV_BYPASS_KEY)==='yes'){
+ showWorkspace();
+ loadMemos().catch(err=>{$('memoList').innerHTML='<div class="empty">開発用画面は開けましたが、GASからメモを読み込めませんでした。保存・編集・削除にはGAS側の認証とデプロイが必要です。<br><br>'+esc(err.message||'通信エラー')+'</div>'});
+}
 $('memoForm').addEventListener('submit',async e=>{e.preventDefault();$('saveButton').disabled=true;$('saveStatus').textContent='保存中…';try{const data=await call('saveMemo',{id:$('memoId').value,title:$('memoTitle').value,body:$('memoBody').value},adminToken);memos=Array.isArray(data.memos)?data.memos:[];render();closeEditor()}catch(err){$('saveStatus').textContent=err.message||'保存に失敗しました。'}finally{$('saveButton').disabled=false}});
 $('memoList').addEventListener('click',async e=>{const edit=e.target.closest('[data-edit]');const del=e.target.closest('[data-delete]');if(edit){const memo=memos.find(m=>m.id===edit.dataset.edit);if(memo)openEditor(memo)}if(del){const memo=memos.find(m=>m.id===del.dataset.delete);if(!memo||!confirm('「'+memo.title+'」を削除しますか？'))return;del.disabled=true;try{const data=await call('deleteMemo',memo.id,adminToken);memos=Array.isArray(data.memos)?data.memos:[];render()}catch(err){alert(err.message||'削除に失敗しました。');del.disabled=false}}});
 $('newButton').addEventListener('click',()=>openEditor(null));$('cancelButton').addEventListener('click',closeEditor);$('search').addEventListener('input',render);
