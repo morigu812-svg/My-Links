@@ -237,6 +237,26 @@ function setupAdminPassword(setupCode, password) {
  * 管理者パスワードで認証し、短時間有効なサーバー側トークンを発行する。
  * パスワードは初回設定画面から登録され、Apps Script のスクリプトプロパティに保存される。
  */
+
+/** 利用者ページの共有パスワードを検証して閲覧専用トークンを発行する。 */
+function authenticateVisitor(password) {
+  const expected = PropertiesService.getScriptProperties().getProperty('LINK_CORE_VISITOR_PASSWORD');
+  if (!expected) throw new Error('利用者用パスワードが未設定です。管理者が設定を完了するまでお待ちください。');
+  if (typeof password !== 'string' || !password || password !== expected) {
+    throw new Error('サイトのパスワードが違います。');
+  }
+  const token = Utilities.getUuid() + Utilities.getUuid();
+  CacheService.getScriptCache().put('LINK_CORE_VISITOR_' + token, 'yes', 21600);
+  return { ok: true, token: token, expiresIn: 21600 };
+}
+
+function requireLinkViewer_(token) {
+  if (typeof token === 'string' && token &&
+      (CacheService.getScriptCache().get('LINK_CORE_ADMIN_' + token) === 'yes' ||
+       CacheService.getScriptCache().get('LINK_CORE_VISITOR_' + token) === 'yes')) return;
+  throw new Error('閲覧にはサイトのパスワード認証が必要です。');
+}
+
 function authenticateAdmin(password) {
   const expected = PropertiesService.getScriptProperties().getProperty('LINK_CORE_ADMIN_PASSWORD');
   if (!expected) throw new Error('管理者パスワードが未設定です。Apps Scriptのスクリプトプロパティ LINK_CORE_ADMIN_PASSWORD を設定してください。');
@@ -259,7 +279,8 @@ function requireAdmin_(token) {
 /**
  * 画面表示用に全リンクを返す。
  */
-function getLinks() {
+function getLinks(viewerToken) {
+  requireLinkViewer_(viewerToken);
   const sheet = ensureSheet_();
   return readLinks_(sheet, getColumnMap_(sheet));
 }
