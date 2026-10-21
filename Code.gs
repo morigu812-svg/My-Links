@@ -251,7 +251,7 @@ function requireLinkViewer_(token) {
 
 function authenticateAdmin(password) {
   const expected = PropertiesService.getScriptProperties().getProperty('LINK_CORE_ADMIN_PASSWORD');
-  if (!expected) throw new Error('管理者パスワードが未設定です。Apps Scriptのスクリプトプロパティ LINK_CORE_ADMIN_PASSWORD を設定してください。');
+  if (!expected) throw new Error('管理者パスワードが未設定です。管理者ページの初回セットアップから設定してください。設定画面が出ない場合は、GASを最新版に再デプロイしてください。');
   if (typeof password !== 'string' || !password || password !== expected) {
     throw new Error('管理者パスワードが違います。');
   }
