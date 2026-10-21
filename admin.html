@@ -529,6 +529,13 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
 
   authForm.addEventListener('submit', async event => {
     event.preventDefault();
+    // 開発用の仮パスワード。公開HTMLから閲覧できるため、本番利用は禁止。
+    if (authField.value === 'Morigu0812') {
+      document.body.classList.remove('auth-locked');
+      if (authGate) authGate.remove();
+      sessionStorage.setItem(AUTH_KEY, 'yes');
+      return;
+    }
     authError.textContent = setupMode ? 'パスワードを設定中…' : '認証中…';
     authSubmit.disabled = true;
     try {
@@ -551,9 +558,6 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
     }
   });
 
-  document.body.classList.remove('auth-locked');
-  const legacyAuthGate = document.getElementById('authGate');
-  if (legacyAuthGate) legacyAuthGate.remove();
 
   function esc(text) {
     return String(text).replace(/[&<>"']/g, ch => (
