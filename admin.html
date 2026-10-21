@@ -479,6 +479,8 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
   // 管理者パスワードと利用者ページ用パスワードを初回に設定する。
   const AUTH_KEY = 'myLinksUnlocked';
   const ADMIN_TOKEN_KEY = 'linkCoreAdminToken';
+  // 開発用の画面表示バイパス。公開HTMLで確認できるため、本番では必ず削除する。
+  const DEV_BYPASS_KEY = 'linkCoreDevBypass';
   const authGate = $('authGate');
   const authForm = $('authForm');
   const authField = $('authPassword');
@@ -493,7 +495,10 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
   const visitorPasswordConfirmField = $('visitorPasswordConfirm');
   let setupMode = false;
 
-  if (sessionStorage.getItem(AUTH_KEY) === 'yes' && sessionStorage.getItem(ADMIN_TOKEN_KEY)) {
+  if (
+    (sessionStorage.getItem(AUTH_KEY) === 'yes' && sessionStorage.getItem(ADMIN_TOKEN_KEY)) ||
+    sessionStorage.getItem(DEV_BYPASS_KEY) === 'yes'
+  ) {
     document.body.classList.remove('auth-locked');
     if (authGate) authGate.remove();
   }
@@ -530,11 +535,13 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
 
   authForm.addEventListener('submit', async event => {
     event.preventDefault();
-    // 開発用の仮パスワード。公開HTMLから閲覧できるため、本番利用は禁止。
+    // 開発用の簡易ログイン。HTMLからパスワードを確認できるため、開発中のみ使用。
+    // これは画面を開くだけで、GAS側の認証・データ更新権限は付与しない。
     if (authField.value === 'Morigu0812') {
       document.body.classList.remove('auth-locked');
       if (authGate) authGate.remove();
       sessionStorage.setItem(AUTH_KEY, 'yes');
+      sessionStorage.setItem(DEV_BYPASS_KEY, 'yes');
       return;
     }
     authError.textContent = setupMode ? 'パスワードを設定中…' : '認証中…';
