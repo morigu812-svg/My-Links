@@ -195,18 +195,15 @@ function readLinks_(sheet, columns) {
  * 初回設定状態を返す。パスワード自体は返さない。
  */
 function getAdminSetupStatus() {
-  const props = PropertiesService.getScriptProperties();
   return {
-    configured: !!props.getProperty('LINK_CORE_ADMIN_PASSWORD'),
-    setupAvailable: !!props.getProperty('LINK_CORE_SETUP_CODE')
+    configured: !!PropertiesService.getScriptProperties().getProperty('LINK_CORE_ADMIN_PASSWORD')
   };
 }
 
 /**
- * サイトから初回の管理者パスワードを登録する。
- * 初回設定コードは一度だけ使え、登録後にサーバー側から削除する。
+ * 管理者画面から初回のみ、管理者パスワードと利用者用パスワードを設定する。
  */
-function setupAdminPassword(setupCode, password) {
+function setupAdminPassword(password, visitorPassword) {
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
@@ -214,19 +211,14 @@ function setupAdminPassword(setupCode, password) {
     if (props.getProperty('LINK_CORE_ADMIN_PASSWORD')) {
       throw new Error('管理者パスワードは既に設定されています。ログインしてください。');
     }
-    const expectedCode = props.getProperty('LINK_CORE_SETUP_CODE');
-    if (!expectedCode) {
-      throw new Error('初回設定コードが未設定です。管理者がApps Scriptのスクリプトプロパティに LINK_CORE_SETUP_CODE を登録してください。');
+    if (typeof password !== 'string' || password.length < 12 || password.length > 200) {
+      throw new Error('管理者パスワードは12〜200文字にしてください。');
     }
-    if (typeof setupCode !== 'string' || setupCode !== expectedCode) {
-      throw new Error('初回設定コードが違います。');
+    if (typeof visitorPassword !== 'string' || visitorPassword.length < 8 || visitorPassword.length > 200) {
+      throw new Error('利用者用パスワードは8〜200文字にしてください。');
     }
-    if (typeof password !== 'string' || password.length < 12) {
-      throw new Error('管理者パスワードは12文字以上にしてください。');
-    }
-    if (password.length > 200) throw new Error('パスワードが長すぎます。');
     props.setProperty('LINK_CORE_ADMIN_PASSWORD', password);
-    props.deleteProperty('LINK_CORE_SETUP_CODE');
+    props.setProperty('LINK_CORE_VISITOR_PASSWORD', visitorPassword);
     return { ok: true };
   } finally {
     lock.releaseLock();
