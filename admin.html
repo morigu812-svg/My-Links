@@ -284,6 +284,7 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
       <button class="side-item" type="button" data-view="all"><span>▦</span> すべてのリンク</button>
       <div class="side-label">クイックアクセス</div>
       <button class="side-item" type="button" data-view="official"><span>✦</span> 公式リンク</button>
+      <button class="side-item" type="button" id="sideMemos"><span>▤</span> メモ帳</button>
       <div class="side-label">カテゴリ</div>
       <div id="sideCats" class="side-cats"></div>
       <div class="side-label">アクション</div>
@@ -722,6 +723,8 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
     updateSidebar();
     render();
   }));
+  $('sideMemos').addEventListener('click', () => { location.href = 'memos.html'; });
+
   $('sideAdd').addEventListener('click', () => {
     if (state.view === 'official') {
       state.view = 'all';
