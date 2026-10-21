@@ -192,6 +192,29 @@ function readLinks_(sheet, columns) {
 }
 
 /**
+ * 管理者パスワードで認証し、短時間有効なサーバー側トークンを発行する。
+ * パスワードは Apps Script のスクリプトプロパティ LINK_CORE_ADMIN_PASSWORD に保存する。
+ */
+function authenticateAdmin(password) {
+  const expected = PropertiesService.getScriptProperties().getProperty('LINK_CORE_ADMIN_PASSWORD');
+  if (!expected) throw new Error('管理者パスワードが未設定です。Apps Scriptのスクリプトプロパティ LINK_CORE_ADMIN_PASSWORD を設定してください。');
+  if (typeof password !== 'string' || !password || password !== expected) {
+    throw new Error('管理者パスワードが違います。');
+  }
+  const token = Utilities.getUuid() + Utilities.getUuid();
+  CacheService.getScriptCache().put('LINK_CORE_ADMIN_' + token, 'yes', 21600);
+  return { ok: true, token: token, expiresIn: 21600 };
+}
+
+/** 書き込み系関数は必ずサーバー側で管理者トークンを検証する。 */
+function requireAdmin_(token) {
+  if (typeof token !== 'string' || !token ||
+      CacheService.getScriptCache().get('LINK_CORE_ADMIN_' + token) !== 'yes') {
+    throw new Error('管理者ログインが必要です。ログインし直してください。');
+  }
+}
+
+/**
  * 画面表示用に全リンクを返す。
  */
 function getLinks() {
@@ -202,7 +225,8 @@ function getLinks() {
 /**
  * リンクを新規作成または更新する。
  */
-function saveLink(input) {
+function saveLink(input, adminToken) {
+  requireAdmin_(adminToken);
   if (!input || typeof input !== 'object') {
     throw new Error('リンクの入力内容がありません。');
   }
@@ -274,7 +298,8 @@ function saveLink(input) {
 /**
  * お気に入りだけを切り替える。
  */
-function toggleFavorite(id, favorite) {
+function toggleFavorite(id, favorite, adminToken) {
+  requireAdmin_(adminToken);
   const linkId = cleanText_(id, 200);
   if (!linkId) throw new Error('リンクIDがありません。');
 
@@ -309,7 +334,8 @@ function toggleFavorite(id, favorite) {
 /**
  * リンクを削除する。
  */
-function deleteLink(id) {
+function deleteLink(id, adminToken) {
+  requireAdmin_(adminToken);
   const linkId = cleanText_(id, 200);
   if (!linkId) throw new Error('削除するリンクIDがありません。');
 
@@ -385,7 +411,8 @@ function getOfficialLinks() {
   })) };
 }
 
-function saveOfficialLink(input) {
+function saveOfficialLink(input, adminToken) {
+  requireAdmin_(adminToken);
   if (!input || typeof input !== 'object') throw new Error('公式リンクの入力内容がありません。');
   const id = cleanText_(input.id, 200) || Utilities.getUuid();
   const name = cleanText_(input.name, 200), url = normalizeUrl_(input.url);
@@ -420,7 +447,8 @@ function saveOfficialLink(input) {
   } finally { lock.releaseLock(); }
 }
 
-function deleteOfficialLink(id) {
+function deleteOfficialLink(id, adminToken) {
+  requireAdmin_(adminToken);
   const linkId = cleanText_(id, 200);
   if (!linkId) throw new Error('削除する公式リンクIDがありません。');
   const lock = LockService.getScriptLock();
