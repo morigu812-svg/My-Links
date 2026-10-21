@@ -192,8 +192,50 @@ function readLinks_(sheet, columns) {
 }
 
 /**
+ * 初回設定状態を返す。パスワード自体は返さない。
+ */
+function getAdminSetupStatus() {
+  const props = PropertiesService.getScriptProperties();
+  return {
+    configured: !!props.getProperty('LINK_CORE_ADMIN_PASSWORD'),
+    setupAvailable: !!props.getProperty('LINK_CORE_SETUP_CODE')
+  };
+}
+
+/**
+ * サイトから初回の管理者パスワードを登録する。
+ * 初回設定コードは一度だけ使え、登録後にサーバー側から削除する。
+ */
+function setupAdminPassword(setupCode, password) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const props = PropertiesService.getScriptProperties();
+    if (props.getProperty('LINK_CORE_ADMIN_PASSWORD')) {
+      throw new Error('管理者パスワードは既に設定されています。ログインしてください。');
+    }
+    const expectedCode = props.getProperty('LINK_CORE_SETUP_CODE');
+    if (!expectedCode) {
+      throw new Error('初回設定コードが未設定です。管理者がApps Scriptのスクリプトプロパティに LINK_CORE_SETUP_CODE を登録してください。');
+    }
+    if (typeof setupCode !== 'string' || setupCode !== expectedCode) {
+      throw new Error('初回設定コードが違います。');
+    }
+    if (typeof password !== 'string' || password.length < 12) {
+      throw new Error('管理者パスワードは12文字以上にしてください。');
+    }
+    if (password.length > 200) throw new Error('パスワードが長すぎます。');
+    props.setProperty('LINK_CORE_ADMIN_PASSWORD', password);
+    props.deleteProperty('LINK_CORE_SETUP_CODE');
+    return { ok: true };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/**
  * 管理者パスワードで認証し、短時間有効なサーバー側トークンを発行する。
- * パスワードは Apps Script のスクリプトプロパティ LINK_CORE_ADMIN_PASSWORD に保存する。
+ * パスワードは初回設定画面から登録され、Apps Script のスクリプトプロパティに保存される。
  */
 function authenticateAdmin(password) {
   const expected = PropertiesService.getScriptProperties().getProperty('LINK_CORE_ADMIN_PASSWORD');
