@@ -518,3 +518,128 @@ function deleteOfficialLink(id, adminToken) {
     return getOfficialLinks();
   } finally { lock.releaseLock(); }
 }
+
+
+/* 独立メモ機能。既存の Links / OfficialLinks シートには触れず、Memos シートのみを利用する。 */
+const MEMOS_SHEET_NAME = 'Memos';
+const MEMOS_HEADERS = ['ID', 'タイトル', '本文', '作成日時', '更新日時'];
+
+function ensureMemosSheet_() {
+  const spreadsheetId = PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY);
+  if (!spreadsheetId) throw new Error('スプレッドシートIDが未設定です。');
+  const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+  let sheet = spreadsheet.getSheetByName(MEMOS_SHEET_NAME);
+  if (!sheet) sheet = spreadsheet.insertSheet(MEMOS_SHEET_NAME);
+  const lastColumn = sheet.getLastColumn();
+  if (lastColumn === 0) {
+    sheet.getRange(1, 1, 1, MEMOS_HEADERS.length).setValues([MEMOS_HEADERS]);
+  } else {
+    const existing = sheet.getRange(1, 1, 1, lastColumn).getDisplayValues()[0];
+    MEMOS_HEADERS.forEach(header => {
+      if (existing.indexOf(header) === -1) {
+        sheet.getRange(1, sheet.getLastColumn() + 1).setValue(header);
+        existing.push(header);
+      }
+    });
+  }
+  return sheet;
+}
+
+function getMemos(adminToken) {
+  requireAdmin_(adminToken);
+  const sheet = ensureMemosSheet_();
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return { memos: [] };
+  const width = sheet.getLastColumn();
+  const headers = sheet.getRange(1, 1, 1, width).getDisplayValues()[0];
+  const col = {};
+  headers.forEach((header, i) => { if (header) col[header] = i; });
+  ['ID', 'タイトル', '本文', '作成日時', '更新日時'].forEach(h => {
+    if (col[h] === undefined) throw new Error('必要な列がありません: ' + h);
+  });
+  const memos = sheet.getRange(2, 1, lastRow - 1, width).getValues()
+    .filter(row => row[col['ID']] !== '')
+    .map(row => ({
+      id: String(row[col['ID']] || ''),
+      title: String(row[col['タイトル']] || ''),
+      body: String(row[col['本文']] || ''),
+      createdAt: toIso_(row[col['作成日時']]),
+      updatedAt: toIso_(row[col['更新日時']])
+    }));
+  memos.sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
+  return { memos };
+}
+
+function saveMemo(input, adminToken) {
+  requireAdmin_(adminToken);
+  if (!input || typeof input !== 'object') throw new Error('メモの入力内容がありません。');
+  const title = cleanText_(input.title, 200);
+  const body = cleanText_(input.body, 20000);
+  if (!title) throw new Error('タイトルを入力してください。');
+  if (!body) throw new Error('本文を入力してください。');
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const sheet = ensureMemosSheet_();
+    const width = sheet.getLastColumn();
+    const headers = sheet.getRange(1, 1, 1, width).getDisplayValues()[0];
+    const col = {};
+    headers.forEach((h, i) => { if (h) col[h] = i; });
+    const id = cleanText_(input.id, 200) || Utilities.getUuid();
+    const now = new Date();
+    const lastRow = sheet.getLastRow();
+    let targetRow = 0;
+    let values = new Array(width).fill('');
+    let createdAt = now;
+
+    if (lastRow >= 2) {
+      const rows = sheet.getRange(2, 1, lastRow - 1, width).getValues();
+      for (let i = 0; i < rows.length; i++) {
+        if (String(rows[i][col['ID']] || '') === id) {
+          targetRow = i + 2;
+          values = rows[i];
+          createdAt = values[col['作成日時']] || now;
+          break;
+        }
+      }
+    }
+    if (!targetRow) targetRow = lastRow + 1;
+    values[col['ID']] = id;
+    values[col['タイトル']] = safeCell_(title);
+    values[col['本文']] = safeCell_(body);
+    values[col['作成日時']] = createdAt;
+    values[col['更新日時']] = now;
+    sheet.getRange(targetRow, 1, 1, width).setValues([values]);
+    return getMemos(adminToken);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function deleteMemo(id, adminToken) {
+  requireAdmin_(adminToken);
+  const memoId = cleanText_(id, 200);
+  if (!memoId) throw new Error('削除するメモIDがありません。');
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const sheet = ensureMemosSheet_();
+    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getDisplayValues()[0];
+    const idColumn = headers.indexOf('ID') + 1;
+    if (!idColumn) throw new Error('メモID列がありません。');
+    const lastRow = sheet.getLastRow();
+    if (lastRow >= 2) {
+      const ids = sheet.getRange(2, idColumn, lastRow - 1, 1).getDisplayValues();
+      for (let i = ids.length - 1; i >= 0; i--) {
+        if (ids[i][0] === memoId) {
+          sheet.deleteRow(i + 2);
+          break;
+        }
+      }
+    }
+    return getMemos(adminToken);
+  } finally {
+    lock.releaseLock();
+  }
+}
