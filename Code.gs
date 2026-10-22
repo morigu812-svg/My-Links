@@ -203,27 +203,7 @@ function getAdminSetupStatus() {
 /**
  * 管理者画面から初回のみ、管理者パスワードと利用者用パスワードを設定する。
  */
-function setupAdminPassword(password, visitorPassword) {
-  const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
-  try {
-    const props = PropertiesService.getScriptProperties();
-    if (props.getProperty('LINK_CORE_ADMIN_PASSWORD')) {
-      throw new Error('管理者パスワードは既に設定されています。ログインしてください。');
-    }
-    if (typeof password !== 'string' || password.length < 12 || password.length > 200) {
-      throw new Error('管理者パスワードは12〜200文字にしてください。');
-    }
-    if (typeof visitorPassword !== 'string' || visitorPassword.length < 8 || visitorPassword.length > 200) {
-      throw new Error('利用者用パスワードは8〜200文字にしてください。');
-    }
-    props.setProperty('LINK_CORE_ADMIN_PASSWORD', password);
-    props.setProperty('LINK_CORE_VISITOR_PASSWORD', visitorPassword);
-    return { ok: true };
-  } finally {
-    lock.releaseLock();
-  }
-}
+// 初期パスワードはブラウザーから設定しない。管理者が Apps Script のスクリプト プロパティで登録する。
 
 /**
  * 管理者パスワードで認証し、短時間有効なサーバー側トークンを発行する。
