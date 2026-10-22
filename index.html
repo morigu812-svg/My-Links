@@ -40,8 +40,7 @@ function isGasOrigin(origin){if(origin==='https://script.google.com'||origin==='
 window.addEventListener('message',event=>{if(!isGasOrigin(event.origin))return;const d=event.data;if(!d||typeof d!=='object')return;if(d.type==='DAILY_CORE_BRIDGE_READY'){bridgeWindow=event.source;bridgeOrigin=event.origin;readyResolve();return}if(d.type==='DAILY_CORE_RESPONSE'&&pending.has(d.id)){const p=pending.get(d.id);pending.delete(d.id);d.ok?p.resolve(d.result):p.reject(new Error(d.error||'通信エラー'))}});
 frame.src=GAS_URL+'?mode=bridge';
 function call(method,...args){return bridgeReady.then(()=>new Promise((resolve,reject)=>{const id=(crypto.randomUUID&&crypto.randomUUID())||String(Date.now()+Math.random());const timer=setTimeout(()=>{pending.delete(id);reject(new Error('サーバーから応答がありません。GASの再デプロイを確認してください。'))},15000);pending.set(id,{resolve:v=>{clearTimeout(timer);resolve(v)},reject:e=>{clearTimeout(timer);reject(e)}});bridgeWindow.postMessage({type:'DAILY_CORE_REQUEST',id,method,args},bridgeOrigin)}))}
-const $=id=>document.getElementById(id);let links=[];
-function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+const $=id=>document.getElementById(id);
 let links=[],categories=[],view='all',selectedCategory='';
 function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function visibleLinks(){
