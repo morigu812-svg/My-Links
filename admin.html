@@ -842,7 +842,7 @@ body:not(.night-mode) .sidebar .side-item.active{
   }
 
   function serverCall(method, ...args) {
-    if (['getLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'saveOfficialLink', 'deleteOfficialLink'].includes(method)) {
+    if (['getLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'saveOfficialLink', 'deleteOfficialLink', 'getMemos', 'saveMemo', 'deleteMemo'].includes(method)) {
       args.push(sessionStorage.getItem(ADMIN_TOKEN_KEY) || '');
     }
     return waitForBridge().then(() => new Promise((resolve, reject) => {
@@ -1140,6 +1140,18 @@ body:not(.night-mode) .sidebar .side-item.active{
       memoFrame.contentWindow.postMessage({ type: 'LINK_CORE_ADMIN_TOKEN', token }, location.origin);
     }
   }
+  // Embedded memo workspace must use this top page's GAS bridge (bridge.html talks to window.top).
+  window.addEventListener('message', async event => {
+    if (event.origin !== location.origin || event.source !== memoFrame.contentWindow) return;
+    const data = event.data;
+    if (!data || data.type !== 'LINK_CORE_MEMO_REQUEST' || typeof data.id !== 'string') return;
+    try {
+      const result = await serverCall(data.method, ...(Array.isArray(data.args) ? data.args : []));
+      memoFrame.contentWindow.postMessage({type:'LINK_CORE_MEMO_RESPONSE', id:data.id, ok:true, result}, location.origin);
+    } catch (error) {
+      memoFrame.contentWindow.postMessage({type:'LINK_CORE_MEMO_RESPONSE', id:data.id, ok:false, error:error && error.message ? error.message : String(error)}, location.origin);
+    }
+  });
   function closeIntegratedMemos() {
     memoOverlay.classList.remove('open');
     document.body.style.overflow = '';
