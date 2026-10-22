@@ -11,7 +11,8 @@ const HEADERS = [
   'メモ',
   'お気に入り',
   '作成日時',
-  '更新日時'
+  '更新日時',
+  '利用者に公開'
 ];
 
 /**
@@ -164,6 +165,7 @@ function rowToLink_(row, columns) {
     category: String(get('カテゴリ') || ''),
     memo: String(get('メモ') || ''),
     favorite: favorite === true || String(favorite).toLowerCase() === 'true',
+    visibleToVisitors: get('利用者に公開') === false || String(get('利用者に公開')).toLowerCase() === 'false' ? false : true,
     createdAt: toIso_(get('作成日時')),
     updatedAt: toIso_(get('更新日時'))
   };
@@ -310,6 +312,7 @@ function saveLink(input, adminToken) {
       'カテゴリ': safeCell_(category),
       'メモ': safeCell_(memo),
       'お気に入り': input.favorite === true,
+      '利用者に公開': input.visibleToVisitors !== false,
       '作成日時': createdAt,
       '更新日時': now
     };
