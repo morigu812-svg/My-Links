@@ -163,6 +163,40 @@ body.dim-mode::after{background:rgba(0,0,8,.34)!important}
 ::selection{background:#35d8ff55!important;color:#fff!important}
 @media(max-width:520px){body{background:#070b13!important}.finder-window{border-color:#263b55!important}}
 
+
+/* Force the public LINKS window (not only the page body) to match admin cyber theme */
+#loginPanel,#linksPanel,.finder-window{
+ background:#080e18!important;
+ color:#e8f0fa!important;
+ border:1px solid #263b55!important;
+ box-shadow:0 0 0 1px #52bfff0b,0 0 26px #168bd018,0 28px 80px #000b!important;
+}
+#loginPanel .finder-toolbar,#linksPanel .finder-toolbar{
+ background:linear-gradient(100deg,#101a2b,#0b1220 65%,#11182a)!important;
+ border-bottom:1px solid #263c59!important;
+}
+#linksPanel .finder-layout{background:#080e18!important}
+#linksPanel .sidebar{background:linear-gradient(180deg,#0b1422,#080e18)!important;border-right:1px solid #203650!important}
+#linksPanel .finder-content{background:linear-gradient(145deg,#080e18,#0b1220)!important;color:#e8f0fa!important}
+#linksPanel .content-heading{border-bottom:1px solid #263b55!important}
+#linksPanel .content-heading h1{color:#e1f4ff!important}
+#linksPanel .content-heading p,#linksPanel .count{color:#9aacc2!important}
+#linksPanel .list-heading{color:#8fa5bb!important;border-bottom:1px solid #263b55!important}
+#linksPanel .item{
+ background:linear-gradient(145deg,#0e1928,#0a111d)!important;
+ color:#e8f0fa!important;border:1px solid #263e59!important;
+ box-shadow:inset 0 1px #ffffff08!important;
+}
+#linksPanel .item:hover{background:linear-gradient(145deg,#12243a,#0c1727)!important;border-color:#36c9f5!important;box-shadow:0 5px 24px #0005,0 0 16px #24bde510!important}
+#linksPanel .item a{color:#83e7ff!important}
+#linksPanel .item .url,#linksPanel .item .memo{color:#9aacc2!important}
+#linksPanel .item .category{background:#11263a!important;border:1px solid #294f70!important;color:#8adfff!important}
+#linksPanel .item-arrow{color:#8adfff!important}
+#linksPanel .empty{background:#0a1320!important;border:1px solid #315779!important;color:#9aacc2!important}
+#linksPanel .status:not(:empty){background:linear-gradient(100deg,#082034,#0a1323)!important;color:#a9eaff!important;border:1px solid #23678a!important;border-left:3px solid #35d8ff!important;border-radius:7px!important}
+#loginPanel .login-row input{background:#060c16!important;border:1px solid #294560!important;color:#e8f0fa!important}
+#loginPanel .login-row button{background:linear-gradient(135deg,#087fa9,#244caa)!important;border:1px solid #28c9f4!important;color:#f3fcff!important}
+
 </style>
 </head>
 <body>
