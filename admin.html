@@ -361,6 +361,14 @@ body:not(.night-mode) .auth-error{color:#b4232d}
  body:not(.night-mode) .item .acts button{font-size:10px;padding:5px 3px}
 }
 
+
+/* 統合メモ帳 */
+.memo-overlay{position:fixed;inset:0;z-index:10000;background:#080b12;display:none;flex-direction:column}
+.memo-overlay.open{display:flex}
+.memo-overlay-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 18px;background:#101827;border-bottom:1px solid #2a3d50}
+.memo-overlay-title{font-weight:800;color:#f4f8fc}
+.memo-overlay-close{border:1px solid #41586c;border-radius:9px;padding:8px 13px;background:#172536;color:#f4f8fc;cursor:pointer}
+.memo-overlay-frame{flex:1;width:100%;border:0;background:#08090c}
 </style>
 </head>
 <body>
@@ -830,7 +838,30 @@ body:not(.night-mode) .auth-error{color:#b4232d}
     updateSidebar();
     render();
   }));
-  $('sideMemos').addEventListener('click', () => { location.href = 'memos.html'; });
+  
+  const memoOverlay = $('memoOverlay');
+  const memoFrame = $('memoFrame');
+  function openIntegratedMemos() {
+    const token = sessionStorage.getItem(ADMIN_TOKEN_KEY);
+    if (!token) { alert('先に管理者ログインをしてください。'); return; }
+    memoOverlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    if (memoFrame.src === 'about:blank' || !memoFrame.src.includes('memos.html?embedded=1')) {
+      memoFrame.onload = () => {
+        memoFrame.contentWindow.postMessage({ type: 'LINK_CORE_ADMIN_TOKEN', token }, location.origin);
+      };
+      memoFrame.src = 'memos.html?embedded=1';
+    } else {
+      memoFrame.contentWindow.postMessage({ type: 'LINK_CORE_ADMIN_TOKEN', token }, location.origin);
+    }
+  }
+  function closeIntegratedMemos() {
+    memoOverlay.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  $('sideMemos').addEventListener('click', openIntegratedMemos);
+  $('closeMemoOverlay').addEventListener('click', closeIntegratedMemos);
+
 
   $('sideAdd').addEventListener('click', () => {
     if (state.view === 'official') {
@@ -986,5 +1017,9 @@ body:not(.night-mode) .auth-error{color:#b4232d}
 })();
 </script>
 <a href="index.html" style="position:fixed;right:18px;bottom:18px;z-index:9999;padding:10px 14px;border:1px solid #444;border-radius:12px;background:#111;color:#eee;text-decoration:none;font:13px system-ui">利用者ページへ ↗</a>
+<section id="memoOverlay" class="memo-overlay" aria-label="統合メモ帳">
+  <div class="memo-overlay-head"><span class="memo-overlay-title">LINK CORE / メモ帳</span><button id="closeMemoOverlay" class="memo-overlay-close" type="button">← リンク管理に戻る</button></div>
+  <iframe id="memoFrame" class="memo-overlay-frame" title="メモ帳" src="about:blank"></iframe>
+</section>
 </body>
 </html>
