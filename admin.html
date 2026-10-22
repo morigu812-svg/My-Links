@@ -1152,6 +1152,17 @@ body:not(.night-mode) .sidebar .side-item.active{
       memoFrame.contentWindow.postMessage({type:'LINK_CORE_MEMO_RESPONSE', id:data.id, ok:false, error:error && error.message ? error.message : String(error)}, location.origin);
     }
   });
+  window.addEventListener('message', async event => {
+    if (event.origin !== location.origin || event.source !== memoFrame.contentWindow) return;
+    const data = event.data;
+    if (!data || data.type !== 'LINK_CORE_MEMO_REQUEST' || typeof data.id !== 'string') return;
+    try {
+      const result = await serverCall(data.method, ...(Array.isArray(data.args) ? data.args : []));
+      memoFrame.contentWindow.postMessage({type:'LINK_CORE_MEMO_RESPONSE', id:data.id, ok:true, result}, location.origin);
+    } catch (error) {
+      memoFrame.contentWindow.postMessage({type:'LINK_CORE_MEMO_RESPONSE', id:data.id, ok:false, error:error && error.message ? error.message : String(error)}, location.origin);
+    }
+  });
   function closeIntegratedMemos() {
     memoOverlay.classList.remove('open');
     document.body.style.overflow = '';
