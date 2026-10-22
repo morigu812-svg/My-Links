@@ -68,6 +68,45 @@ body.fit-screen .finder-content{min-height:calc(100vh - 58px)}
 /* 暗所モードボタンを左下に固定 */
 .mode-toggle{left:18px!important;right:auto!important;bottom:18px!important}
 @media(max-width:720px){.mode-toggle{left:10px!important;right:auto!important;bottom:10px!important}}
+
+/* === LINK CORE / OFFICIAL PAGE CYBER RESTORE === */
+:root{--core-line:#294b4b;--core-jade:#72d7b6;--core-cyan:#83dce0;--core-panel:#091112}
+body{position:relative;isolation:isolate;background:radial-gradient(ellipse at 50% -12%,#183a3b 0,transparent 48%),radial-gradient(ellipse at 100% 35%,#152329 0,transparent 32%),#050809!important}
+body::before{opacity:.26;background-image:linear-gradient(#6bdac00d 1px,transparent 1px),linear-gradient(90deg,#6bdac00d 1px,transparent 1px);background-size:28px 28px}
+.finder-window{border:1px solid #345653!important;border-radius:14px;box-shadow:0 0 0 1px #75d9bd0b,0 0 28px #3bbca51a,0 28px 80px #000b!important}
+.finder-toolbar{background:linear-gradient(100deg,#101b1b,#0b1116 65%,#11151b)!important;border-bottom:1px solid #31504b!important}
+.finder-title{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.16em!important;color:#c7f5e5!important;text-shadow:0 0 12px #63d9b52a}
+.traffic-lights .traffic-green{box-shadow:0 0 0 1px #0008,0 0 10px #42dc7860!important}
+.sidebar{background:linear-gradient(180deg,#0a1213,#080d0f)!important;border-right:1px solid #263e3c!important}
+.side-label{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;letter-spacing:.2em!important;color:#72bca8!important}
+.side-item{border-radius:6px!important;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.015em}
+.side-item.selected{border-color:#477c6d!important;background:linear-gradient(90deg,#142c27,#101d1c)!important;box-shadow:inset 2px 0 #75d7b5,0 0 15px #55c9a20b!important}
+.finder-content{background:linear-gradient(145deg,#090f10,#080d10 60%,#0a1012)!important}
+.content-heading{position:relative;border-bottom:1px solid #2c4744!important}
+.content-heading::after{content:"";position:absolute;bottom:-1px;left:0;width:90px;height:1px;background:#79d6b6;box-shadow:0 0 9px #79d6b6}
+.content-heading h1{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:-.04em!important;text-shadow:0 0 16px #72d7b51a!important}
+.content-heading p{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.035em}
+.list-heading{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.16em;text-transform:uppercase;border-color:#233b39!important}
+.item{position:relative;overflow:hidden;background:linear-gradient(145deg,#0d1717,#0a1113)!important;border:1px solid #2a4542!important;border-radius:8px!important;transition:transform .18s,border-color .18s,box-shadow .18s!important}
+.item::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:#4d9d86;opacity:.55}
+.item:hover{transform:translateY(-2px);background:linear-gradient(145deg,#11201e,#0b1416)!important;border-color:#70bda7!important;box-shadow:0 5px 24px #0005,0 0 16px #5ad1ad12!important}
+.item a{color:#9cdbd2!important;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.item a:hover{color:#d5fff0!important;text-shadow:0 0 9px #72d7b55a!important}
+.url{color:#829b96!important;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.category{background:#11201d!important;border-color:#35564c!important;color:#9bd7bf!important;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.memo{color:#b0c0ba!important}
+.empty{border-color:#34504c!important;background:#0a1213!important;color:#8eaaa2!important}
+.mode-toggle{background:#091111f2!important;border-color:#426d60!important;color:#b9f0d8!important;box-shadow:0 0 20px #4ec7a316!important;font-family:ui-monospace,SFMono-Regular,Menlo,monospace!important;letter-spacing:.02em}
+.mode-toggle:hover{border-color:#80d9b8!important;box-shadow:0 0 22px #4ec7a32c!important}
+.status{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+footer{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.06em}
+a.admin{color:#7faaa0!important}
+.login-body{background:linear-gradient(145deg,#0c1515,#080e10)!important}
+.login-body h1{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#d8f6eb!important}
+.login-body label{color:#9cbab0!important}
+.login-row button{background:linear-gradient(135deg,#214c40,#19352f)!important;border-color:#548b76!important;box-shadow:0 0 15px #5bc9a010}
+@media(max-width:720px){.finder-window{border-radius:11px}.finder-layout{grid-template-columns:1fr}.sidebar{border-bottom:1px solid #263e3c!important}.finder-content{padding:18px 14px}}
+
 </style>
 </head>
 <body>
