@@ -49,26 +49,16 @@ footer a{color:#55eaff!important}
 .traffic-lights{gap:8px}
 .traffic-lights .traffic-green{display:block;width:12px;height:12px;min-width:12px;padding:0;border:0;border-radius:50%;background:#28c840;box-shadow:inset 0 1px 1px rgba(255,255,255,.55),0 0 0 1px rgba(0,0,0,.14),0 0 10px rgba(40,200,64,.25);cursor:pointer}
 .traffic-lights .traffic-green:hover{transform:scale(1.12);box-shadow:0 0 0 2px rgba(40,200,64,.25),0 0 15px rgba(40,200,64,.65)}
-.traffic-lights .traffic-green:focus-visible{outline:2px solid #00f0ff;outline-offset:4px}
-.mode-toggle{position:fixed;right:18px;bottom:18px;z-index:10001;display:flex;align-items:center;gap:8px;padding:10px 14px;border:1px solid #24677b;border-radius:999px;background:rgba(5,13,27,.92);color:#a8f5ff;font:600 12px/1.2 system-ui,sans-serif;box-shadow:0 0 18px rgba(0,217,255,.15);backdrop-filter:blur(12px);cursor:pointer}
-.mode-toggle:hover{border-color:#00f0ff;box-shadow:0 0 20px rgba(0,217,255,.3)}
-.mode-toggle .mode-icon{font-size:15px}
-body.dim-mode::after{content:"";position:fixed;inset:0;z-index:10000;background:rgba(0,0,8,.28);pointer-events:none}
-body.dim-mode .mode-toggle{background:rgba(2,5,12,.96);border-color:#46515d;color:#b9c9d3;box-shadow:none}
-body.fit-screen{padding:0!important}
+.traffic-lights .traffic-green:focus-visible{outline:2px solid #00f0ff;outline-offset:4px}body.fit-screen{padding:0!important}
 body.fit-screen .wrap{width:100%;max-width:none;margin:0}
 body.fit-screen .finder-window{min-height:100vh;border-radius:0}
 body.fit-screen .finder-layout{min-height:calc(100vh - 58px)}
 body.fit-screen .finder-content{min-height:calc(100vh - 58px)}
-@media(max-width:720px){.mode-toggle{right:10px;bottom:10px;padding:9px 12px}body.fit-screen .finder-layout{min-height:calc(100vh - 72px)}}
+@media(max-width:720px){body.fit-screen .finder-layout{min-height:calc(100vh - 72px)}}
 
 
 /* Refined low-glare graphite and muted jade palette */
-:root{color-scheme:dark;background:#050708;color:#e5eeeb}html,body{background:#050708!important;color:#e5eeeb}body{background:#050708!important}.finder-window{background:#080d0e;border-color:#263536;box-shadow:0 18px 55px #0009}.finder-toolbar{background:#0b1112;border-color:#243334}.finder-title{color:#dce7e3}.toolbar-search{background:#070b0c;border-color:#293a3b;color:#9aa9a5}.toolbar-search input{color:#e5eeeb}.toolbar-search input::placeholder{color:#71817d}.finder-layout,.finder-content{background:#080d0e}.sidebar{background:#071124;border-color:#202f30}.side-label{color:#68ddff}.side-item{color:#bac8c4}.side-item>span{color:#35d9ff}.side-item:hover{background:#111c1c}.side-item.selected{border-color:#23708d;background:#102a43;color:#f0fbff;box-shadow:none}.side-item.selected>span{color:#35d9ff}.content-heading{border-color:#202f30}.content-heading h1{color:#e5eeeb}.content-heading p,.count{color:#a8bfd4}.list-heading{border-color:#202f30;color:#91acc2}.item{background:#0b1213;border-color:#263637;box-shadow:none}.item:hover{background:#10243c;border-color:#35d9ff}.item a{color:#73eaff}.item a:hover{color:#c5f7ff}.url,.memo{color:#a8bfd4}.category{background:#111a1a;border-color:#2c4140;color:#b3c7c1}.item-arrow{color:#8acac1}.empty{border-color:#344747;color:#9baaa6;background:#0a1112}.login-body{background:#0b1213}.login-body h1{color:#e5eeeb}.login-body p{color:#a8bfd4}.login-row input{background:#070c0d;border-color:#304343;color:#e5eeeb}.login-row button{background:#234f46;border-color:#397e6d;color:#f1fbf7}
-
-/* 暗所モードボタンを左下に固定 */
-.mode-toggle{left:18px!important;right:auto!important;bottom:18px!important}
-@media(max-width:720px){.mode-toggle{left:10px!important;right:auto!important;bottom:10px!important}}
+:root{color-scheme:dark;background:#050708;color:#e5eeeb}html,body{background:#050708!important;color:#e5eeeb}body{background:#050708!important}.finder-window{background:#080d0e;border-color:#263536;box-shadow:0 18px 55px #0009}.finder-toolbar{background:#0b1112;border-color:#243334}.finder-title{color:#dce7e3}.toolbar-search{background:#070b0c;border-color:#293a3b;color:#9aa9a5}.toolbar-search input{color:#e5eeeb}.toolbar-search input::placeholder{color:#71817d}.finder-layout,.finder-content{background:#080d0e}.sidebar{background:#071124;border-color:#202f30}.side-label{color:#68ddff}.side-item{color:#bac8c4}.side-item>span{color:#35d9ff}.side-item:hover{background:#111c1c}.side-item.selected{border-color:#23708d;background:#102a43;color:#f0fbff;box-shadow:none}.side-item.selected>span{color:#35d9ff}.content-heading{border-color:#202f30}.content-heading h1{color:#e5eeeb}.content-heading p,.count{color:#a8bfd4}.list-heading{border-color:#202f30;color:#91acc2}.item{background:#0b1213;border-color:#263637;box-shadow:none}.item:hover{background:#10243c;border-color:#35d9ff}.item a{color:#73eaff}.item a:hover{color:#c5f7ff}.url,.memo{color:#a8bfd4}.category{background:#111a1a;border-color:#2c4140;color:#b3c7c1}.item-arrow{color:#8acac1}.empty{border-color:#344747;color:#9baaa6;background:#0a1112}.login-body{background:#0b1213}.login-body h1{color:#e5eeeb}.login-body p{color:#a8bfd4}.login-row input{background:#070c0d;border-color:#304343;color:#e5eeeb}.login-row button{background:#234f46;border-color:#397e6d;color:#f1fbf7}@media(max-width:720px){}
 
 /* === LINK CORE / OFFICIAL PAGE CYBER RESTORE === */
 :root{--core-line:#294b4b;--core-jade:#72d7b6;--core-cyan:#83dce0;--core-panel:#091112}
@@ -96,10 +86,7 @@ body::before{opacity:.26;background-image:linear-gradient(#12344b22 1px,transpar
 .url{color:#829b96!important;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
 .category{background:#11201d!important;border-color:#35564c!important;color:#9bd7bf!important;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
 .memo{color:#b0c0ba!important}
-.empty{border-color:#34504c!important;background:#0a1213!important;color:#8eaaa2!important}
-.mode-toggle{background:#091111f2!important;border-color:#426d60!important;color:#b9f0d8!important;box-shadow:0 0 20px #4ec7a316!important;font-family:ui-monospace,SFMono-Regular,Menlo,monospace!important;letter-spacing:.02em}
-.mode-toggle:hover{border-color:#80d9b8!important;box-shadow:0 0 22px #4ec7a32c!important}
-.status{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.empty{border-color:#34504c!important;background:#0a1213!important;color:#8eaaa2!important}.status{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
 footer{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.06em}
 a.admin{color:#7faaa0!important}
 .login-body{background:linear-gradient(145deg,#0c1515,#080e10)!important}
@@ -157,11 +144,7 @@ body::before{opacity:.22!important;background-image:linear-gradient(#52bfff0b 1p
 .error{color:#ffb5c3!important}
 footer{color:#718ba6!important}
 a.admin{color:#8adfff!important}
-a.admin:hover{color:#e1faff!important;text-shadow:0 0 9px #35d8ff35!important}
-.mode-toggle{background:#0a1320f2!important;border-color:#315779!important;color:#a7eaff!important;box-shadow:0 0 18px #21b9f00d!important}
-.mode-toggle:hover{border-color:#42d9ff!important;box-shadow:0 0 22px #21b9f02b!important}
-body.dim-mode::after{background:rgba(0,0,8,.34)!important}
-::selection{background:#35d8ff55!important;color:#fff!important}
+a.admin:hover{color:#e1faff!important;text-shadow:0 0 9px #35d8ff35!important}::selection{background:#35d8ff55!important;color:#fff!important}
 @media(max-width:520px){body{background:#070b13!important}.finder-window{border-color:#263b55!important}}
 
 
@@ -290,9 +273,9 @@ button.primary,.btn.primary,.login-row button,button[type=submit]{background:lin
 .empty{background:#09172a!important;border-color:#27617c!important;color:#a8bfd4!important}
 .status,.notice{background:#081c30!important;border-color:#236b8c!important;color:#a8eaff!important}
 a.admin{color:#68ddff!important}
-body.night-mode,body.dim-mode{background:#02050b!important;color:#8494a5!important}
-body.night-mode .hero,body.night-mode .stat-card,body.night-mode .workspace,body.night-mode .panel,body.night-mode .item,body.dim-mode .hero,body.dim-mode .stat-card,body.dim-mode .workspace,body.dim-mode .panel,body.dim-mode .item{background:#080e18!important;border-color:#172d40!important;box-shadow:none!important}
-body.night-mode .item a,body.dim-mode .item a{color:#8ba6b9!important}
+body.night-mode{background:#02050b!important;color:#8494a5!important}
+body.night-mode .hero,body.night-mode .stat-card,body.night-mode .workspace,body.night-mode .panel,body.night-mode .item{background:#080e18!important;border-color:#172d40!important;box-shadow:none!important}
+body.night-mode .item a{color:#8ba6b9!important}
 
 </style>
 </head>
@@ -352,20 +335,6 @@ function render(){
 $('search').addEventListener('input',render);
 document.querySelectorAll('[data-view]').forEach(btn=>btn.addEventListener('click',()=>{view=btn.dataset.view;selectedCategory='';render()}));
 
-const modeButton=document.createElement('button');
-modeButton.type='button';modeButton.className='mode-toggle';
-modeButton.innerHTML='<span class="mode-icon" aria-hidden="true">☾</span><span class="mode-label">暗所モード</span>';
-modeButton.setAttribute('aria-pressed','false');
-document.body.appendChild(modeButton);
-function setDimMode(enabled){
- document.body.classList.toggle('dim-mode',enabled);
- modeButton.setAttribute('aria-pressed',String(enabled));
- modeButton.querySelector('.mode-icon').textContent=enabled?'☀':'☾';
- modeButton.querySelector('.mode-label').textContent=enabled?'暗所モード ON':'暗所モード';
- try{localStorage.setItem('linkCoreDimMode',enabled?'1':'0')}catch(_){}
-}
-try{setDimMode(localStorage.getItem('linkCoreDimMode')==='1')}catch(_){setDimMode(false)}
-modeButton.addEventListener('click',()=>setDimMode(!document.body.classList.contains('dim-mode')));
 document.querySelectorAll('[data-fullscreen]').forEach(button=>button.addEventListener('click',async()=>{
  const root=document.documentElement;
  if(document.fullscreenElement){
