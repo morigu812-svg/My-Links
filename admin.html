@@ -788,7 +788,7 @@ body:not(.night-mode) .auth-error{color:#b4232d}
       favorite: $('fFav').checked
     };
     $('dlg').close();
-    run('保存中…', () => serverCall('saveLink', input), '保存しました。');
+    run('保存中…', () => serverCall('saveLink', input, sessionStorage.getItem(ADMIN_TOKEN_KEY)), '保存しました。');
   });
 
   $('search').addEventListener('input', event => {
@@ -972,17 +972,17 @@ body:not(.night-mode) .auth-error{color:#b4232d}
     if (!link) return;
 
     if (event.target.closest('.star')) {
-      run('更新中…', () => serverCall('toggleFavorite', link.id, !link.favorite), '');
+      run('更新中…', () => serverCall('toggleFavorite', link.id, !link.favorite, sessionStorage.getItem(ADMIN_TOKEN_KEY)), '');
     } else if (event.target.closest('.edit')) {
       openForm(link);
     } else if (event.target.closest('.del')) {
       if (confirm(`「${link.title}」を削除しますか？`)) {
-        run('削除中…', () => serverCall('deleteLink', link.id), '削除しました。');
+        run('削除中…', () => serverCall('deleteLink', link.id, sessionStorage.getItem(ADMIN_TOKEN_KEY)), '削除しました。');
       }
     }
   });
 
-  run('読み込み中…', () => serverCall('getLinks'), '');
+  run('読み込み中…', () => serverCall('getLinks', sessionStorage.getItem(ADMIN_TOKEN_KEY)), '');
 })();
 </script>
 <a href="index.html" style="position:fixed;right:18px;bottom:18px;z-index:9999;padding:10px 14px;border:1px solid #444;border-radius:12px;background:#111;color:#eee;text-decoration:none;font:13px system-ui">利用者ページへ ↗</a>
