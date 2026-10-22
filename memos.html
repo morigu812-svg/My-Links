@@ -34,6 +34,7 @@ button{border:1px solid #3a4352;border-radius:11px;padding:11px 15px;background:
 const GAS_URL='https://script.google.com/macros/s/AKfycbwr6gUhjgC_zcazwXqDKOqHqiWt1t-NOjrz3IiOjP-NVaXvAJpKOKQ8Ez6It1qKvkxzFw/exec';
 const pending=new Map();let bridgeWindow=null,bridgeOrigin='',adminToken='',memos=[];
 let readyResolve;const bridgeReady=new Promise(resolve=>readyResolve=resolve);const frame=document.getElementById('gasBridge');
+const embedded=new URLSearchParams(location.search).get('embedded')==='1';
 function isGasOrigin(origin){if(origin==='https://script.google.com'||origin==='https://script.googleusercontent.com')return true;try{const h=new URL(origin).hostname;return origin.startsWith('https://')&&(h==='googleusercontent.com'||h.endsWith('.googleusercontent.com'))}catch(_){return false}}
 window.addEventListener('message',event=>{if(!isGasOrigin(event.origin))return;const d=event.data;if(!d||typeof d!=='object')return;if(d.type==='DAILY_CORE_BRIDGE_READY'){bridgeWindow=event.source;bridgeOrigin=event.origin;readyResolve();return}if(d.type==='DAILY_CORE_RESPONSE'&&pending.has(d.id)){const p=pending.get(d.id);pending.delete(d.id);d.ok?p.resolve(d.result):p.reject(new Error(d.error||'通信エラー'))}});
 frame.src=GAS_URL+'?mode=bridge';
@@ -42,6 +43,18 @@ const $=id=>document.getElementById(id);
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function dateLabel(v){if(!v)return '';const d=new Date(v);return Number.isNaN(d.getTime())?String(v):d.toLocaleString('ja-JP',{dateStyle:'medium',timeStyle:'short'})}
 async function loadMemos(){const data=await call('getMemos',adminToken);memos=Array.isArray(data.memos)?data.memos:[];render()}
+if(embedded){
+ $('loginPanel').classList.add('hidden');
+ $('appPanel').classList.remove('hidden');
+ $('memoList').innerHTML='<div class="empty">管理者認証を確認中…</div>';
+ window.addEventListener('message',async event=>{
+  if(event.origin!==location.origin||event.source!==window.parent||!event.data||event.data.type!=='LINK_CORE_ADMIN_TOKEN'||typeof event.data.token!=='string'||!event.data.token)return;
+  adminToken=event.data.token;
+  try{await loadMemos()}catch(err){$('memoList').innerHTML='<div class="empty">メモの読み込みに失敗しました：'+esc(err.message||'通信エラー')+'</div>'}
+ });
+} else {
+ window.addEventListener('load',()=>{if(window.parent!==window)window.parent.postMessage({type:'MEMO_EMBED_READY'},location.origin)});
+}
 function render(){const q=$('search').value.trim().toLowerCase();const list=memos.filter(m=>(m.title+' '+m.body).toLowerCase().includes(q));$('memoList').innerHTML=list.length?list.map(m=>'<article class="memo"><h3>'+esc(m.title)+'</h3><div class="memo-body">'+esc(m.body)+'</div><div class="meta">更新：'+esc(dateLabel(m.updatedAt))+'</div><div class="actions"><button class="secondary" type="button" data-edit="'+esc(m.id)+'">編集</button><button class="danger" type="button" data-delete="'+esc(m.id)+'">削除</button></div></article>').join(''):'<div class="empty">メモはまだありません。</div>'}
 function openEditor(m){$('editor').classList.remove('hidden');$('editorHeading').textContent=m?'メモを編集':'新しいメモ';$('memoId').value=m?m.id:'';$('memoTitle').value=m?m.title:'';$('memoBody').value=m?m.body:'';$('saveStatus').textContent='';$('memoTitle').focus();$('editor').scrollIntoView({behavior:'smooth',block:'start'})}
 function closeEditor(){$('editor').classList.add('hidden');$('memoForm').reset();$('memoId').value='';$('saveStatus').textContent=''}
