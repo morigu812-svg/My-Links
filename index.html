@@ -43,18 +43,36 @@ footer a{color:#55eaff!important}
 ::selection{background:#00d9ff55;color:#fff}
 @media(max-width:720px){body{padding:12px 8px}.finder-window{border-radius:12px}.finder-toolbar{grid-template-columns:70px minmax(0,1fr);height:auto;min-height:58px;padding:10px}.toolbar-search{grid-column:1/-1}.finder-layout{grid-template-columns:1fr}.sidebar{border-right:0;border-bottom:1px solid #173b52}.finder-content{padding:18px 14px}}
 
+
+/* === DIM MODE + FIT-TO-SCREEN CONTROLS === */
+.traffic-lights{gap:8px}
+.traffic-lights .traffic-green{display:block;width:12px;height:12px;min-width:12px;padding:0;border:0;border-radius:50%;background:#28c840;box-shadow:inset 0 1px 1px rgba(255,255,255,.55),0 0 0 1px rgba(0,0,0,.14),0 0 10px rgba(40,200,64,.25);cursor:pointer}
+.traffic-lights .traffic-green:hover{transform:scale(1.12);box-shadow:0 0 0 2px rgba(40,200,64,.25),0 0 15px rgba(40,200,64,.65)}
+.traffic-lights .traffic-green:focus-visible{outline:2px solid #00f0ff;outline-offset:4px}
+.mode-toggle{position:fixed;right:18px;bottom:18px;z-index:10001;display:flex;align-items:center;gap:8px;padding:10px 14px;border:1px solid #24677b;border-radius:999px;background:rgba(5,13,27,.92);color:#a8f5ff;font:600 12px/1.2 system-ui,sans-serif;box-shadow:0 0 18px rgba(0,217,255,.15);backdrop-filter:blur(12px);cursor:pointer}
+.mode-toggle:hover{border-color:#00f0ff;box-shadow:0 0 20px rgba(0,217,255,.3)}
+.mode-toggle .mode-icon{font-size:15px}
+body.dim-mode::after{content:"";position:fixed;inset:0;z-index:10000;background:rgba(0,0,8,.28);pointer-events:none}
+body.dim-mode .mode-toggle{background:rgba(2,5,12,.96);border-color:#46515d;color:#b9c9d3;box-shadow:none}
+body.fit-screen{padding:0!important}
+body.fit-screen .wrap{width:100%;max-width:none;margin:0}
+body.fit-screen .finder-window{min-height:100vh;border-radius:0}
+body.fit-screen .finder-layout{min-height:calc(100vh - 58px)}
+body.fit-screen .finder-content{min-height:calc(100vh - 58px)}
+@media(max-width:720px){.mode-toggle{right:10px;bottom:10px;padding:9px 12px}body.fit-screen .finder-layout{min-height:calc(100vh - 72px)}}
+
 </style>
 </head>
 <body>
 <main class="wrap">
 <section class="finder-window login-window" id="loginPanel">
-  <div class="finder-toolbar"><div class="traffic-lights" aria-hidden="true"><span></span><span></span><span></span></div><div class="finder-title">My Desktop</div><div></div></div>
+  <div class="finder-toolbar"><div class="traffic-lights" aria-label="ウィンドウ操作"><span class="traffic-red" aria-hidden="true"></span><span class="traffic-yellow" aria-hidden="true"></span><button type="button" class="traffic-green" data-fullscreen title="全画面表示" aria-label="全画面表示"></button></div><div class="finder-title">My Desktop</div><div></div></div>
   <div class="login-body"><div class="brand">LINK CORE / SHARED DESKTOP</div><h1>リンク一覧</h1><p>サイトのパスワードを入力すると、共有リンクを閲覧できます。</p>
     <form id="loginForm"><label for="sitePassword">サイトのパスワード</label><div class="login-row"><input id="sitePassword" type="password" autocomplete="current-password" required autofocus><button id="loginButton" type="submit">ログイン</button></div><div class="error" id="loginError" role="alert"></div></form>
   </div>
 </section>
 <section class="finder-window hidden" id="linksPanel">
-  <div class="finder-toolbar"><div class="traffic-lights" aria-hidden="true"><span></span><span></span><span></span></div><div class="finder-title">My Desktop</div><label class="toolbar-search"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="検索" aria-label="リンクを検索"></label></div>
+  <div class="finder-toolbar"><div class="traffic-lights" aria-label="ウィンドウ操作"><span class="traffic-red" aria-hidden="true"></span><span class="traffic-yellow" aria-hidden="true"></span><button type="button" class="traffic-green" data-fullscreen title="全画面表示" aria-label="全画面表示"></button></div><div class="finder-title">My Desktop</div><label class="toolbar-search"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="検索" aria-label="リンクを検索"></label></div>
   <div class="finder-layout"><aside class="sidebar" aria-label="リンクの表示">
     <div class="side-label">お気に入り</div><button type="button" class="side-item" data-view="favorites"><span>★</span> お気に入り</button>
     <div class="side-label">履歴</div><button type="button" class="side-item" data-view="recent"><span>◷</span> 最近追加した項目</button>
@@ -100,6 +118,42 @@ function render(){
 }
 $('search').addEventListener('input',render);
 document.querySelectorAll('[data-view]').forEach(btn=>btn.addEventListener('click',()=>{view=btn.dataset.view;selectedCategory='';render()}));
+
+const modeButton=document.createElement('button');
+modeButton.type='button';modeButton.className='mode-toggle';
+modeButton.innerHTML='<span class="mode-icon" aria-hidden="true">☾</span><span class="mode-label">暗所モード</span>';
+modeButton.setAttribute('aria-pressed','false');
+document.body.appendChild(modeButton);
+function setDimMode(enabled){
+ document.body.classList.toggle('dim-mode',enabled);
+ modeButton.setAttribute('aria-pressed',String(enabled));
+ modeButton.querySelector('.mode-icon').textContent=enabled?'☀':'☾';
+ modeButton.querySelector('.mode-label').textContent=enabled?'暗所モード ON':'暗所モード';
+ try{localStorage.setItem('linkCoreDimMode',enabled?'1':'0')}catch(_){}
+}
+try{setDimMode(localStorage.getItem('linkCoreDimMode')==='1')}catch(_){setDimMode(false)}
+modeButton.addEventListener('click',()=>setDimMode(!document.body.classList.contains('dim-mode')));
+document.querySelectorAll('[data-fullscreen]').forEach(button=>button.addEventListener('click',async()=>{
+ const root=document.documentElement;
+ if(document.fullscreenElement){
+  try{await document.exitFullscreen()}catch(_){}
+  document.body.classList.remove('fit-screen');
+  return;
+ }
+ document.body.classList.add('fit-screen');
+ try{
+  if(root.requestFullscreen) await root.requestFullscreen();
+  else modeButton.querySelector('.mode-label').textContent='画面に合わせて表示中';
+ }catch(_){
+  modeButton.querySelector('.mode-label').textContent='画面に合わせて表示中';
+ }
+}));
+document.addEventListener('fullscreenchange',()=>{
+ const active=!!document.fullscreenElement;
+ document.body.classList.toggle('fit-screen',active);
+ document.querySelectorAll('[data-fullscreen]').forEach(b=>{b.title=active?'全画面表示を終了':'全画面表示';b.setAttribute('aria-label',b.title)});
+});
+
 $('sideCats').addEventListener('click',event=>{const btn=event.target.closest('[data-category]');if(!btn)return;selectedCategory=btn.dataset.category;view='all';render()});
 $('loginForm').addEventListener('submit',async e=>{e.preventDefault();$('loginButton').disabled=true;$('loginError').textContent='認証中…';try{const auth=await call('authenticateVisitor',$('sitePassword').value);if(!auth||!auth.token)throw new Error('閲覧用トークンを取得できませんでした。');$('loginError').textContent='リンクを読み込み中…';const data=await call('getLinks',auth.token);links=Array.isArray(data.links)?data.links:[];categories=Array.isArray(data.categories)?data.categories:Array.from(new Set(links.map(x=>x.category).filter(Boolean))).sort();$('loginPanel').classList.add('hidden');$('linksPanel').classList.remove('hidden');render()}catch(err){$('loginError').textContent=err.message||'ログインできませんでした。';$('loginButton').disabled=false}});
 
