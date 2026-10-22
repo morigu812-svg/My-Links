@@ -963,8 +963,10 @@ body:not(.night-mode) .finder-window .finder-content .list .item .acts button{
     memoOverlay.classList.remove('open');
     document.body.style.overflow = '';
   }
-  $('sideMemos').addEventListener('click', openIntegratedMemos);
-  $('closeMemoOverlay').addEventListener('click', closeIntegratedMemos);
+  const sideMemosButton = $('sideMemos');
+  const closeMemoOverlayButton = $('closeMemoOverlay');
+  if (sideMemosButton) sideMemosButton.addEventListener('click', openIntegratedMemos);
+  if (closeMemoOverlayButton) closeMemoOverlayButton.addEventListener('click', closeIntegratedMemos);
 
 
   $('sideAdd').addEventListener('click', () => {
