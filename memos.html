@@ -41,6 +41,15 @@ a{color:#68eaff}a:hover{color:#fff;text-shadow:0 0 10px #00d9ff55}
 
 /* Refined low-glare graphite and muted jade palette */
 :root{color-scheme:dark;background:#050708;color:#e5eeeb}html,body{background:#050708!important;color:#e5eeeb}body{background:#050708!important}body::before{opacity:.025;background-image:linear-gradient(rgba(110,170,157,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(110,170,157,.035) 1px,transparent 1px);background-size:44px 44px}.brand{color:#79cdb7;text-shadow:none;letter-spacing:.24em}.panel{background:#0b1213;border-color:#263637;border-radius:14px;box-shadow:none}h1{color:#e5eeeb;text-shadow:none}p,label{color:#b1bfba}input,textarea{background:#070c0d;border-color:#304343;color:#e5eeeb}input::placeholder,textarea::placeholder{color:#788985}input:focus,textarea:focus{border-color:#56cbb0;box-shadow:0 0 0 2px #56cbb010}button{background:#14251f;border-color:#36594e;color:#e1f0e9;transition:background-color .12s,border-color .12s}button:hover{border-color:#56cbb0;box-shadow:none;transform:none}button.secondary{background:#11191a;color:#c8d4cf;border-color:#304343}button.danger{background:#241617;border-color:#563438;color:#f0c4c7}.memo{background:#0b1213;border-color:#263637;box-shadow:none}.memo h3{color:#e5eeeb}.memo-body{color:#b1bfba}.meta,.status{color:#879792}.empty{border-color:#344747;color:#9baaa6;background:#0a1112}a{color:#8bcbd1}a:hover{color:#a5e0d3;text-shadow:none}::selection{background:#315b50;color:#fff}@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* Memo loading shimmer */
+@keyframes memoShimmer{0%{background-position:180% 0}100%{background-position:-80% 0}}
+.skeleton-card{padding:17px;border:1px solid #263637;border-radius:15px;background:#0b1213}
+.skeleton-line{height:12px;border-radius:7px;margin:0 0 12px;background:linear-gradient(100deg,#111a1a 20%,#263633 38%,#111a1a 56%);background-size:220% 100%;animation:memoShimmer 1.35s ease-in-out infinite}
+.skeleton-line.title{height:18px;width:46%;margin-bottom:17px}
+.skeleton-line.long{width:94%}.skeleton-line.medium{width:72%}.skeleton-line.short{width:35%;margin-bottom:0}
+@media(prefers-reduced-motion:reduce){.skeleton-line{animation:none;background:#172321}}
+
 </style>
 </head>
 <body><main class="wrap">
@@ -52,7 +61,7 @@ a{color:#68eaff}a:hover{color:#fff;text-shadow:0 0 10px #00d9ff55}
 <section class="panel hidden" id="appPanel">
 <div class="brand">MEMO WORKSPACE</div><h1>メモ帳</h1><p>メモはリンク一覧とは別の「Memos」シートに保存されます。</p>
 <div class="toolbar"><input id="search" type="search" placeholder="メモを検索" aria-label="メモを検索"><button id="newButton" type="button">＋ 新しいメモ</button></div>
-<div class="list" id="memoList"><div class="empty">読み込み中…</div></div>
+<div class="list" id="memoList" aria-live="polite" aria-busy="true"><div class="skeleton-card" aria-hidden="true"><div class="skeleton-line title"></div><div class="skeleton-line long"></div><div class="skeleton-line medium"></div><div class="skeleton-line short"></div></div><div class="skeleton-card" aria-hidden="true"><div class="skeleton-line title"></div><div class="skeleton-line long"></div><div class="skeleton-line medium"></div><div class="skeleton-line short"></div></div><div class="skeleton-card" aria-hidden="true"><div class="skeleton-line title"></div><div class="skeleton-line long"></div><div class="skeleton-line medium"></div><div class="skeleton-line short"></div></div></div>
 <div class="panel hidden" id="editor" style="margin-top:18px">
 <h2 id="editorHeading">新しいメモ</h2><form id="memoForm"><input id="memoId" type="hidden"><label for="memoTitle">タイトル</label><input id="memoTitle" maxlength="200" required placeholder="メモのタイトル"><label for="memoBody">本文</label><textarea id="memoBody" maxlength="20000" required placeholder="自由にメモを書いてください"></textarea><div class="actions"><button id="saveButton" type="submit">保存</button><button class="secondary" id="cancelButton" type="button">キャンセル</button></div><div class="status" id="saveStatus" role="status"></div></form>
 </div><div class="actions"><button class="secondary" id="logoutButton" type="button">ログアウト</button><button class="secondary" type="button" onclick="location.href='./'">リンク一覧へ戻る</button></div>
@@ -72,7 +81,8 @@ function call(method,...args){if(embedded){return new Promise((resolve,reject)=>
 const $=id=>document.getElementById(id);
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function dateLabel(v){if(!v)return '';const d=new Date(v);return Number.isNaN(d.getTime())?String(v):d.toLocaleString('ja-JP',{dateStyle:'medium',timeStyle:'short'})}
-async function loadMemos(){const data=await call('getMemos',adminToken);memos=Array.isArray(data.memos)?data.memos:[];render()}
+function showMemoSkeleton(){ $('memoList').setAttribute('aria-busy','true'); $('memoList').innerHTML=Array.from({length:3},()=>'<div class="skeleton-card" aria-hidden="true"><div class="skeleton-line title"></div><div class="skeleton-line long"></div><div class="skeleton-line medium"></div><div class="skeleton-line short"></div></div>').join('') }
+async function loadMemos(){showMemoSkeleton();try{const data=await call('getMemos',adminToken);memos=Array.isArray(data.memos)?data.memos:[];render()}finally{$('memoList').setAttribute('aria-busy','false')}}
 if(embedded){
  window.addEventListener('message', event => {
   if(event.origin!==location.origin||event.source!==window.parent)return;
@@ -92,7 +102,7 @@ if(embedded){
 } else {
  window.addEventListener('load',()=>{if(window.parent!==window)window.parent.postMessage({type:'MEMO_EMBED_READY'},location.origin)});
 }
-function render(){const q=$('search').value.trim().toLowerCase();const list=memos.filter(m=>(m.title+' '+m.body).toLowerCase().includes(q));$('memoList').innerHTML=list.length?list.map(m=>'<article class="memo"><h3>'+esc(m.title)+'</h3><div class="memo-body">'+esc(m.body)+'</div><div class="meta">更新：'+esc(dateLabel(m.updatedAt))+'</div><div class="actions"><button class="secondary" type="button" data-edit="'+esc(m.id)+'">編集</button><button class="danger" type="button" data-delete="'+esc(m.id)+'">削除</button></div></article>').join(''):'<div class="empty">メモはまだありません。</div>'}
+function render(){$('memoList').setAttribute('aria-busy','false');const q=$('search').value.trim().toLowerCase();const list=memos.filter(m=>(m.title+' '+m.body).toLowerCase().includes(q));$('memoList').innerHTML=list.length?list.map(m=>'<article class="memo"><h3>'+esc(m.title)+'</h3><div class="memo-body">'+esc(m.body)+'</div><div class="meta">更新：'+esc(dateLabel(m.updatedAt))+'</div><div class="actions"><button class="secondary" type="button" data-edit="'+esc(m.id)+'">編集</button><button class="danger" type="button" data-delete="'+esc(m.id)+'">削除</button></div></article>').join(''):'<div class="empty">メモはまだありません。</div>'}
 function openEditor(m){$('editor').classList.remove('hidden');$('editorHeading').textContent=m?'メモを編集':'新しいメモ';$('memoId').value=m?m.id:'';$('memoTitle').value=m?m.title:'';$('memoBody').value=m?m.body:'';$('saveStatus').textContent='';$('memoTitle').focus();$('editor').scrollIntoView({behavior:'smooth',block:'start'})}
 function closeEditor(){$('editor').classList.add('hidden');$('memoForm').reset();$('memoId').value='';$('saveStatus').textContent=''}
 $('loginForm').addEventListener('submit',async e=>{
@@ -101,8 +111,8 @@ $('loginForm').addEventListener('submit',async e=>{
   const result=await call('authenticateAdmin',$('password').value);
   if(!result || !result.token) throw new Error('認証トークンを取得できませんでした。');
   adminToken=result.token;
-  await loadMemos();
   $('loginPanel').classList.add('hidden'); $('appPanel').classList.remove('hidden'); $('loginError').textContent='';
+  await loadMemos();
  } catch(err) { $('loginError').textContent=err.message||'ログインできませんでした。'; }
  finally { $('loginButton').disabled=false; }
 });
