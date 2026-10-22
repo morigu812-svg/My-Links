@@ -725,6 +725,7 @@ main { width:100%; max-width:none !important; }
     <label for="fMemo">メモ</label>
     <textarea id="fMemo" rows="3"></textarea>
     <label class="check"><input id="fFav" type="checkbox"> お気に入りにする</label>
+    <label class="check"><input id="fVisible" type="checkbox" checked> 利用者ページに公開する</label>
     <div class="foot">
       <button id="cancelBtn" class="btn" type="button">キャンセル</button>
       <button id="saveBtn" class="btn primary" type="submit">保存する</button>
@@ -1062,6 +1063,7 @@ main { width:100%; max-width:none !important; }
     $('fCat').value = link ? link.category : state.category;
     $('fMemo').value = link ? link.memo : '';
     $('fFav').checked = link ? link.favorite : false;
+    $('fVisible').checked = link ? link.visibleToVisitors !== false : true;
     $('dlgTitle').textContent = link ? 'リンクを編集' : 'リンクを追加';
     $('saveBtn').textContent = link ? '変更を保存' : '保存する';
     $('dlg').showModal();
@@ -1079,7 +1081,8 @@ main { width:100%; max-width:none !important; }
       url: $('fUrl').value,
       category: $('fCat').value,
       memo: $('fMemo').value,
-      favorite: $('fFav').checked
+      favorite: $('fFav').checked,
+      visibleToVisitors: $('fVisible').checked
     };
     $('dlg').close();
     run('保存中…', () => serverCall('saveLink', input, sessionStorage.getItem(ADMIN_TOKEN_KEY)), '保存しました。');
