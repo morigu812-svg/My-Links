@@ -323,7 +323,7 @@ let links=[],categories=[],view='all',selectedCategory='';
 function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function visibleLinks(){
  const q=$('search').value.trim().toLowerCase();
- let items=links.filter(x=>x.visibleToVisitors!==false).filter(x=>[x.title,x.url,x.memo,x.category].some(v=>String(v||'').toLowerCase().includes(q)));
+ let items=links.filter(x=>x.visibleToVisitors!==false&&String(x.visibleToVisitors).toLowerCase()!=='false').filter(x=>[x.title,x.url,x.memo,x.category].some(v=>String(v||'').toLowerCase().includes(q)));
  if(selectedCategory)items=items.filter(x=>x.category===selectedCategory);
  else if(view==='favorites')items=items.filter(x=>x.favorite);
  else if(view==='recent')items=items.slice().sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
