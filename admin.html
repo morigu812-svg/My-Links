@@ -1283,7 +1283,12 @@ body.night-mode .star[aria-pressed="true"]{background:linear-gradient(100deg,rgb
   })();
 })();
 </script>
-<a href="index.html" style="position:fixed;right:18px;bottom:18px;z-index:9999;padding:10px 14px;border:1px solid #444;border-radius:12px;background:#111;color:#eee;text-decoration:none;font:13px system-ui">利用者ページへ ↗</a>
+<a class="visitor-page-link" href="index.html">利用者ページへ ↗</a>
+<style>
+.visitor-page-link{position:fixed;left:18px;bottom:18px;z-index:9999;display:inline-flex;align-items:center;gap:8px;padding:11px 15px;border:1px solid #286b8c;border-radius:10px;background:linear-gradient(135deg,#10283b,#0a1525);color:#9beaff;text-decoration:none;font:600 12px system-ui,sans-serif;box-shadow:0 0 18px #25c7f51c,inset 0 1px #ffffff0a;transition:border-color .15s,box-shadow .15s,background .15s}
+.visitor-page-link:hover{border-color:#35d8ff;background:linear-gradient(135deg,#12364d,#0d1d31);color:#d5f8ff;box-shadow:0 0 22px #25c7f533}
+@media(max-width:650px){.visitor-page-link{left:12px;bottom:12px;padding:10px 12px}}
+</style>
 
 </body>
 </html>
