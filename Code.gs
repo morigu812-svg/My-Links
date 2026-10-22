@@ -253,7 +253,16 @@ function requireAdmin_(token) {
 function getLinks(viewerToken) {
   requireLinkViewer_(viewerToken);
   const sheet = ensureSheet_();
-  return readLinks_(sheet, getColumnMap_(sheet));
+  const result = readLinks_(sheet, getColumnMap_(sheet));
+
+  // 管理者には全件を返すが、利用者用トークンには公開リンクだけを返す。
+  // ブラウザー側の表示フィルターだけに頼らず、サーバー側でも非公開を除外する。
+  const isAdmin = CacheService.getScriptCache().get('LINK_CORE_ADMIN_' + viewerToken) === 'yes';
+  if (!isAdmin) {
+    result.links = result.links.filter(link => link.visibleToVisitors === true);
+    result.categories = Array.from(new Set(result.links.map(link => link.category).filter(Boolean))).sort();
+  }
+  return result;
 }
 
 /**
