@@ -555,6 +555,22 @@ body:not(.night-mode) .finder-window .finder-content .list .item .acts button{
 </dialog>
 
 <script>
+  // 起動時の例外を握りつぶさず、画面上に表示して「読み込み中…」で止まるのを防ぐ。
+  window.addEventListener('error', event => {
+    const status = document.getElementById('status');
+    if (status && (!status.textContent || status.textContent.includes('読み込み中'))) {
+      status.textContent = '画面の起動に失敗しました：' + (event.message || 'JavaScriptエラー');
+      status.className = 'error';
+    }
+  });
+  window.addEventListener('unhandledrejection', event => {
+    const status = document.getElementById('status');
+    if (status && (!status.textContent || status.textContent.includes('読み込み中'))) {
+      const reason = event.reason;
+      status.textContent = '通信処理の起動に失敗しました：' + (reason && reason.message ? reason.message : String(reason || '不明なエラー'));
+      status.className = 'error';
+    }
+  });
 (() => {
   'use strict';
 
@@ -1101,7 +1117,26 @@ body:not(.night-mode) .finder-window .finder-content .list .item .acts button{
     }
   });
 
-  run('読み込み中…', () => serverCall('getLinks', sessionStorage.getItem(ADMIN_TOKEN_KEY)), '');
+  // 初期読み込みを独立した手順にし、各段階の状態を表示する。
+  (async function initializeAdminPage() {
+    const startedAt = Date.now();
+    setStatus('接続を準備しています…', '');
+    try {
+      await waitForBridge();
+      setStatus('GASに接続しました。リンクを読み込んでいます…', '');
+      const result = await serverCall('getLinks', sessionStorage.getItem(ADMIN_TOKEN_KEY));
+      if (!result || !Array.isArray(result.links) || !Array.isArray(result.categories)) {
+        throw new Error('GASの応答形式が想定と異なります。GASのデプロイ版を確認してください。');
+      }
+      apply(result);
+      setStatus('読み込み完了（' + result.links.length + '件・' + Math.round((Date.now() - startedAt) / 100) / 10 + '秒）', '');
+    } catch (error) {
+      setStatus('読み込みに失敗しました：' + (error && error.message ? error.message : String(error)), 'error');
+      console.error('[LINK CORE] 初期読み込みに失敗しました', error);
+    } finally {
+      setBusy(false);
+    }
+  })();
 })();
 </script>
 <a href="index.html" style="position:fixed;right:18px;bottom:18px;z-index:9999;padding:10px 14px;border:1px solid #444;border-radius:12px;background:#111;color:#eee;text-decoration:none;font:13px system-ui">利用者ページへ ↗</a>
