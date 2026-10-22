@@ -11,6 +11,33 @@ h1{font-size:clamp(27px,5vw,40px);letter-spacing:-.04em;margin:8px 0 10px}p{colo
 label{display:block;margin:16px 0 7px;font-size:13px;color:#c7ceda}input,textarea{width:100%;padding:13px 14px;background:#090b10;border:1px solid #353d4c;border-radius:12px;color:#fff;font:inherit;outline:none}textarea{min-height:180px;resize:vertical;line-height:1.6}input:focus,textarea:focus{border-color:#93a8ce}
 button{border:1px solid #3a4352;border-radius:11px;padding:11px 15px;background:#e8edf7;color:#10141b;font:600 13px inherit;cursor:pointer}button.secondary{background:#151a23;color:#dbe3f1}button.danger{background:#291719;border-color:#5a3036;color:#ffc5ca}button:disabled{opacity:.5;cursor:wait}
 .actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}.hidden{display:none!important}.error{color:#ff9999;min-height:1.5em;font-size:13px}.status{font-size:13px;color:#aeb5c2;min-height:1.5em}.toolbar{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:20px 0}.toolbar input{max-width:350px}.list{display:grid;gap:10px}.memo{padding:17px;border:1px solid #2a303d;border-radius:15px;background:#11141b}.memo h3{margin:0 0 8px;font-size:17px;overflow-wrap:anywhere}.memo-body{white-space:pre-wrap;overflow-wrap:anywhere;color:#b9c1ce;line-height:1.65;font-size:14px}.meta{font-size:11px;color:#78859a;margin-top:12px}.empty{border:1px dashed #343b49;padding:28px;border-radius:14px;color:#9ba5b6;text-align:center}a{color:#aebbd0;text-decoration:none}a:hover{color:#fff}
+
+/* === CYBERPUNK THEME OVERRIDES === */
+:root{color-scheme:dark;background:#050812;color:#e8faff}
+html{background:#050812}
+body{background:radial-gradient(ellipse at 10% 0%,rgba(0,238,255,.14),transparent 34%),radial-gradient(ellipse at 92% 12%,rgba(177,54,255,.16),transparent 32%),linear-gradient(145deg,#050812,#091326 60%,#080817);color:#e8faff}
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.24;background-image:linear-gradient(rgba(0,238,255,.09) 1px,transparent 1px),linear-gradient(90deg,rgba(0,238,255,.09) 1px,transparent 1px);background-size:34px 34px;mask-image:linear-gradient(to bottom,#000,transparent 90%)}
+.brand{color:#62e9ff;text-shadow:0 0 16px #00d9ff44;letter-spacing:.28em}
+.panel{background:linear-gradient(135deg,rgba(8,24,42,.96),rgba(15,16,42,.92));border-color:#1b5067;border-radius:18px;box-shadow:0 0 0 1px #00d9ff0a,0 0 32px #00d9ff16,0 24px 80px #0008}
+h1{color:#e8faff;text-shadow:0 0 22px #00d9ff24;letter-spacing:.01em}
+p,label{color:#a4c7d9}
+input,textarea{background:#050d1b;border-color:#21485d;color:#e8faff}
+input::placeholder,textarea::placeholder{color:#68879b}
+input:focus,textarea:focus{border-color:#00f0ff;box-shadow:0 0 0 3px #00d9ff20}
+button{border-color:#16708b;background:linear-gradient(135deg,#10334b,#171c3b);color:#dffcff;transition:transform .18s,box-shadow .18s,border-color .18s}
+button:hover{border-color:#00f0ff;box-shadow:0 0 18px #00d9ff30;transform:translateY(-1px)}
+button.secondary{background:#0b1728;color:#bfefff;border-color:#23556b}
+button.danger{background:#291024;border-color:#74304e;color:#ffc5d8}
+.memo{background:linear-gradient(135deg,rgba(8,25,43,.95),rgba(15,17,40,.92));border-color:#1b5067;box-shadow:inset 3px 0 #00d9ff}
+.memo h3{color:#e8faff}
+.memo-body{color:#b5d4e5}
+.meta,.status{color:#6e96ab}
+.empty{border-color:#23556b;color:#91b6ca;background:#07101e}
+.error{color:#ff83a7}
+a{color:#68eaff}a:hover{color:#fff;text-shadow:0 0 10px #00d9ff55}
+::selection{background:#00d9ff55;color:#fff}
+@media(max-width:600px){body{padding:12px}.wrap{margin:2vh auto 0}.panel{padding:20px 16px}}
+
 </style>
 </head>
 <body><main class="wrap">
