@@ -613,6 +613,24 @@ body:not(.night-mode) .sidebar .side-item.active{
   box-shadow:none!important;
   background:rgba(35,150,210,.16)!important;
 }
+
+/* Responsive width fix: let the Finder window and active content occupy the full available viewport. */
+html, body { width:100%; min-width:0; }
+body { overflow-x:hidden; }
+main { width:100%; max-width:none !important; }
+#finderWindow { width:100% !important; max-width:none !important; margin-left:0; margin-right:0; }
+.finder-layout { display:grid; grid-template-columns:220px minmax(0,1fr); width:100%; min-width:0; }
+.finder-content, #officialPanel { min-width:0; width:100%; max-width:none; }
+#officialPanel { grid-column:2; }
+@media (max-width:760px) {
+  main { padding:8px !important; }
+  #finderWindow { width:100% !important; }
+  .finder-layout { grid-template-columns:145px minmax(0,1fr); }
+}
+@media (max-width:520px) {
+  main { padding:0 !important; }
+  .finder-layout { grid-template-columns:112px minmax(0,1fr); }
+}
 </style>
 </head>
 <body>
