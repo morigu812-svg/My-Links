@@ -989,7 +989,10 @@ main { width:100%; max-width:none !important; }
     const el = $('status');
     el.textContent = text || '';
     el.className = kind || '';
+    const retryButton = $('retryLoadButton');
+    if (retryButton) retryButton.classList.toggle('hidden', kind !== 'error');
   }
+  $('retryLoadButton').addEventListener('click', () => location.reload());
 
   function setBusy(value) {
     state.busy = value;
