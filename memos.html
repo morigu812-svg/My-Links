@@ -81,6 +81,7 @@ function call(method,...args){if(embedded){return new Promise((resolve,reject)=>
 const $=id=>document.getElementById(id);
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function dateLabel(v){if(!v)return '';const d=new Date(v);return Number.isNaN(d.getTime())?String(v):d.toLocaleString('ja-JP',{dateStyle:'medium',timeStyle:'short'})}
+function showMemoError(message){$('memoList').setAttribute('aria-busy','false');$('memoList').innerHTML='<div class="empty">メモの読み込みに失敗しました：'+esc(message||'通信エラー')+'<div class="actions" style="justify-content:center"><button class="secondary" id="retryMemosButton" type="button">↻ 再試行</button></div></div>';const b=$('retryMemosButton');if(b)b.addEventListener('click',async()=>{b.disabled=true;try{await loadMemos()}catch(err){showMemoError(err.message)}})}
 function showMemoSkeleton(){ $('memoList').setAttribute('aria-busy','true'); $('memoList').innerHTML=Array.from({length:3},()=>'<div class="skeleton-card" aria-hidden="true"><div class="skeleton-line title"></div><div class="skeleton-line long"></div><div class="skeleton-line medium"></div><div class="skeleton-line short"></div></div>').join('') }
 async function loadMemos(){showMemoSkeleton();try{const data=await call('getMemos',adminToken);memos=Array.isArray(data.memos)?data.memos:[];render()}finally{$('memoList').setAttribute('aria-busy','false')}}
 if(embedded){
@@ -97,7 +98,7 @@ if(embedded){
  window.addEventListener('message',async event=>{
   if(event.origin!==location.origin||event.source!==window.parent||!event.data||event.data.type!=='LINK_CORE_ADMIN_TOKEN'||typeof event.data.token!=='string'||!event.data.token)return;
   adminToken=event.data.token;
-  try{await loadMemos()}catch(err){$('memoList').innerHTML='<div class="empty">メモの読み込みに失敗しました：'+esc(err.message||'通信エラー')+'</div>'}
+  try{await loadMemos()}catch(err){showMemoError(err.message||'通信エラー')}
  });
 } else {
  window.addEventListener('load',()=>{if(window.parent!==window)window.parent.postMessage({type:'MEMO_EMBED_READY'},location.origin)});
@@ -112,7 +113,7 @@ $('loginForm').addEventListener('submit',async e=>{
   if(!result || !result.token) throw new Error('認証トークンを取得できませんでした。');
   adminToken=result.token;
   $('loginPanel').classList.add('hidden'); $('appPanel').classList.remove('hidden'); $('loginError').textContent='';
-  await loadMemos();
+  try{await loadMemos()}catch(loadErr){showMemoError(loadErr.message||'通信エラー');return}
  } catch(err) { $('loginError').textContent=err.message||'ログインできませんでした。'; }
  finally { $('loginButton').disabled=false; }
 });
