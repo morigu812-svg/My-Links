@@ -479,8 +479,6 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
   // 管理者パスワードと利用者ページ用パスワードを初回に設定する。
   const AUTH_KEY = 'myLinksUnlocked';
   const ADMIN_TOKEN_KEY = 'linkCoreAdminToken';
-  // 開発用の画面表示バイパス。公開HTMLで確認できるため、本番では必ず削除する。
-  const DEV_BYPASS_KEY = 'linkCoreDevBypass';
   const authGate = $('authGate');
   const authForm = $('authForm');
   const authField = $('authPassword');
@@ -495,31 +493,33 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
   const visitorPasswordConfirmField = $('visitorPasswordConfirm');
   let setupMode = false;
 
-  if (
-    (sessionStorage.getItem(AUTH_KEY) === 'yes' && sessionStorage.getItem(ADMIN_TOKEN_KEY)) ||
-    sessionStorage.getItem(DEV_BYPASS_KEY) === 'yes'
-  ) {
+  if (sessionStorage.getItem(AUTH_KEY) === 'yes' && sessionStorage.getItem(ADMIN_TOKEN_KEY)) {
     document.body.classList.remove('auth-locked');
     if (authGate) authGate.remove();
   }
 
   function setAuthMode(configured) {
     setupMode = !configured;
-    confirmPasswordGroup.hidden = !setupMode;
-    confirmPasswordField.required = setupMode;
-    visitorPasswordField.required = setupMode;
-    visitorPasswordConfirmField.required = setupMode;
+    confirmPasswordGroup.hidden = true;
+    confirmPasswordField.required = false;
+    visitorPasswordField.required = false;
+    visitorPasswordConfirmField.required = false;
     if (setupMode) {
-      authTitle.textContent = '初回セットアップ';
-      authDescription.textContent = '管理者パスワードと、利用者ページに入るためのパスワードを設定してください。';
-      authField.autocomplete = 'new-password';
-      passwordLabel.textContent = '管理者パスワード（12文字以上）';
-      authSubmit.textContent = 'パスワードを設定';
+      authTitle.textContent = '管理者設定が必要です';
+      authDescription.textContent = '管理者パスワードは Apps Script のスクリプト プロパティで設定してください。この画面から初回パスワードは登録できません。';
+      passwordLabel.textContent = '管理者パスワード';
+      authField.autocomplete = 'current-password';
+      authField.disabled = true;
+      authSubmit.disabled = true;
+      authError.textContent = 'LINK_CORE_ADMIN_PASSWORD と LINK_CORE_VISITOR_PASSWORD が設定されるとログインできます。';
     } else {
       authTitle.textContent = '管理者ログイン';
       authDescription.textContent = '管理者だけがリンクの追加・編集・削除を行えます。';
-      authField.autocomplete = 'current-password';
       passwordLabel.textContent = '管理者パスワード';
+      authField.autocomplete = 'current-password';
+      authField.disabled = false;
+      authSubmit.disabled = false;
+      authError.textContent = '';
       authSubmit.textContent = '管理者としてログイン';
     }
   }
@@ -535,25 +535,10 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
 
   authForm.addEventListener('submit', async event => {
     event.preventDefault();
-    // 開発用の簡易ログイン。HTMLからパスワードを確認できるため、開発中のみ使用。
-    // これは画面を開くだけで、GAS側の認証・データ更新権限は付与しない。
-    if (authField.value === 'Morigu0812') {
-      document.body.classList.remove('auth-locked');
-      if (authGate) authGate.remove();
-      sessionStorage.setItem(AUTH_KEY, 'yes');
-      sessionStorage.setItem(DEV_BYPASS_KEY, 'yes');
-      return;
-    }
     authError.textContent = setupMode ? 'パスワードを設定中…' : '認証中…';
     authSubmit.disabled = true;
     try {
-      if (setupMode) {
-        if (authField.value.length < 12) throw new Error('管理者パスワードは12文字以上にしてください。');
-        if (authField.value !== confirmPasswordField.value) throw new Error('管理者パスワードの確認が一致しません。');
-        if (visitorPasswordField.value.length < 8) throw new Error('利用者用パスワードは8文字以上にしてください。');
-        if (visitorPasswordField.value !== visitorPasswordConfirmField.value) throw new Error('利用者用パスワードの確認が一致しません。');
-        await serverCall('setupAdminPassword', authField.value, visitorPasswordField.value);
-      }
+      if (setupMode) throw new Error('管理者パスワードが未設定です。Apps Script のスクリプト プロパティで設定してください。');
       const result = await serverCall('authenticateAdmin', authField.value);
       if (!result || !result.token) throw new Error('認証トークンを受け取れませんでした。');
       sessionStorage.setItem(ADMIN_TOKEN_KEY, result.token);
