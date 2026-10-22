@@ -18,7 +18,7 @@ footer{margin:24px 0;color:#687283;font-size:11px;text-align:center}a.admin{colo
 <div class="brand">LINK CORE / SHARED DESKTOP</div>
 <section class="panel" id="loginPanel">
 <h1>リンク一覧</h1><p>ここではリンクの閲覧のみできます。</p>
-<form id="loginForm"><label for="sitePassword">パスワード（旧GASでは未対応）</label><input id="sitePassword" type="password" autocomplete="current-password" required autofocus><button id="loginButton" type="submit">ログイン</button><div class="error" id="loginError" role="alert"></div></form>
+<form id="loginForm"><label for="sitePassword">サイトのパスワード</label><input id="sitePassword" type="password" autocomplete="current-password" required autofocus><button id="loginButton" type="submit">ログイン</button><div class="error" id="loginError" role="alert"></div></form>
 </section>
 <section class="panel hidden" id="linksPanel">
 <div class="brand">READ ONLY</div><h1>リンク一覧</h1><p>利用者ページではリンクの追加・編集・削除はできません。</p>
@@ -43,6 +43,6 @@ const $=id=>document.getElementById(id);let links=[];
 function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function render(){const q=$('search').value.trim().toLowerCase();const visible=links.filter(x=>[x.title,x.url,x.memo,x.category].some(v=>String(v||'').toLowerCase().includes(q)));$('count').textContent=visible.length+' / '+links.length+' 件';$('list').innerHTML=visible.length?visible.map(x=>'<article class="item"><div><a href="'+esc(/^https?:\/\//i.test(x.url)?x.url:'#')+'" target="_blank" rel="noopener noreferrer">'+esc(x.title)+'</a><div class="url">'+esc(x.url)+'</div>'+(x.category?'<span class="category">'+esc(x.category)+'</span>':'')+(x.memo?'<div class="memo">'+esc(x.memo)+'</div>':'')+'</div><span aria-hidden="true">↗</span></article>').join(''):'<div class="empty">表示できるリンクがありません。</div>'}
 $('search').addEventListener('input',render);
-$('loginForm').addEventListener('submit',async e=>{e.preventDefault();$('loginButton').disabled=true;$('loginError').textContent='リンクを読み込み中…';try{const data=await call('getLinks');links=Array.isArray(data.links)?data.links:[];$('loginPanel').classList.add('hidden');$('linksPanel').classList.remove('hidden');render()}catch(err){$('loginError').textContent=err.message||'ログインできませんでした。';$('loginButton').disabled=false}});
+$('loginForm').addEventListener('submit',async e=>{e.preventDefault();$('loginButton').disabled=true;$('loginError').textContent='認証中…';try{const auth=await call('authenticateVisitor',$('sitePassword').value);if(!auth||!auth.token)throw new Error('閲覧用トークンを取得できませんでした。');$('loginError').textContent='リンクを読み込み中…';const data=await call('getLinks',auth.token);links=Array.isArray(data.links)?data.links:[];$('loginPanel').classList.add('hidden');$('linksPanel').classList.remove('hidden');render()}catch(err){$('loginError').textContent=err.message||'ログインできませんでした。';$('loginButton').disabled=false}});
 })();
 </script></body></html>
