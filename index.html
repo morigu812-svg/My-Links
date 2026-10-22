@@ -294,5 +294,27 @@ $('sideCats').addEventListener('click',event=>{const btn=event.target.closest('[
 $('loginForm').addEventListener('submit',async e=>{e.preventDefault();$('loginButton').disabled=true;$('loginError').textContent='認証中…';try{const auth=await call('authenticateVisitor',$('sitePassword').value);if(!auth||!auth.token)throw new Error('閲覧用トークンを取得できませんでした。');$('loginError').textContent='リンクを読み込み中…';const data=await call('getLinks',auth.token);links=Array.isArray(data.links)?data.links:[];categories=Array.isArray(data.categories)?data.categories:Array.from(new Set(links.map(x=>x.category).filter(Boolean))).sort();$('loginPanel').classList.add('hidden');$('linksPanel').classList.remove('hidden');render()}catch(err){$('loginError').textContent=err.message||'ログインできませんでした。';$('loginButton').disabled=false}});
 
 })();
+
+/* Mobile Safari: tapping outside the search field dismisses the keyboard */
+(function(){
+ const search=document.getElementById('search');
+ if(!search)return;
+ const isMobile=()=>window.matchMedia('(max-width: 760px)').matches || ('ontouchstart' in window);
+ document.addEventListener('pointerdown',function(event){
+   if(!isMobile() || document.activeElement!==search)return;
+   const target=event.target;
+   if(target===search || search.contains(target))return;
+   if(target.closest && target.closest('.toolbar-search'))return;
+   search.blur();
+ },true);
+ document.addEventListener('touchstart',function(event){
+   if(!isMobile() || document.activeElement!==search)return;
+   const target=event.target;
+   if(target===search || search.contains(target))return;
+   if(target.closest && target.closest('.toolbar-search'))return;
+   search.blur();
+ },{capture:true,passive:true});
+})();
+
 </script>
 </body></html>
