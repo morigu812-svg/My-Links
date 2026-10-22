@@ -74,6 +74,13 @@ function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;',
 function dateLabel(v){if(!v)return '';const d=new Date(v);return Number.isNaN(d.getTime())?String(v):d.toLocaleString('ja-JP',{dateStyle:'medium',timeStyle:'short'})}
 async function loadMemos(){const data=await call('getMemos',adminToken);memos=Array.isArray(data.memos)?data.memos:[];render()}
 if(embedded){
+ window.addEventListener('message', event => {
+  if(event.origin!==location.origin||event.source!==window.parent)return;
+  const data=event.data;
+  if(!data||data.type!=='LINK_CORE_MEMO_RESPONSE'||!pending.has(data.id))return;
+  const item=pending.get(data.id);pending.delete(data.id);
+  data.ok?item.resolve(data.result):item.reject(new Error(data.error||'通信に失敗しました。'));
+ });
  $('loginPanel').classList.add('hidden');
  $('appPanel').classList.remove('hidden');
  $('memoList').innerHTML='<div class="empty">管理者認証を確認中…</div>';
