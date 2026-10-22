@@ -369,6 +369,28 @@ body:not(.night-mode) .auth-error{color:#b4232d}
 .memo-overlay-title{font-weight:800;color:#f4f8fc}
 .memo-overlay-close{border:1px solid #41586c;border-radius:9px;padding:8px 13px;background:#172536;color:#f4f8fc;cursor:pointer}
 .memo-overlay-frame{flex:1;width:100%;border:0;background:#08090c}
+
+/* === CYBERPUNK THEME OVERRIDES === */
+:root{color-scheme:dark;--bg:#050812;--panel:rgba(8,18,34,.82);--panel-2:rgba(12,28,48,.9);--ink:#e8faff;--sub:#a4c7d9;--muted:#6e96ab;--line:#17475e;--accent:#00f0ff;--accent-ink:#031116;--star:#f8d66d;--danger:#ff648e}
+html{background:#050812}
+body{background:radial-gradient(ellipse at 8% 0%,rgba(0,238,255,.15),transparent 34%),radial-gradient(ellipse at 92% 10%,rgba(175,49,255,.17),transparent 32%),radial-gradient(ellipse at 50% 90%,rgba(0,110,255,.09),transparent 44%),linear-gradient(145deg,#050812,#091326 56%,#080817)}
+body::before{opacity:.24;background-image:linear-gradient(rgba(0,238,255,.09) 1px,transparent 1px),linear-gradient(90deg,rgba(0,238,255,.09) 1px,transparent 1px);background-size:34px 34px}
+.hero,.panel,.card,.section,.stat-card,.modal,.memo-overlay-content{border-color:#1b5067!important;background:linear-gradient(135deg,rgba(8,24,42,.94),rgba(15,16,42,.88))!important;box-shadow:0 0 0 1px rgba(0,238,255,.04),0 0 30px rgba(0,210,255,.08),0 20px 60px #0005}
+.hero{border-radius:20px!important}
+.hero::after{color:rgba(0,240,255,.055)}
+.brand-mark{border-color:#16708b;background:#071b2b;box-shadow:0 0 18px #00d9ff14}
+.brand-mark span{background:#00f0ff;box-shadow:0 0 10px #00f0ff88}
+.eyebrow,.side-label{color:#64dff2}
+.live-pill{border-color:#176b6e;background:#06272c;color:#8bfbff;box-shadow:0 0 15px #00eaff12}
+button,.btn,input,textarea,select{transition:border-color .18s,box-shadow .18s,background .18s,transform .18s}
+button,.btn{border-color:#176782!important}
+button:hover,.btn:hover{border-color:#00f0ff!important;box-shadow:0 0 18px #00d9ff24;transform:translateY(-1px)}
+input,textarea,select{border-color:#21485d!important;background-color:#050d1b!important;color:#e8faff!important}
+input:focus,textarea:focus,select:focus{border-color:#00f0ff!important;box-shadow:0 0 0 3px #00d9ff20}
+a{color:#68eaff}a:hover{color:#fff;text-shadow:0 0 10px #00d9ff55}
+hr,.divider{border-color:#17475e}
+::selection{background:#00d9ff55;color:#fff}
+
 </style>
 </head>
 <body>
