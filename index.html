@@ -295,25 +295,28 @@ $('loginForm').addEventListener('submit',async e=>{e.preventDefault();$('loginBu
 
 })();
 
-/* Mobile Safari: tapping outside the search field dismisses the keyboard */
+/* Dismiss search focus when the user taps anywhere outside the search control (including iOS Safari). */
 (function(){
  const search=document.getElementById('search');
  if(!search)return;
- const isMobile=()=>window.matchMedia('(max-width: 760px)').matches || ('ontouchstart' in window);
- document.addEventListener('pointerdown',function(event){
-   if(!isMobile() || document.activeElement!==search)return;
+ function dismissOutside(event){
    const target=event.target;
-   if(target===search || search.contains(target))return;
-   if(target.closest && target.closest('.toolbar-search'))return;
-   search.blur();
- },true);
- document.addEventListener('touchstart',function(event){
-   if(!isMobile() || document.activeElement!==search)return;
-   const target=event.target;
-   if(target===search || search.contains(target))return;
-   if(target.closest && target.closest('.toolbar-search'))return;
-   search.blur();
- },{capture:true,passive:true});
+   if(target===search || (target && target.closest && target.closest('.toolbar-search')))return;
+   if(document.activeElement===search || search.matches(':focus')){
+     search.blur();
+     search.setAttribute('inputmode','none');
+     requestAnimationFrame(()=>search.removeAttribute('inputmode'));
+   }
+ }
+ document.addEventListener('pointerdown',dismissOutside,true);
+ document.addEventListener('touchstart',dismissOutside,{capture:true,passive:true});
+ document.addEventListener('click',dismissOutside,true);
+ search.addEventListener('keydown',event=>{
+   if(event.key==='Escape'){
+     search.blur();
+     search.value=search.value;
+   }
+ });
 })();
 
 </script>
