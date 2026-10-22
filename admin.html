@@ -554,6 +554,7 @@ body:not(.night-mode) .finder-window .finder-content .list .item .acts button{
   </form>
 </dialog>
 
+<iframe id="gasBridge" title="通信" hidden></iframe>
 <script>
 (() => {
   'use strict';
@@ -642,11 +643,8 @@ body:not(.night-mode) .finder-window .finder-content .list .item .acts button{
     }
   });
 
-  const frame = document.createElement('iframe');
+  const frame = document.getElementById('gasBridge');
   frame.src = GAS_URL + '?mode=bridge';
-  frame.title = 'LINK CORE bridge';
-  frame.hidden = true;
-  document.body.appendChild(frame);
 
   const READY_TIMEOUT_MS = 10000;
   const REQUEST_TIMEOUT_MS = 15000;
