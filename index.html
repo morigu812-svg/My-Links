@@ -1,46 +1,30 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>My Desktop — LINK CORE</title>
+<style>
+:root{color-scheme:light;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#e9edf2;color:#27292d}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:#e9edf2;padding:28px 22px}button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus-visible{outline:2px solid #3478d4;outline-offset:2px}.hidden{display:none!important}.wrap{width:100%;max-width:1180px;margin:0 auto}.finder-window{overflow:hidden;min-height:650px;border:1px solid #c9cbd0;border-radius:12px;background:#fff;box-shadow:0 18px 55px rgba(30,38,50,.17)}.finder-toolbar{height:58px;display:grid;grid-template-columns:120px minmax(0,1fr) 220px;align-items:center;gap:12px;padding:0 17px;background:linear-gradient(#fbfbfc,#f0f1f3);border-bottom:1px solid #d5d6da}.traffic-lights{display:flex;align-items:center;gap:8px}.traffic-lights span{display:block;width:12px;height:12px;border-radius:50%;box-shadow:inset 0 1px 1px rgba(255,255,255,.7),0 0 0 1px rgba(0,0,0,.08)}.traffic-lights span:nth-child(1){background:#ff5f57}.traffic-lights span:nth-child(2){background:#febc2e}.traffic-lights span:nth-child(3){background:#28c840}.finder-title{justify-self:center;color:#35373b;font-size:14px;font-weight:650;white-space:nowrap}.toolbar-search{display:flex;align-items:center;gap:7px;min-width:0;padding:6px 9px;border:1px solid #d3d5d9;border-radius:7px;background:#fff;color:#777b82}.toolbar-search span{font-size:14px}.toolbar-search input{width:100%;min-width:0;padding:0;border:0;outline:0;background:transparent;color:#292b30;font-size:12px}.toolbar-search input::placeholder{color:#999ca2}.finder-layout{display:grid;grid-template-columns:220px minmax(0,1fr);min-height:590px}.sidebar{padding:17px 10px 22px;background:#f4f5f7;border-right:1px solid #e0e1e4}.side-label{margin:17px 10px 7px;color:#85888f;font-size:10px;font-weight:750;letter-spacing:.04em}.side-item{display:flex;align-items:center;gap:9px;width:100%;padding:7px 10px;border:1px solid transparent;border-radius:6px;background:transparent;text-align:left;color:#36383d;font-size:12px}.side-item>span{display:inline-flex;justify-content:center;width:17px;color:#6e8fc5;font-size:15px}.side-item:hover{background:#e7e9ed}.side-item.selected{border-color:#d0dff6;background:#dce8fa;color:#174c96}.side-item.selected>span{color:#3478d4}.finder-content{min-width:0;padding:25px 27px;background:#fff}.content-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:17px;padding-bottom:13px;border-bottom:1px solid #ececef}.content-heading h1{margin:0;color:#26282d;font-size:25px;line-height:1.25;font-weight:700;letter-spacing:-.025em}.content-heading p{margin:5px 0 0;color:#898c92;font-size:11px}.count{flex-shrink:0;color:#8a8d93;font-size:11px}.list-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 0 9px;border-top:1px solid #e7e8eb;color:#858990;font-size:10px}.list{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}.item{position:relative;min-width:0;min-height:126px;padding:15px;border:1px solid #e0e2e6;border-radius:9px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.035);transition:border-color .15s,background .15s}.item:hover{border-color:#b8cbe7;background:#fbfcff}.item a{display:inline-block;max-width:100%;color:#26282c;text-decoration:none;font-size:14px;font-weight:650;overflow-wrap:anywhere}.item a:hover{color:#1769c2;text-decoration:underline}.url{margin-top:7px;color:#858990;font-size:11px;overflow-wrap:anywhere;word-break:break-word}.category{display:inline-block;margin-top:8px;padding:2px 7px;border:1px solid #e1e4e9;border-radius:5px;background:#f4f5f7;color:#62666d;font-size:10px}.memo{margin-top:8px;color:#656970;font-size:12px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}.item-arrow{position:absolute;right:12px;top:12px;color:#a0a3a9;font-size:13px}.empty{grid-column:1/-1;padding:42px 18px;border:1px dashed #d7d9de;border-radius:9px;color:#7c8087;text-align:center;font-size:13px}.status{min-height:18px;margin:0 0 10px;color:#656970;font-size:12px}.status.error,.error{color:#b4232d}.login-window{max-width:620px;min-height:0;margin:8vh auto 0}.login-window .finder-toolbar{grid-template-columns:120px 1fr 120px}.login-window .finder-title{grid-column:2}.login-body{padding:32px 36px 34px;background:#fff}.login-body h1{margin:0 0 7px;color:#26282c;font-size:27px}.login-body p{margin:0 0 25px;color:#777b82;font-size:13px;line-height:1.65}.login-body label{display:block;margin-bottom:7px;color:#41444a;font-size:12px}.login-row{display:flex;gap:9px}.login-row input{min-width:0;flex:1;padding:11px 12px;border:1px solid #d1d4da;border-radius:7px;background:#fff;color:#25272b}.login-row button{padding:10px 17px;border:1px solid #3478d4;border-radius:7px;background:#3478d4;color:#fff;font-size:12px;font-weight:650}.login-row button:disabled{opacity:.55;cursor:wait}.error{min-height:20px;margin-top:10px;font-size:12px}footer{margin:13px 2px;color:#7f838a;font-size:10px;text-align:right}a.admin{color:#777c84;text-decoration:none}a.admin:hover{color:#245d9e;text-decoration:underline}
+@media(max-width:760px){body{padding:10px}.finder-toolbar{grid-template-columns:72px minmax(0,1fr);grid-template-rows:28px 32px;height:72px;padding:5px 10px;gap:4px 10px}.traffic-lights{grid-column:1;grid-row:1}.finder-title{grid-column:2;grid-row:1;justify-self:start;font-size:13px}.toolbar-search{grid-column:1/-1;grid-row:2}.finder-layout{grid-template-columns:155px minmax(0,1fr)}.sidebar{padding:12px 6px}.side-item{gap:5px;padding:7px 5px;font-size:11px}.finder-content{padding:17px 12px}.list{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:9px}.login-window{margin:6vh auto 0}}
+@media(max-width:520px){body{padding:0;background:#fff}.finder-window{min-height:100vh;border-radius:0;border-left:0;border-right:0}.finder-layout{grid-template-columns:112px minmax(0,1fr)}.sidebar{padding:10px 4px}.side-label{margin:14px 5px 6px;font-size:9px}.side-item{gap:4px;padding:7px 4px;font-size:10px}.side-item>span{width:14px;font-size:13px}.finder-content{padding:14px 9px}.content-heading h1{font-size:21px}.content-heading p{font-size:10px}.count{font-size:10px}.list{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.item{min-height:112px;padding:10px}.item a{font-size:12px}.url{font-size:10px}.memo{font-size:11px}.login-window{margin:0;min-height:100vh}.login-window .finder-window{border-radius:0}.login-body{padding:28px 20px}.login-body h1{font-size:24px}.login-row{flex-direction:column}.login-row button{width:100%}footer{padding:0 10px}}
+</style>
+</head>
 <body>
 <main class="wrap">
 <section class="finder-window login-window" id="loginPanel">
-  <div class="finder-toolbar">
-    <div class="traffic-lights" aria-hidden="true"><span></span><span></span><span></span></div>
-    <div class="finder-title">My Desktop</div>
-    <div></div>
-  </div>
-  <div class="login-body">
-    <div class="brand">LINK CORE / SHARED DESKTOP</div>
-    <h1>リンク一覧</h1>
-    <p>サイトのパスワードを入力すると、共有リンクを閲覧できます。</p>
-    <form id="loginForm">
-      <label for="sitePassword">サイトのパスワード</label>
-      <div class="login-row"><input id="sitePassword" type="password" autocomplete="current-password" required autofocus><button id="loginButton" type="submit">ログイン</button></div>
-      <div class="error" id="loginError" role="alert"></div>
-    </form>
+  <div class="finder-toolbar"><div class="traffic-lights" aria-hidden="true"><span></span><span></span><span></span></div><div class="finder-title">My Desktop</div><div></div></div>
+  <div class="login-body"><div class="brand">LINK CORE / SHARED DESKTOP</div><h1>リンク一覧</h1><p>サイトのパスワードを入力すると、共有リンクを閲覧できます。</p>
+    <form id="loginForm"><label for="sitePassword">サイトのパスワード</label><div class="login-row"><input id="sitePassword" type="password" autocomplete="current-password" required autofocus><button id="loginButton" type="submit">ログイン</button></div><div class="error" id="loginError" role="alert"></div></form>
   </div>
 </section>
 <section class="finder-window hidden" id="linksPanel">
-  <div class="finder-toolbar">
-    <div class="traffic-lights" aria-hidden="true"><span></span><span></span><span></span></div>
-    <div class="finder-title">My Desktop</div>
-    <label class="toolbar-search"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="検索" aria-label="リンクを検索"></label>
-  </div>
-  <div class="finder-layout">
-    <aside class="sidebar" aria-label="リンクの表示">
-      <div class="side-label">お気に入り</div>
-      <button type="button" class="side-item" data-view="favorites"><span>★</span> お気に入り</button>
-      <div class="side-label">履歴</div>
-      <button type="button" class="side-item" data-view="recent"><span>◷</span> 最近追加した項目</button>
-      <div class="side-label">リンク</div>
-      <button type="button" class="side-item selected" data-view="all"><span>▦</span> すべてのリンク</button>
-      <div class="side-label">カテゴリ</div>
-      <div id="sideCats"></div>
-    </aside>
-    <section class="finder-content">
-      <div class="content-heading"><div><h1 id="viewTitle">すべてのリンク</h1><p>共有リンクを一覧表示しています</p></div><span class="count" id="count"></span></div>
-      <div class="status" id="loadStatus" role="status"></div>
-      <div class="list-heading"><span>名前</span><span>リンク一覧</span></div>
-      <div class="list" id="list"><div class="empty">読み込み中…</div></div>
-    </section>
-  </div>
+  <div class="finder-toolbar"><div class="traffic-lights" aria-hidden="true"><span></span><span></span><span></span></div><div class="finder-title">My Desktop</div><label class="toolbar-search"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="検索" aria-label="リンクを検索"></label></div>
+  <div class="finder-layout"><aside class="sidebar" aria-label="リンクの表示">
+    <div class="side-label">お気に入り</div><button type="button" class="side-item" data-view="favorites"><span>★</span> お気に入り</button>
+    <div class="side-label">履歴</div><button type="button" class="side-item" data-view="recent"><span>◷</span> 最近追加した項目</button>
+    <div class="side-label">リンク</div><button type="button" class="side-item selected" data-view="all"><span>▦</span> すべてのリンク</button>
+    <div class="side-label">カテゴリ</div><div id="sideCats"></div>
+  </aside><section class="finder-content"><div class="content-heading"><div><h1 id="viewTitle">すべてのリンク</h1><p>共有リンクを一覧表示しています</p></div><span class="count" id="count"></span></div><div class="status" id="loadStatus" role="status"></div><div class="list-heading"><span>名前</span><span>リンク一覧</span></div><div class="list" id="list"><div class="empty">読み込み中…</div></div></section></div>
 </section>
 <footer><a class="admin" href="memos.html">メモ帳（管理者）</a></footer>
 </main>
@@ -85,4 +69,5 @@ $('sideCats').addEventListener('click',event=>{const btn=event.target.closest('[
 $('loginForm').addEventListener('submit',async e=>{e.preventDefault();$('loginButton').disabled=true;$('loginError').textContent='認証中…';try{const auth=await call('authenticateVisitor',$('sitePassword').value);if(!auth||!auth.token)throw new Error('閲覧用トークンを取得できませんでした。');$('loginError').textContent='リンクを読み込み中…';const data=await call('getLinks',auth.token);links=Array.isArray(data.links)?data.links:[];categories=Array.isArray(data.categories)?data.categories:Array.from(new Set(links.map(x=>x.category).filter(Boolean))).sort();$('loginPanel').classList.add('hidden');$('linksPanel').classList.remove('hidden');render()}catch(err){$('loginError').textContent=err.message||'ログインできませんでした。';$('loginButton').disabled=false}});
 
 })();
-</script></body></html>
+</script>
+</body></html>
