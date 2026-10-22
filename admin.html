@@ -1067,6 +1067,23 @@ body:not(.night-mode) .sidebar .side-item.active{
     run('保存中…', () => serverCall('saveLink', input, sessionStorage.getItem(ADMIN_TOKEN_KEY)), '保存しました。');
   });
 
+  // スマホ・タブレットで検索欄の外をタップしたらキーボードを閉じる
+  (function(){
+    const search = $('search');
+    function blurSearchOutside(event) {
+      if (document.activeElement !== search) return;
+      const target = event.target;
+      if (target === search || (target && target.closest && target.closest('.toolbar-search'))) return;
+      search.blur();
+    }
+    document.addEventListener('touchstart', blurSearchOutside, {capture:true, passive:true});
+    document.addEventListener('pointerdown', blurSearchOutside, true);
+    document.addEventListener('click', blurSearchOutside, true);
+    search.addEventListener('keydown', event => {
+      if (event.key === 'Escape') search.blur();
+    });
+  })();
+
   $('search').addEventListener('input', event => {
     state.query = event.target.value;
     render();
