@@ -391,6 +391,32 @@ a{color:#68eaff}a:hover{color:#fff;text-shadow:0 0 10px #00d9ff55}
 hr,.divider{border-color:#17475e}
 ::selection{background:#00d9ff55;color:#fff}
 
+
+/* === CYBER THEME FIX: override legacy light desktop skin === */
+body:not(.night-mode){color:#e8faff!important;background:radial-gradient(ellipse at 8% 0%,rgba(0,238,255,.15),transparent 34%),radial-gradient(ellipse at 92% 10%,rgba(175,49,255,.17),transparent 32%),linear-gradient(145deg,#050812,#091326 56%,#080817)!important}
+body:not(.night-mode)::before{opacity:.24!important;background-image:linear-gradient(rgba(0,238,255,.09) 1px,transparent 1px),linear-gradient(90deg,rgba(0,238,255,.09) 1px,transparent 1px)!important;background-size:34px 34px!important}
+body:not(.night-mode) .finder-window{background:rgba(7,13,28,.96)!important;border:1px solid #18506a!important;box-shadow:0 0 0 1px rgba(0,238,255,.06),0 0 35px rgba(0,210,255,.12),0 24px 70px #0009!important}
+body:not(.night-mode) .finder-toolbar{background:linear-gradient(100deg,#101d32,#111126)!important;border-bottom:1px solid #17495d!important}
+body:not(.night-mode) .finder-title,body:not(.night-mode) .finder-content h1,body:not(.night-mode) .finder-content h2,body:not(.night-mode) .finder-content h3,body:not(.night-mode) .finder-content strong{color:#e5fbff!important;text-shadow:0 0 14px #00d9ff22!important}
+body:not(.night-mode) .sidebar{background:rgba(7,17,32,.98)!important;border-right:1px solid #173b52!important}
+body:not(.night-mode) .finder-content{background:linear-gradient(145deg,rgba(8,15,30,.98),rgba(10,13,31,.98))!important;color:#e8faff!important}
+body:not(.night-mode) .side-label,body:not(.night-mode) .eyebrow{color:#64dff2!important}
+body:not(.night-mode) .side-item{background:rgba(8,20,36,.7)!important;border-color:#19475c!important;color:#b9d5e6!important}
+body:not(.night-mode) .side-item span{color:#00d9ff!important}
+body:not(.night-mode) .side-item:hover,body:not(.night-mode) .side-item.selected{background:linear-gradient(100deg,#10344a,#171c3a)!important;border-color:#00d9ff!important;color:#eaffff!important;box-shadow:0 0 15px #00d9ff1f!important}
+body:not(.night-mode) .item,body:not(.night-mode) .workspace,body:not(.night-mode) .stat-card,body:not(.night-mode) .chip,body:not(.night-mode) .width-control{background:linear-gradient(135deg,rgba(8,25,43,.95),rgba(15,17,40,.92))!important;border-color:#1b5067!important;color:#dff7ff!important;box-shadow:0 0 18px #00d9ff0b!important}
+body:not(.night-mode) .item:hover{background:#0d2137!important;border-color:#00d9ff!important}
+body:not(.night-mode) .finder-content p,body:not(.night-mode) .finder-content label,body:not(.night-mode) .finder-content small,body:not(.night-mode) .status,body:not(.night-mode) .muted{color:#91b5ca!important}
+body:not(.night-mode) input,body:not(.night-mode) textarea,body:not(.night-mode) select,body:not(.night-mode) .toolbar-search,body:not(.night-mode) .search-wrap{background:#050d1b!important;border-color:#21485d!important;color:#e8faff!important}
+body:not(.night-mode) input::placeholder,body:not(.night-mode) textarea::placeholder{color:#68879b!important}
+body:not(.night-mode) button,body:not(.night-mode) .btn,body:not(.night-mode) .acts button{background:linear-gradient(135deg,#10334b,#171c3b)!important;border-color:#176782!important;color:#dffcff!important}
+body:not(.night-mode) button:hover,body:not(.night-mode) .btn:hover,body:not(.night-mode) .acts button:hover{border-color:#00f0ff!important;box-shadow:0 0 18px #00d9ff30!important}
+body:not(.night-mode) .btn.primary,body:not(.night-mode) button.primary{background:linear-gradient(135deg,#006e8b,#3c36a1)!important;border-color:#00eaff!important;color:#fff!important;box-shadow:0 0 20px #00d9ff24!important}
+body:not(.night-mode) a{color:#68eaff!important}
+body:not(.night-mode) .memo-overlay{background:#050812!important}
+body:not(.night-mode) .memo-overlay-head{background:#0a1729!important;border-bottom-color:#17475e!important}
+body:not(.night-mode) .memo-overlay-title{color:#e8faff!important}
+
 </style>
 </head>
 <body>
