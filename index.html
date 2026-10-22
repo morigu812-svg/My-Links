@@ -247,6 +247,53 @@ body{background:radial-gradient(ellipse at 50% 0%,#0b1b33 0%,#050914 62%) fixed!
 a.admin{color:#63e4ff!important}
 ::selection{background:#00d9ff55!important;color:#fff!important}
 
+
+/* Definitive navy/cyan palette override — replace legacy green styling */
+:root{
+ color-scheme:dark!important;
+ --bg:#050914!important;--panel:#0a1528!important;--panel-2:#0d1c32!important;
+ --ink:#e8f5ff!important;--sub:#a8bfd4!important;--muted:#7895ad!important;
+ --line:#20516c!important;--accent:#35d9ff!important;--accent-ink:#03111c!important;
+ --star:#35d9ff!important;--danger:#ff6bba!important;
+ background:#050914!important;color:#e8f5ff!important
+}
+html,body{background:#050914!important;color:#e8f5ff!important}
+body{background:radial-gradient(ellipse at 50% 0%,#0c203b 0%,#050914 62%) fixed!important}
+body::before{opacity:.1!important;background-image:linear-gradient(#12344b55 1px,transparent 1px),linear-gradient(90deg,#12344b55 1px,transparent 1px)!important}
+.hero,.stat-card,.workspace,.panel,.section,.form-card,.link-card,.memo-card,
+.finder-window,.login-window,.login-body,.workspace-inner,.section-card{
+ background:linear-gradient(145deg,#0b1930,#071124)!important;
+ border-color:#20516c!important;color:#e8f5ff!important;
+ box-shadow:0 0 22px #00cfff12!important
+}
+.finder-toolbar,.toolbar,.topbar{background:linear-gradient(100deg,#101f38,#0a1428)!important;border-color:#20516c!important}
+.finder-layout,.finder-content,.content,.workspace-content{background:#071124!important;color:#e8f5ff!important}
+.sidebar{background:linear-gradient(180deg,#09182c,#060f1e)!important;border-color:#17415a!important}
+.side-label,.eyebrow,.section-note{color:#68ddff!important}
+.side-item{color:#c0d8e9!important;background:transparent!important;border-color:transparent!important;box-shadow:none!important}
+.side-item>span{color:#35d9ff!important}
+.side-item:hover,.side-item.selected{background:#102a43!important;border-color:#23708d!important;color:#f0fbff!important;box-shadow:inset 2px 0 #35d9ff,0 0 14px #00cfff18!important}
+.content-heading,.list-heading,.section-heading,.bar{border-color:#20516c!important}
+h1,h2,h3,.finder-title,.content-heading h1,.section-heading h2,.stat-card strong{color:#e8f5ff!important}
+p,.hero-copy,.hero-copy span,.content-heading p,.count,.url,.memo,.stat-foot{color:#a8bfd4!important}
+.item,.link-card,.memo-card,.official-card{background:linear-gradient(145deg,#0d1c31,#091426)!important;border:1px solid #20516c!important;color:#e8f5ff!important;box-shadow:inset 0 1px #ffffff08,0 0 13px #00cfff08!important}
+.item:hover,.link-card:hover,.memo-card:hover,.official-card:hover{background:#10243c!important;border-color:#35d9ff!important;box-shadow:0 0 18px #00cfff20!important}
+.item a,a{color:#73eaff!important}
+.item a:hover,a:hover{color:#c5f7ff!important}
+.category,.tag,.badge,.live-pill{background:#10283e!important;border-color:#245777!important;color:#8ce8ff!important}
+input,textarea,select,.search-wrap,.toolbar-search{background:#060e1d!important;border-color:#28516c!important;color:#e8f5ff!important}
+input::placeholder,textarea::placeholder{color:#7895ad!important}
+button,.btn{background:#0d263d!important;border-color:#286582!important;color:#a9efff!important}
+button:hover,.btn:hover{background:#12334d!important;border-color:#35d9ff!important;box-shadow:0 0 14px #00cfff1c!important}
+button.primary,.btn.primary,.login-row button,button[type=submit]{background:linear-gradient(135deg,#087fa9,#273f9b)!important;border-color:#35d9ff!important;color:#fff!important}
+.star-icon,.stat-icon,.folder-icon,.official-icon{background:#10283e!important;border-color:#286582!important;color:#35d9ff!important}
+.empty{background:#09172a!important;border-color:#27617c!important;color:#a8bfd4!important}
+.status,.notice{background:#081c30!important;border-color:#236b8c!important;color:#a8eaff!important}
+a.admin{color:#68ddff!important}
+body.night-mode,body.dim-mode{background:#02050b!important;color:#8494a5!important}
+body.night-mode .hero,body.night-mode .stat-card,body.night-mode .workspace,body.night-mode .panel,body.night-mode .item,body.dim-mode .hero,body.dim-mode .stat-card,body.dim-mode .workspace,body.dim-mode .panel,body.dim-mode .item{background:#080e18!important;border-color:#172d40!important;box-shadow:none!important}
+body.night-mode .item a,body.dim-mode .item a{color:#8ba6b9!important}
+
 </style>
 </head>
 <body>
