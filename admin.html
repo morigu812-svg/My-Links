@@ -652,6 +652,7 @@ body:not(.night-mode) .finder-window .finder-content .list .item .acts button{
   const REQUEST_TIMEOUT_MS = 15000;
 
   function waitForBridge() {
+    if (bridgeWindow && bridgeOrigin) return Promise.resolve();
     return Promise.race([
       ready,
       new Promise((_, reject) => {
