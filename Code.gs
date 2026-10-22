@@ -200,10 +200,7 @@ function getAdminSetupStatus() {
   };
 }
 
-/**
- * 管理者画面から初回のみ、管理者パスワードと利用者用パスワードを設定する。
- */
-// 初期パスワードはブラウザーから設定しない。管理者が Apps Script のスクリプト プロパティで登録する。
+// 初期パスワードは Apps Script のスクリプト プロパティで管理者が登録する。
 
 /**
  * 管理者パスワードで認証し、短時間有効なサーバー側トークンを発行する。
@@ -231,7 +228,7 @@ function requireLinkViewer_(token) {
 
 function authenticateAdmin(password) {
   const expected = PropertiesService.getScriptProperties().getProperty('LINK_CORE_ADMIN_PASSWORD');
-  if (!expected) throw new Error('管理者パスワードが未設定です。管理者ページの初回セットアップから設定してください。設定画面が出ない場合は、GASを最新版に再デプロイしてください。');
+  if (!expected) throw new Error('管理者パスワードが未設定です。Apps Script のスクリプト プロパティに LINK_CORE_ADMIN_PASSWORD を登録してください。');
   if (typeof password !== 'string' || !password || password !== expected) {
     throw new Error('管理者パスワードが違います。');
   }
