@@ -579,6 +579,18 @@ body.night-mode .star[aria-pressed="true"]{background:#352b0d!important;border-c
 body:not(.night-mode) #status:not(:empty){background:linear-gradient(100deg,#082034,#0a1323)!important;color:#a9eaff!important;border-color:#23678a!important;border-left-color:#35d8ff!important}
 body:not(.night-mode) #status.error{background:linear-gradient(100deg,#340d1f,#190d1b)!important;color:#ffb5c3!important;border-color:#8d355d!important;border-left-color:#ff4f91!important}
 
+
+/* Favorite state uses the same navy + cyan cyber palette as execution notifications */
+.star::before,.item .star::before{content:"☆"!important;color:#8da4bc!important;text-shadow:none!important}
+.star[aria-pressed="true"]::before,.item .star[aria-pressed="true"]::before{content:"★"!important;color:#8cecff!important;text-shadow:0 0 5px #35d8ff,0 0 14px #12bce8!important}
+.star[aria-pressed="false"],.item .star[aria-pressed="false"]{background:linear-gradient(100deg,rgba(8,32,52,.96),rgba(10,19,35,.96))!important;border:1px solid #23678a!important;box-shadow:inset 0 0 12px #1ab8e50a!important}
+.star[aria-pressed="false"]:hover,.item .star[aria-pressed="false"]:hover{background:#102a43!important;border-color:#35d8ff!important;box-shadow:0 0 12px #12bce820!important}
+.star[aria-pressed="true"],.item .star[aria-pressed="true"]{background:linear-gradient(100deg,rgba(8,32,52,.98),rgba(10,19,35,.98))!important;border:1px solid #35d8ff!important;box-shadow:inset 0 0 16px #1ab8e510,0 0 0 1px #35d8ff24,0 0 15px #12bce825!important}
+.star[aria-pressed="true"]:hover,.item .star[aria-pressed="true"]:hover{background:#102a43!important;border-color:#8cecff!important;box-shadow:inset 0 0 16px #1ab8e518,0 0 18px #12bce835!important}
+body.night-mode .star[aria-pressed="false"]::before{content:"☆"!important;color:#8da4bc!important;text-shadow:none!important}
+body.night-mode .star[aria-pressed="true"]::before{content:"★"!important;color:#8cecff!important;text-shadow:0 0 5px #35d8ff,0 0 14px #12bce8!important}
+body.night-mode .star[aria-pressed="true"]{background:linear-gradient(100deg,rgba(8,32,52,.98),rgba(10,19,35,.98))!important;border-color:#35d8ff!important;box-shadow:inset 0 0 16px #1ab8e510,0 0 0 1px #35d8ff24,0 0 15px #12bce825!important}
+
 </style>
 </head>
 <body>
