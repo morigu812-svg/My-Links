@@ -631,6 +631,14 @@ main { width:100%; max-width:none !important; }
   main { padding:0 !important; }
   .finder-layout { grid-template-columns:112px minmax(0,1fr); }
 }
+
+/* Loading shimmer: a soft, flowing highlight while links are being fetched. */
+.loading-skeleton{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;width:100%;}
+.loading-card{min-height:112px;padding:16px;border:1px solid rgba(53,217,255,.18);border-radius:12px;background:linear-gradient(110deg,rgba(13,28,49,.88) 25%,rgba(32,72,96,.58) 38%,rgba(13,28,49,.88) 52%);background-size:220% 100%;animation:linkCoreShimmer 1.45s ease-in-out infinite;}
+.loading-line{height:9px;margin:5px 0 12px;border-radius:6px;background:rgba(154,201,224,.12);}
+.loading-line.short{width:46%;}.loading-line.long{width:82%;}
+@keyframes linkCoreShimmer{0%{background-position:100% 0}100%{background-position:-120% 0}}
+@media(prefers-reduced-motion:reduce){.loading-card{animation:none;background:rgba(13,28,49,.9)}}
 </style>
 </head>
 <body>
@@ -686,7 +694,7 @@ main { width:100%; max-width:none !important; }
     </div>
     <div class="list-heading"><span class="list-heading-title"><span class="heading-dot">◆</span> LINK FEED</span><span id="resultCount" class="result-count">読み込み中…</span></div>
     <div id="status" role="status" aria-live="polite"></div>
-    <div id="list" class="list"></div>
+    <div id="list" class="list loading-skeleton" role="status" aria-label="リンクを読み込み中"><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div></div>
   </section>
     </main>
     <section id="officialPanel" class="official-panel" aria-label="公式リンク">
@@ -1010,6 +1018,7 @@ main { width:100%; max-width:none !important; }
   }
 
   function render() {
+    $('list').classList.remove('loading-skeleton');
     $('sideCats').innerHTML = state.categories.map(cat =>
       `<button type="button" class="side-item ${state.category === cat ? 'selected' : ''}" data-side-cat="${esc(cat)}"><span>▸</span> ${esc(cat)}</button>`
     ).join('');
