@@ -1,29 +1,46 @@
-<!doctype html>
-<html lang="ja">
-<head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>LINK CORE</title>
-<style>
-:root{color-scheme:dark;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#08090c;color:#eceef3}
-*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at top,#171c27 0,#08090c 60%);padding:24px}
-.wrap{max-width:900px;margin:8vh auto 0}.brand{font-size:12px;letter-spacing:.22em;color:#aab5c8}.panel{margin-top:22px;background:rgba(19,22,29,.9);border:1px solid #2a303d;border-radius:22px;padding:clamp(22px,5vw,38px);box-shadow:0 24px 80px #0006}
-h1{font-size:clamp(28px,5vw,42px);letter-spacing:-.04em;margin:8px 0 10px}p{color:#aeb5c2;line-height:1.7}
-label{display:block;margin:22px 0 8px;font-size:13px;color:#c7ceda}input{width:100%;padding:14px 15px;background:#090b10;border:1px solid #353d4c;border-radius:12px;color:#fff;font:inherit;outline:none}input:focus{border-color:#93a8ce}
-button{border:0;border-radius:12px;padding:13px 18px;background:#e8edf7;color:#10141b;font:600 14px inherit;cursor:pointer;margin-top:14px}button:disabled{opacity:.5;cursor:wait}.error{color:#ff9999;min-height:1.5em;font-size:13px}.hidden{display:none!important}
-.toolbar{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin:24px 0}.toolbar input{max-width:330px}.count{font-size:12px;color:#aeb5c2}
-.list{display:grid;gap:10px}.item{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:18px;border:1px solid #2a303d;border-radius:15px;background:#11141b}.item a{color:#f1f4fa;text-decoration:none;font-weight:600;overflow-wrap:anywhere}.item a:hover{text-decoration:underline}.url{font-size:12px;color:#8e9aae;margin-top:6px;overflow-wrap:anywhere}.category{display:inline-block;margin-top:8px;border:1px solid #343b49;border-radius:999px;padding:3px 8px;color:#aebbd0;font-size:11px}.memo{font-size:13px;color:#aeb5c2;margin-top:8px;white-space:pre-wrap}.empty{border:1px dashed #343b49;padding:30px;border-radius:14px;color:#9ba5b6;text-align:center}
-footer{margin:24px 0;color:#687283;font-size:11px;text-align:center}a.admin{color:#7e8ba0;text-decoration:none;font-size:12px}a.admin:hover{color:#d7dfed}
-</style></head>
-<body><main class="wrap">
-<div class="brand">LINK CORE / SHARED DESKTOP</div>
-<section class="panel" id="loginPanel">
-<h1>リンク一覧</h1><p>ここではリンクの閲覧のみできます。</p>
-<form id="loginForm"><label for="sitePassword">サイトのパスワード</label><input id="sitePassword" type="password" autocomplete="current-password" required autofocus><button id="loginButton" type="submit">ログイン</button><div class="error" id="loginError" role="alert"></div></form>
+<body>
+<main class="wrap">
+<section class="finder-window login-window" id="loginPanel">
+  <div class="finder-toolbar">
+    <div class="traffic-lights" aria-hidden="true"><span></span><span></span><span></span></div>
+    <div class="finder-title">My Desktop</div>
+    <div></div>
+  </div>
+  <div class="login-body">
+    <div class="brand">LINK CORE / SHARED DESKTOP</div>
+    <h1>リンク一覧</h1>
+    <p>サイトのパスワードを入力すると、共有リンクを閲覧できます。</p>
+    <form id="loginForm">
+      <label for="sitePassword">サイトのパスワード</label>
+      <div class="login-row"><input id="sitePassword" type="password" autocomplete="current-password" required autofocus><button id="loginButton" type="submit">ログイン</button></div>
+      <div class="error" id="loginError" role="alert"></div>
+    </form>
+  </div>
 </section>
-<section class="panel hidden" id="linksPanel">
-<div class="brand">READ ONLY</div><h1>リンク一覧</h1><p>利用者ページではリンクの追加・編集・削除はできません。</p>
-<div class="toolbar"><input id="search" type="search" placeholder="リンクを検索" aria-label="リンクを検索"><span class="count" id="count"></span></div>
-<div class="list" id="list"><div class="empty">読み込み中…</div></div>
+<section class="finder-window hidden" id="linksPanel">
+  <div class="finder-toolbar">
+    <div class="traffic-lights" aria-hidden="true"><span></span><span></span><span></span></div>
+    <div class="finder-title">My Desktop</div>
+    <label class="toolbar-search"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="検索" aria-label="リンクを検索"></label>
+  </div>
+  <div class="finder-layout">
+    <aside class="sidebar" aria-label="リンクの表示">
+      <div class="side-label">お気に入り</div>
+      <button type="button" class="side-item" data-view="favorites"><span>★</span> お気に入り</button>
+      <div class="side-label">履歴</div>
+      <button type="button" class="side-item" data-view="recent"><span>◷</span> 最近追加した項目</button>
+      <div class="side-label">リンク</div>
+      <button type="button" class="side-item selected" data-view="all"><span>▦</span> すべてのリンク</button>
+      <div class="side-label">カテゴリ</div>
+      <div id="sideCats"></div>
+    </aside>
+    <section class="finder-content">
+      <div class="content-heading"><div><h1 id="viewTitle">すべてのリンク</h1><p>共有リンクを一覧表示しています</p></div><span class="count" id="count"></span></div>
+      <div class="status" id="loadStatus" role="status"></div>
+      <div class="list-heading"><span>名前</span><span>リンク一覧</span></div>
+      <div class="list" id="list"><div class="empty">読み込み中…</div></div>
+    </section>
+  </div>
 </section>
 <footer><a class="admin" href="memos.html">メモ帳（管理者）</a></footer>
 </main>
@@ -41,8 +58,31 @@ frame.src=GAS_URL+'?mode=bridge';
 function call(method,...args){return bridgeReady.then(()=>new Promise((resolve,reject)=>{const id=(crypto.randomUUID&&crypto.randomUUID())||String(Date.now()+Math.random());const timer=setTimeout(()=>{pending.delete(id);reject(new Error('サーバーから応答がありません。GASの再デプロイを確認してください。'))},15000);pending.set(id,{resolve:v=>{clearTimeout(timer);resolve(v)},reject:e=>{clearTimeout(timer);reject(e)}});bridgeWindow.postMessage({type:'DAILY_CORE_REQUEST',id,method,args},bridgeOrigin)}))}
 const $=id=>document.getElementById(id);let links=[];
 function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function render(){const q=$('search').value.trim().toLowerCase();const visible=links.filter(x=>[x.title,x.url,x.memo,x.category].some(v=>String(v||'').toLowerCase().includes(q)));$('count').textContent=visible.length+' / '+links.length+' 件';$('list').innerHTML=visible.length?visible.map(x=>'<article class="item"><div><a href="'+esc(/^https?:\/\//i.test(x.url)?x.url:'#')+'" target="_blank" rel="noopener noreferrer">'+esc(x.title)+'</a><div class="url">'+esc(x.url)+'</div>'+(x.category?'<span class="category">'+esc(x.category)+'</span>':'')+(x.memo?'<div class="memo">'+esc(x.memo)+'</div>':'')+'</div><span aria-hidden="true">↗</span></article>').join(''):'<div class="empty">表示できるリンクがありません。</div>'}
+let links=[],categories=[],view='all',selectedCategory='';
+function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function visibleLinks(){
+ const q=$('search').value.trim().toLowerCase();
+ let items=links.filter(x=>[x.title,x.url,x.memo,x.category].some(v=>String(v||'').toLowerCase().includes(q)));
+ if(selectedCategory)items=items.filter(x=>x.category===selectedCategory);
+ else if(view==='favorites')items=items.filter(x=>x.favorite);
+ else if(view==='recent')items=items.slice().sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
+ return items;
+}
+function render(){
+ const catButtons=categories.map(cat=>'<button type="button" class="side-item '+(selectedCategory===cat?'selected':'')+'" data-category="'+esc(cat)+'"><span>▸</span> '+esc(cat)+'</button>').join('');
+ $('sideCats').innerHTML=catButtons||'<div style="padding:4px 10px;color:#999;font-size:11px">カテゴリなし</div>';
+ document.querySelectorAll('[data-view]').forEach(btn=>btn.classList.toggle('selected',!selectedCategory&&btn.dataset.view===view));
+ const titles={all:'すべてのリンク',favorites:'お気に入り',recent:'最近追加した項目'};
+ $('viewTitle').textContent=selectedCategory||titles[view]||'すべてのリンク';
+ const visible=visibleLinks();
+ $('count').textContent=visible.length+' 件';
+ $('loadStatus').textContent='';
+ $('list').innerHTML=visible.length?visible.map(x=>'<article class="item"><span class="item-arrow" aria-hidden="true">↗</span><a href="'+esc(/^https?:\/\//i.test(x.url)?x.url:'#')+'" target="_blank" rel="noopener noreferrer">'+esc(x.title)+'</a><div class="url">'+esc(x.url)+'</div>'+(x.category?'<span class="category">'+esc(x.category)+'</span>':'')+(x.memo?'<div class="memo">'+esc(x.memo)+'</div>':'')+'</article>').join(''):'<div class="empty">表示できるリンクがありません。</div>';
+}
 $('search').addEventListener('input',render);
-$('loginForm').addEventListener('submit',async e=>{e.preventDefault();$('loginButton').disabled=true;$('loginError').textContent='認証中…';try{const auth=await call('authenticateVisitor',$('sitePassword').value);if(!auth||!auth.token)throw new Error('閲覧用トークンを取得できませんでした。');$('loginError').textContent='リンクを読み込み中…';const data=await call('getLinks',auth.token);links=Array.isArray(data.links)?data.links:[];$('loginPanel').classList.add('hidden');$('linksPanel').classList.remove('hidden');render()}catch(err){$('loginError').textContent=err.message||'ログインできませんでした。';$('loginButton').disabled=false}});
+document.querySelectorAll('[data-view]').forEach(btn=>btn.addEventListener('click',()=>{view=btn.dataset.view;selectedCategory='';render()}));
+$('sideCats').addEventListener('click',event=>{const btn=event.target.closest('[data-category]');if(!btn)return;selectedCategory=btn.dataset.category;view='all';render()});
+$('loginForm').addEventListener('submit',async e=>{e.preventDefault();$('loginButton').disabled=true;$('loginError').textContent='認証中…';try{const auth=await call('authenticateVisitor',$('sitePassword').value);if(!auth||!auth.token)throw new Error('閲覧用トークンを取得できませんでした。');$('loginError').textContent='リンクを読み込み中…';const data=await call('getLinks',auth.token);links=Array.isArray(data.links)?data.links:[];categories=Array.isArray(data.categories)?data.categories:Array.from(new Set(links.map(x=>x.category).filter(Boolean))).sort();$('loginPanel').classList.add('hidden');$('linksPanel').classList.remove('hidden');render()}catch(err){$('loginError').textContent=err.message||'ログインできませんでした。';$('loginButton').disabled=false}});
+
 })();
 </script></body></html>
