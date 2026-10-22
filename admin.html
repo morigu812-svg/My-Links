@@ -591,6 +591,28 @@ body.night-mode .star[aria-pressed="false"]::before{content:"☆"!important;colo
 body.night-mode .star[aria-pressed="true"]::before{content:"★"!important;color:#8cecff!important;text-shadow:0 0 5px #35d8ff,0 0 14px #12bce8!important}
 body.night-mode .star[aria-pressed="true"]{background:linear-gradient(100deg,rgba(8,32,52,.98),rgba(10,19,35,.98))!important;border-color:#35d8ff!important;box-shadow:inset 0 0 16px #1ab8e510,0 0 0 1px #35d8ff24,0 0 15px #12bce825!important}
 
+
+/* サイドバーの各タブを囲む枠線をなくす */
+.sidebar .side-item,
+body:not(.night-mode) .sidebar .side-item{
+  border-color:transparent!important;
+  box-shadow:none!important;
+  background:transparent!important;
+}
+.sidebar .side-item:hover,
+body:not(.night-mode) .sidebar .side-item:hover{
+  border-color:transparent!important;
+  background:rgba(80,190,235,.08)!important;
+  box-shadow:none!important;
+}
+.sidebar .side-item.selected,
+.sidebar .side-item.active,
+body:not(.night-mode) .sidebar .side-item.selected,
+body:not(.night-mode) .sidebar .side-item.active{
+  border-color:transparent!important;
+  box-shadow:none!important;
+  background:rgba(35,150,210,.16)!important;
+}
 </style>
 </head>
 <body>
