@@ -246,6 +246,121 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
 .auth-card button{width:100%;margin-top:13px;padding:12px;border:1px solid #5af2d6;border-radius:9px;background:#5af2d6;color:#071a18;font-weight:850}
 .auth-error{min-height:22px;margin-top:10px;color:#ff9eae;font-size:12px}
 
+
+/* Finder restoration: classic macOS light window */
+body:not(.night-mode){background:#e9edf2;color:#25272b}
+body:not(.night-mode)::before{display:none}
+body:not(.night-mode) main{max-width:1228px;padding:28px 24px 22px}
+body:not(.night-mode) .finder-window{width:100%;max-width:1180px;margin:0 auto;min-height:650px;overflow:hidden;border:1px solid #c7c9ce;border-radius:12px;background:#fff;box-shadow:0 18px 55px rgba(30,38,50,.18);filter:none}
+body:not(.night-mode) .finder-toolbar{height:58px;display:grid;grid-template-columns:120px minmax(0,1fr) 120px;grid-template-rows:1fr;align-items:center;gap:12px;padding:0 17px;background:linear-gradient(#fafafa,#f1f1f1);border-bottom:1px solid #d4d5d8}
+body:not(.night-mode) .traffic-lights{grid-column:1;grid-row:1;gap:8px}
+body:not(.night-mode) .traffic-lights span{width:12px;height:12px;box-shadow:inset 0 1px 1px rgba(255,255,255,.65),0 0 0 1px rgba(0,0,0,.08)}
+body:not(.night-mode) .finder-title{grid-column:2;grid-row:1;justify-self:center;color:#33363b;font-size:14px;font-weight:650}
+body:not(.night-mode) .folder-glyph{color:#6b9ee8}
+body:not(.night-mode) .toolbar-chevron{color:#8c8e93}
+body:not(.night-mode) .toolbar-tools{grid-column:3;grid-row:1;justify-self:end;gap:10px;color:#6b6d72}
+body:not(.night-mode) .toolbar-tools button{color:#65676c;background:transparent;border:0;padding:4px 7px}
+body:not(.night-mode) .toolbar-search{grid-column:3;grid-row:1;justify-self:end;width:100%;max-width:190px;margin:0;padding:5px 9px;border:1px solid #d2d4d8;border-radius:7px;background:#fff;color:#6d7076}
+body:not(.night-mode) .toolbar-search input{min-width:0;width:100%;padding:2px 0;border:0;outline:0;background:transparent;color:#26282c;font-size:12px}
+body:not(.night-mode) .toolbar-search input::placeholder{color:#8a8d93}
+body:not(.night-mode) .finder-layout{grid-template-columns:220px minmax(0,1fr);min-height:650px;background:#fff}
+body:not(.night-mode) .sidebar{padding:18px 11px 22px;background:#f4f5f7;border-right:1px solid #e0e1e4}
+body:not(.night-mode) .side-label{margin:17px 10px 7px;color:#85888f;font-size:11px;font-weight:700}
+body:not(.night-mode) .side-item{padding:7px 10px;gap:9px;border:1px solid transparent;border-radius:6px;color:#35373c;font-size:12px}
+body:not(.night-mode) .side-item>span{color:#6e8fc5;font-size:15px}
+body:not(.night-mode) .side-item:hover{background:#e7e9ed}
+body:not(.night-mode) .side-item.selected{background:#dce8fa;border-color:#d0dff6;color:#174c96;box-shadow:none}
+body:not(.night-mode) .side-item.selected>span{color:#3478d4}
+body:not(.night-mode) .finder-content{min-width:0;padding:25px 27px;background:#fff}
+body:not(.night-mode) .workspace{padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
+body:not(.night-mode) .section-heading{align-items:center;margin:0 0 18px;padding-bottom:13px;border-bottom:1px solid #ececef}
+body:not(.night-mode) .section-heading h2{margin:4px 0 0;color:#24262a;font-size:25px;font-weight:700;letter-spacing:-.025em}
+body:not(.night-mode) .section-kicker{color:#8b8e94;font-size:9px;letter-spacing:.12em}
+body:not(.night-mode) .section-note{color:#8d9096;font-size:9px}
+body:not(.night-mode) .bar{margin:0 0 17px}
+body:not(.night-mode) .btn{border:1px solid #d1d3d7;border-radius:7px;background:#f8f8f9;color:#303238;box-shadow:none;font-weight:600}
+body:not(.night-mode) .btn:hover{transform:none;border-color:#aeb3bb;background:#f0f1f3}
+body:not(.night-mode) .btn.primary{border-color:#3478d4;background:#3478d4;color:#fff;box-shadow:none}
+body:not(.night-mode) .btn.primary:hover{background:#2469c5}
+body:not(.night-mode) .list-heading{padding:12px 0 9px;border-top:1px solid #e7e8eb}
+body:not(.night-mode) .list-heading-title{color:#858990;font-size:10px}
+body:not(.night-mode) .heading-dot{color:#8b8e94}
+body:not(.night-mode) .result-count{color:#8a8d93;font-size:11px}
+body:not(.night-mode) #status:not(:empty){margin-bottom:10px;padding:8px 10px;border:1px solid #dce8fa;border-radius:6px;background:#f3f7fd;color:#315d94}
+body:not(.night-mode) #status.error{border-color:#f1c9cc;background:#fff5f5;color:#b4232d}
+body:not(.night-mode) .list{grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+body:not(.night-mode) .item{min-height:128px;padding:15px;border:1px solid #e0e2e6;border-radius:9px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.035);backdrop-filter:none;transition:border-color .15s,background .15s}
+body:not(.night-mode) .item:hover{transform:none;border-color:#b8cbe7;background:#fbfcff}
+body:not(.night-mode) .item .title,body:not(.night-mode) .title{color:#26282c;font-size:14px;font-weight:650;text-decoration:none}
+body:not(.night-mode) .item .title:hover,body:not(.night-mode) .title:hover{color:#1769c2;text-decoration:underline}
+body:not(.night-mode) .item .meta,body:not(.night-mode) .meta{margin-top:7px;color:#858990;font-size:11px}
+body:not(.night-mode) .tag{margin:4px 0 0 6px;padding:2px 7px;border:1px solid #e1e4e9;border-radius:5px;background:#f4f5f7;color:#62666d;font-size:10px}
+body:not(.night-mode) .item .memo,body:not(.night-mode) .memo{color:#656970;font-size:12px}
+body:not(.night-mode) .star{border-color:transparent;color:#a4a7ad}
+body:not(.night-mode) .star:hover{background:#f0f1f4;color:#d49b19}
+body:not(.night-mode) .star[aria-pressed="true"]{color:#e2a51a;text-shadow:none}
+body:not(.night-mode) .acts button{border:1px solid #d8dade;border-radius:6px;background:#fafafa;color:#555960}
+body:not(.night-mode) .acts button:hover{border-color:#aebed5;color:#245d9e}
+body:not(.night-mode) .acts .del:hover{border-color:#e3b8bb;color:#b4232d}
+body:not(.night-mode) .empty{padding:38px 18px;color:#7c8087}
+body:not(.night-mode) .empty::before{color:#8b8e94}
+body:not(.night-mode) .official-panel{background:#fff;color:#25272b}
+body:not(.night-mode) .official-hero{border-color:#e0e2e6;border-radius:9px;background:#f7f8fa;color:#25272b}
+body:not(.night-mode) .official-eyebrow{color:#777b82}
+body:not(.night-mode) .official-hero h2,body:not(.night-mode) .official-section-title h3{color:#25272b}
+body:not(.night-mode) .official-hero p,body:not(.night-mode) .official-card-desc{color:#696d74}
+body:not(.night-mode) .official-section-title span{color:#8a8d93}
+body:not(.night-mode) .official-card{border-color:#e0e2e6;border-radius:8px;background:#fff;color:#25272b}
+body:not(.night-mode) .official-card:hover{border-color:#b8cbe7;background:#fbfcff}
+body:not(.night-mode) .official-icon{background:#f0f2f5;color:#60646b}
+body:not(.night-mode) .official-remove{border-color:#dedfe3;background:#fff;color:#666}
+body:not(.night-mode) .official-add-form{border-color:#e0e2e6;background:#f7f8fa}
+body:not(.night-mode) .official-add-form input{border-color:#d6d8dc;background:#fff;color:#25272b}
+body:not(.night-mode) .site-footer{max-width:1180px;margin:0 auto;color:#7f838a;padding:14px 5px;font-size:10px}
+body:not(.night-mode) .site-footer b,body:not(.night-mode) .site-footer i{color:#656a72}
+body:not(.night-mode) dialog{border-color:#d1d4da;border-radius:12px;background:#fff;color:#27292e;box-shadow:0 18px 60px rgba(0,0,0,.25)}
+body:not(.night-mode) dialog::backdrop{background:rgba(40,45,55,.28);backdrop-filter:blur(2px)}
+body:not(.night-mode) dialog h2{color:#25272b}
+body:not(.night-mode) dialog label{color:#44474e}
+body:not(.night-mode) dialog input[type=text],body:not(.night-mode) dialog input[type=url],body:not(.night-mode) dialog textarea{border-color:#d4d7dc;border-radius:7px;background:#fff;color:#25272b}
+body:not(.night-mode) .check{color:#25272b!important}
+body:not(.night-mode) .check input{accent-color:#3478d4}
+body:not(.night-mode) .foot .btn{background:#f7f7f8;color:#333}
+body:not(.night-mode) .foot .btn.primary{background:#3478d4;color:#fff}
+body:not(.night-mode) .auth-gate{background:radial-gradient(ellipse at 20% 10%,rgba(80,120,180,.12),transparent 40%),linear-gradient(145deg,#f5f6f8,#e6e9ee);color:#25272b}
+body:not(.night-mode) .auth-card{border-color:#d4d7dc;border-radius:12px;background:rgba(255,255,255,.97);box-shadow:0 18px 55px rgba(30,38,50,.18)}
+body:not(.night-mode) .auth-mark{color:#666b74}
+body:not(.night-mode) .auth-card h1{color:#25272b}
+body:not(.night-mode) .auth-card p{color:#666a72}
+body:not(.night-mode) .auth-card label{color:#41444a}
+body:not(.night-mode) .auth-card input{border-color:#d1d4da;background:#fff;color:#25272b}
+body:not(.night-mode) .auth-card button{border-color:#3478d4;background:#3478d4;color:#fff}
+body:not(.night-mode) .auth-error{color:#b4232d}
+@media(max-width:760px){
+ body:not(.night-mode) main{padding:8px}
+ body:not(.night-mode) .finder-toolbar{grid-template-columns:60px minmax(0,1fr);grid-template-rows:30px 32px;height:72px;padding:5px 10px}
+ body:not(.night-mode) .finder-title{grid-column:2;grid-row:1;justify-self:start}
+ body:not(.night-mode) .toolbar-tools{grid-column:1;grid-row:2;justify-self:start}
+ body:not(.night-mode) .toolbar-search{grid-column:2;grid-row:2;max-width:none}
+ body:not(.night-mode) .finder-layout{grid-template-columns:165px minmax(0,1fr)}
+ body:not(.night-mode) .sidebar{padding:12px 6px}
+ body:not(.night-mode) .side-item{font-size:11px;padding:7px 6px;gap:6px}
+ body:not(.night-mode) .finder-content{padding:17px 12px}
+ body:not(.night-mode) .list{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:9px}
+}
+@media(max-width:520px){
+ body:not(.night-mode) main{padding:0}
+ body:not(.night-mode) .finder-window{border-radius:0;min-height:100vh}
+ body:not(.night-mode) .finder-layout{grid-template-columns:118px minmax(0,1fr)}
+ body:not(.night-mode) .finder-title{font-size:13px}
+ body:not(.night-mode) .toolbar-tools{display:none}
+ body:not(.night-mode) .finder-content{padding:12px 8px}
+ body:not(.night-mode) .list{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+ body:not(.night-mode) .item{min-height:110px;padding:9px}
+ body:not(.night-mode) .item .title{font-size:12px}
+ body:not(.night-mode) .item .acts button{font-size:10px;padding:5px 3px}
+}
+
 </style>
 </head>
 <body>
