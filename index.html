@@ -277,6 +277,14 @@ body.night-mode{background:#02050b!important;color:#8494a5!important}
 body.night-mode .hero,body.night-mode .stat-card,body.night-mode .workspace,body.night-mode .panel,body.night-mode .item{background:#080e18!important;border-color:#172d40!important;box-shadow:none!important}
 body.night-mode .item a{color:#8ba6b9!important}
 
+
+/* Loading shimmer: a soft, flowing highlight while links are being fetched. */
+.loading-skeleton{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;width:100%;}
+.loading-card{min-height:112px;padding:16px;border:1px solid rgba(53,217,255,.18);border-radius:12px;background:linear-gradient(110deg,rgba(13,28,49,.88) 25%,rgba(32,72,96,.58) 38%,rgba(13,28,49,.88) 52%);background-size:220% 100%;animation:linkCoreShimmer 1.45s ease-in-out infinite;}
+.loading-line{height:9px;margin:5px 0 12px;border-radius:6px;background:rgba(154,201,224,.12);}
+.loading-line.short{width:46%;}.loading-line.long{width:82%;}
+@keyframes linkCoreShimmer{0%{background-position:100% 0}100%{background-position:-120% 0}}
+@media(prefers-reduced-motion:reduce){.loading-card{animation:none;background:rgba(13,28,49,.9)}}
 </style>
 </head>
 <body>
@@ -294,7 +302,7 @@ body.night-mode .item a{color:#8ba6b9!important}
     <div class="side-label">履歴</div><button type="button" class="side-item" data-view="recent"><span>◷</span> 最近追加した項目</button>
     <div class="side-label">リンク</div><button type="button" class="side-item selected" data-view="all"><span>▦</span> すべてのリンク</button>
     <div class="side-label">カテゴリ</div><div id="sideCats"></div>
-  </aside><section class="finder-content"><div class="content-heading"><div><h1 id="viewTitle">すべてのリンク</h1><p>共有リンクを一覧表示しています</p></div><span class="count" id="count"></span></div><div class="status" id="loadStatus" role="status"></div><div class="list-heading"><span>名前</span><span>リンク一覧</span></div><div class="list" id="list"><div class="empty">読み込み中…</div></div></section></div>
+  </aside><section class="finder-content"><div class="content-heading"><div><h1 id="viewTitle">すべてのリンク</h1><p>共有リンクを一覧表示しています</p></div><span class="count" id="count"></span></div><div class="status" id="loadStatus" role="status"></div><div class="list-heading"><span>名前</span><span>リンク一覧</span></div><div class="list loading-skeleton" id="list" role="status" aria-label="リンクを読み込み中"><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div></div></section></div>
 </section>
 <footer><a class="admin" href="admin.html">管理者画面</a></footer>
 </main>
@@ -322,6 +330,7 @@ function visibleLinks(){
  return items;
 }
 function render(){
+ $('list').classList.remove('loading-skeleton');
  const catButtons=categories.map(cat=>'<button type="button" class="side-item '+(selectedCategory===cat?'selected':'')+'" data-category="'+esc(cat)+'"><span>▸</span> '+esc(cat)+'</button>').join('');
  $('sideCats').innerHTML=catButtons||'<div style="padding:4px 10px;color:#999;font-size:11px">カテゴリなし</div>';
  document.querySelectorAll('[data-view]').forEach(btn=>btn.classList.toggle('selected',!selectedCategory&&btn.dataset.view===view));
