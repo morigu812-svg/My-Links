@@ -634,7 +634,7 @@ body:not(.night-mode) .finder-window .finder-content .list .item .acts button{
       return;
     }
 
-    if (data.type === 'DAILY_CORE_RESPONSE' && event.source === bridgeWindow) {
+    if (data.type === 'DAILY_CORE_RESPONSE') {
       const entry = pending.get(data.id);
       if (!entry) return;
       pending.delete(data.id);
