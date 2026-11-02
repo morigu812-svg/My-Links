@@ -236,6 +236,7 @@ main{max-width:none;margin:0;padding:28px 24px;min-height:100vh}
 
 /* Simple client-side password gate (not secure access control) */
 .auth-locked .finder-window,.auth-locked .site-footer{display:none!important}
+.auth-gate.is-hidden{display:none!important}
 .auth-gate{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;background:radial-gradient(ellipse at 20% 10%,rgba(95,145,255,.24),transparent 40%),linear-gradient(145deg,#080d18,#14182c);color:#f4f8fc}
 .auth-card{width:min(420px,100%);padding:30px;border:1px solid #344a60;border-radius:20px;background:rgba(17,24,39,.94);box-shadow:0 24px 80px rgba(0,0,0,.45)}
 .auth-mark{font-size:11px;letter-spacing:.16em;font-weight:800;color:#35d9ff}
@@ -876,7 +877,7 @@ main { width:100%; max-width:none !important; }
       // 呼び出し元（埋め込みメモ帳など）が既にトークンを渡している場合は二重追加しない。
       if (args[args.length - 1] !== token) args.push(token);
     }
-    return waitForBridge().then(() => new Promise((resolve, reject) => {
+    const request = waitForBridge().then(() => new Promise((resolve, reject) => {
       const id = (crypto.randomUUID && crypto.randomUUID()) || String(Date.now() + Math.random());
       const timer = setTimeout(() => {
         pending.delete(id);
@@ -896,6 +897,14 @@ main { width:100%; max-width:none !important; }
         reject(error);
       }
     }));
+    return request.catch(error => {
+      const message = error && error.message ? error.message : String(error || '');
+      if (protectedMethods.includes(method) &&
+          /管理者ログインが必要|ログインし直してください|閲覧にはサイトのパスワード認証が必要/.test(message)) {
+        showAdminReauthentication();
+      }
+      throw error;
+    });
   }
 
   // 管理者パスワードと利用者ページ用パスワードを初回に設定する。
@@ -917,7 +926,7 @@ main { width:100%; max-width:none !important; }
 
   if (sessionStorage.getItem(AUTH_KEY) === 'yes' && sessionStorage.getItem(ADMIN_TOKEN_KEY)) {
     document.body.classList.remove('auth-locked');
-    if (authGate) authGate.remove();
+    if (authGate) authGate.classList.add('is-hidden');
   }
 
   function setAuthMode(configured) {
@@ -944,6 +953,21 @@ main { width:100%; max-width:none !important; }
       authError.textContent = '';
       authSubmit.textContent = '管理者としてログイン';
     }
+  }
+
+  function showAdminReauthentication(message) {
+    sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+    sessionStorage.removeItem(AUTH_KEY);
+    document.body.classList.add('auth-locked');
+    authGate.classList.remove('is-hidden');
+    setAuthMode(true);
+    authTitle.textContent = '管理者ログイン';
+    authDescription.textContent = 'ログインの有効期限が切れました。管理者パスワードを再入力してください。';
+    authError.textContent = message || '管理者ログインの有効期限が切れました。再ログインしてください。';
+    authField.value = '';
+    authSubmit.disabled = false;
+    authField.disabled = false;
+    authField.focus();
   }
 
   async function checkAdminSetupStatus() {
