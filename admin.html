@@ -869,8 +869,11 @@ main { width:100%; max-width:none !important; }
   }
 
   function serverCall(method, ...args) {
-    if (['getLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'saveOfficialLink', 'deleteOfficialLink', 'getMemos', 'saveMemo', 'deleteMemo'].includes(method)) {
-      args.push(sessionStorage.getItem(ADMIN_TOKEN_KEY) || '');
+    const protectedMethods = ['getLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'saveOfficialLink', 'deleteOfficialLink', 'getMemos', 'saveMemo', 'deleteMemo'];
+    if (protectedMethods.includes(method)) {
+      const token = sessionStorage.getItem(ADMIN_TOKEN_KEY) || '';
+      // 呼び出し元（埋め込みメモ帳など）が既にトークンを渡している場合は二重追加しない。
+      if (args[args.length - 1] !== token) args.push(token);
     }
     return waitForBridge().then(() => new Promise((resolve, reject) => {
       const id = (crypto.randomUUID && crypto.randomUUID()) || String(Date.now() + Math.random());
@@ -1097,7 +1100,7 @@ main { width:100%; max-width:none !important; }
       visibleToVisitors: $('fVisible').checked
     };
     $('dlg').close();
-    run('保存中…', () => serverCall('saveLink', input, sessionStorage.getItem(ADMIN_TOKEN_KEY)), '保存しました。');
+    run('保存中…', () => serverCall('saveLink', input), '保存しました。');
   });
 
   // スマホ・タブレットで検索欄の外をタップしたらキーボードを閉じる
@@ -1185,17 +1188,6 @@ main { width:100%; max-width:none !important; }
       memoFrame.contentWindow.postMessage({type:'LINK_CORE_MEMO_RESPONSE', id:data.id, ok:false, error:error && error.message ? error.message : String(error)}, location.origin);
     }
   });
-  window.addEventListener('message', async event => {
-    if (event.origin !== location.origin || event.source !== memoFrame.contentWindow) return;
-    const data = event.data;
-    if (!data || data.type !== 'LINK_CORE_MEMO_REQUEST' || typeof data.id !== 'string') return;
-    try {
-      const result = await serverCall(data.method, ...(Array.isArray(data.args) ? data.args : []));
-      memoFrame.contentWindow.postMessage({type:'LINK_CORE_MEMO_RESPONSE', id:data.id, ok:true, result}, location.origin);
-    } catch (error) {
-      memoFrame.contentWindow.postMessage({type:'LINK_CORE_MEMO_RESPONSE', id:data.id, ok:false, error:error && error.message ? error.message : String(error)}, location.origin);
-    }
-  });
   function closeIntegratedMemos() {
     memoOverlay.classList.remove('open');
     document.body.style.overflow = '';
@@ -1272,25 +1264,40 @@ main { width:100%; max-width:none !important; }
     el.className = 'official-status' + (text ? ' visible' : '') + (kind === 'error' ? ' error' : '');
   }
 
+  const OFFICIAL_LEGACY_BACKUP_KEY = 'linkCoreOfficialLinks:legacy-backup';
+
+  function preserveLegacyOfficialLinks(cloudLinks) {
+    try {
+      const raw = localStorage.getItem(OFFICIAL_STORAGE_KEY);
+      if (!raw || localStorage.getItem(OFFICIAL_LEGACY_BACKUP_KEY)) return false;
+      const local = JSON.parse(raw);
+      if (!Array.isArray(local) || !local.length || JSON.stringify(local) === JSON.stringify(cloudLinks)) return false;
+      // 古いブラウザー内データは自動でクラウドへ戻さず、上書き前に別キーへ退避する。
+      localStorage.setItem(OFFICIAL_LEGACY_BACKUP_KEY, raw);
+      return true;
+    } catch (error) {
+      console.warn('旧公式リンクのバックアップに失敗しました。', error);
+      return false;
+    }
+  }
+
   async function loadOfficialCloud() {
     try {
       const response = await serverCall('getOfficialLinks');
       const cloudLinks = Array.isArray(response.links) ? response.links : [];
-      const cloudIds = new Set(cloudLinks.map(item => item.id));
-      if (true) {
-        for (const local of officialLinks) {
-          if (!cloudIds.has(local.id)) {
-            const saved = await serverCall('saveOfficialLink', local);
-            (Array.isArray(saved.links) ? saved.links : []).forEach(item => cloudIds.add(item.id));
-          }
-        }
-      }
-      const latest = await serverCall('getOfficialLinks');
-      officialLinks = Array.isArray(latest.links) ? latest.links : [];
+      const backedUp = preserveLegacyOfficialLinks(cloudLinks);
+      // クラウドを正本として扱う。古いローカルキャッシュの自動再移行は、
+      // クラウド側で削除したリンクを復活させるため行わない。
+      officialLinks = cloudLinks;
       officialCloudReady = true;
       saveOfficialLinksLocal();
       renderOfficialLinks();
-      setOfficialStatus('✓ クラウドと同期しました。公式リンクはクラウドに保存されています。', '');
+      setOfficialStatus(
+        backedUp
+          ? '✓ クラウドと同期しました。旧ブラウザー内データはバックアップに退避しました。'
+          : '✓ クラウドと同期しました。公式リンクはクラウドに保存されています。',
+        ''
+      );
     } catch (error) {
       setOfficialStatus('クラウドとの同期に失敗しました：' + error.message, 'error');
       renderOfficialLinks();
@@ -1346,12 +1353,12 @@ main { width:100%; max-width:none !important; }
     if (!link) return;
 
     if (event.target.closest('.star')) {
-      run('更新中…', () => serverCall('toggleFavorite', link.id, !link.favorite, sessionStorage.getItem(ADMIN_TOKEN_KEY)), '');
+      run('更新中…', () => serverCall('toggleFavorite', link.id, !link.favorite), '');
     } else if (event.target.closest('.edit')) {
       openForm(link);
     } else if (event.target.closest('.del')) {
       if (confirm(`「${link.title}」を削除しますか？`)) {
-        run('削除中…', () => serverCall('deleteLink', link.id, sessionStorage.getItem(ADMIN_TOKEN_KEY)), '削除しました。');
+        run('削除中…', () => serverCall('deleteLink', link.id), '削除しました。');
       }
     }
   });
@@ -1363,7 +1370,7 @@ main { width:100%; max-width:none !important; }
     try {
       await waitForBridge();
       setStatus('GASに接続しました。リンクを読み込んでいます…', '');
-      const result = await serverCall('getLinks', sessionStorage.getItem(ADMIN_TOKEN_KEY));
+      const result = await serverCall('getLinks');
       if (!result || !Array.isArray(result.links) || !Array.isArray(result.categories)) {
         throw new Error('GASの応答形式が想定と異なります。GASのデプロイ版を確認してください。');
       }
