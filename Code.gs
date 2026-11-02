@@ -632,3 +632,59 @@ function deleteMemo(id, adminToken) {
     lock.releaseLock();
   }
 }
+
+
+/* LINK CORE shared chat. Existing Links / OfficialLinks / Memos sheets remain untouched. */
+const CHAT_SHEET_NAME = 'ChatMessages';
+const CHAT_HEADERS = ['ID', '投稿者', 'メッセージ', '送信日時'];
+const CHAT_MAX_MESSAGES = 200;
+const CHAT_MAX_LENGTH = 1000;
+function ensureChatSheet_() {
+  const id = PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY);
+  if (!id) throw new Error('スプレッドシートIDが未設定です。');
+  const ss = SpreadsheetApp.openById(id);
+  let sheet = ss.getSheetByName(CHAT_SHEET_NAME);
+  if (!sheet) sheet = ss.insertSheet(CHAT_SHEET_NAME);
+  const width = sheet.getLastColumn();
+  if (!width) sheet.getRange(1,1,1,CHAT_HEADERS.length).setValues([CHAT_HEADERS]);
+  else {
+    const existing = sheet.getRange(1,1,1,width).getDisplayValues()[0];
+    CHAT_HEADERS.forEach(h => { if (existing.indexOf(h) < 0) { sheet.getRange(1,sheet.getLastColumn()+1).setValue(h); existing.push(h); } });
+  }
+  return sheet;
+}
+function getChatMessages(viewerToken) {
+  requireLinkViewer_(viewerToken);
+  const sheet = ensureChatSheet_(), last = sheet.getLastRow();
+  if (last < 2) return {messages:[]};
+  const headers = sheet.getRange(1,1,1,sheet.getLastColumn()).getDisplayValues()[0], col = {};
+  headers.forEach((h,i)=>{if(h)col[h]=i;});
+  CHAT_HEADERS.forEach(h=>{if(col[h]===undefined)throw new Error('チャットシートに必要な列がありません: '+h);});
+  const first = Math.max(2,last-CHAT_MAX_MESSAGES+1);
+  const rows = sheet.getRange(first,1,last-first+1,sheet.getLastColumn()).getValues();
+  return {messages:rows.filter(r=>r[col['ID']]!=='').map(r=>({
+    id:String(r[col['ID']]||''),author:String(r[col['投稿者']]||'利用者'),
+    message:String(r[col['メッセージ']]||''),createdAt:toIso_(r[col['送信日時']])
+  }))};
+}
+function sendChatMessage(message, viewerToken) {
+  requireLinkViewer_(viewerToken);
+  const body = cleanText_(message,CHAT_MAX_LENGTH);
+  if(!body)throw new Error('メッセージを入力してください。');
+  if(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/.test(body))throw new Error('使用できない制御文字が含まれています。');
+  const cache=CacheService.getScriptCache(), rateKey='LINK_CORE_CHAT_RATE_'+viewerToken;
+  if(cache.get(rateKey))throw new Error('連続送信はできません。少し待ってから送信してください。');
+  const isAdmin=cache.get('LINK_CORE_ADMIN_'+viewerToken)==='yes';
+  const lock=LockService.getScriptLock();lock.waitLock(10000);
+  try{
+    if(cache.get(rateKey))throw new Error('連続送信はできません。少し待ってから送信してください。');
+    const sheet=ensureChatSheet_(),headers=sheet.getRange(1,1,1,sheet.getLastColumn()).getDisplayValues()[0],col={};
+    headers.forEach((h,i)=>{if(h)col[h]=i;});
+    const row=new Array(headers.length).fill('');
+    row[col['ID']]=Utilities.getUuid();row[col['投稿者']]=isAdmin?'管理者':'利用者';
+    row[col['メッセージ']]=safeCell_(body);row[col['送信日時']]=new Date();
+    sheet.getRange(sheet.getLastRow()+1,1,1,row.length).setValues([row]);
+    cache.put(rateKey,'1',3);
+  }finally{lock.releaseLock();}
+  return getChatMessages(viewerToken);
+}
