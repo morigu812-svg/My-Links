@@ -515,8 +515,11 @@ document.addEventListener('visibilitychange',async()=>{
    const panel=handle.closest('.finder-window');
    if(!panel||panel.classList.contains('hidden'))return;
    const rect=panel.getBoundingClientRect(),direction=handle.dataset.resize;
+   const transform=getComputedStyle(panel).transform;
+   let baseX=0,baseY=0;
+   if(transform&&transform!=='none'){const match=transform.match(/^matrix\\(([^)]+)\\)$/);if(match){const values=match[1].split(',').map(Number);baseX=values[4]||0;baseY=values[5]||0;}}
    event.preventDefault();event.stopPropagation();
-   drag={panel,pointerId:event.pointerId,direction,startX:event.clientX,startY:event.clientY,width:rect.width,height:rect.height,top:rect.top,centerY:rect.top+rect.height/2};
+   drag={panel,pointerId:event.pointerId,direction,startX:event.clientX,startY:event.clientY,width:rect.width,height:rect.height,baseX,baseY};
    panel.classList.add('is-resizing');
    document.body.classList.add('window-resizing');
    document.body.style.cursor=getComputedStyle(handle).cursor;
@@ -534,7 +537,8 @@ document.addEventListener('visibilitychange',async()=>{
    d.panel.style.height=height+'px';
    d.panel.style.marginLeft='auto';
    d.panel.style.marginRight='auto';
-   d.panel.style.transform='translateY('+(d.top+(dir.includes('n')?dy:0)-d.top)+'px)';
+   const shiftX=dir.includes('w')?d.width-width:0,shiftY=dir.includes('n')?d.height-height:0;
+   d.panel.style.transform='translate('+ (d.baseX+shiftX)+'px,'+(d.baseY+shiftY)+'px)';
  }
  function end(event){
    if(!drag||event&&event.pointerId!==drag.pointerId)return;
