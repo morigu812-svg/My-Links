@@ -1714,7 +1714,6 @@ body,.finder-window,.finder-toolbar,.finder-layout,.finder-content,.sidebar,
 /* Review fixes: mobile layout, touch dragging, and viewport recovery */
 .finder-window{touch-action:pan-x pan-y}
 .finder-toolbar{touch-action:none}
-body.fit-screen .finder-window{position:relative!important;left:auto!important;top:auto!important;right:auto!important;bottom:auto!important;width:100vw!important;height:auto!important;min-height:100vh!important;margin:0!important;transform:none!important}
 @media(max-width:720px){
  .finder-layout{display:flex!important;flex-direction:column!important;min-width:0}
  .sidebar{width:100%!important;min-width:0!important;display:flex!important;flex-direction:row!important;align-items:center;gap:5px;overflow-x:auto;overflow-y:hidden;white-space:nowrap;border-right:0!important;border-bottom:1px solid #203c4b;padding:8px!important;scrollbar-width:thin}
@@ -1760,7 +1759,7 @@ body.fit-screen .finder-window{position:relative!important;left:auto!important;t
 </script>
 
 <script id="lc-viewport-recovery">
-(function(){function clampWindows(){if(document.body.classList.contains('fit-screen'))return;document.querySelectorAll('.finder-window').forEach(el=>{if(el.classList.contains('hidden'))return;const fixed=el.classList.contains('lc-browser-window')||el.style.position==='fixed';if(!fixed)return;const r=el.getBoundingClientRect();if(r.width>innerWidth-16)el.style.width=Math.max(280,innerWidth-16)+'px';if(r.height>innerHeight-16)el.style.height=Math.max(220,innerHeight-16)+'px';const w=el.getBoundingClientRect();el.style.left=Math.max(8,Math.min(w.left,innerWidth-w.width-8))+'px';el.style.top=Math.max(8,Math.min(w.top,innerHeight-w.height-8))+'px';});}window.addEventListener('resize',clampWindows,{passive:true});})();
+(function(){function clampWindows(){document.querySelectorAll('.finder-window').forEach(el=>{if(el.classList.contains('hidden'))return;const fixed=el.classList.contains('lc-browser-window')||el.style.position==='fixed';if(!fixed)return;const r=el.getBoundingClientRect();if(r.width>innerWidth-16)el.style.width=Math.max(280,innerWidth-16)+'px';if(r.height>innerHeight-16)el.style.height=Math.max(220,innerHeight-16)+'px';const w=el.getBoundingClientRect();el.style.left=Math.max(8,Math.min(w.left,innerWidth-w.width-8))+'px';el.style.top=Math.max(8,Math.min(w.top,innerHeight-w.height-8))+'px';});}window.addEventListener('resize',clampWindows,{passive:true});})();
 </script>
 </body>
 </html>
