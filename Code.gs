@@ -206,12 +206,12 @@ function readChunkedJsonCache_(key) {
     if (!metaRaw) return null;
     const meta = JSON.parse(metaRaw);
     if (!meta || !Number.isInteger(meta.count) || meta.count < 1 || meta.count > LINKS_CACHE_MAX_CHUNKS) return null;
-    const parts = [];
-    for (let i = 0; i < meta.count; i++) {
-      const part = cache.get(key + '_PART_' + i);
-      if (part === null) return null;
-      parts.push(part);
-    }
+    // CacheServiceへの往復を分割数ぶん繰り返さず、getAllでまとめて取得する。
+    const keys = [];
+    for (let i = 0; i < meta.count; i++) keys.push(key + '_PART_' + i);
+    const cached = cache.getAll(keys);
+    const parts = keys.map(partKey => cached[partKey]);
+    if (parts.some(part => typeof part !== 'string')) return null;
     return JSON.parse(parts.join(''));
   } catch (_) { return null; }
 }
