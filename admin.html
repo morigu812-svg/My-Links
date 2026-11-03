@@ -80,7 +80,7 @@ h1 sup{margin-left:8px;vertical-align:top;font-size:11px;letter-spacing:.1em;col
 .item:hover{transform:translateY(-3px);border-color:rgba(90,242,214,.5);background:linear-gradient(145deg,rgba(255,255,255,.15),rgba(255,255,255,.055))}
 .item .star{position:absolute;z-index:2;top:17px;right:17px;flex:none;width:29px;height:29px;border:1px solid rgba(255,255,255,.14);border-radius:8px;background:rgba(10,17,30,.65);backdrop-filter:blur(10px)}
 .item .body{flex:1;min-width:0;width:100%}
-.item .title{display:block;font-size:16px;line-height:1.5;white-space:normal;overflow-wrap:anywhere}
+.item .title{display:block;font-size:16px;line-height:1.5;white-space:normal;overflow-wrap:anywhere}.new-label{display:inline-flex;align-items:center;margin:0 0 7px;padding:2px 7px;border:1px solid #277c9b;border-radius:5px;background:rgba(20,75,99,.28);color:#7bdfff;font-size:9px;font-weight:850;letter-spacing:.12em;line-height:1.5}
 .item .meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:7px;font-size:12px;color:#94aabd;min-width:0}
 .item .tag{display:inline-flex;align-items:center;max-width:100%;margin:0;padding:2px 8px;font-size:11px;line-height:1.5;white-space:normal;overflow-wrap:anywhere}
 .item .memo{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:13px;line-height:1.5}
@@ -770,6 +770,7 @@ main { width:100%; max-width:none !important; }
     <datalist id="catList"></datalist>
     <label for="fMemo">メモ</label>
     <textarea id="fMemo" rows="3"></textarea>
+    <label class="check"><input id="fNew" type="checkbox"> NEWラベルを表示する</label>
     <label for="fOpenMode">リンクの開き方</label>
     <select id="fOpenMode">
       <option value="internal">サイト内のフローティングブラウザで開く</option>
@@ -1186,6 +1187,7 @@ main { width:100%; max-width:none !important; }
         <button type="button" class="star" aria-pressed="${link.favorite}" aria-label="お気に入り">★</button>
         <div class="body">
           <a class="title" data-open-mode="${link.openMode === 'external' ? 'external' : 'internal'}" href="${esc(safeHref(link.url))}" target="_blank" rel="noopener noreferrer">${esc(link.title)}</a>
+          ${link.isNew ? '<span class="new-label">NEW</span>' : ''}
           <div class="meta">${esc(host(link.url))}${link.category ? `<span class="tag">${esc(link.category)}</span>` : ''}</div>
           ${link.memo ? `<div class="memo">${esc(link.memo)}</div>` : ''}
         </div>
@@ -1217,6 +1219,7 @@ main { width:100%; max-width:none !important; }
     $('fUrl').value = link ? link.url : '';
     $('fCat').value = link ? link.category : state.category;
     $('fMemo').value = link ? link.memo : '';
+    $('fNew').checked = link ? link.isNew === true : false;
     $('fOpenMode').value = link && link.openMode === 'external' ? 'external' : 'internal';
     $('fFav').checked = link ? link.favorite : false;
     $('fVisible').checked = link ? link.visibleToVisitors !== false : true;
@@ -1237,6 +1240,7 @@ main { width:100%; max-width:none !important; }
       url: $('fUrl').value,
       category: $('fCat').value,
       memo: $('fMemo').value,
+      isNew: $('fNew').checked,
       openMode: $('fOpenMode').value,
       favorite: $('fFav').checked,
       visibleToVisitors: $('fVisible').checked
