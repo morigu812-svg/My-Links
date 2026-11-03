@@ -676,6 +676,37 @@ main { width:100%; max-width:none !important; }
 #list .item.visitor-hidden{filter:brightness(.82)}
 </style>
 <meta name="robots" content="noindex, nofollow, noarchive">
+<style id="link-core-folder-visual-fix">
+/* Admin folder cards: blue folders and readable labels on the dark Finder theme */
+.folder-icon{color:#58baff!important;filter:drop-shadow(0 2px 7px rgba(38,160,255,.24))!important}
+.folder-card,
+body:not(.night-mode) .folder-card{
+  border:1px solid #176b9c!important;
+  background:linear-gradient(145deg,rgba(12,48,78,.98),rgba(15,27,55,.98))!important;
+  color:#58baff!important;
+  box-shadow:inset 0 1px rgba(130,220,255,.08),0 3px 12px rgba(0,0,0,.18)!important;
+}
+.folder-card:hover,
+body:not(.night-mode) .folder-card:hover{
+  border-color:#39c8ff!important;
+  background:linear-gradient(145deg,#103d63,#172b59)!important;
+  box-shadow:0 0 18px rgba(0,190,255,.18)!important;
+}
+.folder-card .folder-card-name,
+body:not(.night-mode) .folder-card .folder-card-name{
+  color:#e8f7ff!important;
+  opacity:1!important;
+  text-shadow:0 1px 5px rgba(0,0,0,.28)!important;
+}
+.folder-card .folder-card-count,
+body:not(.night-mode) .folder-card .folder-card-count{
+  color:#a9cce2!important;
+  opacity:1!important;
+}
+.side-folder-mini .folder-icon{color:#58baff!important}
+body:not(.night-mode) .side-folder-mini .folder-icon{color:#58baff!important}
+body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
+</style>
 </head>
 <body>
 <section id="authGate" class="auth-gate" aria-labelledby="authTitle">
