@@ -650,15 +650,14 @@ main { width:100%; max-width:none !important; }
 .loading-line.short{width:46%;}.loading-line.long{width:82%;}
 @keyframes linkCoreShimmer{0%{background-position:100% 0}100%{background-position:-120% 0}}
 @media(prefers-reduced-motion:reduce){.loading-card{animation:none;background:rgba(13,28,49,.9)}}
-/* Shared chat */.chat-overlay{position:fixed;right:22px;bottom:22px;z-index:10000;width:min(410px,calc(100vw - 28px));height:min(650px,calc(100vh - 44px));display:none;flex-direction:column;overflow:hidden;border:1px solid #286b8c;border-radius:16px;background:#081426;box-shadow:0 18px 60px #000b,0 0 24px #00cfff20;color:#e8f5ff}.chat-overlay.open{display:flex}.chat-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 15px;border-bottom:1px solid #20516c;background:linear-gradient(100deg,#10213a,#0b1428)}.chat-head strong{font-size:14px;letter-spacing:.04em}.chat-head-actions{display:flex;align-items:center;gap:6px}.refresh-icon{display:inline-block;font-size:16px;line-height:1;transform-origin:center}.chat-head button.is-refreshing .refresh-icon{animation:chat-refresh-spin .75s linear infinite}@keyframes chat-refresh-spin{to{transform:rotate(360deg)}}.chat-head button:disabled{opacity:.72;cursor:wait}.chat-head button{border:1px solid #28516c;border-radius:7px;padding:5px 9px;background:#10283e;color:#bfeeff}.chat-subtitle{padding:8px 14px;color:#8faec6;font-size:11px;border-bottom:1px solid #17354c}.chat-messages{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:10px;padding:13px;background:linear-gradient(145deg,#071124,#0a1425)}.chat-message{max-width:92%;align-self:flex-start;padding:9px 11px;border:1px solid #24516d;border-radius:10px;background:#10243a;overflow-wrap:anywhere}.chat-message.admin{border-color:#267d9b;background:#102d43}.chat-message-meta{display:flex;justify-content:space-between;gap:12px;margin-bottom:4px;color:#73dfff;font-size:10px}.chat-message-body{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.6;color:#e5f3ff}.chat-empty,.chat-status{padding:12px;color:#91abc2;font-size:12px;text-align:center}.chat-compose{display:flex;gap:8px;padding:11px;border-top:1px solid #20516c;background:#091426}.chat-compose textarea{flex:1;min-width:0;min-height:42px;max-height:110px;resize:vertical;padding:9px 10px;border:1px solid #28516c;border-radius:8px;background:#060e1d;color:#e8f5ff;font:inherit;font-size:13px}.chat-compose button{align-self:flex-end;padding:10px 13px;border:1px solid #35d9ff;border-radius:8px;background:linear-gradient(135deg,#087fa9,#273f9b);color:white;font-weight:650}.chat-compose button:disabled{opacity:.5;cursor:wait}@media(max-width:520px){.chat-overlay{right:8px;bottom:8px;width:calc(100vw - 16px);height:min(75vh,650px)}}.finder-toolbar{cursor:grab}.finder-window.is-moving .finder-toolbar{cursor:grabbing}.finder-window.is-moving{user-select:none}
+/* Shared chat */.chat-overlay{position:fixed;right:22px;bottom:22px;z-index:10000;width:min(410px,calc(100vw - 28px));height:min(650px,calc(100vh - 44px));display:none;flex-direction:column;overflow:hidden;border:1px solid #286b8c;border-radius:16px;background:#081426;box-shadow:0 18px 60px #000b,0 0 24px #00cfff20;color:#e8f5ff}.chat-overlay.open{display:flex}.chat-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 15px;border-bottom:1px solid #20516c;background:linear-gradient(100deg,#10213a,#0b1428)}.chat-head strong{font-size:14px;letter-spacing:.04em}.chat-head-actions{display:flex;align-items:center;gap:6px}.refresh-icon{display:inline-block;font-size:16px;line-height:1;transform-origin:center}.chat-head button.is-refreshing .refresh-icon{animation:chat-refresh-spin .75s linear infinite}@keyframes chat-refresh-spin{to{transform:rotate(360deg)}}.chat-head button:disabled{opacity:.72;cursor:wait}.chat-head button{border:1px solid #28516c;border-radius:7px;padding:5px 9px;background:#10283e;color:#bfeeff}.chat-subtitle{padding:8px 14px;color:#8faec6;font-size:11px;border-bottom:1px solid #17354c}.chat-messages{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:10px;padding:13px;background:linear-gradient(145deg,#071124,#0a1425)}.chat-message{max-width:92%;align-self:flex-start;padding:9px 11px;border:1px solid #24516d;border-radius:10px;background:#10243a;overflow-wrap:anywhere}.chat-message.admin{border-color:#267d9b;background:#102d43}.chat-message-meta{display:flex;justify-content:space-between;gap:12px;margin-bottom:4px;color:#73dfff;font-size:10px}.chat-message-body{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.6;color:#e5f3ff}.chat-empty,.chat-status{padding:12px;color:#91abc2;font-size:12px;text-align:center}.chat-compose{display:flex;gap:8px;padding:11px;border-top:1px solid #20516c;background:#091426}.chat-compose textarea{flex:1;min-width:0;min-height:42px;max-height:110px;resize:vertical;padding:9px 10px;border:1px solid #28516c;border-radius:8px;background:#060e1d;color:#e8f5ff;font:inherit;font-size:13px}.chat-compose button{align-self:flex-end;padding:10px 13px;border:1px solid #35d9ff;border-radius:8px;background:linear-gradient(135deg,#087fa9,#273f9b);color:white;font-weight:650}.chat-compose button:disabled{opacity:.5;cursor:wait}@media(max-width:520px){.chat-overlay{right:8px;bottom:8px;width:calc(100vw - 16px);height:min(75vh,650px)}}.finder-toolbar{cursor:default}
 /* Finder-style category folders */
 .folder-icon{width:54px;height:44px;color:#e5b84f;filter:drop-shadow(0 3px 7px rgba(0,0,0,.25))}.folder-card{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;min-height:132px;padding:14px 10px;border:1px solid #28536b;border-radius:12px;background:linear-gradient(145deg,rgba(17,39,61,.92),rgba(13,19,39,.96));color:#e8b94f;cursor:pointer;transition:transform .16s,border-color .16s,box-shadow .16s}.folder-card:hover{transform:translateY(-2px);border-color:#4edfff;box-shadow:0 0 18px rgba(0,217,255,.16)}.folder-card-name{max-width:100%;overflow-wrap:anywhere;color:var(--ink);font-size:13px;font-weight:750}.folder-card-count{color:var(--muted);font-size:10px}.side-folder-mini{width:18px!important;height:16px;flex:none}.side-folder-mini .folder-icon{width:18px;height:15px;filter:none;color:#d9ad4c}.folder-toolbar{grid-column:1/-1;display:flex;align-items:center;gap:12px;margin:0 0 5px;padding:0 0 12px;border-bottom:1px solid var(--line);color:var(--muted);font-size:11px}.folder-toolbar button{padding:6px 10px;border:1px solid #28536b;border-radius:7px;background:#10283b;color:#bcefff;cursor:pointer}body:not(.night-mode) .folder-card{border-color:#d7c18c;background:linear-gradient(145deg,#fffaf0,#f4eddb);color:#c79b35;box-shadow:0 2px 8px rgba(80,60,20,.07)}body:not(.night-mode) .folder-card:hover{border-color:#9db9df;box-shadow:0 5px 16px rgba(40,80,130,.12)}body:not(.night-mode) .folder-card-name{color:#30343a}body:not(.night-mode) .folder-card-count{color:#858990}body:not(.night-mode) .side-folder-mini .folder-icon{color:#c69b42}body:not(.night-mode) .folder-toolbar{border-bottom-color:#e5e7eb;color:#737982}body:not(.night-mode) .folder-toolbar button{border-color:#d4d8df;background:#f7f8fa;color:#315d94}
-/* Keep the Finder content independently scrollable after its window is moved. */
+/* Keep Finder content independently scrollable. */
 #finderWindow{display:flex;flex-direction:column;min-height:0}
 #finderWindow>.finder-layout{flex:1 1 auto;min-height:0}
 #finderWindow .finder-content{min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;touch-action:pan-y pan-x}
 #finderWindow .finder-toolbar{flex:0 0 auto;touch-action:pan-y pan-x}
-#finderWindow.is-moving .finder-content{pointer-events:auto}
 </style>
 <style>
 .click-log-panel{min-width:0;padding:25px 27px}
@@ -855,59 +854,6 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
 
   const $ = id => document.getElementById(id);
   const finderWindow = $('finderWindow');
-  // Finder-style window dragging from the toolbar background.
-  let moveDrag = null;
-  function beginMove(event) {
-    if (event.button !== undefined && event.button !== 0) return;
-    if (resizeDrag) return;
-    const toolbar = event.target.closest('.finder-toolbar');
-    if (!toolbar || event.target.closest('button,a,input,textarea,select,label,[role="button"],.resize-handle')) return;
-    const panel = toolbar.closest('#finderWindow');
-    if (!panel) return;
-    const rect = panel.getBoundingClientRect();
-    event.preventDefault();
-    panel.style.position = 'fixed';
-    panel.style.left = rect.left + 'px';
-    panel.style.top = rect.top + 'px';
-    panel.style.right = 'auto';
-    panel.style.bottom = 'auto';
-    panel.style.margin = '0';
-    panel.style.transform = 'none';
-    panel.style.width = rect.width + 'px';
-    panel.style.height = rect.height + 'px';
-    panel.style.maxWidth = 'none';
-    moveDrag = { pointerId:event.pointerId, startX:event.clientX, startY:event.clientY, left:rect.left, top:rect.top, toolbar };
-    panel.classList.add('is-moving');
-    // Keep the drag pointer lifecycle attached to the toolbar on iPad Safari.
-    // This prevents a missed pointerup from leaving the window in a drag state.
-    try { toolbar.setPointerCapture(event.pointerId); } catch (_) {}
-  }
-  function moveWindow(event) {
-    if (!moveDrag || event.pointerId !== moveDrag.pointerId) return;
-    event.preventDefault();
-    const rect = finderWindow.getBoundingClientRect();
-    const left = Math.max(0, Math.min(moveDrag.left + event.clientX - moveDrag.startX, Math.max(0, window.innerWidth - Math.min(80, rect.width))));
-    const top = Math.max(0, Math.min(moveDrag.top + event.clientY - moveDrag.startY, Math.max(0, window.innerHeight - 48)));
-    finderWindow.style.left = left + 'px';
-    finderWindow.style.top = top + 'px';
-  }
-  function endMove(event) {
-    if (!moveDrag || (event && event.pointerId !== moveDrag.pointerId)) return;
-    const drag = moveDrag;
-    finderWindow.classList.remove('is-moving');
-    moveDrag = null;
-    if (drag && drag.toolbar && drag.toolbar.hasPointerCapture && drag.toolbar.hasPointerCapture(drag.pointerId)) {
-      try { drag.toolbar.releasePointerCapture(drag.pointerId); } catch (_) {}
-    }
-  }
-  document.addEventListener('pointerdown', beginMove);
-  window.addEventListener('pointermove', moveWindow, { passive:false });
-  window.addEventListener('pointerup', endMove);
-  window.addEventListener('pointercancel', endMove);
-  document.addEventListener('lostpointercapture', event => {
-    if (moveDrag && moveDrag.toolbar === event.target) endMove({pointerId:moveDrag.pointerId});
-  });
-  window.addEventListener('blur', () => endMove());
   const nightModeBtn = $('nightModeBtn');
   nightModeBtn.addEventListener('click', () => {
     const enabled = document.body.classList.toggle('night-mode');
