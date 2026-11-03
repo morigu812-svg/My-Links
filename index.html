@@ -337,7 +337,6 @@ body.window-resizing,body.window-resizing *{user-select:none!important}
 <button class="side-item" type="button" data-view="recent"><span>◷</span> 最近追加した項目</button>
 <button class="side-item" type="button" data-view="all"><span>▦</span> すべてのリンク</button>
 <div class="side-label">クイックアクセス</div>
-<button class="side-item" type="button" id="sideOfficial" data-view="official"><span>✦</span> 公式リンク</button>
 <button class="side-item chat-launch" type="button" id="openChat"><span>✉</span> 管理者チャット <span class="new-badge">NEW</span></button>
 <button class="side-item" type="button" id="sideBrowser"><span>▣</span> ブラウザ <span class="new-badge">NEW</span></button>
 <button class="side-item" type="button" id="sideReleaseNotes"><span>▤</span> リリースノート <span class="new-badge">NEW</span></button>
@@ -402,7 +401,7 @@ function render(){
  const catButtons=categories.map(cat=>'<button type="button" class="side-item '+(selectedCategory===cat?'selected':'')+'" data-category="'+esc(cat)+'"><span>▸</span> '+esc(cat)+'</button>').join('');
  $('sideCats').innerHTML=catButtons||'<div style="padding:4px 10px;color:#999;font-size:11px">カテゴリなし</div>';
  document.querySelectorAll('[data-view]').forEach(btn=>btn.classList.toggle('selected',!selectedCategory&&btn.dataset.view===view));
- const titles={all:'すべてのリンク',favorites:'お気に入り',recent:'最近追加した項目'};
+ const titles={desktop:'My Desktop',all:'すべてのリンク',favorites:'お気に入り',recent:'最近追加した項目'};
  $('viewTitle').textContent=selectedCategory||titles[view]||'すべてのリンク';
  const visible=visibleLinks();
  $('count').textContent=visible.length+' 件';
@@ -454,6 +453,7 @@ document.addEventListener('fullscreenchange',()=>{
 });
 
 $('sideCats').addEventListener('click',event=>{const btn=event.target.closest('[data-category]');if(!btn)return;selectedCategory=btn.dataset.category;view='all';render()});
+document.querySelector('.sidebar').addEventListener('click',event=>{const btn=event.target.closest('[data-view]');if(!btn)return;selectedCategory='';view=btn.dataset.view;render()});
 const clickLogPending=new Set();
 $('list').addEventListener('click',event=>{
  const anchor=event.target.closest('a[href]');
