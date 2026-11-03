@@ -276,6 +276,11 @@ function readLinksFromData_(data) {
 function readLinks_(sheet, columns) {
   return readLinksFromData_(sheet.getDataRange().getValues());
 }
+function refreshLinksCacheFromSheet_(sheet) {
+  const result = readLinks_(sheet);
+  writeChunkedJsonCache_('LINK_CORE_LINKS_ALL_V2', result, LINKS_CACHE_TTL_SECONDS);
+  return result;
+}
 function readLinksForDisplay_() {
   const spreadsheetId = PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY);
   if (!spreadsheetId) throw new Error('スプレッドシートIDが未設定です。');
@@ -497,7 +502,7 @@ function saveLink(input, adminToken) {
     sheet.getRange(targetRow, 1, 1, width).setValues([rowValues]);
 
     invalidateLinksCache_();
-    return readLinks_(sheet, columns);
+    return refreshLinksCacheFromSheet_(sheet);
   } finally {
     lock.releaseLock();
   }
@@ -534,7 +539,7 @@ function toggleFavorite(id, favorite, adminToken) {
     }
 
     invalidateLinksCache_();
-    return readLinks_(sheet, columns);
+    return refreshLinksCacheFromSheet_(sheet);
   } finally {
     lock.releaseLock();
   }
@@ -570,7 +575,7 @@ function deleteLink(id, adminToken) {
     }
 
     invalidateLinksCache_();
-    return readLinks_(sheet, columns);
+    return refreshLinksCacheFromSheet_(sheet);
   } finally {
     lock.releaseLock();
   }
