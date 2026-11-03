@@ -766,3 +766,20 @@ function getClickLogs(adminToken) {
     url: String(row[3] || ''), clickedAt: toIso_(row[4])
   }))};
 }
+
+
+/* 管理者によるクリック履歴の全削除 */
+function deleteClickLogs(adminToken) {
+  requireAdmin_(adminToken);
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const sheet = ensureClickLogSheet_();
+    const lastRow = sheet.getLastRow();
+    if (lastRow > 1) sheet.deleteRows(2, lastRow - 1);
+    SpreadsheetApp.flush();
+    return {ok: true, deleted: Math.max(0, lastRow - 1)};
+  } finally {
+    lock.releaseLock();
+  }
+}
