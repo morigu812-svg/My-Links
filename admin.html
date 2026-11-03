@@ -1249,7 +1249,7 @@ main { width:100%; max-width:none !important; }
     $('sideCats').innerHTML = sideFolders.join('') || '<div class="side-empty">フォルダがありません</div>';
     $('catList').innerHTML = state.categories.map(c => `<option value="${esc(c)}">`).join('');
 
-    if (!state.category && state.view === 'all' && !state.query.trim()) {
+    if (!state.category && (state.view === 'desktop' || state.view === 'all') && !state.query.trim()) {
       const folders = state.categories.map(cat => ({name:cat,key:cat,count:state.links.filter(link => link.category === cat).length}));
       const uncategorized = state.links.filter(link => !String(link.category || '').trim()).length;
       if (uncategorized) folders.push({name:'未分類',key:'__uncategorized__',count:uncategorized});
