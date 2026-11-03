@@ -353,7 +353,7 @@ function getLinksForToken_(viewerToken) {
   // 管理者には全件を返す。利用者用キャッシュには公開リンクのみを格納する。
   if (!isAdmin) {
     result.links = result.links.filter(link => link.visibleToVisitors === true);
-    result.categories = Array.from(new Set(result.links.map(link => link.category).filter(Boolean)).sort((a, b) => a.localeCompare(b, 'ja'));
+    result.categories = Array.from(new Set(result.links.map(link => link.category).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'ja'));
   }
   writeJsonCache_(cacheKey, result, LINKS_CACHE_TTL_SECONDS);
   return result;
