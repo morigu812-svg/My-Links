@@ -1724,7 +1724,11 @@ body,.finder-window,.finder-toolbar,.finder-layout,.finder-content,.sidebar,
  .finder-window,.sidebar,.item,.chat-overlay{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 }
 
-#finderWindow .finder-toolbar .traffic-lights>span:nth-child(-n+2),#finderWindow .toolbar-tools>span{display:none!important}
+#finderWindow .toolbar-tools>span{display:none!important}
+#finderWindow .finder-toolbar .traffic-lights>span{display:inline-block!important}
+#finderWindow .finder-toolbar .traffic-lights>span:nth-child(1){background:#ff5f57!important}
+#finderWindow .finder-toolbar .traffic-lights>span:nth-child(2){background:#febc2e!important}
+#finderWindow .finder-toolbar .traffic-lights>span:nth-child(3){background:#28c840!important}
 .new-badge[hidden]{display:none!important}
 </style>
 <div id="lc-release-overlay" aria-hidden="true">
