@@ -292,10 +292,14 @@ body.night-mode .item a{color:#8ba6b9!important}
 .loading-line.short{width:46%;}.loading-line.long{width:82%;}
 @keyframes linkCoreShimmer{0%{background-position:100% 0}100%{background-position:-120% 0}}
 @media(prefers-reduced-motion:reduce){.loading-card{animation:none;background:rgba(13,28,49,.9)}}
-/* Shared chat */.chat-launch{margin-top:6px}.chat-overlay{position:fixed;right:22px;bottom:22px;z-index:10000;width:min(410px,calc(100vw - 28px));height:min(620px,calc(100vh - 44px));display:none;flex-direction:column;overflow:hidden;border:1px solid #286b8c;border-radius:16px;background:#081426;box-shadow:0 18px 60px #000b,0 0 24px #00cfff20;color:#e8f5ff}.chat-overlay.open{display:flex}.chat-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 15px;border-bottom:1px solid #20516c;background:linear-gradient(100deg,#10213a,#0b1428)}.chat-head strong{font-size:14px;letter-spacing:.04em}.chat-head-actions{display:flex;align-items:center;gap:6px}.refresh-icon{display:inline-block;font-size:16px;line-height:1;transform-origin:center}.chat-head button.is-refreshing .refresh-icon{animation:chat-refresh-spin .75s linear infinite}@keyframes chat-refresh-spin{to{transform:rotate(360deg)}}.chat-head button:disabled{opacity:.72;cursor:wait}.chat-head button{border:1px solid #28516c;border-radius:7px;padding:5px 9px;background:#10283e;color:#bfeeff}.chat-subtitle{padding:8px 14px;color:#8faec6;font-size:11px;border-bottom:1px solid #17354c}.chat-messages{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:10px;padding:13px;background:linear-gradient(145deg,#071124,#0a1425)}.chat-message{max-width:92%;align-self:flex-start;padding:9px 11px;border:1px solid #24516d;border-radius:10px;background:#10243a;overflow-wrap:anywhere}.chat-message.admin{border-color:#267d9b;background:#102d43}.chat-message-meta{display:flex;justify-content:space-between;gap:12px;margin-bottom:4px;color:#73dfff;font-size:10px}.chat-message-body{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.6;color:#e5f3ff}.chat-empty,.chat-status{padding:12px;color:#91abc2;font-size:12px;text-align:center}.chat-compose{display:flex;gap:8px;padding:11px;border-top:1px solid #20516c;background:#091426}.chat-compose textarea{flex:1;min-width:0;min-height:42px;max-height:110px;resize:vertical;padding:9px 10px;border:1px solid #28516c;border-radius:8px;background:#060e1d;color:#e8f5ff;font:inherit;font-size:13px}.chat-compose button{align-self:flex-end;padding:10px 13px;border:1px solid #35d9ff;border-radius:8px;background:linear-gradient(135deg,#087fa9,#273f9b);color:white;font-weight:650}.chat-compose button:disabled{opacity:.5;cursor:wait}@media(max-width:520px){.chat-overlay{right:8px;bottom:8px;width:calc(100vw - 16px);height:min(72vh,620px)}}</style>
+/* Shared chat */.chat-launch{margin-top:6px}.chat-overlay{position:fixed;right:22px;bottom:22px;z-index:10000;width:min(410px,calc(100vw - 28px));height:min(620px,calc(100vh - 44px));display:none;flex-direction:column;overflow:hidden;border:1px solid #286b8c;border-radius:16px;background:#081426;box-shadow:0 18px 60px #000b,0 0 24px #00cfff20;color:#e8f5ff}.chat-overlay.open{display:flex}.chat-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 15px;border-bottom:1px solid #20516c;background:linear-gradient(100deg,#10213a,#0b1428)}.chat-head strong{font-size:14px;letter-spacing:.04em}.chat-head-actions{display:flex;align-items:center;gap:6px}.refresh-icon{display:inline-block;font-size:16px;line-height:1;transform-origin:center}.chat-head button.is-refreshing .refresh-icon{animation:chat-refresh-spin .75s linear infinite}@keyframes chat-refresh-spin{to{transform:rotate(360deg)}}.chat-head button:disabled{opacity:.72;cursor:wait}.chat-head button{border:1px solid #28516c;border-radius:7px;padding:5px 9px;background:#10283e;color:#bfeeff}.chat-subtitle{padding:8px 14px;color:#8faec6;font-size:11px;border-bottom:1px solid #17354c}.chat-messages{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:10px;padding:13px;background:linear-gradient(145deg,#071124,#0a1425)}.chat-message{max-width:92%;align-self:flex-start;padding:9px 11px;border:1px solid #24516d;border-radius:10px;background:#10243a;overflow-wrap:anywhere}.chat-message.admin{border-color:#267d9b;background:#102d43}.chat-message-meta{display:flex;justify-content:space-between;gap:12px;margin-bottom:4px;color:#73dfff;font-size:10px}.chat-message-body{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.6;color:#e5f3ff}.chat-empty,.chat-status{padding:12px;color:#91abc2;font-size:12px;text-align:center}.chat-compose{display:flex;gap:8px;padding:11px;border-top:1px solid #20516c;background:#091426}.chat-compose textarea{flex:1;min-width:0;min-height:42px;max-height:110px;resize:vertical;padding:9px 10px;border:1px solid #28516c;border-radius:8px;background:#060e1d;color:#e8f5ff;font:inherit;font-size:13px}.chat-compose button{align-self:flex-end;padding:10px 13px;border:1px solid #35d9ff;border-radius:8px;background:linear-gradient(135deg,#087fa9,#273f9b);color:white;font-weight:650}.chat-compose button:disabled{opacity:.5;cursor:wait}@media(max-width:520px){.chat-overlay{right:8px;bottom:8px;width:calc(100vw - 16px);height:min(72vh,620px)}}
+/* Click-history diagnostics */
+.click-log-notice{position:fixed;left:50%;bottom:18px;z-index:12000;transform:translate(-50%,12px);width:min(620px,calc(100vw - 28px));padding:12px 15px;border:1px solid #2c7895;border-radius:10px;background:#081a2c;color:#dff7ff;box-shadow:0 12px 38px #0009;font-size:12px;line-height:1.6;opacity:0;pointer-events:none;transition:opacity .18s ease,transform .18s ease;overflow-wrap:anywhere}.click-log-notice.show{opacity:1;transform:translate(-50%,0)}.click-log-notice.error{border-color:#b85b67;background:#29121b;color:#ffe6e9}.click-log-notice strong{display:block;margin-bottom:2px;font-size:12px}
+</style>
 </head>
 <body>
 <main class="wrap">
+<div class="click-log-notice" id="clickLogNotice" role="status" aria-live="polite"></div>
 <section class="finder-window login-window" id="loginPanel">
   <div class="finder-toolbar"><div class="traffic-lights" aria-label="ウィンドウ操作"><span class="traffic-red" aria-hidden="true"></span><span class="traffic-yellow" aria-hidden="true"></span><button type="button" class="traffic-green" data-fullscreen title="全画面表示" aria-label="全画面表示"></button></div><div class="finder-title">My Desktop</div><div></div></div>
   <div class="login-body"><div class="brand">LINK CORE / SHARED DESKTOP</div><h1>リンク一覧</h1><p>サイトのパスワードを入力すると、共有リンクを閲覧できます。</p>
@@ -326,6 +330,16 @@ window.addEventListener('message',event=>{if(!isGasOrigin(event.origin))return;c
 frame.src=GAS_URL+'?mode=bridge';
 function call(method,...args){return bridgeReady.then(()=>new Promise((resolve,reject)=>{const id=(crypto.randomUUID&&crypto.randomUUID())||String(Date.now()+Math.random());const timer=setTimeout(()=>{pending.delete(id);reject(new Error('サーバーから応答がありません。GASの再デプロイを確認してください。'))},15000);pending.set(id,{resolve:v=>{clearTimeout(timer);resolve(v)},reject:e=>{clearTimeout(timer);reject(e)}});bridgeWindow.postMessage({type:'DAILY_CORE_REQUEST',id,method,args},bridgeOrigin)}))}
 const $=id=>document.getElementById(id);
+let clickNoticeTimer=0;
+function showClickLogNotice(message,isError){
+ const box=$('clickLogNotice');if(!box)return;
+ box.classList.toggle('error',!!isError);box.innerHTML='';
+ const heading=document.createElement('strong');heading.textContent=isError?'クリック履歴を保存できませんでした':'クリック履歴';
+ const detail=document.createElement('span');detail.textContent=message;
+ box.append(heading,detail);box.classList.add('show');
+ clearTimeout(clickNoticeTimer);clickNoticeTimer=setTimeout(()=>box.classList.remove('show'),isError?12000:2600);
+}
+
 let links=[],categories=[],view='all',selectedCategory='',visitorToken='';
 function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function visibleLinks(){
@@ -392,14 +406,27 @@ document.addEventListener('fullscreenchange',()=>{
 });
 
 $('sideCats').addEventListener('click',event=>{const btn=event.target.closest('[data-category]');if(!btn)return;selectedCategory=btn.dataset.category;view='all';render()});
+const clickLogPending=new Set();
 $('list').addEventListener('click',event=>{
  const anchor=event.target.closest('a[href]');
  if(!anchor)return;
  const card=anchor.closest('[data-link-id]');
- if(!card||!visitorToken)return;
+ if(!card)return;
+ if(!visitorToken){showClickLogNotice('利用者ログイン情報がありません。ページを再読み込みしてログインし直してください。',true);return;}
  const link=links.find(item=>String(item.id)===card.dataset.linkId);
- if(!link||!(link.url.indexOf('https://')===0||link.url.indexOf('http://')===0))return;
- call('recordLinkClick',link.id,visitorToken).catch(error=>console.warn('[LINK CORE] click log failed',error));
+ if(!link){showClickLogNotice('クリックしたリンクのIDを一覧データから特定できませんでした。リンク一覧を再読み込みしてください。',true);return;}
+ if(!(link.url.indexOf('https://')===0||link.url.indexOf('http://')===0))return;
+ if(clickLogPending.has(String(link.id)))return;
+ clickLogPending.add(String(link.id));
+ call('recordLinkClick',link.id,visitorToken)
+  .then(result=>{if(result&&result.ok)showClickLogNotice('「'+link.title+'」のクリック履歴を保存しました。',false);else throw new Error('GASから保存完了の応答がありませんでした。');})
+  .catch(error=>{
+    const message=error&&error.message?error.message:String(error||'不明なエラー');
+    console.error('[LINK CORE] click log failed', {linkId:link.id,title:link.title,error});
+    if(isVisitorAuthError(error)){showClickLogNotice('利用者認証の期限切れです。ページを再読み込みしてログインし直してください。',true);}
+    else showClickLogNotice('リンク：'+link.title+' / 原因：'+message,true);
+  })
+  .finally(()=>clickLogPending.delete(String(link.id)));
 });
 $('loginForm').addEventListener('submit',async e=>{e.preventDefault();$('loginButton').disabled=true;$('loginError').textContent='認証中…';$('loginRetry').classList.add('hidden');let loadingLinks=false;try{const auth=await call('authenticateVisitor',$('sitePassword').value);if(!auth||!auth.token)throw new Error('閲覧用トークンを取得できませんでした。');visitorToken=auth.token;$('loginPanel').classList.add('hidden');$('linksPanel').classList.remove('hidden');loadingLinks=true;$('loadStatus').textContent='リンクを読み込み中…';$('list').classList.add('loading-skeleton');const data=await call('getLinks',auth.token);links=Array.isArray(data.links)?data.links:[];categories=Array.isArray(data.categories)?data.categories:Array.from(new Set(links.map(x=>x.category).filter(Boolean))).sort();$('sitePassword').value='';$('loginError').textContent='';$('loadStatus').textContent='';render()}catch(err){visitorToken='';if(loadingLinks){$('linksPanel').classList.add('hidden');$('loginPanel').classList.remove('hidden')}$('loginError').textContent=err.message||'ログインできませんでした。';$('loginRetry').classList.remove('hidden');$('loginButton').disabled=false;$('sitePassword').focus()}});
 
