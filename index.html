@@ -526,15 +526,15 @@ document.addEventListener('visibilitychange',async()=>{
    if(!drag||event.pointerId!==drag.pointerId)return;
    event.preventDefault();
    const d=drag,dx=event.clientX-d.startX,dy=event.clientY-d.startY,dir=d.direction;
-   let width=d.width+(dir.includes('w')?-2*dx:dir.includes('e')?2*dx:0);
-   let height=d.height+(dir.includes('n')?-2*dy:dir.includes('s')?2*dy:0);
+   let width=d.width+(dir.includes('w')?-dx:dir.includes('e')?dx:0);
+   let height=d.height+(dir.includes('n')?-dy:dir.includes('s')?dy:0);
    width=Math.max(minWidth,Math.min(width,window.innerWidth-16));
    height=Math.max(minHeight,Math.min(height,window.innerHeight-16));
    d.panel.style.width=width+'px';
    d.panel.style.height=height+'px';
    d.panel.style.marginLeft='auto';
    d.panel.style.marginRight='auto';
-   d.panel.style.transform='translateY('+(d.centerY-height/2-d.top)+'px)';
+   d.panel.style.transform='translateY('+(d.top+(dir.includes('n')?dy:0)-d.top)+'px)';
  }
  function end(event){
    if(!drag||event&&event.pointerId!==drag.pointerId)return;
