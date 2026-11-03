@@ -1230,7 +1230,7 @@ main { width:100%; max-width:none !important; }
       time.textContent=isNaN(date.getTime())?'日時不明':date.toLocaleString('ja-JP');
       const title=document.createElement('td');title.textContent=log.title||'（タイトルなし）';
       const urlCell=document.createElement('td');urlCell.className='log-url';
-      if(/^https?:\\/\\//i.test(log.url)){const a=document.createElement('a');a.href=log.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent=log.url;urlCell.appendChild(a);}else{urlCell.textContent=log.url||'';}
+      if(log.url.indexOf('https://')===0||log.url.indexOf('http://')===0){const a=document.createElement('a');a.href=log.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent=log.url;urlCell.appendChild(a);}else{urlCell.textContent=log.url||'';}
       tr.append(time,title,urlCell);body.appendChild(tr);
     });
   }
