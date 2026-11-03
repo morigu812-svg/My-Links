@@ -707,32 +707,48 @@ function ensureClickLogSheet_() {
   return sheet;
 }
 function recordLinkClick(linkId, visitorToken) {
-  if (typeof visitorToken !== 'string' || !visitorToken ||
-      CacheService.getScriptCache().get('LINK_CORE_VISITOR_' + visitorToken) !== 'yes') {
-    throw new Error('利用者ログインが必要です。');
-  }
-  const id = cleanText_(linkId, 200);
-  if (!id) throw new Error('リンクIDがありません。');
-  const linksSheet = ensureSheet_();
-  const columns = getColumnMap_(linksSheet);
-  const last = linksSheet.getLastRow();
-  if (last < 2) throw new Error('対象のリンクが見つかりません。');
-  const rows = linksSheet.getRange(2, 1, last - 1, linksSheet.getLastColumn()).getValues();
-  let selected = null;
-  for (let i = 0; i < rows.length; i++) {
-    if (String(rows[i][columns['ID'] - 1] || '') === id) {
-      selected = rowToLink_(rows[i], columns);
-      break;
-    }
-  }
-  if (!selected || selected.visibleToVisitors !== true) throw new Error('公開中のリンクではありません。');
-  const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
+  let stage = '利用者認証';
   try {
-    ensureClickLogSheet_().appendRow([Utilities.getUuid(), safeCell_(selected.id), safeCell_(selected.title), safeCell_(selected.url), new Date()]);
-    return {ok: true};
-  } finally {
-    lock.releaseLock();
+    if (typeof visitorToken !== 'string' || !visitorToken ||
+        CacheService.getScriptCache().get('LINK_CORE_VISITOR_' + visitorToken) !== 'yes') {
+      throw new Error('利用者ログインが必要です。ログインの有効期限が切れている可能性があります。');
+    }
+
+    stage = 'リンクIDの確認';
+    const id = cleanText_(linkId, 200);
+    if (!id) throw new Error('リンクIDがありません。');
+
+    stage = 'リンク一覧の読み込み';
+    const linksSheet = ensureSheet_();
+    const columns = getColumnMap_(linksSheet);
+    const last = linksSheet.getLastRow();
+    if (last < 2) throw new Error('Linksシートにリンクデータがありません。');
+    const rows = linksSheet.getRange(2, 1, last - 1, linksSheet.getLastColumn()).getValues();
+    let selected = null;
+    for (let i = 0; i < rows.length; i++) {
+      if (String(rows[i][columns['ID'] - 1] || '') === id) {
+        selected = rowToLink_(rows[i], columns);
+        break;
+      }
+    }
+    if (!selected) throw new Error('Linksシート内にID「' + id + '」のリンクが見つかりません。');
+    if (selected.visibleToVisitors !== true) throw new Error('対象リンクが「利用者に公開」になっていません。');
+
+    stage = 'ClickLogsシートへの保存';
+    const lock = LockService.getScriptLock();
+    lock.waitLock(10000);
+    try {
+      const logSheet = ensureClickLogSheet_();
+      logSheet.appendRow([Utilities.getUuid(), safeCell_(selected.id), safeCell_(selected.title), safeCell_(selected.url), new Date()]);
+      SpreadsheetApp.flush();
+      return {ok: true, title: selected.title, savedAt: new Date().toISOString()};
+    } finally {
+      lock.releaseLock();
+    }
+  } catch (error) {
+    const detail = error && error.message ? error.message : String(error);
+    console.error('[LINK CORE] recordLinkClick failed at ' + stage + ': ' + detail);
+    throw new Error('クリック履歴の保存処理（' + stage + '）で失敗しました：' + detail);
   }
 }
 function getClickLogs(adminToken) {
