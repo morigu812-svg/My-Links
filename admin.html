@@ -708,7 +708,7 @@ main { width:100%; max-width:none !important; }
       <div class="side-label">クイックアクセス</div>
       <button class="side-item" type="button" data-view="official"><span>✦</span> 公式リンク</button>
       <button class="side-item" type="button" id="sideMemos"><span>▤</span> メモ帳</button>
-      <button class="side-item" type="button" id="sideChat"><span>✉</span> 利用者チャット</button>
+      <button class="side-item" type="button" id="sideChat"><span>✉</span> 利用者チャット <span class="new-badge" id="chatUnreadBadge" hidden>NEW</span></button>
       <button class="side-item" type="button" id="sideClickLogs"><span>◷</span> クリック履歴</button>
       <button class="side-item" type="button" id="sideBrowser"><span>▣</span> ブラウザ <span class="new-badge">NEW</span></button>
       <button class="side-item" type="button" id="sideReleaseNotes"><span>▤</span> リリースノート <span class="new-badge">NEW</span></button>
@@ -1317,10 +1317,10 @@ main { width:100%; max-width:none !important; }
   
   // Shared visitor chat; the server determines the author from the authenticated token.
   const chatOverlay=$('chatOverlay'),chatMessages=$('chatMessages'),chatForm=$('chatForm'),chatInput=$('chatInput'),chatSend=$('chatSend');
-  let chatLoading=false,chatLoaded=false;
+  let chatLoading=false,chatLoaded=false,lastAdminChatId='',adminUnreadCount=0;
   function renderChatMessages(messages){chatMessages.replaceChildren();if(!messages.length){const e=document.createElement('div');e.className='chat-empty';e.textContent='まだメッセージはありません。利用者からの投稿を待っています。';chatMessages.appendChild(e);return;}messages.forEach(item=>{const bubble=document.createElement('article');bubble.className='chat-message'+(item.author==='管理者'?' admin':'');const meta=document.createElement('div');meta.className='chat-message-meta';const author=document.createElement('strong');author.textContent=item.author==='管理者'?'管理者':'利用者';const time=document.createElement('time');const date=new Date(item.createdAt);time.textContent=isNaN(date.getTime())?'':date.toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});const body=document.createElement('div');body.className='chat-message-body';body.textContent=item.message;meta.append(author,time);bubble.append(meta,body);chatMessages.appendChild(bubble);});chatMessages.scrollTop=chatMessages.scrollHeight;}
-  async function refreshAdminChat(){if(chatLoading||!sessionStorage.getItem(ADMIN_TOKEN_KEY))return;const button=$('refreshChat');chatLoading=true;button.disabled=true;button.classList.add('is-refreshing');button.setAttribute('aria-busy','true');try{const r=await serverCall('getChatMessages');renderChatMessages(Array.isArray(r.messages)?r.messages:[]);chatLoaded=true;}catch(e){chatMessages.textContent='読み込みに失敗しました：'+(e.message||'通信エラー');}finally{chatLoading=false;button.disabled=false;button.classList.remove('is-refreshing');button.removeAttribute('aria-busy');}}
-  function openAdminChat(){if(!sessionStorage.getItem(ADMIN_TOKEN_KEY)){alert('先に管理者ログインをしてください。');return;}leaveClickLogs();chatOverlay.classList.add('open');if(!chatLoaded)refreshAdminChat();}
+  function updateAdminChatBadge(){const badge=$('chatUnreadBadge');if(!badge)return;badge.hidden=adminUnreadCount<1;badge.textContent=adminUnreadCount>99?'99+':String(adminUnreadCount);badge.setAttribute('aria-label',adminUnreadCount+'件の未読メッセージ');}\n  async function refreshAdminChat(){if(chatLoading||!sessionStorage.getItem(ADMIN_TOKEN_KEY))return;const button=$('refreshChat');chatLoading=true;if(button){button.disabled=true;button.classList.add('is-refreshing');button.setAttribute('aria-busy','true');}try{const r=await serverCall('getChatMessages');const messages=Array.isArray(r.messages)?r.messages:[];const latest=messages.length?messages[messages.length-1].id:'';if(chatLoaded&&latest&&lastAdminChatId&&latest!==lastAdminChatId&&!chatOverlay.classList.contains('open')){const previousIndex=messages.findIndex(item=>item.id===lastAdminChatId);adminUnreadCount+=previousIndex>=0?messages.length-previousIndex-1:1;updateAdminChatBadge();}if(latest)lastAdminChatId=latest;renderChatMessages(messages);chatLoaded=true;}catch(e){if(chatOverlay.classList.contains('open'))chatMessages.textContent='読み込みに失敗しました：'+(e.message||'通信エラー');}finally{chatLoading=false;if(button){button.disabled=false;button.classList.remove('is-refreshing');button.removeAttribute('aria-busy');}}}
+  function openAdminChat(){if(!sessionStorage.getItem(ADMIN_TOKEN_KEY)){alert('先に管理者ログインをしてください。');return;}leaveClickLogs();adminUnreadCount=0;updateAdminChatBadge();chatOverlay.classList.add('open');refreshAdminChat();}
   $('sideChat').addEventListener('click',openAdminChat);
   const clickLogPanel=$('clickLogPanel');
   let clickLogsLoaded=false,clickLogsLoading=false;
@@ -1374,7 +1374,7 @@ main { width:100%; max-width:none !important; }
   }
   document.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>{clickLogPanel.hidden=true;document.querySelector('.workspace').hidden=false;}));
 $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEventListener('click',()=>{chatOverlay.classList.remove('open');});
-  setInterval(()=>{if(chatOverlay.classList.contains('open'))refreshAdminChat();},15000);
+  setInterval(()=>{if(sessionStorage.getItem(ADMIN_TOKEN_KEY))refreshAdminChat();},15000);
   chatForm.addEventListener('submit',async e=>{e.preventDefault();const message=chatInput.value.trim();if(!message)return;chatSend.disabled=true;try{const r=await serverCall('sendChatMessage',message);chatInput.value='';renderChatMessages(Array.isArray(r.messages)?r.messages:[]);chatLoaded=true;}catch(error){const s=document.createElement('div');s.className='chat-status';s.textContent=error.message||'送信できませんでした。';chatMessages.appendChild(s);}finally{chatSend.disabled=false;chatInput.focus();}});
 
   const memoOverlay = $('memoOverlay');
@@ -1876,6 +1876,19 @@ body .lc-browser-window .lc-browser-lights button.lc-browser-light{display:block
 @media(max-width:520px){#lc-release-overlay{padding:10px}#lc-release-dialog{max-height:90vh;border-radius:14px}#lc-release-content{max-height:calc(90vh - 82px);padding:14px}#lc-release-head{padding:16px}#lc-release-head h2{font-size:19px}}
 
 .lc-release-new-badge,.side-item>.new-badge{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;width:auto!important;min-width:0;margin-left:auto;padding:2px 6px;border:1px solid #ffe45c;border-radius:5px;background:rgba(255,228,92,.10);color:#fff29a!important;font-size:9px!important;font-weight:900;letter-spacing:.08em;line-height:1.3;white-space:nowrap;text-shadow:0 0 5px rgba(255,226,75,.95),0 0 10px rgba(255,210,40,.7);box-shadow:0 0 6px rgba(255,220,70,.45),inset 0 0 4px rgba(255,220,70,.12)}
+
+/* Review fixes: mobile layout, touch dragging, and viewport recovery */
+.finder-toolbar{touch-action:none}
+body.fit-screen .finder-window{position:relative!important;left:auto!important;top:auto!important;right:auto!important;bottom:auto!important;width:100vw!important;height:auto!important;min-height:100vh!important;margin:0!important;transform:none!important}
+@media(max-width:720px){
+ .finder-layout{display:flex!important;flex-direction:column!important;min-width:0}
+ .sidebar{width:100%!important;min-width:0!important;display:flex!important;flex-direction:row!important;align-items:center;gap:5px;overflow-x:auto;overflow-y:hidden;white-space:nowrap;border-right:0!important;border-bottom:1px solid #203c4b;padding:8px!important;scrollbar-width:thin}
+ .sidebar .side-label{display:none!important}
+ .sidebar .side-item{flex:0 0 auto;width:auto!important;min-height:36px;padding:8px 10px!important;font-size:12px!important}
+ .finder-content{min-width:0;padding:12px!important}
+ .item button,.item .btn{min-height:36px;font-size:12px!important}
+ .finder-window,.sidebar,.item,.chat-overlay{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+}
 </style>
 <div id="lc-release-overlay" aria-hidden="true">
  <section id="lc-release-dialog" role="dialog" aria-modal="true" aria-labelledby="lc-release-title">
@@ -1904,6 +1917,10 @@ body .lc-browser-window .lc-browser-lights button.lc-browser-light{display:block
  overlay.addEventListener('click',e=>{if(e.target===overlay)shut()});
  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&overlay.classList.contains('is-open'))shut()});
 })();
+</script>
+
+<script id="lc-viewport-recovery">
+(function(){function clampWindows(){if(document.body.classList.contains('fit-screen'))return;document.querySelectorAll('.lc-browser-window,.finder-window').forEach(el=>{if(el.classList.contains('hidden'))return;const fixed=el.classList.contains('lc-browser-window')||el.style.position==='fixed';if(!fixed)return;const r=el.getBoundingClientRect();if(r.width>innerWidth-16)el.style.width=Math.max(280,innerWidth-16)+'px';if(r.height>innerHeight-16)el.style.height=Math.max(220,innerHeight-16)+'px';const w=el.getBoundingClientRect();el.style.left=Math.max(8,Math.min(w.left,innerWidth-w.width-8))+'px';el.style.top=Math.max(8,Math.min(w.top,innerHeight-w.height-8))+'px';});}window.addEventListener('resize',clampWindows,{passive:true});})();
 </script>
 </body>
 </html>
