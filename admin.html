@@ -1723,7 +1723,7 @@ body.lc-browser-resizing iframe{pointer-events:none!important}
     external.addEventListener('click',()=>window.open(parsed.href,'_blank','noopener,noreferrer'));
     refreshBrowserTaskbar();
     toolbar.addEventListener('pointerdown',event=>{
-      if(event.button!==0 || event.target.closest('button')) return;
+      if(event.button!==0 || event.target.closest('button, .lc-browser-lights')) return;
       const rect=win.getBoundingClientRect();
       activeDrag={win,pointerId:event.pointerId,x:event.clientX,y:event.clientY,left:rect.left,top:rect.top};
       toolbar.setPointerCapture(event.pointerId);event.preventDefault();
