@@ -56,12 +56,7 @@ footer a{color:#55eaff!important}
 .traffic-lights{gap:8px}
 .traffic-lights .traffic-green{display:block;width:12px;height:12px;min-width:12px;padding:0;border:0;border-radius:50%;background:#28c840;box-shadow:inset 0 1px 1px rgba(255,255,255,.55),0 0 0 1px rgba(0,0,0,.14),0 0 10px rgba(40,200,64,.25);cursor:pointer}
 .traffic-lights .traffic-green:hover{transform:scale(1.12);box-shadow:0 0 0 2px rgba(40,200,64,.25),0 0 15px rgba(40,200,64,.65)}
-.traffic-lights .traffic-green:focus-visible{outline:2px solid #00f0ff;outline-offset:4px}body.fit-screen{padding:0!important}
-body.fit-screen .wrap{width:100%;max-width:none;margin:0}
-body.fit-screen .finder-window{min-height:100vh;border-radius:0}
-body.fit-screen .finder-layout{min-height:calc(100vh - 58px)}
-body.fit-screen .finder-content{min-height:calc(100vh - 58px)}
-@media(max-width:720px){body.fit-screen .finder-layout{min-height:calc(100vh - 72px)}}
+.traffic-lights .traffic-green:focus-visible{outline:2px solid #00f0ff;outline-offset:4px}@media(max-width:720px){}
 
 
 /* Refined low-glare graphite and muted jade palette */
@@ -325,13 +320,13 @@ body.window-resizing,body.window-resizing *{user-select:none!important}
 <main class="wrap">
 <div class="click-log-notice" id="clickLogNotice" role="status" aria-live="polite"></div>
 <section class="finder-window login-window" id="loginPanel">
-  <div class="finder-toolbar"><div class="traffic-lights" aria-label="ウィンドウ操作"><span class="traffic-red" aria-hidden="true"></span><span class="traffic-yellow" aria-hidden="true"></span><button type="button" class="traffic-green" data-fullscreen title="全画面表示" aria-label="全画面表示"></button></div><div class="finder-title">My Desktop</div><div></div></div>
+  <div class="finder-toolbar"><div class="traffic-lights" aria-label="ウィンドウ操作"><span class="traffic-red" aria-hidden="true"></span><span class="traffic-yellow" aria-hidden="true"></span></div><div class="finder-title">My Desktop</div><div></div></div>
   <div class="login-body"><div class="brand">LINK CORE / SHARED DESKTOP</div><h1>リンク一覧</h1><p>サイトのパスワードを入力すると、共有リンクを閲覧できます。</p>
     <form id="loginForm"><label for="sitePassword">サイトのパスワード</label><div class="login-row"><input id="sitePassword" type="password" autocomplete="current-password" required autofocus><button id="loginButton" type="submit">ログイン</button></div><div class="error" id="loginError" role="alert"></div><button class="retry-button hidden" id="loginRetry" type="button"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:5px"><path d="M20 7v5h-5"/><path d="M20 12a8 8 0 1 1-2.3-5.7L20 9"/></svg>再試行</button></form>
   </div>
 </section>
 <section class="finder-window hidden" id="linksPanel">
-  <div class="finder-toolbar"><div class="traffic-lights" aria-label="ウィンドウ操作"><span class="traffic-red" aria-hidden="true"></span><span class="traffic-yellow" aria-hidden="true"></span><button type="button" class="traffic-green" data-fullscreen title="全画面表示" aria-label="全画面表示"></button></div><div class="finder-title"><span class="folder-glyph">▰</span> My Desktop <span class="toolbar-chevron">›</span></div><div class="toolbar-tools"><span>▤</span><span>☷</span></div><label class="toolbar-search"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="検索" aria-label="リンクを検索"></label></div>
+  <div class="finder-toolbar"><div class="traffic-lights" aria-label="ウィンドウ操作"><span class="traffic-red" aria-hidden="true"></span><span class="traffic-yellow" aria-hidden="true"></span></div><div class="finder-title"><span class="folder-glyph">▰</span> My Desktop <span class="toolbar-chevron">›</span></div><div class="toolbar-tools"><span>▤</span><span>☷</span></div><label class="toolbar-search"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="検索" aria-label="リンクを検索"></label></div>
   <div class="finder-layout"><aside class="sidebar" aria-label="サイドバー">
 <button class="side-item" type="button" data-view="desktop"><span>▣</span> My Desktop</button>
 <div class="side-label">よく使う項目</div>
@@ -490,25 +485,6 @@ chatForm.addEventListener('submit',async e=>{e.preventDefault();const message=ch
 $('search').addEventListener('input',render);
 document.querySelectorAll('[data-view]').forEach(btn=>btn.addEventListener('click',()=>{view=btn.dataset.view;selectedCategory='';render()}));
 
-document.querySelectorAll('[data-fullscreen]').forEach(button=>button.addEventListener('click',async()=>{
- const root=document.documentElement;
- if(document.fullscreenElement){
-  try{await document.exitFullscreen()}catch(_){}
-  document.body.classList.remove('fit-screen');
-  return;
- }
- document.body.classList.add('fit-screen');
- try{
-  if(root.requestFullscreen) await root.requestFullscreen();
-  else document.querySelectorAll('[data-fullscreen]').forEach(button=>{button.title='画面に合わせて表示中';button.setAttribute('aria-label',button.title)});
- }catch(_){
-  document.querySelectorAll('[data-fullscreen]').forEach(button=>{button.title='画面に合わせて表示中';button.setAttribute('aria-label',button.title)});
- }
-}));
-document.addEventListener('fullscreenchange',()=>{
- const active=!!document.fullscreenElement;
- document.body.classList.toggle('fit-screen',active);
- document.querySelectorAll('[data-fullscreen]').forEach(b=>{b.title=active?'全画面表示を終了':'全画面表示';b.setAttribute('aria-label',b.title)});
 });
 
 $('sideCats').addEventListener('click',event=>{const btn=event.target.closest('[data-category]');if(!btn)return;selectedCategory=btn.dataset.category;view='all';render()});
@@ -604,7 +580,7 @@ document.addEventListener('visibilitychange',async()=>{
  let drag=null;
  function start(event){
    const handle=event.target.closest('.resize-handle[data-resize]');
-   if(!handle||(event.button!==undefined&&event.button!==0)||document.body.classList.contains('fit-screen'))return;
+   if(!handle||(event.button!==undefined&&event.button!==0))return;
    const panel=handle.closest('.finder-window');
    if(!panel||panel.classList.contains('hidden'))return;
    const rect=panel.getBoundingClientRect(),direction=handle.dataset.resize;
@@ -689,7 +665,6 @@ document.addEventListener('visibilitychange',async()=>{
 
 /* Review fixes: mobile navigation, touch dragging, and viewport recovery */
 .finder-toolbar{touch-action:none}
-body.fit-screen .finder-window{position:relative!important;left:auto!important;top:auto!important;right:auto!important;bottom:auto!important;width:100vw!important;height:auto!important;min-height:100vh!important;margin:0!important;transform:none!important}
 @media(max-width:720px){
  .finder-layout{display:flex!important;flex-direction:column!important;min-width:0}
  .sidebar{width:100%!important;min-width:0!important;display:flex!important;flex-direction:row!important;align-items:center;gap:5px;overflow-x:auto;overflow-y:hidden;white-space:nowrap;border-right:0!important;border-bottom:1px solid #203c4b;padding:8px!important;scrollbar-width:thin}
@@ -796,6 +771,6 @@ main.wrap{width:100%;max-width:none!important;margin:0;padding:22px 24px}
 </script>
 
 <script id="lc-viewport-recovery">
-(function(){function clampWindows(){if(document.body.classList.contains('fit-screen'))return;document.querySelectorAll('.finder-window').forEach(el=>{if(el.classList.contains('hidden'))return;const fixed=el.classList.contains('lc-browser-window')||el.style.position==='fixed';if(!fixed)return;const r=el.getBoundingClientRect();if(r.width>innerWidth-16)el.style.width=Math.max(280,innerWidth-16)+'px';if(r.height>innerHeight-16)el.style.height=Math.max(220,innerHeight-16)+'px';const w=el.getBoundingClientRect();el.style.left=Math.max(8,Math.min(w.left,innerWidth-w.width-8))+'px';el.style.top=Math.max(8,Math.min(w.top,innerHeight-w.height-8))+'px';});}window.addEventListener('resize',clampWindows,{passive:true});})();
+(function(){function clampWindows(){document.querySelectorAll('.finder-window').forEach(el=>{if(el.classList.contains('hidden'))return;const fixed=el.classList.contains('lc-browser-window')||el.style.position==='fixed';if(!fixed)return;const r=el.getBoundingClientRect();if(r.width>innerWidth-16)el.style.width=Math.max(280,innerWidth-16)+'px';if(r.height>innerHeight-16)el.style.height=Math.max(220,innerHeight-16)+'px';const w=el.getBoundingClientRect();el.style.left=Math.max(8,Math.min(w.left,innerWidth-w.width-8))+'px';el.style.top=Math.max(8,Math.min(w.top,innerHeight-w.height-8))+'px';});}window.addEventListener('resize',clampWindows,{passive:true});})();
 </script>
 </body></html>
