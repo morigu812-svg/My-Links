@@ -411,36 +411,65 @@ function requireAdmin_(token) {
 /**
  * 画面表示用に全リンクを返す。
  */
-function getLinksForToken_(viewerToken, knownIsAdmin) {
+function getLinksForToken_(viewerToken, knownIsAdmin, performanceData) {
   const cache = CacheService.getScriptCache();
   const isAdmin = typeof knownIsAdmin === 'boolean'
     ? knownIsAdmin
     : cache.get('LINK_CORE_ADMIN_' + viewerToken) === 'yes';
+
+  const cacheStartedAt = Date.now();
   let result = readChunkedJsonCache_('LINK_CORE_LINKS_ALL_V2');
+  if (performanceData) {
+    performanceData.cacheReadMs = Date.now() - cacheStartedAt;
+    performanceData.cacheHit = !!result;
+  }
+
   if (!result) {
+    const sheetStartedAt = Date.now();
     result = readLinksForDisplay_();
+    if (performanceData) performanceData.sheetReadMs = Date.now() - sheetStartedAt;
+    const cacheWriteStartedAt = Date.now();
     writeChunkedJsonCache_('LINK_CORE_LINKS_ALL_V2', result, LINKS_CACHE_TTL_SECONDS);
+    if (performanceData) performanceData.cacheWriteMs = Date.now() - cacheWriteStartedAt;
+  } else if (performanceData) {
+    performanceData.sheetReadMs = 0;
+    performanceData.cacheWriteMs = 0;
   }
 
   // キャッシュはサーバー内に全件を保持し、利用者には返却直前に公開リンクだけを渡す。
   if (!isAdmin) {
+    const filterStartedAt = Date.now();
     const visibleLinks = result.links.filter(link => link.visibleToVisitors === true);
-    return {
+    const filtered = {
       links: visibleLinks,
       categories: Array.from(new Set(visibleLinks.map(link => link.category).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'ja'))
     };
+    if (performanceData) performanceData.filterMs = Date.now() - filterStartedAt;
+    return filtered;
   }
+  if (performanceData) performanceData.filterMs = 0;
   return result;
 }
 function getLinks(viewerToken) {
+  const startedAt = Date.now();
   // トークン種別を一度だけ確認し、後続処理で同じCacheService照会を繰り返さない。
+  const authStartedAt = Date.now();
   const cache = CacheService.getScriptCache();
   const isAdmin = typeof viewerToken === 'string' && viewerToken &&
     cache.get('LINK_CORE_ADMIN_' + viewerToken) === 'yes';
   const isVisitor = isAdmin || (typeof viewerToken === 'string' && viewerToken &&
     cache.get('LINK_CORE_VISITOR_' + viewerToken) === 'yes');
+  const authMs = Date.now() - authStartedAt;
   if (!isVisitor) throw new Error('閲覧にはサイトのパスワード認証が必要です。');
-  return getLinksForToken_(viewerToken, isAdmin);
+
+  const performanceData = isAdmin ? { authMs: authMs } : null;
+  const result = getLinksForToken_(viewerToken, isAdmin, performanceData);
+  if (performanceData) {
+    performanceData.serverTotalMs = Date.now() - startedAt;
+    performanceData.linkCount = result.links.length;
+    result._performance = performanceData;
+  }
+  return result;
 }
 
 /**
