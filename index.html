@@ -572,7 +572,7 @@ document.addEventListener('visibilitychange',async()=>{
    if(event.button!==undefined&&event.button!==0)return;
    if(drag)return;
    const toolbar=event.target.closest('.finder-toolbar');
-   if(!toolbar||event.target.closest('button,a,input,textarea,select,label,[role="button"],.resize-handle'))return;
+   if(!toolbar||event.target.closest('button,a,input,textarea,select,label,[role="button"],.resize-handle,.traffic-lights'))return;
    const panel=toolbar.closest('.finder-window');
    if(!panel||panel.classList.contains('hidden'))return;
    const rect=panel.getBoundingClientRect();
