@@ -315,7 +315,7 @@ body.night-mode .item a{color:#8ba6b9!important}
 body.window-resizing,body.window-resizing *{user-select:none!important}
 @media(max-width:720px){.finder-window{width:calc(100vw - 16px);max-width:none;max-height:none;overflow:hidden}.resize-handle{display:block!important}}
 
-.finder-toolbar{cursor:grab}.finder-window.is-moving .finder-toolbar{cursor:grabbing}.finder-window.is-moving{user-select:none}
+.finder-toolbar{cursor:default}
 /* Finder-style category folders */
 .folder-icon{width:54px;height:44px;color:#e5b84f;filter:drop-shadow(0 3px 7px rgba(0,0,0,.25))}.finder-content .folder-card{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;min-height:132px;padding:14px 10px;border:1px solid #28536b;border-radius:12px;background:linear-gradient(145deg,rgba(17,39,61,.92),rgba(13,19,39,.96));color:#e8b94f;cursor:pointer;transition:transform .16s,border-color .16s,box-shadow .16s}.folder-card:hover{transform:translateY(-2px);border-color:#4edfff;box-shadow:0 0 18px rgba(0,217,255,.16)}.folder-card-name{max-width:100%;overflow-wrap:anywhere;color:#e9f8ff;font-size:13px;font-weight:750}.folder-card-count{color:#8caabd;font-size:10px}.side-folder-mini{width:18px!important;height:16px;flex:none}.side-folder-mini .folder-icon{width:18px;height:15px;filter:none;color:#d9ad4c}.folder-toolbar{grid-column:1/-1;display:flex;align-items:center;gap:12px;margin:0 0 5px;padding:0 0 12px;border-bottom:1px solid #1a3e54;color:#8eacc0;font-size:11px}.folder-toolbar button{padding:6px 10px;border:1px solid #28536b;border-radius:7px;background:#10283b;color:#bcefff;cursor:pointer}</style>
 <meta name="robots" content="noindex, nofollow, noarchive">
@@ -659,42 +659,6 @@ document.addEventListener('visibilitychange',async()=>{
  window.addEventListener('pointercancel',end);
  window.addEventListener('blur',()=>end());
 
- // Finder-style window dragging from the toolbar background.
- let moveDrag=null;
- function beginMove(event){
-   if(event.button!==undefined&&event.button!==0)return;
-   if(drag)return;
-   const toolbar=event.target.closest('.finder-toolbar');
-   if(!toolbar||event.target.closest('button,a,input,textarea,select,label,[role="button"],.resize-handle,.traffic-lights'))return;
-   const panel=toolbar.closest('.finder-window');
-   if(!panel||panel.classList.contains('hidden'))return;
-   const rect=panel.getBoundingClientRect();
-   event.preventDefault();
-   panel.style.position='fixed';
-   panel.style.left=rect.left+'px';panel.style.top=rect.top+'px';
-   panel.style.right='auto';panel.style.bottom='auto';panel.style.margin='0';
-   panel.style.transform='none';panel.style.width=rect.width+'px';
-   panel.style.height=rect.height+'px';panel.style.maxWidth='none';
-   moveDrag={panel,pointerId:event.pointerId,startX:event.clientX,startY:event.clientY,left:rect.left,top:rect.top};
-   panel.classList.add('is-moving');
- }
- function moveWindow(event){
-   if(!moveDrag||event.pointerId!==moveDrag.pointerId)return;
-   event.preventDefault();
-   const d=moveDrag,rect=d.panel.getBoundingClientRect();
-   const left=Math.max(0,Math.min(d.left+event.clientX-d.startX,Math.max(0,window.innerWidth-Math.min(80,rect.width))));
-   const top=Math.max(0,Math.min(d.top+event.clientY-d.startY,Math.max(0,window.innerHeight-48)));
-   d.panel.style.left=left+'px';d.panel.style.top=top+'px';
- }
- function endMove(event){
-   if(!moveDrag||(event&&event.pointerId!==moveDrag.pointerId))return;
-   moveDrag.panel.classList.remove('is-moving');moveDrag=null;
- }
- document.addEventListener('pointerdown',beginMove);
- window.addEventListener('pointermove',moveWindow,{passive:false});
- window.addEventListener('pointerup',endMove);
- window.addEventListener('pointercancel',endMove);
- window.addEventListener('blur',()=>endMove());
 })();</script>
 
 
