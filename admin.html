@@ -1376,7 +1376,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
     clickLogPanel.hidden=true;document.querySelector('.workspace').hidden=false;
     $('addBtn').style.display='';$('search').disabled=false;$('search').placeholder='検索';render();
   }
-  document.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>{clickLogPanel.hidden=true;document.querySelector('.workspace').hidden=false;}));
+
 $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEventListener('click',()=>{chatOverlay.classList.remove('open');});
   setInterval(()=>{if(document.visibilityState==='visible'&&sessionStorage.getItem(ADMIN_TOKEN_KEY))refreshAdminChat();},30000);
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&sessionStorage.getItem(ADMIN_TOKEN_KEY))refreshAdminChat();});
