@@ -651,7 +651,8 @@ main { width:100%; max-width:none !important; }
 @keyframes linkCoreShimmer{0%{background-position:100% 0}100%{background-position:-120% 0}}
 @media(prefers-reduced-motion:reduce){.loading-card{animation:none;background:rgba(13,28,49,.9)}}
 /* Shared chat */.chat-overlay{position:fixed;right:22px;bottom:22px;z-index:10000;width:min(410px,calc(100vw - 28px));height:min(650px,calc(100vh - 44px));display:none;flex-direction:column;overflow:hidden;border:1px solid #286b8c;border-radius:16px;background:#081426;box-shadow:0 18px 60px #000b,0 0 24px #00cfff20;color:#e8f5ff}.chat-overlay.open{display:flex}.chat-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 15px;border-bottom:1px solid #20516c;background:linear-gradient(100deg,#10213a,#0b1428)}.chat-head strong{font-size:14px;letter-spacing:.04em}.chat-head-actions{display:flex;align-items:center;gap:6px}.refresh-icon{display:inline-block;font-size:16px;line-height:1;transform-origin:center}.chat-head button.is-refreshing .refresh-icon{animation:chat-refresh-spin .75s linear infinite}@keyframes chat-refresh-spin{to{transform:rotate(360deg)}}.chat-head button:disabled{opacity:.72;cursor:wait}.chat-head button{border:1px solid #28516c;border-radius:7px;padding:5px 9px;background:#10283e;color:#bfeeff}.chat-subtitle{padding:8px 14px;color:#8faec6;font-size:11px;border-bottom:1px solid #17354c}.chat-messages{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:10px;padding:13px;background:linear-gradient(145deg,#071124,#0a1425)}.chat-message{max-width:92%;align-self:flex-start;padding:9px 11px;border:1px solid #24516d;border-radius:10px;background:#10243a;overflow-wrap:anywhere}.chat-message.admin{border-color:#267d9b;background:#102d43}.chat-message-meta{display:flex;justify-content:space-between;gap:12px;margin-bottom:4px;color:#73dfff;font-size:10px}.chat-message-body{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.6;color:#e5f3ff}.chat-empty,.chat-status{padding:12px;color:#91abc2;font-size:12px;text-align:center}.chat-compose{display:flex;gap:8px;padding:11px;border-top:1px solid #20516c;background:#091426}.chat-compose textarea{flex:1;min-width:0;min-height:42px;max-height:110px;resize:vertical;padding:9px 10px;border:1px solid #28516c;border-radius:8px;background:#060e1d;color:#e8f5ff;font:inherit;font-size:13px}.chat-compose button{align-self:flex-end;padding:10px 13px;border:1px solid #35d9ff;border-radius:8px;background:linear-gradient(135deg,#087fa9,#273f9b);color:white;font-weight:650}.chat-compose button:disabled{opacity:.5;cursor:wait}@media(max-width:520px){.chat-overlay{right:8px;bottom:8px;width:calc(100vw - 16px);height:min(75vh,650px)}}.finder-toolbar{cursor:grab}.finder-window.is-moving .finder-toolbar{cursor:grabbing}.finder-window.is-moving{user-select:none}
-</style>
+/* Finder-style category folders */
+.folder-icon{width:54px;height:44px;color:#e5b84f;filter:drop-shadow(0 3px 7px rgba(0,0,0,.25))}.folder-card{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;min-height:132px;padding:14px 10px;border:1px solid #28536b;border-radius:12px;background:linear-gradient(145deg,rgba(17,39,61,.92),rgba(13,19,39,.96));color:#e8b94f;cursor:pointer;transition:transform .16s,border-color .16s,box-shadow .16s}.folder-card:hover{transform:translateY(-2px);border-color:#4edfff;box-shadow:0 0 18px rgba(0,217,255,.16)}.folder-card-name{max-width:100%;overflow-wrap:anywhere;color:var(--ink);font-size:13px;font-weight:750}.folder-card-count{color:var(--muted);font-size:10px}.side-folder-mini{width:18px!important;height:16px;flex:none}.side-folder-mini .folder-icon{width:18px;height:15px;filter:none;color:#d9ad4c}.folder-toolbar{grid-column:1/-1;display:flex;align-items:center;gap:12px;margin:0 0 5px;padding:0 0 12px;border-bottom:1px solid var(--line);color:var(--muted);font-size:11px}.folder-toolbar button{padding:6px 10px;border:1px solid #28536b;border-radius:7px;background:#10283b;color:#bcefff;cursor:pointer}body:not(.night-mode) .folder-card{border-color:#d7c18c;background:linear-gradient(145deg,#fffaf0,#f4eddb);color:#c79b35;box-shadow:0 2px 8px rgba(80,60,20,.07)}body:not(.night-mode) .folder-card:hover{border-color:#9db9df;box-shadow:0 5px 16px rgba(40,80,130,.12)}body:not(.night-mode) .folder-card-name{color:#30343a}body:not(.night-mode) .folder-card-count{color:#858990}body:not(.night-mode) .side-folder-mini .folder-icon{color:#c69b42}body:not(.night-mode) .folder-toolbar{border-bottom-color:#e5e7eb;color:#737982}body:not(.night-mode) .folder-toolbar button{border-color:#d4d8df;background:#f7f8fa;color:#315d94}</style>
 <style>
 .click-log-panel{min-width:0;padding:25px 27px}
 .click-log-panel[hidden]{display:none!important}
@@ -1221,7 +1222,7 @@ main { width:100%; max-width:none !important; }
   function apply(data) {
     state.links = data.links;
     state.categories = data.categories;
-    if (state.category && state.categories.indexOf(state.category) === -1) state.category = '';
+    if (state.category && state.category !== '__uncategorized__' && state.categories.indexOf(state.category) === -1) state.category = '';
     render();
   }
 
@@ -1230,7 +1231,7 @@ main { width:100%; max-width:none !important; }
 
     return state.links
       .filter(link => state.view !== 'favorites' || link.favorite)
-      .filter(link => !state.category || link.category === state.category)
+      .filter(link => state.category === '__uncategorized__' ? !String(link.category || '').trim() : (!state.category || link.category === state.category))
       .filter(link => !q || [link.title, link.url, link.memo, link.category]
         .some(text => text.toLowerCase().includes(q)))
       .sort((a, b) => state.view === 'recent'
@@ -1241,24 +1242,33 @@ main { width:100%; max-width:none !important; }
   function render() {
     $('list').setAttribute('aria-busy', 'false');
     $('list').classList.remove('loading-skeleton');
-    $('sideCats').innerHTML = state.categories.map(cat =>
-      `<button type="button" class="side-item ${state.category === cat ? 'selected' : ''}" data-side-cat="${esc(cat)}"><span>▸</span> ${esc(cat)}</button>`
-    ).join('');
+    const folderIcon = "<svg class=\"folder-icon\" viewBox=\"0 0 64 52\" aria-hidden=\"true\"><path d=\"M4 10a5 5 0 0 1 5-5h17l7 7h22a5 5 0 0 1 5 5v4H4z\" fill=\"currentColor\" opacity=\".72\"/><path d=\"M4 17a5 5 0 0 1 5-5h46a5 5 0 0 1 5 5v27a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z\" fill=\"currentColor\"/><path d=\"M4 22h56\" stroke=\"#fff\" stroke-opacity=\".35\" stroke-width=\"2\"/></svg>";
+    const folderButton = (name, key, count) => `<button type="button" class="folder-card" data-open-folder="${esc(key)}">${folderIcon}<span class="folder-card-name">${esc(name)}</span><span class="folder-card-count">${count} 個のリンク</span></button>`;
+    const sideFolders = state.categories.map(cat => `<button type="button" class="side-item ${state.category === cat ? 'selected' : ''}" data-side-cat="${esc(cat)}"><span class="side-folder-mini">${folderIcon}</span> ${esc(cat)}</button>`);
+    if (state.links.some(link => !String(link.category || '').trim())) sideFolders.push(`<button type="button" class="side-item ${state.category === '__uncategorized__' ? 'selected' : ''}" data-side-cat="__uncategorized__"><span class="side-folder-mini">${folderIcon}</span> 未分類</button>`);
+    $('sideCats').innerHTML = sideFolders.join('') || '<div class="side-empty">フォルダがありません</div>';
     $('catList').innerHTML = state.categories.map(c => `<option value="${esc(c)}">`).join('');
 
-    const links = visibleLinks();
-    $('resultCount').textContent = `${links.length} / ${state.links.length} 件を表示`;
-
-    if (!links.length) {
-      $('list').innerHTML = `<div class="empty">${
-        state.links.length ? '条件に合うリンクがありません。' : 'まだリンクがありません。「リンクを追加」から登録してください。'
-      }</div>`;
+    if (!state.category && state.view === 'all' && !state.query.trim()) {
+      const folders = state.categories.map(cat => ({name:cat,key:cat,count:state.links.filter(link => link.category === cat).length}));
+      const uncategorized = state.links.filter(link => !String(link.category || '').trim()).length;
+      if (uncategorized) folders.push({name:'未分類',key:'__uncategorized__',count:uncategorized});
+      $('viewTitle').textContent = 'My Desktop';
+      $('resultCount').textContent = folders.length + ' フォルダ';
+      $('list').innerHTML = folders.length ? folders.map(folder => folderButton(folder.name,folder.key,folder.count)).join('') : '<div class="empty">フォルダがありません。「リンクを追加」からリンクを登録できます。</div>';
       return;
     }
 
-    $('list').innerHTML = links.map(link => `
+    const links = visibleLinks();
+    $('resultCount').textContent = `${links.length} / ${state.links.length} 件を表示`;
+    const folderName = state.category === '__uncategorized__' ? '未分類' : state.category;
+    const back = state.category ? `<div class="folder-toolbar"><button type="button" data-folder-back>‹ フォルダ一覧に戻る</button><span>My Desktop　›　${esc(folderName)}</span></div>` : '';
+    if (!links.length) {
+      $('list').innerHTML = back + `<div class="empty">${state.links.length ? '条件に合うリンクがありません。' : 'まだリンクがありません。「リンクを追加」から登録してください。'}</div>`;
+      return;
+    }
+    $('list').innerHTML = back + links.map(link => `
       <div class="item ${link.visibleToVisitors === true ? 'visitor-visible' : 'visitor-hidden'}" data-id="${esc(link.id)}">
-        
         <button type="button" class="star" aria-pressed="${link.favorite}" aria-label="お気に入り">★</button>
         <div class="body">
           <a class="title" data-open-mode="${link.openMode === 'external' ? 'external' : 'internal'}" href="${esc(safeHref(link.url))}" target="_blank" rel="noopener noreferrer">${esc(link.title)}</a>
@@ -1266,13 +1276,9 @@ main { width:100%; max-width:none !important; }
           <div class="meta">${esc(host(link.url))}${link.category ? `<span class="tag">${esc(link.category)}</span>` : ''}</div>
           ${link.memo ? `<div class="memo">${esc(link.memo)}</div>` : ''}
         </div>
-        <div class="acts">
-          <button type="button" class="edit">編集</button>
-          <button type="button" class="del">削除</button>
-        </div>
+        <div class="acts"><button type="button" class="edit">編集</button><button type="button" class="del">削除</button></div>
       </div>`).join('');
   }
-
   async function run(label, task, doneText) {
     if (state.busy) return;
     setBusy(true);
@@ -1292,7 +1298,7 @@ main { width:100%; max-width:none !important; }
     $('fId').value = link ? link.id : '';
     $('fTitle').value = link ? link.title : '';
     $('fUrl').value = link ? link.url : '';
-    $('fCat').value = link ? link.category : state.category;
+    $('fCat').value = link ? link.category : (state.category === '__uncategorized__' ? '' : state.category);
     $('fMemo').value = link ? link.memo : '';
     $('fNew').checked = link ? link.isNew === true : false;
     $('fOpenMode').value = link && link.openMode === 'external' ? 'external' : 'internal';
@@ -1359,7 +1365,7 @@ main { width:100%; max-width:none !important; }
     $('sideAdd').disabled = false;
     $('search').disabled = false;
     $('search').placeholder = '検索';
-    $('viewTitle').textContent = state.category;
+    $('viewTitle').textContent = state.category === '__uncategorized__' ? '未分類' : state.category;
     updateSidebar();
     render();
   });
@@ -1638,6 +1644,9 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
   renderOfficialLinks();
 
   $('list').addEventListener('click', event => {
+    const folder = event.target.closest('[data-open-folder]');
+    if (folder) { state.category = folder.dataset.openFolder; state.view = 'all'; $('viewTitle').textContent = state.category === '__uncategorized__' ? '未分類' : state.category; updateSidebar(); render(); return; }
+    if (event.target.closest('[data-folder-back]')) { state.category = ''; state.view = 'all'; $('viewTitle').textContent = 'My Desktop'; updateSidebar(); render(); return; }
     const item = event.target.closest('.item');
     if (!item) return;
     const link = state.links.find(l => l.id === item.dataset.id);
