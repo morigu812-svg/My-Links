@@ -846,17 +846,30 @@ body .lc-browser-window .lc-browser-lights button.lc-browser-light{display:block
 @media(max-width:520px){#lc-release-overlay{padding:10px}#lc-release-dialog{max-height:90vh;border-radius:14px}#lc-release-content{max-height:calc(90vh - 82px);padding:14px}#lc-release-head{padding:16px}#lc-release-head h2{font-size:19px}}
 
 .lc-release-new-badge,.side-item>.new-badge{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;width:auto!important;min-width:0;margin-left:auto;padding:2px 6px;border:1px solid #ffe45c;border-radius:5px;background:rgba(255,228,92,.10);color:#fff29a!important;font-size:9px!important;font-weight:900;letter-spacing:.08em;line-height:1.3;white-space:nowrap;text-shadow:0 0 5px rgba(255,226,75,.95),0 0 10px rgba(255,210,40,.7);box-shadow:0 0 6px rgba(255,220,70,.45),inset 0 0 4px rgba(255,220,70,.12)}
+
+/* Review fixes: mobile navigation, touch dragging, and viewport recovery */
+.finder-toolbar{touch-action:none}
+body.fit-screen .finder-window{position:relative!important;left:auto!important;top:auto!important;right:auto!important;bottom:auto!important;width:100vw!important;height:auto!important;min-height:100vh!important;margin:0!important;transform:none!important}
+@media(max-width:720px){
+ .finder-layout{display:flex!important;flex-direction:column!important;min-width:0}
+ .sidebar{width:100%!important;min-width:0!important;display:flex!important;flex-direction:row!important;align-items:center;gap:5px;overflow-x:auto;overflow-y:hidden;white-space:nowrap;border-right:0!important;border-bottom:1px solid #203c4b;padding:8px!important;scrollbar-width:thin}
+ .sidebar .side-label{display:none!important}
+ .sidebar .side-item{flex:0 0 auto;width:auto!important;min-height:36px;padding:8px 10px!important;font-size:12px!important}
+ .finder-content{min-width:0;padding:12px!important}
+ .item button,.item .btn{min-height:36px;font-size:12px!important}
+ .finder-window,.sidebar,.item,.chat-overlay{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+}
 </style>
 <div id="lc-release-overlay" aria-hidden="true">
  <section id="lc-release-dialog" role="dialog" aria-modal="true" aria-labelledby="lc-release-title">
   <header id="lc-release-head"><div><small>LINK CORE / CHANGELOG</small><h2 id="lc-release-title">リリースノート</h2></div><button id="lc-release-close" type="button" aria-label="閉じる">×</button></header>
   <div id="lc-release-content">
-   <article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v1.5.0</span><time datetime="2026-11-03">2026年11月3日</time></div><h3>セキュリティと安定性を強化</h3><ul><li>管理者・利用者の認証に連続失敗回数の制限を追加しました（5回失敗すると15分間ロック）。</li><li>公式リンクの取得にもログイン認証を必須にしました。</li><li>公開設定が空欄のリンクは、利用者画面に表示されないよう変更しました。</li><li>ブリッジ通信の送信元を固定し、埋め込みメモ帳の二重ブリッジを解消しました。</li><li>内部ブラウザのiframeにsandboxを設定しました。</li><li>管理者ページの初回表示と、iPhone Safariの全画面表示時のエラーを修正しました。</li><li>利用者向けのエラー表示から内部情報を除外しました。</li></ul></article>
-<article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v1.4.0</span><time datetime="2026-11-03">2026年11月3日</time></div><h3>表示・デザインを改善</h3><ul><li>NEWラベルを黄色のネオンカラーに変更し、発光エフェクトを追加しました。</li><li>リンクタイトルとNEWラベルの間隔を調整し、見やすくしました。</li><li>管理者画面で、利用者画面に公開されているリンクカードを明るく表示するようにしました。</li><li>利用者画面にログインしたとき、最初に「お気に入り」が表示されるようにしました。</li></ul></article>
+   <article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v1.5.0</span><time datetime="2026-11-03">2026年11月3日</time></div><h3>セキュリティと安定性を強化</h3><ul><li>公開設定が空欄のリンクは、利用者画面に表示されないよう変更しました。</li><li>利用者向けのエラー表示を分かりやすくし、内部情報が表示されないよう改善しました。</li><li>iPhone Safariでの全画面表示に関する不具合を修正しました。</li></ul></article>
+<article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v1.4.0</span><time datetime="2026-11-03">2026年11月3日</time></div><h3>表示・デザインを改善</h3><ul><li>NEWラベルを黄色のネオンカラーに変更し、発光エフェクトを追加しました。</li><li>リンクタイトルとNEWラベルの間隔を調整し、見やすくしました。</li><li>利用者画面にログインしたとき、最初に「お気に入り」が表示されるようにしました。</li></ul></article>
    <article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v1.3.0</span><time datetime="2026-11-03">2026年11月3日</time></div><h3>カード設定・クリック履歴を強化</h3><ul><li>カードの詳細設定から、リンクごとにNEWラベルを表示できるようになりました。</li><li>NEWラベルの設定は保存され、管理者画面・利用者画面の両方に反映されます。</li><li>クリック履歴をすべて削除する機能と、履歴を1件ずつ削除する機能を追加しました。</li></ul></article>
    <article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v1.2.0</span><time datetime="2026-11-03">2026年11月3日</time></div><h3>フローティングブラウザを追加</h3><ul><li>利用者画面・管理者画面の両方から、サイトをウィンドウ内で開けるようになりました。</li><li>ウィンドウの移動・8方向リサイズに対応しました。</li><li>画面下のタスクバーから、開いているウィンドウの切り替えや復元ができます。</li><li>赤・黄・緑のウィンドウ操作ボタンを追加しました。</li></ul></article>
    <article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v1.1.0</span><time datetime="2026-11-02">2026年11月2日</time></div><h3>ウィンドウ操作を改善</h3><ul><li>利用者画面・管理者画面のウィンドウをドラッグで移動できるようにしました。</li><li>ウィンドウの端や角をつかんでサイズを変更できるようにしました。</li><li>操作ボタン付近を誤ってドラッグしないよう、移動できる範囲を調整しました。</li></ul></article>
-   <article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v1.0.0</span><time datetime="2026-11-02">2026年11月2日</time></div><h3>LINK CORE デスクトップを更新</h3><ul><li>Finder風の画面構成と、リンクを探しやすいサイドバーを整えました。</li><li>管理者画面に利用者画面と連動したリンク管理機能を用意しました。</li></ul></article>
+   <article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v1.0.0</span><time datetime="2026-11-02">2026年11月2日</time></div><h3>LINK CORE デスクトップを更新</h3><ul><li>Finder風の画面構成と、リンクを探しやすいサイドバーを整えました。</li></ul></article>
   </div>
  </section>
 </div>
@@ -874,5 +887,9 @@ body .lc-browser-window .lc-browser-lights button.lc-browser-light{display:block
  overlay.addEventListener('click',e=>{if(e.target===overlay)shut()});
  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&overlay.classList.contains('is-open'))shut()});
 })();
+</script>
+
+<script id="lc-viewport-recovery">
+(function(){function clampWindows(){if(document.body.classList.contains('fit-screen'))return;document.querySelectorAll('.lc-browser-window,.finder-window').forEach(el=>{if(el.classList.contains('hidden'))return;const fixed=el.classList.contains('lc-browser-window')||el.style.position==='fixed';if(!fixed)return;const r=el.getBoundingClientRect();if(r.width>innerWidth-16)el.style.width=Math.max(280,innerWidth-16)+'px';if(r.height>innerHeight-16)el.style.height=Math.max(220,innerHeight-16)+'px';const w=el.getBoundingClientRect();el.style.left=Math.max(8,Math.min(w.left,innerWidth-w.width-8))+'px';el.style.top=Math.max(8,Math.min(w.top,innerHeight-w.height-8))+'px';});}window.addEventListener('resize',clampWindows,{passive:true});})();
 </script>
 </body></html>
