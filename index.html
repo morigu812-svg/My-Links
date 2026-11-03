@@ -382,7 +382,7 @@ function render(){
  const visible=visibleLinks();
  $('count').textContent=visible.length+' 件';
  $('loadStatus').textContent='';
- $('list').innerHTML=visible.length?visible.map(x=>'<article class="item" data-link-id="'+esc(x.id)+'"><span class="item-arrow" aria-hidden="true">↗</span><a href="'+esc(/^https?:\/\//i.test(x.url)?x.url:'#')+'" target="_blank" rel="noopener noreferrer">'+esc(x.title)+'</a><div class="url">'+esc(x.url)+'</div>'+(x.category?'<span class="category">'+esc(x.category)+'</span>':'')+(x.memo?'<div class="memo">'+esc(x.memo)+'</div>':'')+'</article>').join(''):'<div class="empty">表示できるリンクがありません。</div>';
+ $('list').innerHTML=visible.length?visible.map(x=>'<article class="item" data-link-id="'+esc(x.id)+'"><span class="item-arrow" aria-hidden="true">↗</span><a data-open-mode="'+(x.openMode==='external'?'external':'internal')+'" href="'+esc(/^https?:\/\//i.test(x.url)?x.url:'#')+'" target="_blank" rel="noopener noreferrer">'+esc(x.title)+'</a><div class="url">'+esc(x.url)+'</div>'+(x.category?'<span class="category">'+esc(x.category)+'</span>':'')+(x.memo?'<div class="memo">'+esc(x.memo)+'</div>':'')+'</article>').join(''):'<div class="empty">表示できるリンクがありません。</div>';
 }
 const chatOverlay=$('chatOverlay'),chatMessages=$('chatMessages'),chatForm=$('chatForm'),chatInput=$('chatInput'),chatSend=$('chatSend');let chatLoading=false,chatLoaded=false;
 function renderChat(messages){chatMessages.replaceChildren();if(!messages.length){const e=document.createElement('div');e.className='chat-empty';e.textContent='まだメッセージはありません。最初のメッセージを送ってみましょう。';chatMessages.appendChild(e);return;}messages.forEach(item=>{const bubble=document.createElement('article');bubble.className='chat-message'+(item.author==='管理者'?' admin':'');const meta=document.createElement('div');meta.className='chat-message-meta';const author=document.createElement('strong');author.textContent=item.author==='管理者'?'管理者':'利用者';const time=document.createElement('time');const date=new Date(item.createdAt);time.textContent=isNaN(date.getTime())?'':date.toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});const body=document.createElement('div');body.className='chat-message-body';body.textContent=item.message;meta.append(author,time);bubble.append(meta,body);chatMessages.appendChild(bubble);});chatMessages.scrollTop=chatMessages.scrollHeight;}
@@ -788,6 +788,7 @@ body.lc-browser-resizing iframe{pointer-events:none!important}
     const anchor=event.target.closest('#list .item a[href]');
     if(!anchor)return;
     if(event.button!==0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)return;
+    if(anchor.dataset.openMode==='external')return;
     event.preventDefault();
     openInternalBrowser(anchor);
   },true);
