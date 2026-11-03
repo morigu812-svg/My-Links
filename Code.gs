@@ -783,3 +783,29 @@ function deleteClickLogs(adminToken) {
     lock.releaseLock();
   }
 }
+
+
+/* 管理者によるクリック履歴の個別削除 */
+function deleteClickLog(logId, adminToken) {
+  requireAdmin_(adminToken);
+  const id = cleanText_(logId, 200);
+  if (!id) throw new Error('削除対象の履歴IDがありません。');
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const sheet = ensureClickLogSheet_();
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) return {ok: false, deleted: 0};
+    const ids = sheet.getRange(2, 1, lastRow - 1, 1).getDisplayValues();
+    for (let i = ids.length - 1; i >= 0; i--) {
+      if (String(ids[i][0]) === id) {
+        sheet.deleteRow(i + 2);
+        SpreadsheetApp.flush();
+        return {ok: true, deleted: 1};
+      }
+    }
+    return {ok: false, deleted: 0};
+  } finally {
+    lock.releaseLock();
+  }
+}
