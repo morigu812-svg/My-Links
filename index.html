@@ -395,6 +395,20 @@ function showClickLogNotice(message,isError){
 }
 
 let links=[],categories=[],view='favorites',selectedCategory='',visitorToken='';
+const READ_NEW_LINKS_KEY='linkCoreReadNewLinksV1';
+let readNewLinkIds=new Set();
+try{
+ const saved=JSON.parse(localStorage.getItem(READ_NEW_LINKS_KEY)||'[]');
+ if(Array.isArray(saved))readNewLinkIds=new Set(saved.map(String));
+}catch(error){console.warn('[LINK CORE] NEW表示の既読情報を読み込めませんでした。',error);}
+function markNewLinkAsRead(link){
+ if(!link||!link.isNew)return;
+ const id=String(link.id);
+ if(readNewLinkIds.has(id))return;
+ readNewLinkIds.add(id);
+ try{localStorage.setItem(READ_NEW_LINKS_KEY,JSON.stringify(Array.from(readNewLinkIds)));}
+ catch(error){console.warn('[LINK CORE] NEW表示の既読情報を保存できませんでした。',error);}
+}
 function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function visibleLinks(){
  const q=$('search').value.trim().toLowerCase();
@@ -415,7 +429,7 @@ function render(){
  const visible=visibleLinks();
  $('count').textContent=visible.length+' 件';
  $('loadStatus').textContent='';
- $('list').innerHTML=visible.length?visible.map(x=>'<article class="item" data-link-id="'+esc(x.id)+'"><div class="body"><a class="title" data-open-mode="'+(x.openMode==='external'?'external':'internal')+'" href="'+esc(/^https?:\/\//i.test(x.url)?x.url:'#')+'" target="_blank" rel="noopener noreferrer">'+esc(x.title)+'</a>'+(x.isNew?'<span class="new-label">NEW</span>':'')+'<div class="meta">'+(x.category?'<span class="tag">'+esc(x.category)+'</span>':'')+'</div>'+(x.memo?'<div class="memo">'+esc(x.memo)+'</div>':'')+'</div><span class="item-arrow" aria-hidden="true">↗</span></article>').join(''):'<div class="empty">表示できるリンクがありません。</div>';
+ $('list').innerHTML=visible.length?visible.map(x=>'<article class="item" data-link-id="'+esc(x.id)+'"><div class="body"><a class="title" data-open-mode="'+(x.openMode==='external'?'external':'internal')+'" href="'+esc(/^https?:\/\//i.test(x.url)?x.url:'#')+'" target="_blank" rel="noopener noreferrer">'+esc(x.title)+'</a>'+(x.isNew&&!readNewLinkIds.has(String(x.id))?'<span class="new-label">NEW</span>':'')+'<div class="meta">'+(x.category?'<span class="tag">'+esc(x.category)+'</span>':'')+'</div>'+(x.memo?'<div class="memo">'+esc(x.memo)+'</div>':'')+'</div><span class="item-arrow" aria-hidden="true">↗</span></article>').join(''):'<div class="empty">表示できるリンクがありません。</div>';
 }
 const chatOverlay=$('chatOverlay'),chatMessages=$('chatMessages'),chatForm=$('chatForm'),chatInput=$('chatInput'),chatSend=$('chatSend');let chatLoading=false,chatLoaded=false;
 function renderChat(messages){chatMessages.replaceChildren();if(!messages.length){const e=document.createElement('div');e.className='chat-empty';e.textContent='まだメッセージはありません。最初のメッセージを送ってみましょう。';chatMessages.appendChild(e);return;}messages.forEach(item=>{const bubble=document.createElement('article');bubble.className='chat-message'+(item.author==='管理者'?' admin':'');const meta=document.createElement('div');meta.className='chat-message-meta';const author=document.createElement('strong');author.textContent=item.author==='管理者'?'管理者':'利用者';const time=document.createElement('time');const date=new Date(item.createdAt);time.textContent=isNaN(date.getTime())?'':date.toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});const body=document.createElement('div');body.className='chat-message-body';body.textContent=item.message;meta.append(author,time);bubble.append(meta,body);chatMessages.appendChild(bubble);});chatMessages.scrollTop=chatMessages.scrollHeight;}
@@ -473,6 +487,11 @@ $('list').addEventListener('click',event=>{
  const link=links.find(item=>String(item.id)===card.dataset.linkId);
  if(!link){showClickLogNotice('クリックしたリンクのIDを一覧データから特定できませんでした。リンク一覧を再読み込みしてください。',true);return;}
  if(!(link.url.indexOf('https://')===0||link.url.indexOf('http://')===0))return;
+ if(link.isNew&&!readNewLinkIds.has(String(link.id))){
+  markNewLinkAsRead(link);
+  const badge=card.querySelector('.new-label');
+  if(badge)badge.remove();
+ }
  if(clickLogPending.has(String(link.id)))return;
  clickLogPending.add(String(link.id));
  call('recordLinkClick',link.id,visitorToken)
