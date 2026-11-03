@@ -787,16 +787,13 @@ function recordLinkClick(linkId, visitorToken) {
     const linksSheet = ensureSheet_();
     const columns = getColumnMap_(linksSheet);
     const last = linksSheet.getLastRow();
-    if (last < 2) throw new Error('Linksシートにリンクデータがありません。');
-    const rows = linksSheet.getRange(2, 1, last - 1, linksSheet.getLastColumn()).getValues();
-    let selected = null;
-    for (let i = 0; i < rows.length; i++) {
-      if (String(rows[i][columns['ID'] - 1] || '') === id) {
-        selected = rowToLink_(rows[i], columns);
-        break;
-      }
-    }
-    if (!selected) throw new Error('Linksシート内にID「' + id + '」のリンクが見つかりません。');
+    if (last < 2) throw new Error('リンクが見つかりません。');
+    // ID列だけを検索し、全リンク行をメモリへ読み込まない。
+    const idColumn = linksSheet.getRange(2, columns['ID'], last - 1, 1);
+    const match = idColumn.createTextFinder(id).matchEntireCell(true).findNext();
+    if (!match) throw new Error('リンクが見つかりません。');
+    const row = linksSheet.getRange(match.getRow(), 1, 1, linksSheet.getLastColumn()).getValues()[0];
+    const selected = rowToLink_(row, columns);
     if (selected.visibleToVisitors !== true) throw new Error('対象リンクが「利用者に公開」になっていません。');
 
     stage = 'ClickLogsシートへの保存';
