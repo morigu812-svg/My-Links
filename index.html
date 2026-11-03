@@ -315,7 +315,7 @@ body.night-mode .item a{color:#8ba6b9!important}
 body.window-resizing,body.window-resizing *{user-select:none!important}
 @media(max-width:720px){.finder-window{width:calc(100vw - 16px);max-width:none;max-height:none;overflow:hidden}.resize-handle{display:block!important}}
 
-</style>
+.finder-toolbar{cursor:grab}.finder-window.is-moving .finder-toolbar{cursor:grabbing}.finder-window.is-moving{user-select:none}\n</style>
 </head>
 <body>
 <main class="wrap">
@@ -565,6 +565,43 @@ document.addEventListener('visibilitychange',async()=>{
  window.addEventListener('pointerup',end);
  window.addEventListener('pointercancel',end);
  window.addEventListener('blur',()=>end());
+
+ // Finder-style window dragging from the toolbar background.
+ let moveDrag=null;
+ function beginMove(event){
+   if(event.button!==undefined&&event.button!==0)return;
+   if(drag)return;
+   const toolbar=event.target.closest('.finder-toolbar');
+   if(!toolbar||event.target.closest('button,a,input,textarea,select,label,[role="button"],.resize-handle'))return;
+   const panel=toolbar.closest('.finder-window');
+   if(!panel||panel.classList.contains('hidden'))return;
+   const rect=panel.getBoundingClientRect();
+   event.preventDefault();
+   panel.style.position='fixed';
+   panel.style.left=rect.left+'px';panel.style.top=rect.top+'px';
+   panel.style.right='auto';panel.style.bottom='auto';panel.style.margin='0';
+   panel.style.transform='none';panel.style.width=rect.width+'px';
+   panel.style.height=rect.height+'px';panel.style.maxWidth='none';
+   moveDrag={panel,pointerId:event.pointerId,startX:event.clientX,startY:event.clientY,left:rect.left,top:rect.top};
+   panel.classList.add('is-moving');
+ }
+ function moveWindow(event){
+   if(!moveDrag||event.pointerId!==moveDrag.pointerId)return;
+   event.preventDefault();
+   const d=moveDrag,rect=d.panel.getBoundingClientRect();
+   const left=Math.max(0,Math.min(d.left+event.clientX-d.startX,Math.max(0,window.innerWidth-Math.min(80,rect.width))));
+   const top=Math.max(0,Math.min(d.top+event.clientY-d.startY,Math.max(0,window.innerHeight-48)));
+   d.panel.style.left=left+'px';d.panel.style.top=top+'px';
+ }
+ function endMove(event){
+   if(!moveDrag||(event&&event.pointerId!==moveDrag.pointerId))return;
+   moveDrag.panel.classList.remove('is-moving');moveDrag=null;
+ }
+ document.addEventListener('pointerdown',beginMove);
+ window.addEventListener('pointermove',moveWindow,{passive:false});
+ window.addEventListener('pointerup',endMove);
+ window.addEventListener('pointercancel',endMove);
+ window.addEventListener('blur',()=>endMove());
 })();</script>
 
 </body></html>
