@@ -641,6 +641,22 @@ main { width:100%; max-width:none !important; }
 @keyframes linkCoreShimmer{0%{background-position:100% 0}100%{background-position:-120% 0}}
 @media(prefers-reduced-motion:reduce){.loading-card{animation:none;background:rgba(13,28,49,.9)}}
 /* Shared chat */.chat-overlay{position:fixed;right:22px;bottom:22px;z-index:10000;width:min(410px,calc(100vw - 28px));height:min(650px,calc(100vh - 44px));display:none;flex-direction:column;overflow:hidden;border:1px solid #286b8c;border-radius:16px;background:#081426;box-shadow:0 18px 60px #000b,0 0 24px #00cfff20;color:#e8f5ff}.chat-overlay.open{display:flex}.chat-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 15px;border-bottom:1px solid #20516c;background:linear-gradient(100deg,#10213a,#0b1428)}.chat-head strong{font-size:14px;letter-spacing:.04em}.chat-head-actions{display:flex;align-items:center;gap:6px}.refresh-icon{display:inline-block;font-size:16px;line-height:1;transform-origin:center}.chat-head button.is-refreshing .refresh-icon{animation:chat-refresh-spin .75s linear infinite}@keyframes chat-refresh-spin{to{transform:rotate(360deg)}}.chat-head button:disabled{opacity:.72;cursor:wait}.chat-head button{border:1px solid #28516c;border-radius:7px;padding:5px 9px;background:#10283e;color:#bfeeff}.chat-subtitle{padding:8px 14px;color:#8faec6;font-size:11px;border-bottom:1px solid #17354c}.chat-messages{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:10px;padding:13px;background:linear-gradient(145deg,#071124,#0a1425)}.chat-message{max-width:92%;align-self:flex-start;padding:9px 11px;border:1px solid #24516d;border-radius:10px;background:#10243a;overflow-wrap:anywhere}.chat-message.admin{border-color:#267d9b;background:#102d43}.chat-message-meta{display:flex;justify-content:space-between;gap:12px;margin-bottom:4px;color:#73dfff;font-size:10px}.chat-message-body{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.6;color:#e5f3ff}.chat-empty,.chat-status{padding:12px;color:#91abc2;font-size:12px;text-align:center}.chat-compose{display:flex;gap:8px;padding:11px;border-top:1px solid #20516c;background:#091426}.chat-compose textarea{flex:1;min-width:0;min-height:42px;max-height:110px;resize:vertical;padding:9px 10px;border:1px solid #28516c;border-radius:8px;background:#060e1d;color:#e8f5ff;font:inherit;font-size:13px}.chat-compose button{align-self:flex-end;padding:10px 13px;border:1px solid #35d9ff;border-radius:8px;background:linear-gradient(135deg,#087fa9,#273f9b);color:white;font-weight:650}.chat-compose button:disabled{opacity:.5;cursor:wait}@media(max-width:520px){.chat-overlay{right:8px;bottom:8px;width:calc(100vw - 16px);height:min(75vh,650px)}}</style>
+<style>
+.click-log-panel{min-width:0;padding:25px 27px}
+.click-log-panel[hidden]{display:none!important}
+.workspace[hidden]{display:none!important}
+.click-log-panel .section-heading p{margin:6px 0 0;color:var(--muted,#9aabba);font-size:12px}
+.click-log-table-wrap{width:100%;overflow:auto;border:1px solid var(--line,#263b55);border-radius:10px;background:rgba(8,16,28,.72)}
+.click-log-table{width:100%;border-collapse:collapse;font-size:12px;text-align:left}
+.click-log-table th,.click-log-table td{padding:12px 14px;border-bottom:1px solid var(--line,#263b55);vertical-align:top}
+.click-log-table th{position:sticky;top:0;background:#101d30;color:#8fdfff;white-space:nowrap}
+.click-log-table td{color:var(--ink,#e8f0fa)}
+.click-log-table tr:last-child td{border-bottom:0}
+.click-log-table .log-url{max-width:420px;overflow-wrap:anywhere;color:#8da8c3}
+.click-log-table a{color:#73dfff}
+.click-log-empty{text-align:center;color:var(--muted,#9aabba)!important;padding:28px!important}
+@media(max-width:700px){.click-log-panel{padding:18px 12px}.click-log-table{min-width:620px}}
+</style>
 </head>
 <body>
 <section id="authGate" class="auth-gate" aria-labelledby="authTitle">
@@ -680,6 +696,7 @@ main { width:100%; max-width:none !important; }
       <button class="side-item" type="button" data-view="official"><span>✦</span> 公式リンク</button>
       <button class="side-item" type="button" id="sideMemos"><span>▤</span> メモ帳</button>
       <button class="side-item" type="button" id="sideChat"><span>✉</span> 利用者チャット</button>
+      <button class="side-item" type="button" id="sideClickLogs"><span>◷</span> クリック履歴</button>
       <div class="side-label">カテゴリ</div>
       <div id="sideCats" class="side-cats"></div>
       <div class="side-label">アクション</div>
@@ -697,6 +714,17 @@ main { width:100%; max-width:none !important; }
     <div class="list-heading"><span class="list-heading-title"><span class="heading-dot">◆</span> LINK FEED</span><span id="resultCount" class="result-count">読み込み中…</span></div>
     <div id="status" role="status" aria-live="polite"></div><button id="retryLoadButton" type="button" style="display:none;margin:8px 0;padding:9px 13px;border:1px solid #286b8c;border-radius:8px;background:#10283b;color:#9beaff;cursor:pointer"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:5px"><path d="M20 7v5h-5"/><path d="M20 12a8 8 0 1 1-2.3-5.7L20 9"/></svg>再試行</button>
     <div id="list" class="list loading-skeleton" role="status" aria-label="リンクを読み込み中"><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div></div>
+  </section>
+  <section id="clickLogPanel" class="click-log-panel" hidden aria-label="クリック履歴">
+    <div class="section-heading">
+      <div><span class="section-kicker">LINK CORE / ACTIVITY LOG</span><h2>クリック履歴</h2><p>利用者ページでクリックされたリンクの記録です（直近500件）。</p></div>
+      <button id="refreshClickLogs" class="btn" type="button">↻ 再読み込み</button>
+    </div>
+    <div id="clickLogStatus" role="status" aria-live="polite"></div>
+    <div class="click-log-table-wrap"><table class="click-log-table">
+      <thead><tr><th>クリック日時</th><th>リンク名</th><th>URL</th></tr></thead>
+      <tbody id="clickLogRows"><tr><td colspan="3">まだ履歴はありません。</td></tr></tbody>
+    </table></div>
   </section>
     </main>
     <section id="officialPanel" class="official-panel" aria-label="公式リンク">
@@ -871,7 +899,7 @@ main { width:100%; max-width:none !important; }
   }
 
   function serverCall(method, ...args) {
-    const protectedMethods = ['getLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'saveOfficialLink', 'deleteOfficialLink', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'sendChatMessage'];
+    const protectedMethods = ['getLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'saveOfficialLink', 'deleteOfficialLink', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'sendChatMessage', 'getClickLogs'];
     if (protectedMethods.includes(method)) {
       const token = sessionStorage.getItem(ADMIN_TOKEN_KEY) || '';
       // 呼び出し元（埋め込みメモ帳など）が既にトークンを渡している場合は二重追加しない。
@@ -1191,7 +1219,39 @@ main { width:100%; max-width:none !important; }
   function renderChatMessages(messages){chatMessages.replaceChildren();if(!messages.length){const e=document.createElement('div');e.className='chat-empty';e.textContent='まだメッセージはありません。利用者からの投稿を待っています。';chatMessages.appendChild(e);return;}messages.forEach(item=>{const bubble=document.createElement('article');bubble.className='chat-message'+(item.author==='管理者'?' admin':'');const meta=document.createElement('div');meta.className='chat-message-meta';const author=document.createElement('strong');author.textContent=item.author==='管理者'?'管理者':'利用者';const time=document.createElement('time');const date=new Date(item.createdAt);time.textContent=isNaN(date.getTime())?'':date.toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});const body=document.createElement('div');body.className='chat-message-body';body.textContent=item.message;meta.append(author,time);bubble.append(meta,body);chatMessages.appendChild(bubble);});chatMessages.scrollTop=chatMessages.scrollHeight;}
   async function refreshAdminChat(){if(chatLoading||!sessionStorage.getItem(ADMIN_TOKEN_KEY))return;const button=$('refreshChat');chatLoading=true;button.disabled=true;button.classList.add('is-refreshing');button.setAttribute('aria-busy','true');try{const r=await serverCall('getChatMessages');renderChatMessages(Array.isArray(r.messages)?r.messages:[]);chatLoaded=true;}catch(e){chatMessages.textContent='読み込みに失敗しました：'+(e.message||'通信エラー');}finally{chatLoading=false;button.disabled=false;button.classList.remove('is-refreshing');button.removeAttribute('aria-busy');}}
   function openAdminChat(){if(!sessionStorage.getItem(ADMIN_TOKEN_KEY)){alert('先に管理者ログインをしてください。');return;}chatOverlay.classList.add('open');if(!chatLoaded)refreshAdminChat();}
-  $('sideChat').addEventListener('click',openAdminChat);$('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEventListener('click',()=>{chatOverlay.classList.remove('open');});
+  $('sideChat').addEventListener('click',openAdminChat);
+  const clickLogPanel=$('clickLogPanel');
+  let clickLogsLoaded=false,clickLogsLoading=false;
+  function renderClickLogs(logs){
+    const body=$('clickLogRows');body.replaceChildren();
+    if(!logs.length){const tr=document.createElement('tr');const td=document.createElement('td');td.colSpan=3;td.className='click-log-empty';td.textContent='まだクリック履歴はありません。';tr.appendChild(td);body.appendChild(tr);return;}
+    logs.forEach(log=>{
+      const tr=document.createElement('tr');const time=document.createElement('td');const date=new Date(log.clickedAt);
+      time.textContent=isNaN(date.getTime())?'日時不明':date.toLocaleString('ja-JP');
+      const title=document.createElement('td');title.textContent=log.title||'（タイトルなし）';
+      const urlCell=document.createElement('td');urlCell.className='log-url';
+      if(/^https?:\\/\\//i.test(log.url)){const a=document.createElement('a');a.href=log.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent=log.url;urlCell.appendChild(a);}else{urlCell.textContent=log.url||'';}
+      tr.append(time,title,urlCell);body.appendChild(tr);
+    });
+  }
+  async function refreshClickLogs(){
+    if(clickLogsLoading)return;clickLogsLoading=true;const button=$('refreshClickLogs');button.disabled=true;$('clickLogStatus').textContent='履歴を読み込んでいます…';
+    try{const result=await serverCall('getClickLogs');const logs=Array.isArray(result.logs)?result.logs:[];renderClickLogs(logs);clickLogsLoaded=true;$('clickLogStatus').textContent='直近 '+logs.length+' 件を表示中';}
+    catch(error){$('clickLogStatus').textContent='読み込みに失敗しました：'+(error.message||'通信エラー');}
+    finally{clickLogsLoading=false;button.disabled=false;}
+  }
+  function openClickLogs(){
+    if(!sessionStorage.getItem(ADMIN_TOKEN_KEY)){alert('先に管理者ログインをしてください。');return;}
+    document.querySelector('.workspace').hidden=true;$('officialPanel').classList.remove('active');
+    document.querySelector('.finder-content').classList.remove('official-hidden');document.querySelector('.finder-toolbar').classList.remove('official-toolbar');
+    clickLogPanel.hidden=false;$('addBtn').style.display='none';$('search').disabled=true;$('search').placeholder='クリック履歴';$('viewTitle').textContent='クリック履歴';
+    document.querySelectorAll('[data-view]').forEach(button=>button.classList.remove('selected'));
+    if(!clickLogsLoaded)refreshClickLogs();
+  }
+  $('sideClickLogs').addEventListener('click',openClickLogs);
+  $('refreshClickLogs').addEventListener('click',refreshClickLogs);
+  document.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>{clickLogPanel.hidden=true;document.querySelector('.workspace').hidden=false;}));
+$('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEventListener('click',()=>{chatOverlay.classList.remove('open');});
   chatForm.addEventListener('submit',async e=>{e.preventDefault();const message=chatInput.value.trim();if(!message)return;chatSend.disabled=true;try{const r=await serverCall('sendChatMessage',message);chatInput.value='';renderChatMessages(Array.isArray(r.messages)?r.messages:[]);chatLoaded=true;}catch(error){const s=document.createElement('div');s.className='chat-status';s.textContent=error.message||'送信できませんでした。';chatMessages.appendChild(s);}finally{chatSend.disabled=false;chatInput.focus();}});
 
   const memoOverlay = $('memoOverlay');
