@@ -13,7 +13,8 @@ const HEADERS = [
   '作成日時',
   '更新日時',
   '利用者に公開',
-  '開き方'
+  '開き方',
+  'NEWラベル'
 ];
 
 /**
@@ -168,6 +169,7 @@ function rowToLink_(row, columns) {
     favorite: favorite === true || String(favorite).toLowerCase() === 'true',
     visibleToVisitors: get('利用者に公開') === false || String(get('利用者に公開')).toLowerCase() === 'false' ? false : true,
     openMode: String(get('開き方') || 'internal').toLowerCase() === 'external' ? 'external' : 'internal',
+    isNew: get('NEWラベル') === true || String(get('NEWラベル')).toLowerCase() === 'true',
     createdAt: toIso_(get('作成日時')),
     updatedAt: toIso_(get('更新日時'))
   };
@@ -325,6 +327,7 @@ function saveLink(input, adminToken) {
       'お気に入り': input.favorite === true,
       '利用者に公開': input.visibleToVisitors !== false,
       '開き方': input.openMode === 'external' ? 'external' : 'internal',
+      'NEWラベル': input.isNew === true,
       '作成日時': createdAt,
       '更新日時': now
     };
