@@ -955,9 +955,10 @@ main { width:100%; max-width:none !important; }
     const data = event.data;
     if (!data || typeof data !== 'object') return;
 
-    // READY はこのページが作成したブリッジ iframe からの最初の1回だけ受理する。
+    // GAS Webアプリは中継iframeを使う場合があるため、信頼済みGAS originからの最初のREADYを受理する。
+    // 以降の応答は、このREADY送信元とoriginに固定する。
     if (data.type === 'DAILY_CORE_BRIDGE_READY') {
-      if (bridgeWindow || event.source !== frame.contentWindow) return;
+      if (bridgeWindow) return;
       bridgeWindow = event.source;
       bridgeOrigin = event.origin;
       markReady();
