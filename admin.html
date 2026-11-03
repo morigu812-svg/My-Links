@@ -703,6 +703,7 @@ main { width:100%; max-width:none !important; }
       <button class="side-item" type="button" id="sideMemos"><span>▤</span> メモ帳</button>
       <button class="side-item" type="button" id="sideChat"><span>✉</span> 利用者チャット</button>
       <button class="side-item" type="button" id="sideClickLogs"><span>◷</span> クリック履歴</button>
+      <button class="side-item" type="button" id="sideBrowser"><span>▣</span> ブラウザ</button>
       <div class="side-label">カテゴリ</div>
       <div id="sideCats" class="side-cats"></div>
       <div class="side-label">アクション</div>
@@ -1760,6 +1761,29 @@ body.lc-browser-resizing iframe{pointer-events:none!important}
   document.addEventListener('pointerup',finishBrowserResize);
   document.addEventListener('pointercancel',finishBrowserResize);
   window.addEventListener('blur',()=>finishBrowserResize());
+  const browserSidebarButton=document.getElementById('sideBrowser');
+  if(browserSidebarButton){
+    browserSidebarButton.addEventListener('click',()=>{
+      const entered=window.prompt('開きたいWebサイトのURLを入力してください','https://');
+      if(!entered)return;
+      let parsed;
+      try{
+        const candidate=entered.trim();
+        parsed=new URL(/^https?:\/\//i.test(candidate)?candidate:'https://'+candidate);
+      }catch(_){
+        window.alert('URLを正しく入力してください。');
+        return;
+      }
+      if(!['http:','https:'].includes(parsed.protocol)){
+        window.alert('http または https のURLを入力してください。');
+        return;
+      }
+      const fakeAnchor=document.createElement('a');
+      fakeAnchor.href=parsed.href;
+      fakeAnchor.textContent=parsed.hostname;
+      openInternalBrowser(fakeAnchor);
+    });
+  }
   document.addEventListener('click',event=>{
     const anchor=event.target.closest('.item a.title, a.official-card');
     if(!anchor)return;
