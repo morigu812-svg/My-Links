@@ -202,16 +202,20 @@ function writeJsonCache_(key, value, ttl) {
 function readChunkedJsonCache_(key) {
   try {
     const cache = CacheService.getScriptCache();
-    const metaRaw = cache.get(key + '_META');
+    // メタ情報と全チャンク候補を1回のgetAllで取得し、CacheServiceとの往復を1回にまとめる。
+    const keys = [key + '_META'];
+    for (let i = 0; i < LINKS_CACHE_MAX_CHUNKS; i++) keys.push(key + '_PART_' + i);
+    const cached = cache.getAll(keys);
+    const metaRaw = cached[key + '_META'];
     if (!metaRaw) return null;
     const meta = JSON.parse(metaRaw);
     if (!meta || !Number.isInteger(meta.count) || meta.count < 1 || meta.count > LINKS_CACHE_MAX_CHUNKS) return null;
-    // CacheServiceへの往復を分割数ぶん繰り返さず、getAllでまとめて取得する。
-    const keys = [];
-    for (let i = 0; i < meta.count; i++) keys.push(key + '_PART_' + i);
-    const cached = cache.getAll(keys);
-    const parts = keys.map(partKey => cached[partKey]);
-    if (parts.some(part => typeof part !== 'string')) return null;
+    const parts = [];
+    for (let i = 0; i < meta.count; i++) {
+      const part = cached[key + '_PART_' + i];
+      if (typeof part !== 'string') return null;
+      parts.push(part);
+    }
     return JSON.parse(parts.join(''));
   } catch (_) { return null; }
 }
@@ -407,9 +411,11 @@ function requireAdmin_(token) {
 /**
  * 画面表示用に全リンクを返す。
  */
-function getLinksForToken_(viewerToken) {
+function getLinksForToken_(viewerToken, knownIsAdmin) {
   const cache = CacheService.getScriptCache();
-  const isAdmin = cache.get('LINK_CORE_ADMIN_' + viewerToken) === 'yes';
+  const isAdmin = typeof knownIsAdmin === 'boolean'
+    ? knownIsAdmin
+    : cache.get('LINK_CORE_ADMIN_' + viewerToken) === 'yes';
   let result = readChunkedJsonCache_('LINK_CORE_LINKS_ALL_V2');
   if (!result) {
     result = readLinksForDisplay_();
@@ -427,8 +433,14 @@ function getLinksForToken_(viewerToken) {
   return result;
 }
 function getLinks(viewerToken) {
-  requireLinkViewer_(viewerToken);
-  return getLinksForToken_(viewerToken);
+  // トークン種別を一度だけ確認し、後続処理で同じCacheService照会を繰り返さない。
+  const cache = CacheService.getScriptCache();
+  const isAdmin = typeof viewerToken === 'string' && viewerToken &&
+    cache.get('LINK_CORE_ADMIN_' + viewerToken) === 'yes';
+  const isVisitor = isAdmin || (typeof viewerToken === 'string' && viewerToken &&
+    cache.get('LINK_CORE_VISITOR_' + viewerToken) === 'yes');
+  if (!isVisitor) throw new Error('閲覧にはサイトのパスワード認証が必要です。');
+  return getLinksForToken_(viewerToken, isAdmin);
 }
 
 /**
