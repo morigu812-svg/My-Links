@@ -665,14 +665,8 @@ main { width:100%; max-width:none !important; }
 </style>
 
 <style id="visitor-visible-card-highlight">
-/* 利用者画面に公開されるリンクだけ、管理者画面でも明るく表示 */
-#list .item.visitor-visible{border-color:rgba(75,205,255,.62)!important;background:linear-gradient(145deg,rgba(26,91,119,.38),rgba(12,34,49,.72))!important;box-shadow:0 0 0 1px rgba(75,205,255,.12),0 0 18px rgba(35,174,230,.16)!important}
-#list .item.visitor-visible .title{color:#e7f8ff!important;text-shadow:0 0 9px rgba(69,194,255,.25)}
-#list .item.visitor-visible .meta{color:#a9d7e8!important}
-#list .item.visitor-hidden{filter:saturate(.58);opacity:.68}
-body:not(.night-mode) #list .item.visitor-visible{border-color:rgba(0,151,205,.48)!important;background:linear-gradient(145deg,#f0fbff,#e5f6fc)!important;box-shadow:0 2px 12px rgba(0,139,190,.13)!important}
-body:not(.night-mode) #list .item.visitor-visible .title{color:#123d50!important;text-shadow:none}
-body:not(.night-mode) #list .item.visitor-visible .meta{color:#52798a!important}
+/* 公開中カードは従来のデザインを維持し、非公開カードだけ少し暗くする */
+#list .item.visitor-hidden{filter:brightness(.82)}
 </style>
 </head>
 <body>
