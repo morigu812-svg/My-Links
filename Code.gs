@@ -397,7 +397,17 @@ function authenticateAdmin(password) {
   clearAuthFailures_(rateState);
   const token = Utilities.getUuid() + Utilities.getUuid();
   CacheService.getScriptCache().put('LINK_CORE_ADMIN_' + token, 'yes', 21600);
-  return { ok: true, token: token, expiresIn: 21600 };
+
+  // 認証直後に管理者用リンク一覧も取得し、ブラウザ側の追加往復をなくす。
+  const linkData = getLinks(token);
+  return {
+    ok: true,
+    token: token,
+    expiresIn: 21600,
+    links: linkData.links,
+    categories: linkData.categories,
+    _performance: linkData._performance || null
+  };
 }
 
 /** 書き込み系関数は必ずサーバー側で管理者トークンを検証する。 */
