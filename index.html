@@ -409,6 +409,25 @@ function markNewLinkAsRead(link){
  try{localStorage.setItem(READ_NEW_LINKS_KEY,JSON.stringify(Array.from(readNewLinkIds)));}
  catch(error){console.warn('[LINK CORE] NEW表示の既読情報を保存できませんでした。',error);}
 }
+const READ_SIDE_TABS_KEY='linkCoreReadSideTabsV1';
+let readSideTabIds=new Set();
+try{
+ const saved=JSON.parse(localStorage.getItem(READ_SIDE_TABS_KEY)||'[]');
+ if(Array.isArray(saved))readSideTabIds=new Set(saved.map(String));
+}catch(error){console.warn('[LINK CORE] サイドバーNEWの既読情報を読み込めませんでした。',error);}
+function markSideTabAsRead(id){
+ const key=String(id||'');
+ if(!key||readSideTabIds.has(key))return;
+ readSideTabIds.add(key);
+ try{localStorage.setItem(READ_SIDE_TABS_KEY,JSON.stringify(Array.from(readSideTabIds)));}
+ catch(error){console.warn('[LINK CORE] サイドバーNEWの既読情報を保存できませんでした。',error);}
+ const button=document.getElementById(key);
+ const badge=button&&button.querySelector('.new-badge');
+ if(badge)badge.remove();
+}
+document.querySelectorAll('.sidebar .side-item[id]').forEach(button=>{
+ if(readSideTabIds.has(button.id)){const badge=button.querySelector('.new-badge');if(badge)badge.remove();}
+});
 function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function visibleLinks(){
  const q=$('search').value.trim().toLowerCase();
@@ -446,7 +465,7 @@ function showVisitorLogin(message){
   $('sitePassword').focus();
 }
 async function refreshChat(){if(!visitorToken||chatLoading)return;const button=$('refreshChat');chatLoading=true;button.disabled=true;button.classList.add('is-refreshing');button.setAttribute('aria-busy','true');try{const r=await call('getChatMessages',visitorToken);renderChat(Array.isArray(r.messages)?r.messages:[]);chatLoaded=true;}catch(e){if(isVisitorAuthError(e))showVisitorLogin('ログインの有効期限が切れました。もう一度サイトのパスワードを入力してください。');else chatMessages.textContent='読み込みに失敗しました：'+(e.message||'通信エラー');}finally{chatLoading=false;button.disabled=false;button.classList.remove('is-refreshing');button.removeAttribute('aria-busy');}}
-function openChat(){if(!visitorToken){$('loginError').textContent='先に利用者ログインをしてください。';return;}chatOverlay.classList.add('open');if(!chatLoaded)refreshChat();}
+function openChat(){if(!visitorToken){$('loginError').textContent='先に利用者ログインをしてください。';return;}markSideTabAsRead('openChat');chatOverlay.classList.add('open');if(!chatLoaded)refreshChat();}
 $('openChat').addEventListener('click',openChat);$('refreshChat').addEventListener('click',refreshChat);$('closeChat').addEventListener('click',()=>{chatOverlay.classList.remove('open');});
 setInterval(()=>{if(chatOverlay.classList.contains('open'))refreshChat();},15000);
 chatForm.addEventListener('submit',async e=>{e.preventDefault();const message=chatInput.value.trim();if(!message||!visitorToken)return;chatSend.disabled=true;try{const r=await call('sendChatMessage',message,visitorToken);chatInput.value='';renderChat(Array.isArray(r.messages)?r.messages:[]);chatLoaded=true;}catch(error){if(isVisitorAuthError(error)){showVisitorLogin('ログインの有効期限が切れました。もう一度サイトのパスワードを入力してください。');}else{const s=document.createElement('div');s.className='chat-status';s.textContent=error.message||'送信できませんでした。';chatMessages.appendChild(s);}}finally{chatSend.disabled=false;if(visitorToken)chatInput.focus();}});
@@ -824,6 +843,7 @@ body.lc-browser-resizing iframe{pointer-events:none!important}
   const browserSidebarButton=document.getElementById('sideBrowser');
   if(browserSidebarButton){
     browserSidebarButton.addEventListener('click',()=>{
+      markSideTabAsRead('sideBrowser');
       const entered=window.prompt('開きたいWebサイトのURLを入力してください','https://');
       if(!entered)return;
       let parsed;
@@ -989,7 +1009,7 @@ main.wrap{width:100%;max-width:none!important;margin:0;padding:22px 24px}
  const close=document.getElementById('lc-release-close');
  if(!trigger||!overlay||!close||trigger.dataset.bound)return;
  trigger.dataset.bound='1';
- function open(){overlay.classList.add('is-open');overlay.setAttribute('aria-hidden','false');close.focus()}
+ function open(){if(typeof markSideTabAsRead==='function')markSideTabAsRead('sideReleaseNotes');overlay.classList.add('is-open');overlay.setAttribute('aria-hidden','false');close.focus()}
  function shut(){overlay.classList.remove('is-open');overlay.setAttribute('aria-hidden','true');trigger.focus()}
  trigger.addEventListener('click',open);
  close.addEventListener('click',shut);
