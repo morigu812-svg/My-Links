@@ -1605,5 +1605,84 @@ body,.finder-window,.finder-toolbar,.finder-layout,.finder-content,.sidebar,
 #linksPanel .item .description,#linksPanel .item .memo{color:#a8bfd4!important}
 </style>
 
+
+<style id="lcInternalBrowserStyles">
+.lc-browser-window{position:fixed;z-index:20000;left:calc(50% - 390px);top:calc(50% - 280px);width:min(780px,calc(100vw - 28px));height:min(560px,calc(100vh - 90px));min-width:320px;min-height:190px;display:flex;flex-direction:column;resize:both;overflow:hidden;border:1px solid rgba(111,205,239,.55);border-radius:13px;background:#101a29;color:#edf7ff;box-shadow:0 24px 80px #0009,inset 0 1px #ffffff18;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px)}
+.lc-browser-window.is-minimized{height:48px!important;min-height:48px;resize:none}
+.lc-browser-toolbar{height:48px;min-height:48px;display:flex;align-items:center;gap:10px;padding:0 12px;background:linear-gradient(110deg,#18283b,#0c1929);border-bottom:1px solid #29485d;cursor:grab;touch-action:none;user-select:none}
+.lc-browser-toolbar:active{cursor:grabbing}
+.lc-browser-lights{display:flex;gap:6px;flex:none}
+.lc-browser-light{width:12px;height:12px;border:0;border-radius:50%;padding:0;box-shadow:inset 0 1px #ffffff55}
+.lc-browser-light.close{background:#ff625b}.lc-browser-light.min{background:#ffbd44}.lc-browser-light.external{background:#35c98b}
+.lc-browser-title{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:750;color:#d9f2ff}
+.lc-browser-url{max-width:34%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:5px 8px;border:1px solid #2b4b61;border-radius:6px;background:#091421;color:#8eafc4;font:11px/1.4 ui-monospace,monospace}
+.lc-browser-content{position:relative;flex:1;min-height:0;background:#fff}
+.lc-browser-content iframe{display:block;width:100%;height:100%;border:0;background:#fff}
+.lc-browser-hint{padding:8px 12px;border-top:1px solid #29485d;background:#0d1927;color:#9bb5c8;font-size:11px}
+.lc-browser-window.is-minimized .lc-browser-content,.lc-browser-window.is-minimized .lc-browser-hint{display:none}
+@media(max-width:600px){.lc-browser-window{left:8px!important;top:70px!important;width:calc(100vw - 16px)!important;height:calc(100vh - 95px)!important;min-width:0}.lc-browser-url{display:none}}
+</style>
+
+<script id="lcInternalBrowser">
+(() => {
+  let browserZ = 20000, browserOffset = 0, activeDrag = null;
+  function openInternalBrowser(anchor) {
+    const url = anchor.href;
+    let parsed;
+    try { parsed = new URL(url, location.href); } catch (_) { return; }
+    if (!['http:', 'https:'].includes(parsed.protocol)) return;
+    const titleNode = anchor.querySelector('.official-card-title') || anchor;
+    const title = (titleNode.textContent || parsed.hostname).trim().slice(0,100) || parsed.hostname;
+    const win = document.createElement('section');
+    win.className = 'lc-browser-window';
+    win.setAttribute('role','dialog');
+    win.setAttribute('aria-label',title + ' ブラウザウィンドウ');
+    browserOffset = (browserOffset + 34) % 240;
+    win.style.left = Math.max(8, Math.min(window.innerWidth - 340, (window.innerWidth - 780) / 2 + browserOffset)) + 'px';
+    win.style.top = Math.max(62, Math.min(window.innerHeight - 220, (window.innerHeight - 560) / 2 + browserOffset)) + 'px';
+    win.style.zIndex = String(++browserZ);
+
+    const toolbar = document.createElement('div'); toolbar.className='lc-browser-toolbar';
+    const lights=document.createElement('div');lights.className='lc-browser-lights';
+    const close=document.createElement('button');close.className='lc-browser-light close';close.type='button';close.title='閉じる';close.setAttribute('aria-label','閉じる');
+    const minimize=document.createElement('button');minimize.className='lc-browser-light min';minimize.type='button';minimize.title='最小化';minimize.setAttribute('aria-label','最小化');
+    const external=document.createElement('button');external.className='lc-browser-light external';external.type='button';external.title='別タブで開く';external.setAttribute('aria-label','別タブで開く');
+    lights.append(close,minimize,external);
+    const heading=document.createElement('div');heading.className='lc-browser-title';heading.textContent=title;
+    const address=document.createElement('div');address.className='lc-browser-url';address.textContent=parsed.href;address.title=parsed.href;
+    toolbar.append(lights,heading,address);
+    const content=document.createElement('div');content.className='lc-browser-content';
+    const frame=document.createElement('iframe');frame.src=parsed.href;frame.title=title;frame.referrerPolicy='strict-origin-when-cross-origin';
+    content.appendChild(frame);
+    const hint=document.createElement('div');hint.className='lc-browser-hint';hint.textContent='サイト側の設定により、このウィンドウ内で表示できない場合があります。その場合は右上の緑のボタンから別タブで開いてください。';
+    win.append(toolbar,content,hint);document.body.appendChild(win);
+    win.addEventListener('pointerdown',()=>{win.style.zIndex=String(++browserZ);});
+    close.addEventListener('click',()=>win.remove());
+    minimize.addEventListener('click',()=>{win.classList.toggle('is-minimized');minimize.title=win.classList.contains('is-minimized')?'元に戻す':'最小化';});
+    external.addEventListener('click',()=>window.open(parsed.href,'_blank','noopener,noreferrer'));
+    toolbar.addEventListener('pointerdown',event=>{
+      if(event.button!==0 || event.target.closest('button')) return;
+      const rect=win.getBoundingClientRect();
+      activeDrag={win,pointerId:event.pointerId,x:event.clientX,y:event.clientY,left:rect.left,top:rect.top};
+      toolbar.setPointerCapture(event.pointerId);event.preventDefault();
+    });
+    toolbar.addEventListener('pointermove',event=>{
+      if(!activeDrag || activeDrag.win!==win || activeDrag.pointerId!==event.pointerId)return;
+      const maxLeft=Math.max(0,window.innerWidth-100),maxTop=Math.max(0,window.innerHeight-48);
+      win.style.left=Math.max(0,Math.min(maxLeft,activeDrag.left+event.clientX-activeDrag.x))+'px';
+      win.style.top=Math.max(0,Math.min(maxTop,activeDrag.top+event.clientY-activeDrag.y))+'px';
+    });
+    const stop=event=>{if(activeDrag && activeDrag.win===win && (!event || event.pointerId===activeDrag.pointerId))activeDrag=null;};
+    toolbar.addEventListener('pointerup',stop);toolbar.addEventListener('pointercancel',stop);
+  }
+  document.addEventListener('click',event=>{
+    const anchor=event.target.closest('a.item .title, a.official-card');
+    if(!anchor)return;
+    if(event.button!==0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)return;
+    event.preventDefault();
+    openInternalBrowser(anchor);
+  },true);
+})();
+</script>
 </body>
 </html>
