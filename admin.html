@@ -703,8 +703,8 @@ main { width:100%; max-width:none !important; }
       <button class="side-item" type="button" id="sideMemos"><span>▤</span> メモ帳</button>
       <button class="side-item" type="button" id="sideChat"><span>✉</span> 利用者チャット</button>
       <button class="side-item" type="button" id="sideClickLogs"><span>◷</span> クリック履歴</button>
-      <button class="side-item" type="button" id="sideBrowser"><span>▣</span> ブラウザ</button>
-      <button class="side-item" type="button" id="sideReleaseNotes"><span>▤</span> リリースノート</button>
+      <button class="side-item" type="button" id="sideBrowser"><span>▣</span> ブラウザ <span class="new-badge">NEW</span></button>
+      <button class="side-item" type="button" id="sideReleaseNotes"><span>▤</span> リリースノート <span class="new-badge">NEW</span></button>
       <div class="side-label">カテゴリ</div>
       <div id="sideCats" class="side-cats"></div>
       <div class="side-label">アクション</div>
@@ -1832,6 +1832,8 @@ body .lc-browser-window .lc-browser-lights button.lc-browser-light{display:block
 .lc-release-entry ul{margin:0;padding-left:19px;color:#b4c9d5;font-size:13px;line-height:1.85}
 #lc-release-notes-button{position:relative}
 @media(max-width:520px){#lc-release-overlay{padding:10px}#lc-release-dialog{max-height:90vh;border-radius:14px}#lc-release-content{max-height:calc(90vh - 82px);padding:14px}#lc-release-head{padding:16px}#lc-release-head h2{font-size:19px}}
+
+.lc-release-new-badge,.side-item>.new-badge{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;width:auto!important;min-width:0;margin-left:auto;padding:2px 6px;border:1px solid #9b682e;border-radius:5px;background:#382713;color:#ffd39a!important;font-size:9px!important;font-weight:800;letter-spacing:.08em;line-height:1.3;white-space:nowrap}
 </style>
 <div id="lc-release-overlay" aria-hidden="true">
  <section id="lc-release-dialog" role="dialog" aria-modal="true" aria-labelledby="lc-release-title">
