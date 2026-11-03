@@ -602,15 +602,24 @@ function ensureOfficialSheet_() {
   return sheet;
 }
 
+const OFFICIAL_CACHE_TTL_SECONDS = 300;
+function invalidateOfficialLinksCache_() {
+  CacheService.getScriptCache().remove('LINK_CORE_OFFICIAL_LINKS_V1');
+}
 function getOfficialLinks(viewerToken) {
   requireLinkViewer_(viewerToken);
+  const cached = readJsonCache_('LINK_CORE_OFFICIAL_LINKS_V1');
+  if (cached) return cached;
   const sheet = ensureOfficialSheet_();
-  const lastRow = sheet.getLastRow();
-  if (lastRow < 2) return { links: [] };
-  const rows = sheet.getRange(1, 1, lastRow, sheet.getLastColumn()).getValues();
-  const headers = rows.shift().map(String), col = {};
+  const data = sheet.getDataRange().getValues();
+  if (data.length < 2) {
+    const empty = {links:[]};
+    writeJsonCache_('LINK_CORE_OFFICIAL_LINKS_V1', empty, OFFICIAL_CACHE_TTL_SECONDS);
+    return empty;
+  }
+  const headers = data[0].map(String), col = {};
   headers.forEach((h, i) => { if (h) col[h] = i; });
-  return { links: rows.filter(row => row[col['ID']] !== '').map(row => ({
+  const links = data.slice(1).filter(row => row[col['ID']] !== '').map(row => ({
     id: String(row[col['ID']] || ''),
     name: String(row[col['サイト名']] || ''),
     url: String(row[col['URL']] || ''),
@@ -619,7 +628,10 @@ function getOfficialLinks(viewerToken) {
     kind: String(row[col['種別']] || 'custom'),
     createdAt: toIso_(row[col['作成日時']]),
     updatedAt: toIso_(row[col['更新日時']])
-  })) };
+  }));
+  const result = {links};
+  writeJsonCache_('LINK_CORE_OFFICIAL_LINKS_V1', result, OFFICIAL_CACHE_TTL_SECONDS);
+  return result;
 }
 
 function saveOfficialLink(input, adminToken) {
@@ -654,6 +666,7 @@ function saveOfficialLink(input, adminToken) {
     };
     Object.keys(fields).forEach(key => { values[col[key]] = fields[key]; });
     sheet.getRange(target, 1, 1, headers.length).setValues([values]);
+    invalidateOfficialLinksCache_();
     return getOfficialLinks(adminToken);
   } finally { lock.releaseLock(); }
 }
@@ -671,6 +684,7 @@ function deleteOfficialLink(id, adminToken) {
       const ids = sheet.getRange(2, idColumn, lastRow - 1, 1).getDisplayValues();
       for (let i = ids.length - 1; i >= 0; i--) if (ids[i][0] === linkId) { sheet.deleteRow(i + 2); break; }
     }
+    invalidateOfficialLinksCache_();
     return getOfficialLinks(adminToken);
   } finally { lock.releaseLock(); }
 }
@@ -701,20 +715,27 @@ function ensureMemosSheet_() {
   return sheet;
 }
 
+const MEMOS_CACHE_TTL_SECONDS = 60;
+function invalidateMemosCache_() {
+  CacheService.getScriptCache().remove('LINK_CORE_MEMOS_V1');
+}
 function getMemos(adminToken) {
   requireAdmin_(adminToken);
+  const cached = readJsonCache_('LINK_CORE_MEMOS_V1');
+  if (cached) return cached;
   const sheet = ensureMemosSheet_();
-  const lastRow = sheet.getLastRow();
-  if (lastRow < 2) return { memos: [] };
-  const width = sheet.getLastColumn();
-  const headers = sheet.getRange(1, 1, 1, width).getDisplayValues()[0];
-  const col = {};
+  const data = sheet.getDataRange().getValues();
+  if (!data.length) {
+    const empty = {memos:[]};
+    writeJsonCache_('LINK_CORE_MEMOS_V1', empty, MEMOS_CACHE_TTL_SECONDS);
+    return empty;
+  }
+  const headers = data[0].map(String), col = {};
   headers.forEach((header, i) => { if (header) col[header] = i; });
   ['ID', 'タイトル', '本文', '作成日時', '更新日時'].forEach(h => {
     if (col[h] === undefined) throw new Error('必要な列がありません: ' + h);
   });
-  const memos = sheet.getRange(2, 1, lastRow - 1, width).getValues()
-    .filter(row => row[col['ID']] !== '')
+  const memos = data.slice(1).filter(row => row[col['ID']] !== '')
     .map(row => ({
       id: String(row[col['ID']] || ''),
       title: String(row[col['タイトル']] || ''),
@@ -723,7 +744,9 @@ function getMemos(adminToken) {
       updatedAt: toIso_(row[col['更新日時']])
     }));
   memos.sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
-  return { memos };
+  const result = {memos};
+  writeJsonCache_('LINK_CORE_MEMOS_V1', result, MEMOS_CACHE_TTL_SECONDS);
+  return result;
 }
 
 function saveMemo(input, adminToken) {
@@ -767,6 +790,7 @@ function saveMemo(input, adminToken) {
     values[col['作成日時']] = createdAt;
     values[col['更新日時']] = now;
     sheet.getRange(targetRow, 1, 1, width).setValues([values]);
+    invalidateMemosCache_();
     return getMemos(adminToken);
   } finally {
     lock.releaseLock();
@@ -794,6 +818,7 @@ function deleteMemo(id, adminToken) {
         }
       }
     }
+    invalidateMemosCache_();
     return getMemos(adminToken);
   } finally {
     lock.releaseLock();
@@ -895,17 +920,12 @@ function recordLinkClick(linkId, visitorToken) {
     if (!id) throw new Error('リンクIDがありません。');
 
     stage = 'リンク一覧の読み込み';
-    const linksSheet = ensureSheet_();
-    const columns = getColumnMap_(linksSheet);
-    const last = linksSheet.getLastRow();
-    if (last < 2) throw new Error('リンクが見つかりません。');
-    // ID列だけを検索し、全リンク行をメモリへ読み込まない。
-    const idColumn = linksSheet.getRange(2, columns['ID'], last - 1, 1);
-    const match = idColumn.createTextFinder(id).matchEntireCell(true).findNext();
-    if (!match) throw new Error('リンクが見つかりません。');
-    const row = linksSheet.getRange(match.getRow(), 1, 1, linksSheet.getLastColumn()).getValues()[0];
-    const selected = rowToLink_(row, columns);
-    if (selected.visibleToVisitors !== true) throw new Error('対象リンクが「利用者に公開」になっていません。');
+    // 一覧キャッシュを再利用し、クリックのたびに Links シートを開かない。
+    const cachedLinks = getLinksForToken_(visitorToken);
+    const selected = cachedLinks.links.find(link => link.id === id);
+    if (!selected || selected.visibleToVisitors !== true) {
+      throw new Error('対象リンクが見つからないか、利用者に公開されていません。');
+    }
 
     stage = 'ClickLogsシートへの保存';
     const lock = LockService.getScriptLock();
