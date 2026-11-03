@@ -770,6 +770,11 @@ main { width:100%; max-width:none !important; }
     <datalist id="catList"></datalist>
     <label for="fMemo">メモ</label>
     <textarea id="fMemo" rows="3"></textarea>
+    <label for="fOpenMode">リンクの開き方</label>
+    <select id="fOpenMode">
+      <option value="internal">サイト内のフローティングブラウザで開く</option>
+      <option value="external">別タブで開く</option>
+    </select>
     <label class="check"><input id="fFav" type="checkbox"> お気に入りにする</label>
     <label class="check"><input id="fVisible" type="checkbox" checked> 利用者ページに公開する</label>
     <div class="foot">
@@ -1212,6 +1217,7 @@ main { width:100%; max-width:none !important; }
     $('fUrl').value = link ? link.url : '';
     $('fCat').value = link ? link.category : state.category;
     $('fMemo').value = link ? link.memo : '';
+    $('fOpenMode').value = link && link.openMode === 'external' ? 'external' : 'internal';
     $('fFav').checked = link ? link.favorite : false;
     $('fVisible').checked = link ? link.visibleToVisitors !== false : true;
     $('dlgTitle').textContent = link ? 'リンクを編集' : 'リンクを追加';
@@ -1231,6 +1237,7 @@ main { width:100%; max-width:none !important; }
       url: $('fUrl').value,
       category: $('fCat').value,
       memo: $('fMemo').value,
+      openMode: $('fOpenMode').value,
       favorite: $('fFav').checked,
       visibleToVisitors: $('fVisible').checked
     };
