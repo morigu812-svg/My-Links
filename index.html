@@ -425,6 +425,7 @@ function markSideTabAsRead(id){
  const badge=button&&button.querySelector('.new-badge');
  if(badge)badge.remove();
 }
+window.markLinkCoreSideTabAsRead=markSideTabAsRead;
 document.querySelectorAll('.sidebar .side-item[id]').forEach(button=>{
  if(readSideTabIds.has(button.id)){const badge=button.querySelector('.new-badge');if(badge)badge.remove();}
 });
@@ -843,7 +844,7 @@ body.lc-browser-resizing iframe{pointer-events:none!important}
   const browserSidebarButton=document.getElementById('sideBrowser');
   if(browserSidebarButton){
     browserSidebarButton.addEventListener('click',()=>{
-      markSideTabAsRead('sideBrowser');
+      window.markLinkCoreSideTabAsRead('sideBrowser');
       const entered=window.prompt('開きたいWebサイトのURLを入力してください','https://');
       if(!entered)return;
       let parsed;
@@ -1009,7 +1010,7 @@ main.wrap{width:100%;max-width:none!important;margin:0;padding:22px 24px}
  const close=document.getElementById('lc-release-close');
  if(!trigger||!overlay||!close||trigger.dataset.bound)return;
  trigger.dataset.bound='1';
- function open(){if(typeof markSideTabAsRead==='function')markSideTabAsRead('sideReleaseNotes');overlay.classList.add('is-open');overlay.setAttribute('aria-hidden','false');close.focus()}
+ function open(){if(window.markLinkCoreSideTabAsRead)window.markLinkCoreSideTabAsRead('sideReleaseNotes');overlay.classList.add('is-open');overlay.setAttribute('aria-hidden','false');close.focus()}
  function shut(){overlay.classList.remove('is-open');overlay.setAttribute('aria-hidden','true');trigger.focus()}
  trigger.addEventListener('click',open);
  close.addEventListener('click',shut);
