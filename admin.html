@@ -1676,7 +1676,7 @@ body,.finder-window,.finder-toolbar,.finder-layout,.finder-content,.sidebar,
     toolbar.addEventListener('pointerup',stop);toolbar.addEventListener('pointercancel',stop);
   }
   document.addEventListener('click',event=>{
-    const anchor=event.target.closest('a.item .title, a.official-card');
+    const anchor=event.target.closest('.item a.title, a.official-card');
     if(!anchor)return;
     if(event.button!==0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)return;
     event.preventDefault();
