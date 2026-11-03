@@ -427,9 +427,9 @@ document.querySelectorAll('[data-fullscreen]').forEach(button=>button.addEventLi
  document.body.classList.add('fit-screen');
  try{
   if(root.requestFullscreen) await root.requestFullscreen();
-  else modeButton.querySelector('.mode-label').textContent='画面に合わせて表示中';
+  else document.querySelectorAll('[data-fullscreen]').forEach(button=>{button.title='画面に合わせて表示中';button.setAttribute('aria-label',button.title)});
  }catch(_){
-  modeButton.querySelector('.mode-label').textContent='画面に合わせて表示中';
+  document.querySelectorAll('[data-fullscreen]').forEach(button=>{button.title='画面に合わせて表示中';button.setAttribute('aria-label',button.title)});
  }
 }));
 document.addEventListener('fullscreenchange',()=>{
