@@ -1712,6 +1712,12 @@ body.lc-browser-resizing iframe{pointer-events:none!important}
     let parsed;
     try { parsed = new URL(url, location.href); } catch (_) { return; }
     if (!['http:', 'https:'].includes(parsed.protocol)) return;
+    // 埋め込み拒否が一般的なサービスは、空白のウィンドウを作らず別タブで開く。
+    const blockedHosts = ['mail.google.com','drive.google.com','docs.google.com','script.google.com','github.com'];
+    if (blockedHosts.some(host => parsed.hostname === host || parsed.hostname.endsWith('.' + host))) {
+      window.open(parsed.href, '_blank', 'noopener,noreferrer');
+      return;
+    }
     const titleNode = anchor.querySelector('.official-card-title') || anchor;
     const title = (titleNode.textContent || parsed.hostname).trim().slice(0,100) || parsed.hostname;
     const win = document.createElement('section');
