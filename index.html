@@ -346,7 +346,7 @@ function render(){
  const visible=visibleLinks();
  $('count').textContent=visible.length+' 件';
  $('loadStatus').textContent='';
- $('list').innerHTML=visible.length?visible.map(x=>'<article class="item"><span class="item-arrow" aria-hidden="true">↗</span><a href="'+esc(/^https?:\/\//i.test(x.url)?x.url:'#')+'" target="_blank" rel="noopener noreferrer">'+esc(x.title)+'</a><div class="url">'+esc(x.url)+'</div>'+(x.category?'<span class="category">'+esc(x.category)+'</span>':'')+(x.memo?'<div class="memo">'+esc(x.memo)+'</div>':'')+'</article>').join(''):'<div class="empty">表示できるリンクがありません。</div>';
+ $('list').innerHTML=visible.length?visible.map(x=>'<article class="item" data-link-id="'+esc(x.id)+'"><span class="item-arrow" aria-hidden="true">↗</span><a href="'+esc(/^https?:\/\//i.test(x.url)?x.url:'#')+'" target="_blank" rel="noopener noreferrer">'+esc(x.title)+'</a><div class="url">'+esc(x.url)+'</div>'+(x.category?'<span class="category">'+esc(x.category)+'</span>':'')+(x.memo?'<div class="memo">'+esc(x.memo)+'</div>':'')+'</article>').join(''):'<div class="empty">表示できるリンクがありません。</div>';
 }
 const chatOverlay=$('chatOverlay'),chatMessages=$('chatMessages'),chatForm=$('chatForm'),chatInput=$('chatInput'),chatSend=$('chatSend');let chatLoading=false,chatLoaded=false;
 function renderChat(messages){chatMessages.replaceChildren();if(!messages.length){const e=document.createElement('div');e.className='chat-empty';e.textContent='まだメッセージはありません。最初のメッセージを送ってみましょう。';chatMessages.appendChild(e);return;}messages.forEach(item=>{const bubble=document.createElement('article');bubble.className='chat-message'+(item.author==='管理者'?' admin':'');const meta=document.createElement('div');meta.className='chat-message-meta';const author=document.createElement('strong');author.textContent=item.author==='管理者'?'管理者':'利用者';const time=document.createElement('time');const date=new Date(item.createdAt);time.textContent=isNaN(date.getTime())?'':date.toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});const body=document.createElement('div');body.className='chat-message-body';body.textContent=item.message;meta.append(author,time);bubble.append(meta,body);chatMessages.appendChild(bubble);});chatMessages.scrollTop=chatMessages.scrollHeight;}
@@ -392,6 +392,15 @@ document.addEventListener('fullscreenchange',()=>{
 });
 
 $('sideCats').addEventListener('click',event=>{const btn=event.target.closest('[data-category]');if(!btn)return;selectedCategory=btn.dataset.category;view='all';render()});
+$('list').addEventListener('click',event=>{
+ const anchor=event.target.closest('a[href]');
+ if(!anchor)return;
+ const card=anchor.closest('[data-link-id]');
+ if(!card||!visitorToken)return;
+ const link=links.find(item=>String(item.id)===card.dataset.linkId);
+ if(!link||!/^https?:\\/\\//i.test(link.url))return;
+ call('recordLinkClick',link.id,visitorToken).catch(error=>console.warn('[LINK CORE] click log failed',error));
+});
 $('loginForm').addEventListener('submit',async e=>{e.preventDefault();$('loginButton').disabled=true;$('loginError').textContent='認証中…';$('loginRetry').classList.add('hidden');let loadingLinks=false;try{const auth=await call('authenticateVisitor',$('sitePassword').value);if(!auth||!auth.token)throw new Error('閲覧用トークンを取得できませんでした。');visitorToken=auth.token;$('loginPanel').classList.add('hidden');$('linksPanel').classList.remove('hidden');loadingLinks=true;$('loadStatus').textContent='リンクを読み込み中…';$('list').classList.add('loading-skeleton');const data=await call('getLinks',auth.token);links=Array.isArray(data.links)?data.links:[];categories=Array.isArray(data.categories)?data.categories:Array.from(new Set(links.map(x=>x.category).filter(Boolean))).sort();$('sitePassword').value='';$('loginError').textContent='';$('loadStatus').textContent='';render()}catch(err){visitorToken='';if(loadingLinks){$('linksPanel').classList.add('hidden');$('loginPanel').classList.remove('hidden')}$('loginError').textContent=err.message||'ログインできませんでした。';$('loginRetry').classList.remove('hidden');$('loginButton').disabled=false;$('sitePassword').focus()}});
 
 $('loginRetry').addEventListener('click',()=>{$('loginRetry').classList.add('hidden');$('loginForm').requestSubmit()});
