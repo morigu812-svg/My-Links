@@ -688,3 +688,62 @@ function sendChatMessage(message, viewerToken) {
   }finally{lock.releaseLock();}
   return getChatMessages(viewerToken);
 }
+
+
+/* LINK CORE click history. Only authenticated visitors can write; only admins can read. */
+const CLICK_LOG_SHEET_NAME = 'ClickLogs';
+const CLICK_LOG_HEADERS = ['ID', 'リンクID', 'リンク名', 'URL', 'クリック日時'];
+function ensureClickLogSheet_() {
+  const id = PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY);
+  if (!id) throw new Error('スプレッドシートIDが未設定です。');
+  const ss = SpreadsheetApp.openById(id);
+  let sheet = ss.getSheetByName(CLICK_LOG_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(CLICK_LOG_SHEET_NAME);
+    sheet.getRange(1, 1, 1, CLICK_LOG_HEADERS.length).setValues([CLICK_LOG_HEADERS]);
+  } else if (sheet.getLastColumn() === 0) {
+    sheet.getRange(1, 1, 1, CLICK_LOG_HEADERS.length).setValues([CLICK_LOG_HEADERS]);
+  }
+  return sheet;
+}
+function recordLinkClick(linkId, visitorToken) {
+  if (typeof visitorToken !== 'string' || !visitorToken ||
+      CacheService.getScriptCache().get('LINK_CORE_VISITOR_' + visitorToken) !== 'yes') {
+    throw new Error('利用者ログインが必要です。');
+  }
+  const id = cleanText_(linkId, 200);
+  if (!id) throw new Error('リンクIDがありません。');
+  const linksSheet = ensureSheet_();
+  const columns = getColumnMap_(linksSheet);
+  const last = linksSheet.getLastRow();
+  if (last < 2) throw new Error('対象のリンクが見つかりません。');
+  const rows = linksSheet.getRange(2, 1, last - 1, linksSheet.getLastColumn()).getValues();
+  let selected = null;
+  for (let i = 0; i < rows.length; i++) {
+    if (String(rows[i][columns['ID'] - 1] || '') === id) {
+      selected = rowToLink_(rows[i], columns);
+      break;
+    }
+  }
+  if (!selected || selected.visibleToVisitors !== true) throw new Error('公開中のリンクではありません。');
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    ensureClickLogSheet_().appendRow([Utilities.getUuid(), safeCell_(selected.id), safeCell_(selected.title), safeCell_(selected.url), new Date()]);
+    return {ok: true};
+  } finally {
+    lock.releaseLock();
+  }
+}
+function getClickLogs(adminToken) {
+  requireAdmin_(adminToken);
+  const sheet = ensureClickLogSheet_();
+  const last = sheet.getLastRow();
+  if (last < 2) return {logs: []};
+  const first = Math.max(2, last - 499);
+  const rows = sheet.getRange(first, 1, last - first + 1, CLICK_LOG_HEADERS.length).getValues();
+  return {logs: rows.filter(row => row[0] !== '').reverse().map(row => ({
+    id: String(row[0] || ''), linkId: String(row[1] || ''), title: String(row[2] || ''),
+    url: String(row[3] || ''), clickedAt: toIso_(row[4])
+  }))};
+}
