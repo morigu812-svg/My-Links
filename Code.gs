@@ -299,7 +299,12 @@ function authenticateVisitor(password) {
   clearAuthFailures_(rateState);
   const token = Utilities.getUuid() + Utilities.getUuid();
   CacheService.getScriptCache().put('LINK_CORE_VISITOR_' + token, 'yes', 21600);
-  return { ok: true, token: token, expiresIn: 21600 };
+  // 認証直後のリンク取得を同じ応答にまとめ、ブラウザーとの往復を1回減らす。
+  const initialLinks = getLinksForToken_(token);
+  return {
+    ok: true, token: token, expiresIn: 21600,
+    links: initialLinks.links, categories: initialLinks.categories
+  };
 }
 
 function requireLinkViewer_(token) {
@@ -335,8 +340,7 @@ function requireAdmin_(token) {
 /**
  * 画面表示用に全リンクを返す。
  */
-function getLinks(viewerToken) {
-  requireLinkViewer_(viewerToken);
+function getLinksForToken_(viewerToken) {
   const cache = CacheService.getScriptCache();
   const isAdmin = cache.get('LINK_CORE_ADMIN_' + viewerToken) === 'yes';
   const cacheKey = isAdmin ? 'LINK_CORE_LINKS_ADMIN_V1' : 'LINK_CORE_LINKS_VISITOR_V1';
@@ -349,10 +353,14 @@ function getLinks(viewerToken) {
   // 管理者には全件を返す。利用者用キャッシュには公開リンクのみを格納する。
   if (!isAdmin) {
     result.links = result.links.filter(link => link.visibleToVisitors === true);
-    result.categories = Array.from(new Set(result.links.map(link => link.category).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'ja'));
+    result.categories = Array.from(new Set(result.links.map(link => link.category).filter(Boolean)).sort((a, b) => a.localeCompare(b, 'ja'));
   }
   writeJsonCache_(cacheKey, result, LINKS_CACHE_TTL_SECONDS);
   return result;
+}
+function getLinks(viewerToken) {
+  requireLinkViewer_(viewerToken);
+  return getLinksForToken_(viewerToken);
 }
 
 /**
