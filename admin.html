@@ -1112,22 +1112,44 @@ main { width:100%; max-width:none !important; }
 
   authForm.addEventListener('submit', async event => {
     event.preventDefault();
-    authError.textContent = setupMode ? 'パスワードを設定中…' : '認証中・リンクを準備しています…';
+    authError.textContent = setupMode ? 'パスワードを設定中…' : '認証中…';
     authSubmit.disabled = true;
+
+    // まず認証だけを完了させ、成功した瞬間にリンク画面へ切り替える。
+    let token;
     try {
       if (setupMode) throw new Error('管理者パスワードが未設定です。Apps Script のスクリプト プロパティで設定してください。');
-      const result = await serverCall('authenticateAdmin', authField.value);
-      if (!result || !result.token) throw new Error('認証トークンを受け取れませんでした。');
-      if (!Array.isArray(result.links) || !Array.isArray(result.categories)) {
-        throw new Error('ログインには成功しましたが、リンク一覧を受け取れませんでした。Apps Script の Code.gs を更新して再デプロイしてください。');
-      }
-
-      // 認証応答に含まれるリンク一覧をそのまま表示し、ページ再読み込みと2回目の通信を省く。
-      sessionStorage.setItem(ADMIN_TOKEN_KEY, result.token);
+      const authResult = await serverCall('authenticateAdmin', authField.value);
+      if (!authResult || !authResult.token) throw new Error('認証トークンを受け取れませんでした。');
+      token = authResult.token;
+      sessionStorage.setItem(ADMIN_TOKEN_KEY, token);
       sessionStorage.setItem(AUTH_KEY, 'yes');
+    } catch (error) {
+      sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+      sessionStorage.removeItem(AUTH_KEY);
+      authError.textContent = error.message || (setupMode ? '設定に失敗しました。' : 'ログインに失敗しました。');
+      authField.select();
+      authSubmit.disabled = false;
+      return;
+    }
+
+    // 認証成功後はデータ取得を待たずに画面を表示し、既存のスケルトンを見せる。
+    document.body.classList.remove('auth-locked');
+    if (authGate) authGate.classList.add('is-hidden');
+    authField.value = '';
+    setBusy(true);
+    setStatus('認証完了。リンクを読み込んでいます…', '');
+
+    const fetchStartedAt = performance.now();
+    try {
+      const result = await serverCall('getLinks');
+      if (!result || !Array.isArray(result.links) || !Array.isArray(result.categories)) {
+        throw new Error('GASの応答形式が想定と異なります。GASのデプロイ版を確認してください。');
+      }
       const renderStartedAt = performance.now();
       apply(result);
       const renderMs = performance.now() - renderStartedAt;
+      const fetchMs = performance.now() - fetchStartedAt;
       const seconds = value => (value / 1000).toFixed(2);
       const server = result._performance || null;
       const serverSummary = server
@@ -1136,24 +1158,18 @@ main { width:100%; max-width:none !important; }
           '・キャッシュ保存 ' + seconds(server.cacheWriteMs) + '・絞込 ' + seconds(server.filterMs) +
           '秒／' + (server.cacheHit ? 'HIT' : 'MISS') + '）'
         : '';
-      setStatus('読み込み完了（' + result.links.length + '件）｜ログイン・取得一括処理・描画 ' +
-        seconds(renderMs) + '秒' + serverSummary, '');
-      console.info('[LINK CORE 性能計測・ログイン一括]', {
+      setStatus('読み込み完了（' + result.links.length + '件）｜取得 ' + seconds(fetchMs) +
+        '秒・描画 ' + seconds(renderMs) + '秒' + serverSummary, '');
+      console.info('[LINK CORE 性能計測・認証後読み込み]', {
+        fetchMs: Math.round(fetchMs),
         renderMs: Math.round(renderMs),
         server: server,
         linkCount: result.links.length
       });
-
-      document.body.classList.remove('auth-locked');
-      if (authGate) authGate.classList.add('is-hidden');
-      authField.value = '';
-      setBusy(false);
     } catch (error) {
-      sessionStorage.removeItem(ADMIN_TOKEN_KEY);
-      sessionStorage.removeItem(AUTH_KEY);
-      authError.textContent = error.message || (setupMode ? '設定に失敗しました。' : 'ログインに失敗しました。');
-      authField.select();
-      authSubmit.disabled = false;
+      setStatus('読み込みに失敗しました：' + (error && error.message ? error.message : String(error)), 'error');
+      console.error('[LINK CORE] 認証後のリンク読み込みに失敗しました', error);
+    } finally {
       setBusy(false);
     }
   });
