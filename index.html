@@ -297,17 +297,17 @@ body.night-mode .item a{color:#8ba6b9!important}
 /* Click-history diagnostics */
 .click-log-notice{position:fixed;left:50%;bottom:18px;z-index:12000;transform:translate(-50%,12px);width:min(620px,calc(100vw - 28px));padding:12px 15px;border:1px solid #2c7895;border-radius:10px;background:#081a2c;color:#dff7ff;box-shadow:0 12px 38px #0009;font-size:12px;line-height:1.6;opacity:0;pointer-events:none;transition:opacity .18s ease,transform .18s ease;overflow-wrap:anywhere}.click-log-notice.show{opacity:1;transform:translate(-50%,0)}.click-log-notice.error{border-color:#b85b67;background:#29121b;color:#ffe6e9}.click-log-notice strong{display:block;margin-bottom:2px;font-size:12px}
 
-/* Symmetric resize handles on all four edges and corners */
+/* Invisible, narrow resize hit areas */
 .wrap{width:100%;max-width:none}
 .finder-window{position:relative;resize:none;width:min(1180px,calc(100vw - 44px));max-width:none;max-height:none;margin-left:auto;margin-right:auto;overflow:hidden}
 .finder-window.is-resizing{transition:none!important;user-select:none!important}
-.resize-handle{position:absolute;z-index:1000;display:block!important;padding:0;margin:0;border:0!important;background:rgba(74,190,255,.035)!important;box-shadow:none!important;opacity:1;touch-action:none;user-select:none;pointer-events:auto}
-.resize-handle:hover{background:rgba(90,210,255,.18)!important;box-shadow:inset 0 0 0 1px rgba(90,210,255,.38)!important;transform:none!important}
-.resize-handle.n,.resize-handle.s{left:40px;right:40px;height:30px;cursor:ns-resize}
+.resize-handle{position:absolute;z-index:1000;display:block!important;padding:0;margin:0;border:0!important;background:transparent!important;box-shadow:none!important;opacity:1;touch-action:none;user-select:none;pointer-events:auto}
+.resize-handle:hover{background:transparent!important;box-shadow:none!important;transform:none!important}
+.resize-handle.n,.resize-handle.s{left:14px;right:14px;height:8px;cursor:ns-resize}
 .resize-handle.n{top:0}.resize-handle.s{bottom:0}
-.resize-handle.e,.resize-handle.w{top:40px;bottom:40px;width:30px;cursor:ew-resize}
+.resize-handle.e,.resize-handle.w{top:14px;bottom:14px;width:8px;cursor:ew-resize}
 .resize-handle.e{right:0}.resize-handle.w{left:0}
-.resize-handle.nw,.resize-handle.ne,.resize-handle.sw,.resize-handle.se{width:42px;height:42px;background:rgba(74,190,255,.07)!important}
+.resize-handle.nw,.resize-handle.ne,.resize-handle.sw,.resize-handle.se{width:14px;height:14px;background:transparent!important}
 .resize-handle.nw{top:0;left:0;cursor:nwse-resize}
 .resize-handle.se{right:0;bottom:0;cursor:nwse-resize}
 .resize-handle.ne{right:0;top:0;cursor:nesw-resize}
