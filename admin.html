@@ -1110,6 +1110,12 @@ main { width:100%; max-width:none !important; }
     }
   }
 
+  // ログイン画面の表示中に、サーバー側でリンク一覧の取得・キャッシュ準備を先行開始する。
+  // 一覧データ自体はブラウザへ返さず、認証成功後の getLinks() で取得する。
+  if (sessionStorage.getItem(AUTH_KEY) !== 'yes' || !sessionStorage.getItem(ADMIN_TOKEN_KEY)) {
+    checkAdminSetupStatus();
+  }
+
   authForm.addEventListener('submit', async event => {
     event.preventDefault();
     authError.textContent = setupMode ? 'パスワードを設定中…' : '認証中…';
