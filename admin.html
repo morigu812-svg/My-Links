@@ -1313,6 +1313,7 @@ main { width:100%; max-width:none !important; }
     $('search').placeholder = isOfficial ? '公式リンクページ' : '検索';
     updateSidebar();
     render();
+    if (isOfficial && !officialCloudReady) loadOfficialCloud();
   }));
   
   // Shared visitor chat; the server determines the author from the authenticated token.
@@ -1375,7 +1376,8 @@ main { width:100%; max-width:none !important; }
   }
   document.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>{clickLogPanel.hidden=true;document.querySelector('.workspace').hidden=false;}));
 $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEventListener('click',()=>{chatOverlay.classList.remove('open');});
-  setInterval(()=>{if(sessionStorage.getItem(ADMIN_TOKEN_KEY))refreshAdminChat();},15000);
+  setInterval(()=>{if(document.visibilityState==='visible'&&sessionStorage.getItem(ADMIN_TOKEN_KEY))refreshAdminChat();},30000);
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&sessionStorage.getItem(ADMIN_TOKEN_KEY))refreshAdminChat();});
   chatForm.addEventListener('submit',async e=>{e.preventDefault();const message=chatInput.value.trim();if(!message)return;chatSend.disabled=true;try{const r=await serverCall('sendChatMessage',message);chatInput.value='';renderChatMessages(Array.isArray(r.messages)?r.messages:[]);chatLoaded=true;}catch(error){const s=document.createElement('div');s.className='chat-status';s.textContent=error.message||'送信できませんでした。';chatMessages.appendChild(s);}finally{chatSend.disabled=false;chatInput.focus();}});
 
   const memoOverlay = $('memoOverlay');
@@ -1563,7 +1565,6 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
     } catch (error) { setOfficialStatus('削除に失敗しました：' + error.message, 'error'); }
   });
   renderOfficialLinks();
-  loadOfficialCloud();
 
   $('list').addEventListener('click', event => {
     const item = event.target.closest('.item');
