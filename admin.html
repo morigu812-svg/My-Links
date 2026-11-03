@@ -943,6 +943,11 @@ main { width:100%; max-width:none !important; }
   let markReady;
   const ready = new Promise(resolve => { markReady = resolve; });
 
+  // 未認証で開いた場合は、GASブリッジのREADY直後にサーバー側のリンク取得・キャッシュ準備を開始する。
+  // リンク本体は認証前のブラウザには返さない。
+  const needsAdminWarmup = sessionStorage.getItem(AUTH_KEY) !== 'yes' || !sessionStorage.getItem(ADMIN_TOKEN_KEY);
+  let adminWarmupPromise = Promise.resolve();
+
   function isGasOrigin(origin) {
     if (origin === 'https://script.google.com' ||
         origin === 'https://script.googleusercontent.com') return true;
@@ -966,6 +971,11 @@ main { width:100%; max-width:none !important; }
       if (bridgeWindow) return;
       bridgeWindow = event.source;
       bridgeOrigin = event.origin;
+
+      // GAS接続完了を合図に、パスワード入力中のバックグラウンド取得を即時開始する。
+      // このリクエストが先にリンク一覧をサーバーキャッシュへ準備し、認証後は同じキャッシュを利用する。
+      if (needsAdminWarmup) adminWarmupPromise = checkAdminSetupStatus();
+
       markReady();
       return;
     }
@@ -1108,13 +1118,6 @@ main { width:100%; max-width:none !important; }
     } catch (error) {
       authError.textContent = '設定状態を確認できませんでした：' + (error.message || '通信エラー');
     }
-  }
-
-  // ログイン画面の表示中に先行取得を開始し、完了Promiseを保持する。
-  // リンク本体はブラウザへ返さず、認証成功後の getLinks() で取得する。
-  let adminWarmupPromise = Promise.resolve();
-  if (sessionStorage.getItem(AUTH_KEY) !== 'yes' || !sessionStorage.getItem(ADMIN_TOKEN_KEY)) {
-    adminWarmupPromise = checkAdminSetupStatus();
   }
 
   authForm.addEventListener('submit', async event => {
