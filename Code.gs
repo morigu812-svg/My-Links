@@ -398,15 +398,11 @@ function authenticateAdmin(password) {
   const token = Utilities.getUuid() + Utilities.getUuid();
   CacheService.getScriptCache().put('LINK_CORE_ADMIN_' + token, 'yes', 21600);
 
-  // 認証直後に管理者用リンク一覧も取得し、ブラウザ側の追加往復をなくす。
-  const linkData = getLinks(token);
+  // 認証だけを先に返し、ブラウザ側でリンク画面を表示してから一覧を取得する。
   return {
     ok: true,
     token: token,
-    expiresIn: 21600,
-    links: linkData.links,
-    categories: linkData.categories,
-    _performance: linkData._performance || null
+    expiresIn: 21600
   };
 }
 
