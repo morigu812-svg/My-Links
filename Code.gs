@@ -167,7 +167,8 @@ function rowToLink_(row, columns) {
     category: String(get('カテゴリ') || ''),
     memo: String(get('メモ') || ''),
     favorite: favorite === true || String(favorite).toLowerCase() === 'true',
-    visibleToVisitors: get('利用者に公開') === false || String(get('利用者に公開')).toLowerCase() === 'false' ? false : true,
+    // 公開フラグが明示的に true の場合だけ公開する（空欄・不明値は非公開）。
+    visibleToVisitors: get('利用者に公開') === true || String(get('利用者に公開')).toLowerCase() === 'true',
     openMode: String(get('開き方') || 'internal').toLowerCase() === 'external' ? 'external' : 'internal',
     isNew: get('NEWラベル') === true || String(get('NEWラベル')).toLowerCase() === 'true',
     createdAt: toIso_(get('作成日時')),
@@ -213,13 +214,63 @@ function getAdminSetupStatus() {
  * パスワードは初回設定画面から登録され、Apps Script のスクリプトプロパティに保存される。
  */
 
+/**
+ * 認証失敗を利用者単位で短時間制限する。
+ * Apps Script から接続元IPを取得できないため、仮名化された一時ユーザーキーを使用する。
+ * 一時キーを取得できない環境では anonymous に集約し、全体への試行制限にフォールバックする。
+ */
+function getAuthRateState_(scope) {
+  let userKey = 'anonymous';
+  try {
+    userKey = Session.getTemporaryActiveUserKey() || 'anonymous';
+  } catch (_) {}
+  const digest = Utilities.computeDigest(
+    Utilities.DigestAlgorithm.SHA_256,
+    scope + ':' + userKey
+  );
+  const suffix = digest.map(byte => ('0' + ((byte + 256) % 256).toString(16)).slice(-2)).join('').slice(0, 32);
+  return { cache: CacheService.getScriptCache(), key: 'LINK_CORE_AUTH_' + scope + '_' + suffix };
+}
+
+function checkAuthRateLimit_(state) {
+  const raw = state.cache.get(state.key);
+  if (!raw) return;
+  let data = {};
+  try { data = JSON.parse(raw) || {}; } catch (_) {}
+  if (Number(data.lockedUntil || 0) > Date.now()) {
+    throw new Error('認証の試行回数が上限に達しました。15分ほど待ってから再試行してください。');
+  }
+}
+
+function recordAuthFailure_(state) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(3000);
+  try {
+    let data = {};
+    try { data = JSON.parse(state.cache.get(state.key) || '{}') || {}; } catch (_) {}
+    const count = Number(data.count || 0) + 1;
+    const lockedUntil = count >= 5 ? Date.now() + 15 * 60 * 1000 : 0;
+    state.cache.put(state.key, JSON.stringify({ count, lockedUntil }), 15 * 60);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function clearAuthFailures_(state) {
+  state.cache.remove(state.key);
+}
+
 /** 利用者ページの共有パスワードを検証して閲覧専用トークンを発行する。 */
 function authenticateVisitor(password) {
+  const rateState = getAuthRateState_('VISITOR');
+  checkAuthRateLimit_(rateState);
   const expected = PropertiesService.getScriptProperties().getProperty('LINK_CORE_VISITOR_PASSWORD');
   if (!expected) throw new Error('利用者用パスワードが未設定です。管理者が設定を完了するまでお待ちください。');
   if (typeof password !== 'string' || !password || password !== expected) {
+    recordAuthFailure_(rateState);
     throw new Error('サイトのパスワードが違います。');
   }
+  clearAuthFailures_(rateState);
   const token = Utilities.getUuid() + Utilities.getUuid();
   CacheService.getScriptCache().put('LINK_CORE_VISITOR_' + token, 'yes', 21600);
   return { ok: true, token: token, expiresIn: 21600 };
@@ -233,11 +284,15 @@ function requireLinkViewer_(token) {
 }
 
 function authenticateAdmin(password) {
+  const rateState = getAuthRateState_('ADMIN');
+  checkAuthRateLimit_(rateState);
   const expected = PropertiesService.getScriptProperties().getProperty('LINK_CORE_ADMIN_PASSWORD');
   if (!expected) throw new Error('管理者パスワードが未設定です。Apps Script のスクリプト プロパティに LINK_CORE_ADMIN_PASSWORD を登録してください。');
   if (typeof password !== 'string' || !password || password !== expected) {
+    recordAuthFailure_(rateState);
     throw new Error('管理者パスワードが違います。');
   }
+  clearAuthFailures_(rateState);
   const token = Utilities.getUuid() + Utilities.getUuid();
   CacheService.getScriptCache().put('LINK_CORE_ADMIN_' + token, 'yes', 21600);
   return { ok: true, token: token, expiresIn: 21600 };
@@ -442,7 +497,8 @@ function ensureOfficialSheet_() {
   return sheet;
 }
 
-function getOfficialLinks() {
+function getOfficialLinks(viewerToken) {
+  requireLinkViewer_(viewerToken);
   const sheet = ensureOfficialSheet_();
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return { links: [] };
@@ -493,7 +549,7 @@ function saveOfficialLink(input, adminToken) {
     };
     Object.keys(fields).forEach(key => { values[col[key]] = fields[key]; });
     sheet.getRange(target, 1, 1, headers.length).setValues([values]);
-    return getOfficialLinks();
+    return getOfficialLinks(adminToken);
   } finally { lock.releaseLock(); }
 }
 
@@ -510,7 +566,7 @@ function deleteOfficialLink(id, adminToken) {
       const ids = sheet.getRange(2, idColumn, lastRow - 1, 1).getDisplayValues();
       for (let i = ids.length - 1; i >= 0; i--) if (ids[i][0] === linkId) { sheet.deleteRow(i + 2); break; }
     }
-    return getOfficialLinks();
+    return getOfficialLinks(adminToken);
   } finally { lock.releaseLock(); }
 }
 
