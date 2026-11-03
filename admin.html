@@ -1110,10 +1110,11 @@ main { width:100%; max-width:none !important; }
     }
   }
 
-  // ログイン画面の表示中に、サーバー側でリンク一覧の取得・キャッシュ準備を先行開始する。
-  // 一覧データ自体はブラウザへ返さず、認証成功後の getLinks() で取得する。
+  // ログイン画面の表示中に先行取得を開始し、完了Promiseを保持する。
+  // リンク本体はブラウザへ返さず、認証成功後の getLinks() で取得する。
+  let adminWarmupPromise = Promise.resolve();
   if (sessionStorage.getItem(AUTH_KEY) !== 'yes' || !sessionStorage.getItem(ADMIN_TOKEN_KEY)) {
-    checkAdminSetupStatus();
+    adminWarmupPromise = checkAdminSetupStatus();
   }
 
   authForm.addEventListener('submit', async event => {
@@ -1148,6 +1149,8 @@ main { width:100%; max-width:none !important; }
 
     const fetchStartedAt = performance.now();
     try {
+      // ログイン画面で開始したサーバー側キャッシュ準備の完了を待ってから一覧を取得する。
+      await adminWarmupPromise;
       const result = await serverCall('getLinks');
       if (!result || !Array.isArray(result.links) || !Array.isArray(result.categories)) {
         throw new Error('GASの応答形式が想定と異なります。GASのデプロイ版を確認してください。');
