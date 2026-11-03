@@ -1285,8 +1285,10 @@ main { width:100%; max-width:none !important; }
     if (!button) return;
     state.category = button.dataset.sideCat;
     state.view = 'all';
-    document.querySelector('.finder-content').classList.remove('official-hidden');
+    document.querySelector('.workspace').hidden = false;
+    $('clickLogPanel').hidden = true;
     $('officialPanel').classList.remove('active');
+    document.querySelector('.finder-toolbar').classList.remove('official-toolbar');
     $('addBtn').style.display = '';
     $('sideAdd').disabled = false;
     $('search').disabled = false;
@@ -1304,7 +1306,9 @@ main { width:100%; max-width:none !important; }
     state.category = '';
     const isOfficial = state.view === 'official';
     $('viewTitle').textContent = state.view === 'favorites' ? 'お気に入り' : state.view === 'recent' ? '最近追加した項目' : 'My Desktop';
-    document.querySelector('.finder-content').classList.toggle('official-hidden', isOfficial);
+    // officialPanel is inside finder-content; hide only the workspace, never its parent.
+    document.querySelector('.workspace').hidden = isOfficial;
+    $('clickLogPanel').hidden = true;
     $('officialPanel').classList.toggle('active', isOfficial);
     document.querySelector('.finder-toolbar').classList.toggle('official-toolbar', isOfficial);
     $('addBtn').style.display = isOfficial ? 'none' : '';
@@ -1354,7 +1358,7 @@ main { width:100%; max-width:none !important; }
   function openClickLogs(){
     if(!sessionStorage.getItem(ADMIN_TOKEN_KEY)){alert('先に管理者ログインをしてください。');return;}
     document.querySelector('.workspace').hidden=true;$('officialPanel').classList.remove('active');
-    document.querySelector('.finder-content').classList.remove('official-hidden');document.querySelector('.finder-toolbar').classList.remove('official-toolbar');
+    document.querySelector('.finder-toolbar').classList.remove('official-toolbar');
     clickLogPanel.hidden=false;$('addBtn').style.display='none';$('search').disabled=true;$('search').placeholder='クリック履歴';$('viewTitle').textContent='クリック履歴';
     document.querySelectorAll('[data-view]').forEach(button=>button.classList.remove('selected'));
     if(!clickLogsLoaded)refreshClickLogs();
@@ -1423,7 +1427,8 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
     if (state.view === 'official') {
       state.view = 'all';
       state.category = '';
-      document.querySelector('.finder-content').classList.remove('official-hidden');
+      document.querySelector('.workspace').hidden = false;
+      $('clickLogPanel').hidden = true;
       $('officialPanel').classList.remove('active');
       document.querySelector('.finder-toolbar').classList.remove('official-toolbar');
       $('addBtn').style.display = '';
