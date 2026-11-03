@@ -127,7 +127,10 @@ function normalizeUrl_(value) {
 
   if (!url) throw new Error('URLを入力してください。');
 
-  if (!/^[a-z][a-z0-9+.-]*:/i.test(url)) {
+  if (!/^https?:\/\//i.test(url)) {
+    if (/^[a-z][a-z0-9+.-]*:\/\//i.test(url)) {
+      throw new Error('URLは http:// または https:// のみ利用できます。');
+    }
     url = 'https://' + url;
   }
 
@@ -193,7 +196,7 @@ function readLinks_(sheet, columns) {
 
   const categories = Array.from(
     new Set(links.map(link => link.category).filter(Boolean))
-  ).sort();
+  ).sort((a, b) => a.localeCompare(b, 'ja'));
 
   return { links: links, categories: categories };
 }
@@ -319,7 +322,7 @@ function getLinks(viewerToken) {
   const isAdmin = CacheService.getScriptCache().get('LINK_CORE_ADMIN_' + viewerToken) === 'yes';
   if (!isAdmin) {
     result.links = result.links.filter(link => link.visibleToVisitors === true);
-    result.categories = Array.from(new Set(result.links.map(link => link.category).filter(Boolean))).sort();
+    result.categories = Array.from(new Set(result.links.map(link => link.category).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'ja'));
   }
   return result;
 }
