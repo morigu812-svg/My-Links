@@ -516,7 +516,7 @@ document.addEventListener('visibilitychange',async()=>{
    if(!panel||panel.classList.contains('hidden'))return;
    const rect=panel.getBoundingClientRect(),direction=handle.dataset.resize;
    event.preventDefault();event.stopPropagation();
-   drag={panel,pointerId:event.pointerId,direction,startX:event.clientX,startY:event.clientY,width:rect.width,height:rect.height,centerY:rect.top+rect.height/2};
+   drag={panel,pointerId:event.pointerId,direction,startX:event.clientX,startY:event.clientY,width:rect.width,height:rect.height,top:rect.top,centerY:rect.top+rect.height/2};
    panel.classList.add('is-resizing');
    document.body.classList.add('window-resizing');
    document.body.style.cursor=getComputedStyle(handle).cursor;
@@ -534,7 +534,7 @@ document.addEventListener('visibilitychange',async()=>{
    d.panel.style.height=height+'px';
    d.panel.style.marginLeft='auto';
    d.panel.style.marginRight='auto';
-   d.panel.style.transform='translateY('+(d.centerY-height/2-d.panel.getBoundingClientRect().top)+'px)';
+   d.panel.style.transform='translateY('+(d.centerY-height/2-d.top)+'px)';
  }
  function end(event){
    if(!drag||event&&event.pointerId!==drag.pointerId)return;
