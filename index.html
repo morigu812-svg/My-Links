@@ -315,7 +315,8 @@ body.night-mode .item a{color:#8ba6b9!important}
 body.window-resizing,body.window-resizing *{user-select:none!important}
 @media(max-width:720px){.finder-window{width:calc(100vw - 16px);max-width:none;max-height:none;overflow:hidden}.resize-handle{display:block!important}}
 
-.finder-toolbar{cursor:grab}.finder-window.is-moving .finder-toolbar{cursor:grabbing}.finder-window.is-moving{user-select:none}\n</style>
+.finder-toolbar{cursor:grab}.finder-window.is-moving .finder-toolbar{cursor:grabbing}.finder-window.is-moving{user-select:none}
+</style>
 <meta name="robots" content="noindex, nofollow, noarchive">
 </head>
 <body>
@@ -713,7 +714,7 @@ body.lc-browser-resizing iframe{pointer-events:none!important}
     const content=document.createElement('div');content.className='lc-browser-content';
     const frame=document.createElement('iframe');frame.src=parsed.href;frame.title=title;frame.referrerPolicy='strict-origin-when-cross-origin';frame.setAttribute('sandbox','allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox');
     content.appendChild(frame);
-    const hint=document.createElement('div');hint.className='lc-browser-hint';hint.textContent='サイト側の設定により、このウィンドウ内で表示できない場合があります。その場合は右上の緑のボタンから別タブで開いてください。';
+    const hint=document.createElement('div');hint.className='lc-browser-hint';hint.textContent='サイト側の設定により、このウィンドウ内で表示できない場合があります。その場合は左側の緑のボタンから別タブで開いてください。';
     win.append(toolbar,content,hint);
     ['n','s','e','w','nw','ne','sw','se'].forEach(direction=>{
       const handle=document.createElement('div');
