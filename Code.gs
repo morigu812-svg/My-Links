@@ -182,6 +182,29 @@ function rowToLink_(row, columns) {
 /**
  * 全リンクと、カテゴリ一覧を返す。
  */
+/* 短時間キャッシュ。認証後にロール別キーでのみ返し、更新時は必ず破棄する。 */
+const LINKS_CACHE_TTL_SECONDS = 20;
+const CHAT_CACHE_TTL_SECONDS = 8;
+function readJsonCache_(key) {
+  try {
+    const raw = CacheService.getScriptCache().get(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch (_) { return null; }
+}
+function writeJsonCache_(key, value, ttl) {
+  try {
+    const raw = JSON.stringify(value);
+    // Apps Script CacheService の1値あたり上限に余裕を持たせる。
+    if (raw.length < 95000) CacheService.getScriptCache().put(key, raw, ttl);
+  } catch (_) {}
+}
+function invalidateLinksCache_() {
+  CacheService.getScriptCache().removeAll(['LINK_CORE_LINKS_ADMIN_V1', 'LINK_CORE_LINKS_VISITOR_V1']);
+}
+function invalidateChatCache_() {
+  CacheService.getScriptCache().remove('LINK_CORE_CHAT_MESSAGES_V1');
+}
+
 function readLinks_(sheet, columns) {
   const lastRow = sheet.getLastRow();
   let links = [];
@@ -314,16 +337,21 @@ function requireAdmin_(token) {
  */
 function getLinks(viewerToken) {
   requireLinkViewer_(viewerToken);
+  const cache = CacheService.getScriptCache();
+  const isAdmin = cache.get('LINK_CORE_ADMIN_' + viewerToken) === 'yes';
+  const cacheKey = isAdmin ? 'LINK_CORE_LINKS_ADMIN_V1' : 'LINK_CORE_LINKS_VISITOR_V1';
+  const cached = readJsonCache_(cacheKey);
+  if (cached) return cached;
+
   const sheet = ensureSheet_();
   const result = readLinks_(sheet, getColumnMap_(sheet));
 
-  // 管理者には全件を返すが、利用者用トークンには公開リンクだけを返す。
-  // ブラウザー側の表示フィルターだけに頼らず、サーバー側でも非公開を除外する。
-  const isAdmin = CacheService.getScriptCache().get('LINK_CORE_ADMIN_' + viewerToken) === 'yes';
+  // 管理者には全件を返す。利用者用キャッシュには公開リンクのみを格納する。
   if (!isAdmin) {
     result.links = result.links.filter(link => link.visibleToVisitors === true);
     result.categories = Array.from(new Set(result.links.map(link => link.category).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'ja'));
   }
+  writeJsonCache_(cacheKey, result, LINKS_CACHE_TTL_SECONDS);
   return result;
 }
 
@@ -397,6 +425,7 @@ function saveLink(input, adminToken) {
     // 1行分を一括で書き込む
     sheet.getRange(targetRow, 1, 1, width).setValues([rowValues]);
 
+    invalidateLinksCache_();
     return readLinks_(sheet, columns);
   } finally {
     lock.releaseLock();
@@ -433,6 +462,7 @@ function toggleFavorite(id, favorite, adminToken) {
       }
     }
 
+    invalidateLinksCache_();
     return readLinks_(sheet, columns);
   } finally {
     lock.releaseLock();
@@ -468,6 +498,7 @@ function deleteLink(id, adminToken) {
       }
     }
 
+    invalidateLinksCache_();
     return readLinks_(sheet, columns);
   } finally {
     lock.releaseLock();
@@ -720,17 +751,25 @@ function ensureChatSheet_() {
 }
 function getChatMessages(viewerToken) {
   requireLinkViewer_(viewerToken);
+  const cached = readJsonCache_('LINK_CORE_CHAT_MESSAGES_V1');
+  if (cached) return cached;
   const sheet = ensureChatSheet_(), last = sheet.getLastRow();
-  if (last < 2) return {messages:[]};
+  if (last < 2) {
+    const empty = {messages:[]};
+    writeJsonCache_('LINK_CORE_CHAT_MESSAGES_V1', empty, CHAT_CACHE_TTL_SECONDS);
+    return empty;
+  }
   const headers = sheet.getRange(1,1,1,sheet.getLastColumn()).getDisplayValues()[0], col = {};
   headers.forEach((h,i)=>{if(h)col[h]=i;});
   CHAT_HEADERS.forEach(h=>{if(col[h]===undefined)throw new Error('チャットシートに必要な列がありません: '+h);});
   const first = Math.max(2,last-CHAT_MAX_MESSAGES+1);
   const rows = sheet.getRange(first,1,last-first+1,sheet.getLastColumn()).getValues();
-  return {messages:rows.filter(r=>r[col['ID']]!=='').map(r=>({
+  const result = {messages:rows.filter(r=>r[col['ID']]!=='').map(r=>({
     id:String(r[col['ID']]||''),author:String(r[col['投稿者']]||'利用者'),
     message:String(r[col['メッセージ']]||''),createdAt:toIso_(r[col['送信日時']])
   }))};
+  writeJsonCache_('LINK_CORE_CHAT_MESSAGES_V1', result, CHAT_CACHE_TTL_SECONDS);
+  return result;
 }
 function sendChatMessage(message, viewerToken) {
   requireLinkViewer_(viewerToken);
@@ -749,6 +788,7 @@ function sendChatMessage(message, viewerToken) {
     row[col['ID']]=Utilities.getUuid();row[col['投稿者']]=isAdmin?'管理者':'利用者';
     row[col['メッセージ']]=safeCell_(body);row[col['送信日時']]=new Date();
     sheet.getRange(sheet.getLastRow()+1,1,1,row.length).setValues([row]);
+    invalidateChatCache_();
     cache.put(rateKey,'1',3);
   }finally{lock.releaseLock();}
   return getChatMessages(viewerToken);
@@ -802,7 +842,6 @@ function recordLinkClick(linkId, visitorToken) {
     try {
       const logSheet = ensureClickLogSheet_();
       logSheet.appendRow([Utilities.getUuid(), safeCell_(selected.id), safeCell_(selected.title), safeCell_(selected.url), new Date()]);
-      SpreadsheetApp.flush();
       return {ok: true, title: selected.title, savedAt: new Date().toISOString()};
     } finally {
       lock.releaseLock();
