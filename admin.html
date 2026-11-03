@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
+<link rel="preconnect" href="https://script.google.com" crossorigin>
+<link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
+<link rel="dns-prefetch" href="//script.google.com">
+<link rel="dns-prefetch" href="//script.googleusercontent.com">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>LINK CORE Admin</title>
@@ -1595,17 +1599,35 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
       setBusy(false);
       return;
     }
-    const startedAt = Date.now();
+    const startedAt = performance.now();
+    let bridgeMs = 0;
+    let fetchMs = 0;
+    let renderMs = 0;
     setStatus('接続を準備しています…', '');
     try {
+      const bridgeStartedAt = performance.now();
       await waitForBridge();
+      bridgeMs = performance.now() - bridgeStartedAt;
       setStatus('GASに接続しました。リンクを読み込んでいます…', '');
+      const fetchStartedAt = performance.now();
       const result = await serverCall('getLinks');
+      fetchMs = performance.now() - fetchStartedAt;
       if (!result || !Array.isArray(result.links) || !Array.isArray(result.categories)) {
         throw new Error('GASの応答形式が想定と異なります。GASのデプロイ版を確認してください。');
       }
+      const renderStartedAt = performance.now();
       apply(result);
-      setStatus('読み込み完了（' + result.links.length + '件・' + Math.round((Date.now() - startedAt) / 100) / 10 + '秒）', '');
+      renderMs = performance.now() - renderStartedAt;
+      const totalMs = performance.now() - startedAt;
+      const seconds = value => (value / 1000).toFixed(2);
+      setStatus('読み込み完了（' + result.links.length + '件）｜接続 ' + seconds(bridgeMs) + '秒・取得 ' + seconds(fetchMs) + '秒・描画 ' + seconds(renderMs) + '秒・合計 ' + seconds(totalMs) + '秒', '');
+      console.info('[LINK CORE 性能計測]', {
+        bridgeMs: Math.round(bridgeMs),
+        fetchMs: Math.round(fetchMs),
+        renderMs: Math.round(renderMs),
+        totalMs: Math.round(totalMs),
+        linkCount: result.links.length
+      });
     } catch (error) {
       setStatus('読み込みに失敗しました：' + (error && error.message ? error.message : String(error)), 'error');
       console.error('[LINK CORE] 初期読み込みに失敗しました', error);
