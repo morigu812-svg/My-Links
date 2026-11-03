@@ -726,7 +726,7 @@ main { width:100%; max-width:none !important; }
   <section id="clickLogPanel" class="click-log-panel" hidden aria-label="クリック履歴">
     <div class="section-heading">
       <div><span class="section-kicker">LINK CORE / ACTIVITY LOG</span><h2>クリック履歴</h2><p>利用者ページでクリックされたリンクの記録です（直近500件）。</p></div>
-      <button id="refreshClickLogs" class="btn" type="button">↻ 再読み込み</button>
+      <div class="click-log-actions"><button id="refreshClickLogs" class="btn" type="button">↻ 再読み込み</button><button id="deleteClickLogs" class="btn danger" type="button">履歴をすべて削除</button></div>
     </div>
     <div id="clickLogStatus" role="status" aria-live="polite"></div>
     <div class="click-log-table-wrap"><table class="click-log-table">
@@ -1339,6 +1339,14 @@ main { width:100%; max-width:none !important; }
   }
   $('sideClickLogs').addEventListener('click',openClickLogs);
   $('refreshClickLogs').addEventListener('click',refreshClickLogs);
+  $('deleteClickLogs').addEventListener('click',async()=>{
+    if(!sessionStorage.getItem(ADMIN_TOKEN_KEY)){alert('先に管理者ログインをしてください。');return;}
+    if(!confirm('クリック履歴をすべて削除します。\nこの操作は取り消せません。よろしいですか？'))return;
+    const button=$('deleteClickLogs');button.disabled=true;$('clickLogStatus').textContent='履歴を削除しています…';
+    try{const result=await serverCall('deleteClickLogs');if(!result||!result.ok)throw new Error('削除完了の応答がありません。');renderClickLogs([]);clickLogsLoaded=true;$('clickLogStatus').textContent='クリック履歴をすべて削除しました。';}
+    catch(error){$('clickLogStatus').textContent='削除に失敗しました：'+(error.message||'通信エラー');}
+    finally{button.disabled=false;}
+  });
   function leaveClickLogs(){
     if(clickLogPanel.hidden)return;
     clickLogPanel.hidden=true;document.querySelector('.workspace').hidden=false;
