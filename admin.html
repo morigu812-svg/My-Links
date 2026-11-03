@@ -943,6 +943,9 @@ main { width:100%; max-width:none !important; }
   let markReady;
   const ready = new Promise(resolve => { markReady = resolve; });
 
+  const AUTH_KEY = 'myLinksUnlocked';
+  const ADMIN_TOKEN_KEY = 'linkCoreAdminToken';
+
   // 未認証で開いた場合は、GASブリッジのREADY直後にサーバー側のリンク取得・キャッシュ準備を開始する。
   // リンク本体は認証前のブラウザには返さない。
   const needsAdminWarmup = sessionStorage.getItem(AUTH_KEY) !== 'yes' || !sessionStorage.getItem(ADMIN_TOKEN_KEY);
@@ -1049,8 +1052,6 @@ main { width:100%; max-width:none !important; }
   }
 
   // 管理者パスワードと利用者ページ用パスワードを初回に設定する。
-  const AUTH_KEY = 'myLinksUnlocked';
-  const ADMIN_TOKEN_KEY = 'linkCoreAdminToken';
   const authGate = $('authGate');
   const authForm = $('authForm');
   const authField = $('authPassword');
