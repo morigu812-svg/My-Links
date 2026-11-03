@@ -329,15 +329,25 @@ body.window-resizing,body.window-resizing *{user-select:none!important}
   </div>
 </section>
 <section class="finder-window hidden" id="linksPanel">
-  <div class="finder-toolbar"><div class="traffic-lights" aria-label="ウィンドウ操作"><span class="traffic-red" aria-hidden="true"></span><span class="traffic-yellow" aria-hidden="true"></span><button type="button" class="traffic-green" data-fullscreen title="全画面表示" aria-label="全画面表示"></button></div><div class="finder-title">My Desktop</div><label class="toolbar-search"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="検索" aria-label="リンクを検索"></label></div>
-  <div class="finder-layout"><aside class="sidebar" aria-label="リンクの表示">
-    <div class="side-label">お気に入り</div><button type="button" class="side-item selected" data-view="favorites"><span>★</span> お気に入り</button>
-    <div class="side-label">履歴</div><button type="button" class="side-item" data-view="recent"><span>◷</span> 最近追加した項目</button>
-    <div class="side-label">リンク</div><button type="button" class="side-item" data-view="all"><span>▦</span> すべてのリンク</button>
-    <div class="side-label">カテゴリ</div><div id="sideCats"></div><div class="side-label">コミュニケーション</div><button type="button" class="side-item chat-launch" id="openChat"><span>✉</span> 管理者チャット <span class="new-badge">NEW</span></button>
-    <button type="button" class="side-item" id="sideBrowser"><span>▣</span> ブラウザ <span class="new-badge">NEW</span></button>
-      <button class="side-item" type="button" id="sideReleaseNotes"><span>▤</span> リリースノート <span class="new-badge">NEW</span></button>
-  </aside><section class="finder-content"><div class="content-heading"><div><h1 id="viewTitle">お気に入り</h1><p>共有リンクを一覧表示しています</p></div><span class="count" id="count"></span></div><div class="status" id="loadStatus" role="status"></div><div class="list-heading"><span>名前</span><span>リンク一覧</span></div><div class="list loading-skeleton" id="list" role="region" aria-label="リンク一覧" aria-live="polite" aria-busy="true"><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div></div></section></div>
+  <div class="finder-toolbar"><div class="traffic-lights" aria-label="ウィンドウ操作"><span class="traffic-red" aria-hidden="true"></span><span class="traffic-yellow" aria-hidden="true"></span><button type="button" class="traffic-green" data-fullscreen title="全画面表示" aria-label="全画面表示"></button></div><div class="finder-title"><span class="folder-glyph">▰</span> My Desktop <span class="toolbar-chevron">›</span></div><div class="toolbar-tools"><span>▤</span><span>☷</span></div><label class="toolbar-search"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="検索" aria-label="リンクを検索"></label></div>
+  <div class="finder-layout"><aside class="sidebar" aria-label="サイドバー">
+<button class="side-item" type="button" data-view="desktop"><span>▣</span> My Desktop</button>
+<div class="side-label">よく使う項目</div>
+<button class="side-item selected" type="button" data-view="favorites"><span>★</span> お気に入り</button>
+<button class="side-item" type="button" data-view="recent"><span>◷</span> 最近追加した項目</button>
+<button class="side-item" type="button" data-view="all"><span>▦</span> すべてのリンク</button>
+<div class="side-label">クイックアクセス</div>
+<button class="side-item" type="button" id="sideOfficial" data-view="official"><span>✦</span> 公式リンク</button>
+<button class="side-item chat-launch" type="button" id="openChat"><span>✉</span> 管理者チャット <span class="new-badge">NEW</span></button>
+<button class="side-item" type="button" id="sideBrowser"><span>▣</span> ブラウザ <span class="new-badge">NEW</span></button>
+<button class="side-item" type="button" id="sideReleaseNotes"><span>▤</span> リリースノート <span class="new-badge">NEW</span></button>
+<div class="side-label">カテゴリ</div><div id="sideCats" class="side-cats"></div>
+</aside><section class="finder-content"><div class="workspace">
+<div class="section-heading"><div><span class="section-kicker">MY DESKTOP / LINK LIBRARY</span><h2 id="viewTitle">お気に入り</h2></div><span class="section-note">ICON VIEW</span></div>
+<div class="list-heading"><span class="list-heading-title"><span class="heading-dot">◆</span> LINK FEED</span><span class="result-count" id="count"></span></div>
+<div class="status" id="loadStatus" role="status" aria-live="polite"></div>
+<div class="list loading-skeleton" id="list" role="region" aria-label="リンク一覧" aria-live="polite" aria-busy="true"><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div></div>
+</div></section></div>
 </section>
 <section class="chat-overlay" id="chatOverlay" aria-label="管理者との共通チャット"><div class="chat-head"><strong>LINK CORE / CHAT</strong><div class="chat-head-actions"><button type="button" id="refreshChat"><span class="refresh-icon" aria-hidden="true">↻</span><span>再読み込み</span></button><button type="button" id="closeChat">閉じる</button></div></div><div class="chat-subtitle">利用者と管理者が参加する共通チャットです。サイトの不具合報告などにもご利用ください。</div><div class="chat-messages" id="chatMessages" aria-live="polite"><div class="chat-status">チャットを開いています…</div></div><form class="chat-compose" id="chatForm"><textarea id="chatInput" maxlength="1000" rows="2" placeholder="メッセージを入力…" required></textarea><button id="chatSend" type="submit">送信</button></form></section><footer><a class="admin" href="admin.html">管理者画面</a></footer>
 </main>
@@ -397,7 +407,7 @@ function render(){
  const visible=visibleLinks();
  $('count').textContent=visible.length+' 件';
  $('loadStatus').textContent='';
- $('list').innerHTML=visible.length?visible.map(x=>'<article class="item" data-link-id="'+esc(x.id)+'"><span class="item-arrow" aria-hidden="true">↗</span><a data-open-mode="'+(x.openMode==='external'?'external':'internal')+'" href="'+esc(/^https?:\/\//i.test(x.url)?x.url:'#')+'" target="_blank" rel="noopener noreferrer">'+esc(x.title)+'</a>'+(x.isNew?'<span class="new-label">NEW</span>':'')+'<div class="url">'+esc(x.url)+'</div>'+(x.category?'<span class="category">'+esc(x.category)+'</span>':'')+(x.memo?'<div class="memo">'+esc(x.memo)+'</div>':'')+'</article>').join(''):'<div class="empty">表示できるリンクがありません。</div>';
+ $('list').innerHTML=visible.length?visible.map(x=>'<article class="item" data-link-id="'+esc(x.id)+'"><div class="body"><a class="title" data-open-mode="'+(x.openMode==='external'?'external':'internal')+'" href="'+esc(/^https?:\/\//i.test(x.url)?x.url:'#')+'" target="_blank" rel="noopener noreferrer">'+esc(x.title)+'</a>'+(x.isNew?'<span class="new-label">NEW</span>':'')+'<div class="meta">'+(x.category?'<span class="tag">'+esc(x.category)+'</span>':'')+'</div>'+(x.memo?'<div class="memo">'+esc(x.memo)+'</div>':'')+'</div><span class="item-arrow" aria-hidden="true">↗</span></article>').join(''):'<div class="empty">表示できるリンクがありません。</div>';
 }
 const chatOverlay=$('chatOverlay'),chatMessages=$('chatMessages'),chatForm=$('chatForm'),chatInput=$('chatInput'),chatSend=$('chatSend');let chatLoading=false,chatLoaded=false;
 function renderChat(messages){chatMessages.replaceChildren();if(!messages.length){const e=document.createElement('div');e.className='chat-empty';e.textContent='まだメッセージはありません。最初のメッセージを送ってみましょう。';chatMessages.appendChild(e);return;}messages.forEach(item=>{const bubble=document.createElement('article');bubble.className='chat-message'+(item.author==='管理者'?' admin':'');const meta=document.createElement('div');meta.className='chat-message-meta';const author=document.createElement('strong');author.textContent=item.author==='管理者'?'管理者':'利用者';const time=document.createElement('time');const date=new Date(item.createdAt);time.textContent=isNaN(date.getTime())?'':date.toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});const body=document.createElement('div');body.className='chat-message-body';body.textContent=item.message;meta.append(author,time);bubble.append(meta,body);chatMessages.appendChild(bubble);});chatMessages.scrollTop=chatMessages.scrollHeight;}
@@ -866,6 +876,48 @@ body.fit-screen .finder-window{position:relative!important;left:auto!important;t
  .item button,.item .btn{min-height:36px;font-size:12px!important}
  .finder-window,.sidebar,.item,.chat-overlay{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 }
+
+/* Shared Finder appearance — matched to the administrator desktop */
+html,body{width:100%;min-width:0}body{overflow-x:hidden}
+main.wrap{width:100%;max-width:none!important;margin:0;padding:22px 24px}
+.finder-window{width:min(1440px,calc(100vw - 48px));max-width:none;margin:0 auto;border:1px solid #18506a!important;border-radius:15px;background:rgba(7,13,28,.96)!important;box-shadow:0 0 0 1px rgba(0,238,255,.06),0 0 35px rgba(0,210,255,.12),0 24px 70px #0009!important;overflow:hidden}
+.finder-toolbar{height:78px;display:grid;grid-template-columns:190px minmax(160px,1fr) 220px;grid-template-rows:38px 32px;align-items:center;padding:7px 18px 8px;border-bottom:1px solid #17495d!important;background:linear-gradient(100deg,#101d32,#111126)!important}
+.traffic-lights{grid-column:1;grid-row:1}.finder-title{grid-column:2;grid-row:1;color:#e5fbff!important;font-size:14px;font-weight:700}
+.toolbar-tools{grid-column:3;grid-row:1;display:flex;justify-content:flex-end;gap:13px;color:#78b6ca}
+.toolbar-search{grid-column:2/4;grid-row:2;justify-self:end;width:min(320px,100%);max-width:100%;display:flex;align-items:center;gap:9px;padding:5px 10px;border:1px solid #20516c;border-radius:7px;background:#071426;color:#64dff2}
+.toolbar-search input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:#e8faff}
+.finder-layout{display:grid;grid-template-columns:220px minmax(0,1fr);width:100%;min-width:0;min-height:calc(100vh - 102px);background:#071124}
+.sidebar{min-width:0;padding:18px 12px;background:rgba(7,17,32,.98)!important;border-right:1px solid #173b52!important}
+.side-label{margin:18px 9px 7px;color:#64dff2!important;font-size:10px;font-weight:800;letter-spacing:.12em}
+.side-item{display:flex;align-items:center;gap:9px;width:100%;min-height:36px;margin:2px 0;padding:8px 10px;border:1px solid transparent!important;border-radius:7px;background:transparent!important;color:#b9d5e6!important;text-align:left;font-size:12px}
+.side-item>span:first-child{flex:0 0 18px;color:#00d9ff!important;text-align:center}
+.side-item:hover,.side-item.selected{background:linear-gradient(100deg,#10344a,#171c3a)!important;border-color:#00d9ff!important;color:#eaffff!important;box-shadow:0 0 15px #00d9ff1f!important}
+.side-item .new-badge{margin-left:auto}.side-cats{display:flex;flex-direction:column;gap:2px}
+.finder-content{min-width:0;width:100%;padding:24px;background:linear-gradient(145deg,rgba(8,15,30,.98),rgba(10,13,31,.98))!important;color:#e8faff!important}
+.workspace{padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
+.section-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 18px;padding-bottom:13px;border-bottom:1px solid #17475e}
+.section-heading h2{margin:4px 0 0;color:#e5fbff;font-size:25px;font-weight:750}
+.section-kicker{color:#64dff2;font-size:9px;font-weight:800;letter-spacing:.12em}.section-note{color:#6e96ab;font-size:9px;letter-spacing:.12em}
+.list-heading{display:flex;align-items:center;justify-content:space-between;padding:12px 0 10px;border-top:1px solid #17475e}
+.list-heading-title{color:#a4c7d9;font-size:10px;font-weight:850;letter-spacing:.13em}.heading-dot{color:#00d9ff}.result-count{color:#8ca5b7;font-size:11px}
+.status:not(:empty){margin:0 0 10px;padding:8px 10px;border:1px solid #20516c;border-radius:6px;background:#081c30;color:#a8eaff;font-size:12px}
+.list{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;min-width:0}
+.item{position:relative;display:flex;align-items:flex-start;gap:10px;min-width:0;min-height:112px;padding:15px;background:linear-gradient(145deg,rgba(8,30,49,.98),rgba(13,17,40,.98))!important;color:#dff7ff!important;border:1px solid #1b6077!important;border-radius:12px!important;box-shadow:0 8px 24px rgba(0,0,0,.28),0 0 0 1px rgba(0,229,255,.035),inset 0 1px rgba(120,240,255,.06)!important;transition:transform .18s,border-color .18s,box-shadow .18s}
+.item:hover{background:linear-gradient(145deg,rgba(9,43,65,.99),rgba(20,22,54,.99))!important;border-color:#00eaff!important;box-shadow:0 10px 28px rgba(0,0,0,.34),0 0 22px rgba(0,217,255,.16)!important;transform:translateY(-2px)}
+.item .body{flex:1;min-width:0}.item .title{display:block;color:#57eaff!important;font-size:14px;font-weight:750;line-height:1.5;overflow-wrap:anywhere;text-decoration:none}
+.item .title:hover{color:#c5f7ff!important;text-decoration:underline}.item .meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
+.item .tag{display:inline-flex;margin:0;padding:2px 8px;border:1px solid #245777;border-radius:999px;background:#10283e;color:#8ce8ff;font-size:10px}
+.item .memo{margin-top:7px;color:#a4c2d4;font-size:12px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}.item-arrow{flex:0 0 auto;color:#4bbdd6;font-size:14px}
+.new-label{display:inline-flex;margin:6px 0 0;padding:2px 7px;border:1px solid #ffe45c;border-radius:5px;background:rgba(255,228,92,.10);color:#fff29a;font-size:9px;font-weight:900;letter-spacing:.12em;text-shadow:0 0 7px rgba(255,226,75,.7)}
+.empty{grid-column:1/-1;padding:42px 18px;text-align:center;color:#a4c7d9;border:1px dashed #24516d;border-radius:10px}
+#loginPanel{max-width:680px;margin:8vh auto 0}#loginPanel .finder-toolbar{grid-template-columns:190px 1fr 220px}
+#loginPanel .login-body{padding:30px;background:linear-gradient(145deg,#0b1930,#071124);color:#e8faff}
+#loginPanel h1{color:#e5fbff;font-size:28px}#loginPanel p,#loginPanel label{color:#a4c7d9}
+#loginPanel input{background:#060e1d;border:1px solid #28516c;color:#e8faff;border-radius:7px;padding:11px}
+#loginPanel button{background:#0d263d;border:1px solid #286582;color:#a9efff;border-radius:7px;padding:10px 15px}
+#loginPanel button[type=submit]{background:linear-gradient(135deg,#087fa9,#273f9b);border-color:#35d9ff;color:#fff}
+@media(max-width:760px){main.wrap{padding:8px}.finder-window{width:100%;border-radius:10px}.finder-toolbar{grid-template-columns:112px minmax(0,1fr);grid-template-rows:34px 32px;padding:6px 10px}.finder-title{grid-column:2;grid-row:1;font-size:13px}.toolbar-tools{display:none}.toolbar-search{grid-column:1/3;grid-row:2;justify-self:stretch;width:100%}.finder-layout{grid-template-columns:160px minmax(0,1fr)}.sidebar{padding:12px 6px}.side-item{font-size:11px;padding:7px 6px;gap:6px}.finder-content{padding:16px 12px}.list{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.item{min-height:105px;padding:10px}.item .title{font-size:12px}}
+@media(max-width:520px){main.wrap{padding:0}.finder-window{border-radius:0;min-height:100vh}.finder-layout{grid-template-columns:112px minmax(0,1fr)}.finder-content{padding:12px 8px}.list{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.item{min-height:110px;padding:9px}.item .title{font-size:12px}.item-arrow{display:none}.side-label{font-size:8px;margin:14px 4px 6px}.side-item{font-size:10px;padding:7px 4px;gap:4px}}
 </style>
 <div id="lc-release-overlay" aria-hidden="true">
  <section id="lc-release-dialog" role="dialog" aria-modal="true" aria-labelledby="lc-release-title">
