@@ -79,7 +79,8 @@ window.addEventListener('message',event=>{
  if(!isGasOrigin(event.origin))return;
  const d=event.data;if(!d||typeof d!=='object')return;
  if(d.type==='DAILY_CORE_BRIDGE_READY'){
-  if(embedded||bridgeWindow||event.source!==frame.contentWindow)return;
+  // GAS Webアプリの中継iframeにも対応。信頼済みoriginの最初のREADY送信元を固定する。
+  if(embedded||bridgeWindow)return;
   bridgeWindow=event.source;bridgeOrigin=event.origin;readyResolve();return;
  }
  if(d.type==='DAILY_CORE_RESPONSE'){
