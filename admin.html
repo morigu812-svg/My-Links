@@ -1620,12 +1620,20 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
       renderMs = performance.now() - renderStartedAt;
       const totalMs = performance.now() - startedAt;
       const seconds = value => (value / 1000).toFixed(2);
-      setStatus('読み込み完了（' + result.links.length + '件）｜接続 ' + seconds(bridgeMs) + '秒・取得 ' + seconds(fetchMs) + '秒・描画 ' + seconds(renderMs) + '秒・合計 ' + seconds(totalMs) + '秒', '');
+      const server = result._performance || null;
+      const serverSummary = server
+        ? '｜サーバー ' + seconds(server.serverTotalMs) + '秒（認証 ' + seconds(server.authMs) +
+          '・キャッシュ ' + seconds(server.cacheReadMs) + '・シート ' + seconds(server.sheetReadMs) +
+          '・キャッシュ保存 ' + seconds(server.cacheWriteMs) + '・絞込 ' + seconds(server.filterMs) +
+          '秒／' + (server.cacheHit ? 'HIT' : 'MISS') + '）'
+        : '';
+      setStatus('読み込み完了（' + result.links.length + '件）｜接続 ' + seconds(bridgeMs) + '秒・取得 ' + seconds(fetchMs) + '秒・描画 ' + seconds(renderMs) + '秒・合計 ' + seconds(totalMs) + '秒' + serverSummary, '');
       console.info('[LINK CORE 性能計測]', {
         bridgeMs: Math.round(bridgeMs),
         fetchMs: Math.round(fetchMs),
         renderMs: Math.round(renderMs),
         totalMs: Math.round(totalMs),
+        server: server,
         linkCount: result.links.length
       });
     } catch (error) {
