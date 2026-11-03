@@ -297,9 +297,13 @@ body.night-mode .item a{color:#8ba6b9!important}
 /* Click-history diagnostics */
 .click-log-notice{position:fixed;left:50%;bottom:18px;z-index:12000;transform:translate(-50%,12px);width:min(620px,calc(100vw - 28px));padding:12px 15px;border:1px solid #2c7895;border-radius:10px;background:#081a2c;color:#dff7ff;box-shadow:0 12px 38px #0009;font-size:12px;line-height:1.6;opacity:0;pointer-events:none;transition:opacity .18s ease,transform .18s ease;overflow-wrap:anywhere}.click-log-notice.show{opacity:1;transform:translate(-50%,0)}.click-log-notice.error{border-color:#b85b67;background:#29121b;color:#ffe6e9}.click-log-notice strong{display:block;margin-bottom:2px;font-size:12px}
 
-/* User-resizable main window */
-.finder-window{resize:both;overflow:auto;max-width:calc(100vw - 44px);max-height:calc(100vh - 56px)}
-@media(max-width:720px){.finder-window{resize:none;max-width:100%;max-height:none;overflow:hidden}}
+/* Symmetric edge-and-corner resizing */
+.wrap{width:100%;max-width:none}
+.finder-window{resize:none;width:min(1180px,calc(100vw - 44px));max-width:none;max-height:none;margin-left:auto;margin-right:auto;overflow:hidden}
+.finder-window.is-resizing{transition:none!important;user-select:none!important}
+body.window-resizing,body.window-resizing *{cursor:inherit!important;user-select:none!important}
+@media(max-width:720px){.finder-window{width:calc(100vw - 16px);max-width:none;max-height:none;overflow:hidden}}
+
 </style>
 </head>
 <body>
@@ -478,4 +482,61 @@ document.addEventListener('visibilitychange',async()=>{
 })();
 
 </script>
+
+<script>
+/* Drag any edge or corner to resize the visitor window. The center stays fixed. */
+(function(){
+  'use strict';
+  const panels=[document.getElementById('loginPanel'),document.getElementById('linksPanel')].filter(Boolean);
+  if(!panels.length)return;
+  const edgeSize=18,minWidth=320,minHeight=420;
+  let drag=null;
+  function start(event){
+    if(event.button!==undefined&&event.button!==0)return;
+    const panel=event.target.closest('.finder-window');
+    if(!panel||!panels.includes(panel)||document.body.classList.contains('fit-screen'))return;
+    const rect=panel.getBoundingClientRect();
+    const x=event.clientX-rect.left,y=event.clientY-rect.top;
+    const left=x<=edgeSize,right=rect.width-x<=edgeSize,top=y<=edgeSize,bottom=rect.height-y<=edgeSize;
+    if(!(left||right||top||bottom))return;
+    event.preventDefault();
+    const dirs={left,right,top,bottom};
+    const cursor=(left||right)&&(top||bottom)?(left===top?'nwse-resize':'nesw-resize'):(left||right?'ew-resize':'ns-resize');
+    drag={panel,pointerId:event.pointerId,startX:event.clientX,startY:event.clientY,rect,dirs,cursor,centerX:rect.left+rect.width/2,centerY:rect.top+rect.height/2};
+    document.body.classList.add('window-resizing');
+    document.body.style.cursor=cursor;
+    panel.classList.add('is-resizing');
+    try{panel.setPointerCapture(event.pointerId)}catch(_){}
+  }
+  function move(event){
+    if(!drag||event.pointerId!==drag.pointerId)return;
+    event.preventDefault();
+    const d=drag,dx=event.clientX-d.startX,dy=event.clientY-d.startY;
+    let width=d.rect.width+(d.dirs.left?-2*dx:d.dirs.right?2*dx:0);
+    let height=d.rect.height+(d.dirs.top?-2*dy:d.dirs.bottom?2*dy:0);
+    width=Math.max(minWidth,Math.min(width,window.innerWidth-16));
+    height=Math.max(minHeight,Math.min(height,window.innerHeight-16));
+    panels.forEach(p=>{
+      p.style.width=width+'px';
+      p.style.height=height+'px';
+      p.style.marginLeft='auto';
+      p.style.marginRight='auto';
+      p.style.transform='translateY('+(d.centerY-height/2-d.rect.top)+'px)';
+    });
+  }
+  function end(event){
+    if(!drag||(event&&event.pointerId!==drag.pointerId))return;
+    drag.panel.classList.remove('is-resizing');
+    document.body.classList.remove('window-resizing');
+    document.body.style.cursor='';
+    drag=null;
+  }
+  document.addEventListener('pointerdown',start,true);
+  window.addEventListener('pointermove',move,{passive:false});
+  window.addEventListener('pointerup',end);
+  window.addEventListener('pointercancel',end);
+  window.addEventListener('blur',()=>end());
+})();
+</script>
+
 </body></html>
