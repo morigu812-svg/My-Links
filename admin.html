@@ -1579,6 +1579,11 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
 
   // 初期読み込みを独立した手順にし、各段階の状態を表示する。
   (async function initializeAdminPage() {
+    // 未ログイン状態では保護されたAPIを呼ばず、認証画面をそのまま表示する。
+    if (sessionStorage.getItem(AUTH_KEY) !== 'yes' || !sessionStorage.getItem(ADMIN_TOKEN_KEY)) {
+      setBusy(false);
+      return;
+    }
     const startedAt = Date.now();
     setStatus('接続を準備しています…', '');
     try {
