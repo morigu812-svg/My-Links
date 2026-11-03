@@ -319,11 +319,7 @@ body.window-resizing,body.window-resizing *{user-select:none!important}
 /* Finder-style category folders */
 .folder-icon{width:54px;height:44px;color:#e5b84f;filter:drop-shadow(0 3px 7px rgba(0,0,0,.25))}.finder-content .folder-card{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;min-height:132px;padding:14px 10px;border:1px solid #28536b;border-radius:12px;background:linear-gradient(145deg,rgba(17,39,61,.92),rgba(13,19,39,.96));color:#e8b94f;cursor:pointer;transition:transform .16s,border-color .16s,box-shadow .16s}.folder-card:hover{transform:translateY(-2px);border-color:#4edfff;box-shadow:0 0 18px rgba(0,217,255,.16)}.folder-card-name{max-width:100%;overflow-wrap:anywhere;color:#e9f8ff;font-size:13px;font-weight:750}.folder-card-count{color:#8caabd;font-size:10px}.side-folder-mini{width:18px!important;height:16px;flex:none}.side-folder-mini .folder-icon{width:18px;height:15px;filter:none;color:#d9ad4c}.folder-toolbar{grid-column:1/-1;display:flex;align-items:center;gap:12px;margin:0 0 5px;padding:0 0 12px;border-bottom:1px solid #1a3e54;color:#8eacc0;font-size:11px}.folder-toolbar button{padding:6px 10px;border:1px solid #28536b;border-radius:7px;background:#10283b;color:#bcefff;cursor:pointer}</style>
 <meta name="robots" content="noindex, nofollow, noarchive">
-<style id="disableVisitorWindowResize">
-/* Window resizing is intentionally disabled on the visitor page. */
-#loginPanel .resize-handle,#linksPanel .resize-handle,.lc-browser-window .lc-browser-resize{display:none!important;pointer-events:none!important}
-#loginPanel,#linksPanel,.lc-browser-window{resize:none!important}
-</style>
+
 </head>
 <body>
 <main class="wrap">
@@ -344,7 +340,6 @@ body.window-resizing,body.window-resizing *{user-select:none!important}
 <button class="side-item" type="button" data-view="all"><span>▦</span> すべてのリンク</button>
 <div class="side-label">クイックアクセス</div>
 <button class="side-item chat-launch" type="button" id="openChat"><span>✉</span> 管理者チャット <span class="new-badge">NEW</span></button>
-<button class="side-item" type="button" id="sideBrowser"><span>▣</span> ブラウザ <span class="new-badge">NEW</span></button>
 <button class="side-item" type="button" id="sideReleaseNotes"><span>▤</span> リリースノート <span class="new-badge">NEW</span></button>
 <div class="side-label">カテゴリ</div><div id="sideCats" class="side-cats"></div>
 </aside><section class="finder-content"><div class="workspace">
@@ -703,206 +698,9 @@ document.addEventListener('visibilitychange',async()=>{
 })();</script>
 
 
-<style id="lcInternalBrowserStyles">
-.lc-browser-window{position:fixed;z-index:20000;left:calc(50% - 390px);top:calc(50% - 280px);width:min(780px,calc(100vw - 28px));height:min(560px,calc(100vh - 90px));min-width:320px;min-height:190px;display:flex;flex-direction:column;resize:none;overflow:hidden;border:1px solid rgba(111,205,239,.55);border-radius:13px;background:#101a29;color:#edf7ff;box-shadow:0 24px 80px #0009,inset 0 1px #ffffff18;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px)}
-.lc-browser-window.is-minimized{height:48px!important;min-height:48px;resize:none}
-.lc-browser-resize{position:absolute;z-index:30;display:block!important;padding:0!important;margin:0!important;border:0!important;background:transparent!important;box-shadow:none!important;opacity:1!important;touch-action:none;user-select:none}
-.lc-browser-resize.n,.lc-browser-resize.s{left:12px;right:12px;height:8px;cursor:ns-resize}
-.lc-browser-resize.n{top:0}.lc-browser-resize.s{bottom:0}
-.lc-browser-resize.e,.lc-browser-resize.w{top:12px;bottom:12px;width:8px;cursor:ew-resize}
-.lc-browser-resize.e{right:0}.lc-browser-resize.w{left:0}
-.lc-browser-resize.nw,.lc-browser-resize.ne,.lc-browser-resize.sw,.lc-browser-resize.se{width:14px;height:14px}
-.lc-browser-resize.nw{top:0;left:0;cursor:nwse-resize}.lc-browser-resize.se{right:0;bottom:0;cursor:nwse-resize}
-.lc-browser-resize.ne{right:0;top:0;cursor:nesw-resize}.lc-browser-resize.sw{left:0;bottom:0;cursor:nesw-resize}
-.lc-browser-window.is-minimized .lc-browser-resize{display:none!important}
-body.lc-browser-resizing{user-select:none!important;cursor:inherit!important}
-body.lc-browser-resizing iframe{pointer-events:none!important}
-.lc-browser-toolbar{height:48px;min-height:48px;display:flex;align-items:center;gap:10px;padding:0 12px;background:linear-gradient(110deg,#18283b,#0c1929);border-bottom:1px solid #29485d;cursor:grab;touch-action:none;user-select:none}
-.lc-browser-toolbar:active{cursor:grabbing}
-.lc-browser-lights{display:flex;gap:6px;flex:none}
-.lc-browser-light{width:12px;height:12px;border:0;border-radius:50%;padding:0;box-shadow:inset 0 1px #ffffff55}
-.lc-browser-light.close{background:#ff625b}.lc-browser-light.min{background:#ffbd44}.lc-browser-light.external{background:#35c98b}
-.lc-browser-title{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:750;color:#d9f2ff}
-.lc-browser-url{max-width:34%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:5px 8px;border:1px solid #2b4b61;border-radius:6px;background:#091421;color:#8eafc4;font:11px/1.4 ui-monospace,monospace}
-.lc-browser-content{position:relative;flex:1;min-height:0;background:#fff}
-.lc-browser-content iframe{display:block;width:100%;height:100%;border:0;background:#fff}
-.lc-browser-hint{padding:8px 12px;border-top:1px solid #29485d;background:#0d1927;color:#9bb5c8;font-size:11px}
-.lc-browser-window.is-minimized .lc-browser-content,.lc-browser-window.is-minimized .lc-browser-hint{display:none}
-@media(max-width:600px){.lc-browser-window{min-width:260px;min-height:180px}.lc-browser-url{display:none}}
-</style>
-<script id="lcInternalBrowser">
-(() => {
-  let browserZ = 20000, browserOffset = 0, activeDrag = null, activeResize = null, browserTaskbar = null;
-  function getBrowserTaskbar(){
-    if(browserTaskbar && browserTaskbar.isConnected)return browserTaskbar;
-    browserTaskbar=document.createElement('nav');
-    browserTaskbar.id='lc-browser-taskbar';
-    browserTaskbar.setAttribute('aria-label','開いているウィンドウ');
-    browserTaskbar.hidden=true;
-    document.body.appendChild(browserTaskbar);
-    return browserTaskbar;
-  }
-  function refreshBrowserTaskbar(){
-    if(!browserTaskbar)return;
-    const windows=[...document.querySelectorAll('.lc-browser-window')];
-    browserTaskbar.hidden=windows.length===0;
-    windows.forEach(win=>{
-      const item=win._lcTaskItem;
-      if(!item)return;
-      item.classList.toggle('is-active',win.style.zIndex===String(browserZ));
-      item.classList.toggle('is-minimized',win.classList.contains('is-minimized'));
-      item.setAttribute('aria-pressed',String(!win.classList.contains('is-minimized') && win.style.zIndex===String(browserZ)));
-    });
-  }
-  function focusBrowserWindow(win){
-    if(win.classList.contains('is-minimized'))win.classList.remove('is-minimized');
-    win.style.zIndex=String(++browserZ);
-    refreshBrowserTaskbar();
-  }
-  function openInternalBrowser(anchor) {
-    const url = anchor.href;
-    let parsed;
-    try { parsed = new URL(url, location.href); } catch (_) { return; }
-    if (!['http:', 'https:'].includes(parsed.protocol)) return;
-    // 埋め込み拒否が一般的なサービスは、空白のウィンドウを作らず別タブで開く。
-    const blockedHosts = ['mail.google.com','drive.google.com','docs.google.com','script.google.com','github.com'];
-    if (blockedHosts.some(host => parsed.hostname === host || parsed.hostname.endsWith('.' + host))) {
-      window.open(parsed.href, '_blank', 'noopener,noreferrer');
-      return;
-    }
-    const titleNode = anchor.querySelector('.official-card-title') || anchor;
-    const title = (titleNode.textContent || parsed.hostname).trim().slice(0,100) || parsed.hostname;
-    const win = document.createElement('section');
-    win.className = 'lc-browser-window';
-    win.setAttribute('role','dialog');
-    win.setAttribute('aria-label',title + ' ブラウザウィンドウ');
-    browserOffset = (browserOffset + 34) % 240;
-    win.style.left = Math.max(8, Math.min(window.innerWidth - 340, (window.innerWidth - 780) / 2 + browserOffset)) + 'px';
-    win.style.top = Math.max(62, Math.min(window.innerHeight - 220, (window.innerHeight - 560) / 2 + browserOffset)) + 'px';
-    win.style.zIndex = String(++browserZ);
-    win.style.resize = 'none';
 
-    const toolbar = document.createElement('div'); toolbar.className='lc-browser-toolbar';
-    const lights=document.createElement('div');lights.className='lc-browser-lights';
-    const close=document.createElement('button');close.className='lc-browser-light close';close.type='button';close.title='閉じる';close.setAttribute('aria-label','閉じる');
-    const minimize=document.createElement('button');minimize.className='lc-browser-light min';minimize.type='button';minimize.title='最小化';minimize.setAttribute('aria-label','最小化');
-    const external=document.createElement('button');external.className='lc-browser-light external';external.type='button';external.title='別タブで開く';external.setAttribute('aria-label','別タブで開く');
-    lights.append(close,minimize,external);
-    const heading=document.createElement('div');heading.className='lc-browser-title';heading.textContent=title;
-    const address=document.createElement('div');address.className='lc-browser-url';address.textContent=parsed.href;address.title=parsed.href;
-    toolbar.append(lights,heading,address);
-    const content=document.createElement('div');content.className='lc-browser-content';
-    const frame=document.createElement('iframe');frame.src=parsed.href;frame.title=title;frame.referrerPolicy='strict-origin-when-cross-origin';frame.setAttribute('sandbox','allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox');
-    content.appendChild(frame);
-    const hint=document.createElement('div');hint.className='lc-browser-hint';hint.textContent='サイト側の設定により、このウィンドウ内で表示できない場合があります。その場合は左側の緑のボタンから別タブで開いてください。';
-    win.append(toolbar,content,hint);
-    ['n','s','e','w','nw','ne','sw','se'].forEach(direction=>{
-      const handle=document.createElement('div');
-      handle.className='lc-browser-resize '+direction;
-      handle.setAttribute('aria-hidden','true');
-      handle.addEventListener('pointerdown',event=>{
-        if(event.button!==0 || win.classList.contains('is-minimized'))return;
-        event.preventDefault();event.stopPropagation();
-        const rect=win.getBoundingClientRect();
-        activeResize={win,direction,pointerId:event.pointerId,x:event.clientX,y:event.clientY,left:rect.left,top:rect.top,width:rect.width,height:rect.height};
-        handle.setPointerCapture(event.pointerId);
-        document.body.classList.add('lc-browser-resizing');
-      });
-      win.appendChild(handle);
-    });
-    document.body.appendChild(win);
-    const taskbar=getBrowserTaskbar();
-    const taskItem=document.createElement('button');
-    taskItem.type='button';taskItem.className='lc-browser-task-item';
-    const taskDot=document.createElement('span');taskDot.className='lc-browser-task-dot';
-    const taskLabel=document.createElement('span');taskLabel.className='lc-browser-task-label';taskLabel.textContent=title;
-    taskItem.append(taskDot,taskLabel);taskbar.appendChild(taskItem);win._lcTaskItem=taskItem;
-    taskItem.addEventListener('click',()=>focusBrowserWindow(win));
-    win.addEventListener('pointerdown',()=>{win.style.zIndex=String(++browserZ);refreshBrowserTaskbar();});
-    close.addEventListener('click',()=>{win.remove();taskItem.remove();refreshBrowserTaskbar();});
-    minimize.addEventListener('click',()=>{win.classList.toggle('is-minimized');minimize.title=win.classList.contains('is-minimized')?'元に戻す':'最小化';refreshBrowserTaskbar();});
-    external.addEventListener('click',()=>window.open(parsed.href,'_blank','noopener,noreferrer'));
-    refreshBrowserTaskbar();
-    toolbar.addEventListener('pointerdown',event=>{
-      const greenButtonRight=external.getBoundingClientRect().right;
-      if(event.button!==0 || event.clientX<=greenButtonRight || event.target.closest('button, .lc-browser-lights')) return;
-      const rect=win.getBoundingClientRect();
-      activeDrag={win,pointerId:event.pointerId,x:event.clientX,y:event.clientY,left:rect.left,top:rect.top};
-      toolbar.setPointerCapture(event.pointerId);event.preventDefault();
-    });
-    toolbar.addEventListener('pointermove',event=>{
-      if(!activeDrag || activeDrag.win!==win || activeDrag.pointerId!==event.pointerId)return;
-      const maxLeft=Math.max(0,window.innerWidth-100),maxTop=Math.max(0,window.innerHeight-48);
-      win.style.left=Math.max(0,Math.min(maxLeft,activeDrag.left+event.clientX-activeDrag.x))+'px';
-      win.style.top=Math.max(0,Math.min(maxTop,activeDrag.top+event.clientY-activeDrag.y))+'px';
-    });
-    const stop=event=>{if(activeDrag && activeDrag.win===win && (!event || event.pointerId===activeDrag.pointerId))activeDrag=null;};
-    toolbar.addEventListener('pointerup',stop);toolbar.addEventListener('pointercancel',stop);
-  }
-  document.addEventListener('pointermove',event=>{
-    if(!activeResize || activeResize.pointerId!==event.pointerId)return;
-    event.preventDefault();
-    const r=activeResize,dx=event.clientX-r.x,dy=event.clientY-r.y;
-    const minW=260,minH=180;
-    let left=r.left,top=r.top,width=r.width,height=r.height;
-    if(r.direction.includes('e'))width=Math.max(minW,r.width+dx);
-    if(r.direction.includes('s'))height=Math.max(minH,r.height+dy);
-    if(r.direction.includes('w')){width=Math.max(minW,r.width-dx);left=r.left+r.width-width;}
-    if(r.direction.includes('n')){height=Math.max(minH,r.height-dy);top=r.top+r.height-height;}
-    if(left<0){width+=left;left=0;}
-    if(top<0){height+=top;top=0;}
-    width=Math.min(width,window.innerWidth-left);
-    height=Math.min(height,window.innerHeight-top);
-    r.win.style.left=left+'px';r.win.style.top=top+'px';
-    r.win.style.width=Math.max(minW,width)+'px';r.win.style.height=Math.max(minH,height)+'px';
-  },{passive:false});
-  const finishBrowserResize=event=>{
-    if(!activeResize || (event && event.pointerId!==activeResize.pointerId))return;
-    activeResize=null;document.body.classList.remove('lc-browser-resizing');
-  };
-  document.addEventListener('pointerup',finishBrowserResize);
-  document.addEventListener('pointercancel',finishBrowserResize);
-  window.addEventListener('blur',()=>finishBrowserResize());
-  const browserSidebarButton=document.getElementById('sideBrowser');
-  if(browserSidebarButton){
-    browserSidebarButton.addEventListener('click',()=>{
-      window.markLinkCoreSideTabAsRead('sideBrowser');
-      const entered=window.prompt('開きたいWebサイトのURLを入力してください','https://');
-      if(!entered)return;
-      let parsed;
-      try{
-        const candidate=entered.trim();
-        parsed=new URL(/^https?:\/\//i.test(candidate)?candidate:'https://'+candidate);
-      }catch(_){
-        window.alert('URLを正しく入力してください。');
-        return;
-      }
-      if(!['http:','https:'].includes(parsed.protocol)){
-        window.alert('http または https のURLを入力してください。');
-        return;
-      }
-      const fakeAnchor=document.createElement('a');
-      fakeAnchor.href=parsed.href;
-      fakeAnchor.textContent=parsed.hostname;
-      openInternalBrowser(fakeAnchor);
-    });
-  }
-  document.addEventListener('click',event=>{
-    const anchor=event.target.closest('#list .item a[href]');
-    if(!anchor)return;
-    if(event.button!==0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)return;
-    if(anchor.dataset.openMode==='external')return;
-    event.preventDefault();
-    openInternalBrowser(anchor);
-  },true);
-})();
-</script>
-<style id="lcBrowserTrafficLightFix">
-body .lc-browser-window .lc-browser-lights button.lc-browser-light.close{background-color:#ff625b!important;background-image:none!important;border:0!important;opacity:1!important}
-body .lc-browser-window .lc-browser-lights button.lc-browser-light.min{background-color:#ffbd44!important;background-image:none!important;border:0!important;opacity:1!important}
-body .lc-browser-window .lc-browser-lights button.lc-browser-light.external{background-color:#35c98b!important;background-image:none!important;border:0!important;opacity:1!important}
-body .lc-browser-window .lc-browser-lights button.lc-browser-light{display:block!important;flex:0 0 12px!important;width:12px!important;height:12px!important;min-width:12px!important;min-height:12px!important;padding:0!important;border-radius:50%!important;box-shadow:inset 0 1px 1px #ffffff88,0 0 5px #0005!important}
-</style>
+
+
 <style id="lcBrowserTaskbarStyles">
 #lc-browser-taskbar{position:fixed;z-index:30000;left:50%;bottom:14px;transform:translateX(-50%);display:flex;align-items:center;gap:7px;max-width:calc(100vw - 24px);padding:8px 10px;border:1px solid rgba(111,205,239,.45);border-radius:12px;background:rgba(9,20,34,.88);box-shadow:0 12px 38px #0008;backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);overflow-x:auto}
 #lc-browser-taskbar[hidden]{display:none!important}
