@@ -730,7 +730,7 @@ main { width:100%; max-width:none !important; }
     </div>
     <div id="clickLogStatus" role="status" aria-live="polite"></div>
     <div class="click-log-table-wrap"><table class="click-log-table">
-      <thead><tr><th>クリック日時</th><th>リンク名</th><th>URL</th></tr></thead>
+      <thead><tr><th>クリック日時</th><th>リンク名</th><th>URL</th><th>操作</th></tr></thead>
       <tbody id="clickLogRows"><tr><td colspan="3">まだ履歴はありません。</td></tr></tbody>
     </table></div>
   </section>
@@ -986,7 +986,7 @@ main { width:100%; max-width:none !important; }
   }
 
   function serverCall(method, ...args) {
-    const protectedMethods = ['getLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'saveOfficialLink', 'deleteOfficialLink', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'sendChatMessage', 'getClickLogs', 'deleteClickLogs'];
+    const protectedMethods = ['getLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'saveOfficialLink', 'deleteOfficialLink', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'sendChatMessage', 'getClickLogs', 'deleteClickLogs', 'deleteClickLog'];
     if (protectedMethods.includes(method)) {
       const token = sessionStorage.getItem(ADMIN_TOKEN_KEY) || '';
       // 呼び出し元（埋め込みメモ帳など）が既にトークンを渡している場合は二重追加しない。
@@ -1313,14 +1313,21 @@ main { width:100%; max-width:none !important; }
   let clickLogsLoaded=false,clickLogsLoading=false;
   function renderClickLogs(logs){
     const body=$('clickLogRows');body.replaceChildren();
-    if(!logs.length){const tr=document.createElement('tr');const td=document.createElement('td');td.colSpan=3;td.className='click-log-empty';td.textContent='まだクリック履歴はありません。';tr.appendChild(td);body.appendChild(tr);return;}
+    if(!logs.length){const tr=document.createElement('tr');const td=document.createElement('td');td.colSpan=4;td.className='click-log-empty';td.textContent='まだクリック履歴はありません。';tr.appendChild(td);body.appendChild(tr);return;}
     logs.forEach(log=>{
       const tr=document.createElement('tr');const time=document.createElement('td');const date=new Date(log.clickedAt);
       time.textContent=isNaN(date.getTime())?'日時不明':date.toLocaleString('ja-JP');
       const title=document.createElement('td');title.textContent=log.title||'（タイトルなし）';
       const urlCell=document.createElement('td');urlCell.className='log-url';
       if(log.url.indexOf('https://')===0||log.url.indexOf('http://')===0){const a=document.createElement('a');a.href=log.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent=log.url;urlCell.appendChild(a);}else{urlCell.textContent=log.url||'';}
-      tr.append(time,title,urlCell);body.appendChild(tr);
+      const actionCell=document.createElement('td');actionCell.className='click-log-action';
+      const remove=document.createElement('button');remove.type='button';remove.className='btn danger click-log-delete-one';remove.textContent='削除';remove.addEventListener('click',async()=>{
+        if(!confirm('「'+(log.title||'（タイトルなし）')+'」のクリック履歴を1件削除しますか？'))return;
+        remove.disabled=true;
+        try{const result=await serverCall('deleteClickLog',log.id);if(!result||!result.ok)throw new Error('削除完了の応答がありません。');tr.remove();const remaining=body.querySelectorAll('tr').length;if(!remaining){renderClickLogs([]);}const count=body.querySelectorAll('tr').length;$('clickLogStatus').textContent='履歴を1件削除しました。';}
+        catch(error){remove.disabled=false;$('clickLogStatus').textContent='削除に失敗しました：'+(error.message||'通信エラー');}
+      });
+      actionCell.appendChild(remove);tr.append(time,title,urlCell,actionCell);body.appendChild(tr);
     });
   }
   async function refreshClickLogs(){
