@@ -955,10 +955,9 @@ main { width:100%; max-width:none !important; }
     const data = event.data;
     if (!data || typeof data !== 'object') return;
 
-    // Apps Script は内部でリダイレクト／ラッパーiframeを使う場合があるため、
-    // READY通知では frame.contentWindow との一致を必須にしない。
-    // 応答は READY で確定した送信元だけから受け付ける。
+    // READY はこのページが作成したブリッジ iframe からの最初の1回だけ受理する。
     if (data.type === 'DAILY_CORE_BRIDGE_READY') {
+      if (bridgeWindow || event.source !== frame.contentWindow) return;
       bridgeWindow = event.source;
       bridgeOrigin = event.origin;
       markReady();
@@ -966,6 +965,7 @@ main { width:100%; max-width:none !important; }
     }
 
     if (data.type === 'DAILY_CORE_RESPONSE') {
+      if (event.source !== bridgeWindow || event.origin !== bridgeOrigin) return;
       const entry = pending.get(data.id);
       if (!entry) return;
       pending.delete(data.id);
@@ -993,7 +993,7 @@ main { width:100%; max-width:none !important; }
   }
 
   function serverCall(method, ...args) {
-    const protectedMethods = ['getLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'saveOfficialLink', 'deleteOfficialLink', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'sendChatMessage', 'getClickLogs', 'deleteClickLogs', 'deleteClickLog'];
+    const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'saveOfficialLink', 'deleteOfficialLink', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'sendChatMessage', 'getClickLogs', 'deleteClickLogs', 'deleteClickLog'];
     if (protectedMethods.includes(method)) {
       const token = sessionStorage.getItem(ADMIN_TOKEN_KEY) || '';
       // 呼び出し元（埋め込みメモ帳など）が既にトークンを渡している場合は二重追加しない。
