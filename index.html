@@ -329,13 +329,13 @@ body.window-resizing,body.window-resizing *{user-select:none!important}
 <section class="finder-window hidden" id="linksPanel">
   <div class="finder-toolbar"><div class="traffic-lights" aria-label="ウィンドウ操作"><span class="traffic-red" aria-hidden="true"></span><span class="traffic-yellow" aria-hidden="true"></span><button type="button" class="traffic-green" data-fullscreen title="全画面表示" aria-label="全画面表示"></button></div><div class="finder-title">My Desktop</div><label class="toolbar-search"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="検索" aria-label="リンクを検索"></label></div>
   <div class="finder-layout"><aside class="sidebar" aria-label="リンクの表示">
-    <div class="side-label">お気に入り</div><button type="button" class="side-item" data-view="favorites"><span>★</span> お気に入り</button>
+    <div class="side-label">お気に入り</div><button type="button" class="side-item selected" data-view="favorites"><span>★</span> お気に入り</button>
     <div class="side-label">履歴</div><button type="button" class="side-item" data-view="recent"><span>◷</span> 最近追加した項目</button>
-    <div class="side-label">リンク</div><button type="button" class="side-item selected" data-view="all"><span>▦</span> すべてのリンク</button>
+    <div class="side-label">リンク</div><button type="button" class="side-item" data-view="all"><span>▦</span> すべてのリンク</button>
     <div class="side-label">カテゴリ</div><div id="sideCats"></div><div class="side-label">コミュニケーション</div><button type="button" class="side-item chat-launch" id="openChat"><span>✉</span> 管理者チャット <span class="new-badge">NEW</span></button>
     <button type="button" class="side-item" id="sideBrowser"><span>▣</span> ブラウザ <span class="new-badge">NEW</span></button>
       <button class="side-item" type="button" id="sideReleaseNotes"><span>▤</span> リリースノート <span class="new-badge">NEW</span></button>
-  </aside><section class="finder-content"><div class="content-heading"><div><h1 id="viewTitle">すべてのリンク</h1><p>共有リンクを一覧表示しています</p></div><span class="count" id="count"></span></div><div class="status" id="loadStatus" role="status"></div><div class="list-heading"><span>名前</span><span>リンク一覧</span></div><div class="list loading-skeleton" id="list" role="status" aria-label="リンクを読み込み中"><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div></div></section></div>
+  </aside><section class="finder-content"><div class="content-heading"><div><h1 id="viewTitle">お気に入り</h1><p>共有リンクを一覧表示しています</p></div><span class="count" id="count"></span></div><div class="status" id="loadStatus" role="status"></div><div class="list-heading"><span>名前</span><span>リンク一覧</span></div><div class="list loading-skeleton" id="list" role="status" aria-label="リンクを読み込み中"><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div></div></section></div>
 </section>
 <section class="chat-overlay" id="chatOverlay" aria-label="管理者との共通チャット"><div class="chat-head"><strong>LINK CORE / CHAT</strong><div class="chat-head-actions"><button type="button" id="refreshChat"><span class="refresh-icon" aria-hidden="true">↻</span><span>再読み込み</span></button><button type="button" id="closeChat">閉じる</button></div></div><div class="chat-subtitle">利用者と管理者が参加する共通チャットです。サイトの不具合報告などにもご利用ください。</div><div class="chat-messages" id="chatMessages" aria-live="polite"><div class="chat-status">チャットを開いています…</div></div><form class="chat-compose" id="chatForm"><textarea id="chatInput" maxlength="1000" rows="2" placeholder="メッセージを入力…" required></textarea><button id="chatSend" type="submit">送信</button></form></section><footer><a class="admin" href="admin.html">管理者画面</a></footer>
 </main>
@@ -362,7 +362,7 @@ function showClickLogNotice(message,isError){
  clearTimeout(clickNoticeTimer);clickNoticeTimer=setTimeout(()=>box.classList.remove('show'),isError?12000:2600);
 }
 
-let links=[],categories=[],view='all',selectedCategory='',visitorToken='';
+let links=[],categories=[],view='favorites',selectedCategory='',visitorToken='';
 function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function visibleLinks(){
  const q=$('search').value.trim().toLowerCase();
