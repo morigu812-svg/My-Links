@@ -1742,7 +1742,7 @@ body.lc-browser-resizing iframe{pointer-events:none!important}
     const content=document.createElement('div');content.className='lc-browser-content';
     const frame=document.createElement('iframe');frame.src=parsed.href;frame.title=title;frame.referrerPolicy='strict-origin-when-cross-origin';frame.setAttribute('sandbox','allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox');
     content.appendChild(frame);
-    const hint=document.createElement('div');hint.className='lc-browser-hint';hint.textContent='サイト側の設定により、このウィンドウ内で表示できない場合があります。その場合は右上の緑のボタンから別タブで開いてください。';
+    const hint=document.createElement('div');hint.className='lc-browser-hint';hint.textContent='サイト側の設定により、このウィンドウ内で表示できない場合があります。その場合は左側の緑のボタンから別タブで開いてください。';
     win.append(toolbar,content,hint);
     ['n','s','e','w','nw','ne','sw','se'].forEach(direction=>{
       const handle=document.createElement('div');
