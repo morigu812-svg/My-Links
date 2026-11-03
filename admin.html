@@ -1636,7 +1636,33 @@ body.lc-browser-resizing iframe{pointer-events:none!important}
 
 <script id="lcInternalBrowser">
 (() => {
-  let browserZ = 20000, browserOffset = 0, activeDrag = null, activeResize = null;
+  let browserZ = 20000, browserOffset = 0, activeDrag = null, activeResize = null, browserTaskbar = null;
+  function getBrowserTaskbar(){
+    if(browserTaskbar && browserTaskbar.isConnected)return browserTaskbar;
+    browserTaskbar=document.createElement('nav');
+    browserTaskbar.id='lc-browser-taskbar';
+    browserTaskbar.setAttribute('aria-label','開いているウィンドウ');
+    browserTaskbar.hidden=true;
+    document.body.appendChild(browserTaskbar);
+    return browserTaskbar;
+  }
+  function refreshBrowserTaskbar(){
+    if(!browserTaskbar)return;
+    const windows=[...document.querySelectorAll('.lc-browser-window')];
+    browserTaskbar.hidden=windows.length===0;
+    windows.forEach(win=>{
+      const item=win._lcTaskItem;
+      if(!item)return;
+      item.classList.toggle('is-active',win.style.zIndex===String(browserZ));
+      item.classList.toggle('is-minimized',win.classList.contains('is-minimized'));
+      item.setAttribute('aria-pressed',String(!win.classList.contains('is-minimized') && win.style.zIndex===String(browserZ)));
+    });
+  }
+  function focusBrowserWindow(win){
+    if(win.classList.contains('is-minimized'))win.classList.remove('is-minimized');
+    win.style.zIndex=String(++browserZ);
+    refreshBrowserTaskbar();
+  }
   function openInternalBrowser(anchor) {
     const url = anchor.href;
     let parsed;
@@ -1683,10 +1709,18 @@ body.lc-browser-resizing iframe{pointer-events:none!important}
       win.appendChild(handle);
     });
     document.body.appendChild(win);
-    win.addEventListener('pointerdown',()=>{win.style.zIndex=String(++browserZ);});
-    close.addEventListener('click',()=>win.remove());
-    minimize.addEventListener('click',()=>{win.classList.toggle('is-minimized');minimize.title=win.classList.contains('is-minimized')?'元に戻す':'最小化';});
+    const taskbar=getBrowserTaskbar();
+    const taskItem=document.createElement('button');
+    taskItem.type='button';taskItem.className='lc-browser-task-item';
+    const taskDot=document.createElement('span');taskDot.className='lc-browser-task-dot';
+    const taskLabel=document.createElement('span');taskLabel.className='lc-browser-task-label';taskLabel.textContent=title;
+    taskItem.append(taskDot,taskLabel);taskbar.appendChild(taskItem);win._lcTaskItem=taskItem;
+    taskItem.addEventListener('click',()=>focusBrowserWindow(win));
+    win.addEventListener('pointerdown',()=>{win.style.zIndex=String(++browserZ);refreshBrowserTaskbar();});
+    close.addEventListener('click',()=>{win.remove();taskItem.remove();refreshBrowserTaskbar();});
+    minimize.addEventListener('click',()=>{win.classList.toggle('is-minimized');minimize.title=win.classList.contains('is-minimized')?'元に戻す':'最小化';refreshBrowserTaskbar();});
     external.addEventListener('click',()=>window.open(parsed.href,'_blank','noopener,noreferrer'));
+    refreshBrowserTaskbar();
     toolbar.addEventListener('pointerdown',event=>{
       if(event.button!==0 || event.target.closest('button')) return;
       const rect=win.getBoundingClientRect();
@@ -1743,5 +1777,16 @@ body .lc-browser-window .lc-browser-lights button.lc-browser-light.external{back
 body .lc-browser-window .lc-browser-lights button.lc-browser-light{display:block!important;flex:0 0 12px!important;width:12px!important;height:12px!important;min-width:12px!important;min-height:12px!important;padding:0!important;border-radius:50%!important;box-shadow:inset 0 1px 1px #ffffff88,0 0 5px #0005!important}
 </style>
 
+<style id="lcBrowserTaskbarStyles">
+#lc-browser-taskbar{position:fixed;z-index:30000;left:50%;bottom:14px;transform:translateX(-50%);display:flex;align-items:center;gap:7px;max-width:calc(100vw - 24px);padding:8px 10px;border:1px solid rgba(111,205,239,.45);border-radius:12px;background:rgba(9,20,34,.88);box-shadow:0 12px 38px #0008;backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);overflow-x:auto}
+#lc-browser-taskbar[hidden]{display:none!important}
+.lc-browser-task-item{display:flex!important;align-items:center;gap:8px;max-width:190px;min-width:90px;padding:8px 12px!important;border:1px solid #294b61!important;border-radius:8px!important;background:linear-gradient(145deg,#172b40,#0c1929)!important;color:#ccecff!important;font-size:12px!important;white-space:nowrap;cursor:pointer}
+.lc-browser-task-item:hover{border-color:#42c9ed!important;background:#19354b!important}
+.lc-browser-task-item.is-active{border-color:#35c8ed!important;box-shadow:inset 0 0 0 1px #35c8ed55,0 0 12px #24bce733}
+.lc-browser-task-item.is-minimized{opacity:.65}
+.lc-browser-task-dot{width:7px;height:7px;flex:none;border-radius:50%;background:#42c9ed;box-shadow:0 0 7px #42c9ed}
+.lc-browser-task-label{overflow:hidden;text-overflow:ellipsis}
+@media(max-width:600px){#lc-browser-taskbar{bottom:6px;max-width:calc(100vw - 12px)}.lc-browser-task-item{max-width:130px;min-width:75px;padding:7px 9px!important}}
+</style>
 </body>
 </html>
