@@ -457,7 +457,7 @@ $('list').addEventListener('click',event=>{
     const message=error&&error.message?error.message:String(error||'不明なエラー');
     console.error('[LINK CORE] click log failed', {linkId:link.id,title:link.title,error});
     if(isVisitorAuthError(error)){showClickLogNotice('利用者認証の期限切れです。ページを再読み込みしてログインし直してください。',true);}
-    else showClickLogNotice('リンク：'+link.title+' / 原因：'+message,true);
+    else showClickLogNotice('クリック履歴を保存できませんでした。時間をおいて再試行してください。',true);
   })
   .finally(()=>clickLogPending.delete(String(link.id)));
 });
@@ -701,7 +701,7 @@ body.lc-browser-resizing iframe{pointer-events:none!important}
     const address=document.createElement('div');address.className='lc-browser-url';address.textContent=parsed.href;address.title=parsed.href;
     toolbar.append(lights,heading,address);
     const content=document.createElement('div');content.className='lc-browser-content';
-    const frame=document.createElement('iframe');frame.src=parsed.href;frame.title=title;frame.referrerPolicy='strict-origin-when-cross-origin';
+    const frame=document.createElement('iframe');frame.src=parsed.href;frame.title=title;frame.referrerPolicy='strict-origin-when-cross-origin';frame.setAttribute('sandbox','allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox');
     content.appendChild(frame);
     const hint=document.createElement('div');hint.className='lc-browser-hint';hint.textContent='サイト側の設定により、このウィンドウ内で表示できない場合があります。その場合は右上の緑のボタンから別タブで開いてください。';
     win.append(toolbar,content,hint);
