@@ -183,8 +183,10 @@ function rowToLink_(row, columns) {
  * 全リンクと、カテゴリ一覧を返す。
  */
 /* 短時間キャッシュ。認証後にロール別キーでのみ返し、更新時は必ず破棄する。 */
-const LINKS_CACHE_TTL_SECONDS = 20;
+const LINKS_CACHE_TTL_SECONDS = 300;
 const CHAT_CACHE_TTL_SECONDS = 8;
+const LINKS_CACHE_CHUNK_LENGTH = 18000;
+const LINKS_CACHE_MAX_CHUNKS = 10;
 function readJsonCache_(key) {
   try {
     const raw = CacheService.getScriptCache().get(key);
@@ -194,34 +196,94 @@ function readJsonCache_(key) {
 function writeJsonCache_(key, value, ttl) {
   try {
     const raw = JSON.stringify(value);
-    // Apps Script CacheService の1値あたり上限に余裕を持たせる。
     if (raw.length < 95000) CacheService.getScriptCache().put(key, raw, ttl);
   } catch (_) {}
 }
+function readChunkedJsonCache_(key) {
+  try {
+    const cache = CacheService.getScriptCache();
+    const metaRaw = cache.get(key + '_META');
+    if (!metaRaw) return null;
+    const meta = JSON.parse(metaRaw);
+    if (!meta || !Number.isInteger(meta.count) || meta.count < 1 || meta.count > LINKS_CACHE_MAX_CHUNKS) return null;
+    const parts = [];
+    for (let i = 0; i < meta.count; i++) {
+      const part = cache.get(key + '_PART_' + i);
+      if (part === null) return null;
+      parts.push(part);
+    }
+    return JSON.parse(parts.join(''));
+  } catch (_) { return null; }
+}
+function writeChunkedJsonCache_(key, value, ttl) {
+  const cache = CacheService.getScriptCache();
+  const oldMeta = readJsonCache_(key + '_META');
+  try {
+    const raw = JSON.stringify(value);
+    const count = Math.ceil(raw.length / LINKS_CACHE_CHUNK_LENGTH);
+    if (count < 1 || count > LINKS_CACHE_MAX_CHUNKS) {
+      removeChunkedJsonCache_(key);
+      return;
+    }
+    const values = {};
+    for (let i = 0; i < count; i++) {
+      values[key + '_PART_' + i] = raw.slice(i * LINKS_CACHE_CHUNK_LENGTH, (i + 1) * LINKS_CACHE_CHUNK_LENGTH);
+    }
+    cache.putAll(values, ttl);
+    // メタ情報は全パーツを書き終えてから保存する。
+    cache.put(key + '_META', JSON.stringify({count:count}), ttl);
+    if (oldMeta && Number.isInteger(oldMeta.count)) {
+      const stale = [];
+      for (let i = count; i < Math.min(oldMeta.count, LINKS_CACHE_MAX_CHUNKS); i++) stale.push(key + '_PART_' + i);
+      if (stale.length) cache.removeAll(stale);
+    }
+  } catch (_) {
+    removeChunkedJsonCache_(key);
+  }
+}
+function removeChunkedJsonCache_(key) {
+  const cache = CacheService.getScriptCache();
+  const meta = readJsonCache_(key + '_META');
+  const keys = [key + '_META'];
+  if (meta && Number.isInteger(meta.count)) {
+    for (let i = 0; i < Math.min(meta.count, LINKS_CACHE_MAX_CHUNKS); i++) keys.push(key + '_PART_' + i);
+  }
+  for (let i = 0; i < LINKS_CACHE_MAX_CHUNKS; i++) keys.push(key + '_PART_' + i);
+  cache.removeAll(keys);
+}
 function invalidateLinksCache_() {
-  CacheService.getScriptCache().removeAll(['LINK_CORE_LINKS_ADMIN_V1', 'LINK_CORE_LINKS_VISITOR_V1']);
+  removeChunkedJsonCache_('LINK_CORE_LINKS_ALL_V2');
 }
 function invalidateChatCache_() {
   CacheService.getScriptCache().remove('LINK_CORE_CHAT_MESSAGES_V1');
 }
 
-function readLinks_(sheet, columns) {
-  const lastRow = sheet.getLastRow();
-  let links = [];
-
-  if (lastRow >= 2) {
-    links = sheet
-      .getRange(2, 1, lastRow - 1, sheet.getLastColumn())
-      .getValues()
-      .filter(row => row[columns['ID'] - 1] !== '')
-      .map(row => rowToLink_(row, columns));
-  }
-
-  const categories = Array.from(
-    new Set(links.map(link => link.category).filter(Boolean))
-  ).sort((a, b) => a.localeCompare(b, 'ja'));
-
+function readLinksFromData_(data) {
+  if (!data || !data.length) throw new Error('Linksシートにヘッダーがありません。');
+  const headers = data[0].map(value => String(value || ''));
+  const columns = {};
+  headers.forEach((header, index) => { if (header) columns[header] = index + 1; });
+  HEADERS.forEach(header => {
+    if (!columns[header]) throw new Error('必要な列がありません: ' + header + '。管理者画面を開いてシート構成を確認してください。');
+  });
+  const links = data.slice(1)
+    .filter(row => row[columns['ID'] - 1] !== '' && row[columns['ID'] - 1] != null)
+    .map(row => rowToLink_(row, columns));
+  const categories = Array.from(new Set(links.map(link => link.category).filter(Boolean)))
+    .sort((a, b) => a.localeCompare(b, 'ja'));
   return { links: links, categories: categories };
+}
+function readLinks_(sheet, columns) {
+  return readLinksFromData_(sheet.getDataRange().getValues());
+}
+function readLinksForDisplay_() {
+  const spreadsheetId = PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY);
+  if (!spreadsheetId) throw new Error('スプレッドシートIDが未設定です。');
+  const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+  const sheet = spreadsheet.getSheetByName(SHEET_NAME);
+  if (!sheet) throw new Error('Linksシートがありません。管理者画面で初期設定を行ってください。');
+  // ヘッダーと全データを一度の読み取りで取得する。
+  return readLinksFromData_(sheet.getDataRange().getValues());
 }
 
 /**
@@ -343,19 +405,20 @@ function requireAdmin_(token) {
 function getLinksForToken_(viewerToken) {
   const cache = CacheService.getScriptCache();
   const isAdmin = cache.get('LINK_CORE_ADMIN_' + viewerToken) === 'yes';
-  const cacheKey = isAdmin ? 'LINK_CORE_LINKS_ADMIN_V1' : 'LINK_CORE_LINKS_VISITOR_V1';
-  const cached = readJsonCache_(cacheKey);
-  if (cached) return cached;
-
-  const sheet = ensureSheet_();
-  const result = readLinks_(sheet, getColumnMap_(sheet));
-
-  // 管理者には全件を返す。利用者用キャッシュには公開リンクのみを格納する。
-  if (!isAdmin) {
-    result.links = result.links.filter(link => link.visibleToVisitors === true);
-    result.categories = Array.from(new Set(result.links.map(link => link.category).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'ja'));
+  let result = readChunkedJsonCache_('LINK_CORE_LINKS_ALL_V2');
+  if (!result) {
+    result = readLinksForDisplay_();
+    writeChunkedJsonCache_('LINK_CORE_LINKS_ALL_V2', result, LINKS_CACHE_TTL_SECONDS);
   }
-  writeJsonCache_(cacheKey, result, LINKS_CACHE_TTL_SECONDS);
+
+  // キャッシュはサーバー内に全件を保持し、利用者には返却直前に公開リンクだけを渡す。
+  if (!isAdmin) {
+    const visibleLinks = result.links.filter(link => link.visibleToVisitors === true);
+    return {
+      links: visibleLinks,
+      categories: Array.from(new Set(visibleLinks.map(link => link.category).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'ja'))
+    };
+  }
   return result;
 }
 function getLinks(viewerToken) {
