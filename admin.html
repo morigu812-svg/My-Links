@@ -980,9 +980,12 @@ main { width:100%; max-width:none !important; }
   });
 
   const frame = document.createElement('iframe');
-  frame.src = GAS_URL + '?mode=bridge';
+  // 初期表示に必須のGASブリッジなので、遅延させず高優先度で読み込む。
+  frame.loading = 'eager';
+  frame.setAttribute('fetchpriority', 'high');
   frame.title = 'LINK CORE bridge';
   frame.hidden = true;
+  frame.src = GAS_URL + '?mode=bridge';
   document.body.appendChild(frame);
 
   const READY_TIMEOUT_MS = 10000;
