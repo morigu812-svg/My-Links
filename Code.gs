@@ -299,6 +299,14 @@ function readLinksForDisplay_() {
  * 初回設定状態を返す。パスワード自体は返さない。
  */
 function getAdminSetupStatus() {
+  // ログイン画面の表示中にリンク一覧のサーバーキャッシュを先行準備する。
+  // リンク本体は返さず、認証成功後の getLinks() でのみ管理者に返却する。
+  try {
+    getLinksForToken_(null, false);
+  } catch (error) {
+    // キャッシュ準備に失敗しても、ログイン画面と認証処理は通常どおり続行する。
+    console.warn('LINK CORE cache warm-up failed:', error);
+  }
   return {
     configured: !!PropertiesService.getScriptProperties().getProperty('LINK_CORE_ADMIN_PASSWORD')
   };
