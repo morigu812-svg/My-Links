@@ -485,8 +485,6 @@ chatForm.addEventListener('submit',async e=>{e.preventDefault();const message=ch
 $('search').addEventListener('input',render);
 document.querySelectorAll('[data-view]').forEach(btn=>btn.addEventListener('click',()=>{view=btn.dataset.view;selectedCategory='';render()}));
 
-});
-
 $('sideCats').addEventListener('click',event=>{const btn=event.target.closest('[data-category]');if(!btn)return;selectedCategory=btn.dataset.category;view='all';render()});
 $('list').addEventListener('click',event=>{const folder=event.target.closest('[data-open-folder]');if(folder){selectedCategory=folder.dataset.openFolder;view='all';render();return;}if(event.target.closest('[data-folder-back]')){selectedCategory='';view='desktop';render();}});
 document.querySelector('.sidebar').addEventListener('click',event=>{const btn=event.target.closest('[data-view]');if(!btn)return;selectedCategory='';view=btn.dataset.view;render()});
