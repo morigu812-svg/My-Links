@@ -316,7 +316,8 @@ body.window-resizing,body.window-resizing *{user-select:none!important}
 @media(max-width:720px){.finder-window{width:calc(100vw - 16px);max-width:none;max-height:none;overflow:hidden}.resize-handle{display:block!important}}
 
 .finder-toolbar{cursor:grab}.finder-window.is-moving .finder-toolbar{cursor:grabbing}.finder-window.is-moving{user-select:none}\n</style>
-<meta name="robots" content="noindex, nofollow, noarchive">\n</head>
+<meta name="robots" content="noindex, nofollow, noarchive">
+</head>
 <body>
 <main class="wrap">
 <div class="click-log-notice" id="clickLogNotice" role="status" aria-live="polite"></div>
@@ -413,7 +414,8 @@ function showVisitorLogin(message){
 }
 async function refreshChat(){if(!visitorToken||chatLoading)return;const button=$('refreshChat');chatLoading=true;button.disabled=true;button.classList.add('is-refreshing');button.setAttribute('aria-busy','true');try{const r=await call('getChatMessages',visitorToken);renderChat(Array.isArray(r.messages)?r.messages:[]);chatLoaded=true;}catch(e){if(isVisitorAuthError(e))showVisitorLogin('ログインの有効期限が切れました。もう一度サイトのパスワードを入力してください。');else chatMessages.textContent='読み込みに失敗しました：'+(e.message||'通信エラー');}finally{chatLoading=false;button.disabled=false;button.classList.remove('is-refreshing');button.removeAttribute('aria-busy');}}
 function openChat(){if(!visitorToken){$('loginError').textContent='先に利用者ログインをしてください。';return;}chatOverlay.classList.add('open');if(!chatLoaded)refreshChat();}
-$('openChat').addEventListener('click',openChat);$('refreshChat').addEventListener('click',refreshChat);$('closeChat').addEventListener('click',()=>{chatOverlay.classList.remove('open');});\nsetInterval(()=>{if(chatOverlay.classList.contains('open'))refreshChat();},15000);
+$('openChat').addEventListener('click',openChat);$('refreshChat').addEventListener('click',refreshChat);$('closeChat').addEventListener('click',()=>{chatOverlay.classList.remove('open');});
+setInterval(()=>{if(chatOverlay.classList.contains('open'))refreshChat();},15000);
 chatForm.addEventListener('submit',async e=>{e.preventDefault();const message=chatInput.value.trim();if(!message||!visitorToken)return;chatSend.disabled=true;try{const r=await call('sendChatMessage',message,visitorToken);chatInput.value='';renderChat(Array.isArray(r.messages)?r.messages:[]);chatLoaded=true;}catch(error){if(isVisitorAuthError(error)){showVisitorLogin('ログインの有効期限が切れました。もう一度サイトのパスワードを入力してください。');}else{const s=document.createElement('div');s.className='chat-status';s.textContent=error.message||'送信できませんでした。';chatMessages.appendChild(s);}}finally{chatSend.disabled=false;if(visitorToken)chatInput.focus();}});
 
 $('search').addEventListener('input',render);
