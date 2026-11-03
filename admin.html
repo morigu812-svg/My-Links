@@ -1185,7 +1185,7 @@ main { width:100%; max-width:none !important; }
         
         <button type="button" class="star" aria-pressed="${link.favorite}" aria-label="お気に入り">★</button>
         <div class="body">
-          <a class="title" href="${esc(safeHref(link.url))}" target="_blank" rel="noopener noreferrer">${esc(link.title)}</a>
+          <a class="title" data-open-mode="${link.openMode === 'external' ? 'external' : 'internal'}" href="${esc(safeHref(link.url))}" target="_blank" rel="noopener noreferrer">${esc(link.title)}</a>
           <div class="meta">${esc(host(link.url))}${link.category ? `<span class="tag">${esc(link.category)}</span>` : ''}</div>
           ${link.memo ? `<div class="memo">${esc(link.memo)}</div>` : ''}
         </div>
@@ -1797,6 +1797,7 @@ body.lc-browser-resizing iframe{pointer-events:none!important}
     const anchor=event.target.closest('.item a.title, a.official-card');
     if(!anchor)return;
     if(event.button!==0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)return;
+    if(anchor.dataset.openMode === 'external')return;
     event.preventDefault();
     openInternalBrowser(anchor);
   },true);
