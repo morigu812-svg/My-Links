@@ -1651,7 +1651,8 @@ body.lc-browser-resizing iframe{pointer-events:none!important}
     browserOffset = (browserOffset + 34) % 240;
     win.style.left = Math.max(8, Math.min(window.innerWidth - 340, (window.innerWidth - 780) / 2 + browserOffset)) + 'px';
     win.style.top = Math.max(62, Math.min(window.innerHeight - 220, (window.innerHeight - 560) / 2 + browserOffset)) + 'px';
-    win.style.zIndex = String(++browserZ);\n    win.style.resize = 'none';
+    win.style.zIndex = String(++browserZ);
+    win.style.resize = 'none';
 
     const toolbar = document.createElement('div'); toolbar.className='lc-browser-toolbar';
     const lights=document.createElement('div');lights.className='lc-browser-lights';
