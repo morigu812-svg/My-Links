@@ -316,7 +316,8 @@ body.window-resizing,body.window-resizing *{user-select:none!important}
 @media(max-width:720px){.finder-window{width:calc(100vw - 16px);max-width:none;max-height:none;overflow:hidden}.resize-handle{display:block!important}}
 
 .finder-toolbar{cursor:grab}.finder-window.is-moving .finder-toolbar{cursor:grabbing}.finder-window.is-moving{user-select:none}
-</style>
+/* Finder-style category folders */
+.folder-icon{width:54px;height:44px;color:#e5b84f;filter:drop-shadow(0 3px 7px rgba(0,0,0,.25))}.folder-card{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;min-height:132px;padding:14px 10px;border:1px solid #28536b;border-radius:12px;background:linear-gradient(145deg,rgba(17,39,61,.92),rgba(13,19,39,.96));color:#e8b94f;cursor:pointer;transition:transform .16s,border-color .16s,box-shadow .16s}.folder-card:hover{transform:translateY(-2px);border-color:#4edfff;box-shadow:0 0 18px rgba(0,217,255,.16)}.folder-card-name{max-width:100%;overflow-wrap:anywhere;color:#e9f8ff;font-size:13px;font-weight:750}.folder-card-count{color:#8caabd;font-size:10px}.side-folder-mini{width:18px!important;height:16px;flex:none}.side-folder-mini .folder-icon{width:18px;height:15px;filter:none;color:#d9ad4c}.folder-toolbar{grid-column:1/-1;display:flex;align-items:center;gap:12px;margin:0 0 5px;padding:0 0 12px;border-bottom:1px solid #1a3e54;color:#8eacc0;font-size:11px}.folder-toolbar button{padding:6px 10px;border:1px solid #28536b;border-radius:7px;background:#10283b;color:#bcefff;cursor:pointer}</style>
 <meta name="robots" content="noindex, nofollow, noarchive">
 </head>
 <body>
@@ -394,7 +395,7 @@ function showClickLogNotice(message,isError){
  clearTimeout(clickNoticeTimer);clickNoticeTimer=setTimeout(()=>box.classList.remove('show'),isError?12000:2600);
 }
 
-let links=[],categories=[],view='favorites',selectedCategory='',visitorToken='';
+let links=[],categories=[],view='desktop',selectedCategory='',visitorToken='';
 const READ_NEW_LINKS_KEY='linkCoreReadNewLinksV1';
 let readNewLinkIds=new Set();
 try{
@@ -433,7 +434,8 @@ function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&l
 function visibleLinks(){
  const q=$('search').value.trim().toLowerCase();
  let items=links.filter(x=>x.visibleToVisitors!==false&&String(x.visibleToVisitors).toLowerCase()!=='false').filter(x=>[x.title,x.url,x.memo,x.category].some(v=>String(v||'').toLowerCase().includes(q)));
- if(selectedCategory)items=items.filter(x=>x.category===selectedCategory);
+ if(selectedCategory==='__uncategorized__')items=items.filter(x=>!String(x.category||'').trim());
+ else if(selectedCategory)items=items.filter(x=>x.category===selectedCategory);
  else if(view==='favorites')items=items.filter(x=>x.favorite);
  else if(view==='recent')items=items.slice().sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
  return items;
@@ -441,15 +443,29 @@ function visibleLinks(){
 function render(){
  $('list').setAttribute('aria-busy','false');
  $('list').classList.remove('loading-skeleton');
- const catButtons=categories.map(cat=>'<button type="button" class="side-item '+(selectedCategory===cat?'selected':'')+'" data-category="'+esc(cat)+'"><span>▸</span> '+esc(cat)+'</button>').join('');
- $('sideCats').innerHTML=catButtons||'<div style="padding:4px 10px;color:#999;font-size:11px">カテゴリなし</div>';
+ const folderIcon="<svg class=\"folder-icon\" viewBox=\"0 0 64 52\" aria-hidden=\"true\"><path d=\"M4 10a5 5 0 0 1 5-5h17l7 7h22a5 5 0 0 1 5 5v4H4z\" fill=\"currentColor\" opacity=\".72\"/><path d=\"M4 17a5 5 0 0 1 5-5h46a5 5 0 0 1 5 5v27a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z\" fill=\"currentColor\"/><path d=\"M4 22h56\" stroke=\"#fff\" stroke-opacity=\".35\" stroke-width=\"2\"/></svg>";
+ const folderButton=(name,key,count)=>'<button type="button" class="folder-card" data-open-folder="'+esc(key)+'">'+folderIcon+'<span class="folder-card-name">'+esc(name)+'</span><span class="folder-card-count">'+count+' 個のリンク</span></button>';
+ const catButtons=categories.map(cat=>'<button type="button" class="side-item '+(selectedCategory===cat?'selected':'')+'" data-category="'+esc(cat)+'"><span class="side-folder-mini">'+folderIcon+'</span> '+esc(cat)+'</button>').join('');
+ $('sideCats').innerHTML=catButtons||'<div style="padding:4px 10px;color:#999;font-size:11px">フォルダがありません</div>';
  document.querySelectorAll('[data-view]').forEach(btn=>btn.classList.toggle('selected',!selectedCategory&&btn.dataset.view===view));
  const titles={desktop:'My Desktop',all:'すべてのリンク',favorites:'お気に入り',recent:'最近追加した項目'};
- $('viewTitle').textContent=selectedCategory||titles[view]||'すべてのリンク';
+ $('viewTitle').textContent=selectedCategory==='__uncategorized__'?'未分類':(selectedCategory||titles[view]||'すべてのリンク');
+ const query=$('search').value.trim();
+ if(!selectedCategory&&(view==='desktop'||view==='all')&&!query){
+  const visible=links.filter(x=>x.visibleToVisitors!==false&&String(x.visibleToVisitors).toLowerCase()!=='false');
+  const folders=categories.map(cat=>({name:cat,key:cat,count:visible.filter(x=>x.category===cat).length}));
+  const uncategorized=visible.filter(x=>!String(x.category||'').trim()).length;
+  if(uncategorized)folders.push({name:'未分類',key:'__uncategorized__',count:uncategorized});
+  $('count').textContent=folders.length+' フォルダ';
+  $('loadStatus').textContent='';
+  $('list').innerHTML=folders.length?folders.map(f=>folderButton(f.name,f.key,f.count)).join(''):'<div class="empty">フォルダがありません。</div>';
+  return;
+ }
  const visible=visibleLinks();
  $('count').textContent=visible.length+' 件';
  $('loadStatus').textContent='';
- $('list').innerHTML=visible.length?visible.map(x=>'<article class="item" data-link-id="'+esc(x.id)+'"><div class="body"><a class="title" data-open-mode="'+(x.openMode==='external'?'external':'internal')+'" href="'+esc(/^https?:\/\//i.test(x.url)?x.url:'#')+'" target="_blank" rel="noopener noreferrer">'+esc(x.title)+'</a>'+(x.isNew&&!readNewLinkIds.has(String(x.id))?'<span class="new-label">NEW</span>':'')+'<div class="meta">'+(x.category?'<span class="tag">'+esc(x.category)+'</span>':'')+'</div>'+(x.memo?'<div class="memo">'+esc(x.memo)+'</div>':'')+'</div><span class="item-arrow" aria-hidden="true">↗</span></article>').join(''):'<div class="empty">表示できるリンクがありません。</div>';
+ const back=selectedCategory?'<div class="folder-toolbar"><button type="button" data-folder-back>‹ フォルダ一覧に戻る</button><span>My Desktop　›　'+esc(selectedCategory==='__uncategorized__'?'未分類':selectedCategory)+'</span></div>':'';
+ $('list').innerHTML=back+(visible.length?visible.map(x=>'<article class="item" data-link-id="'+esc(x.id)+'"><div class="body"><a class="title" data-open-mode="'+(x.openMode==='external'?'external':'internal')+'" href="'+esc(/^https?:\/\//i.test(x.url)?x.url:'#')+'" target="_blank" rel="noopener noreferrer">'+esc(x.title)+'</a>'+(x.isNew&&!readNewLinkIds.has(String(x.id))?'<span class="new-label">NEW</span>':'')+'<div class="meta">'+(x.category?'<span class="tag">'+esc(x.category)+'</span>':'')+'</div>'+(x.memo?'<div class="memo">'+esc(x.memo)+'</div>':'')+'</div><span class="item-arrow" aria-hidden="true">↗</span></article>').join(''):'<div class="empty">表示できるリンクがありません。</div>');
 }
 const chatOverlay=$('chatOverlay'),chatMessages=$('chatMessages'),chatForm=$('chatForm'),chatInput=$('chatInput'),chatSend=$('chatSend');let chatLoading=false,chatLoaded=false;
 function renderChat(messages){chatMessages.replaceChildren();if(!messages.length){const e=document.createElement('div');e.className='chat-empty';e.textContent='まだメッセージはありません。最初のメッセージを送ってみましょう。';chatMessages.appendChild(e);return;}messages.forEach(item=>{const bubble=document.createElement('article');bubble.className='chat-message'+(item.author==='管理者'?' admin':'');const meta=document.createElement('div');meta.className='chat-message-meta';const author=document.createElement('strong');author.textContent=item.author==='管理者'?'管理者':'利用者';const time=document.createElement('time');const date=new Date(item.createdAt);time.textContent=isNaN(date.getTime())?'':date.toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});const body=document.createElement('div');body.className='chat-message-body';body.textContent=item.message;meta.append(author,time);bubble.append(meta,body);chatMessages.appendChild(bubble);});chatMessages.scrollTop=chatMessages.scrollHeight;}
@@ -496,6 +512,7 @@ document.addEventListener('fullscreenchange',()=>{
 });
 
 $('sideCats').addEventListener('click',event=>{const btn=event.target.closest('[data-category]');if(!btn)return;selectedCategory=btn.dataset.category;view='all';render()});
+$('list').addEventListener('click',event=>{const folder=event.target.closest('[data-open-folder]');if(folder){selectedCategory=folder.dataset.openFolder;view='all';render();return;}if(event.target.closest('[data-folder-back]')){selectedCategory='';view='desktop';render();}});
 document.querySelector('.sidebar').addEventListener('click',event=>{const btn=event.target.closest('[data-view]');if(!btn)return;selectedCategory='';view=btn.dataset.view;render()});
 const clickLogPending=new Set();
 $('list').addEventListener('click',event=>{
