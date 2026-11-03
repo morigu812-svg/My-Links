@@ -398,7 +398,7 @@ $('list').addEventListener('click',event=>{
  const card=anchor.closest('[data-link-id]');
  if(!card||!visitorToken)return;
  const link=links.find(item=>String(item.id)===card.dataset.linkId);
- if(!link||!/^https?:\\/\\//i.test(link.url))return;
+ if(!link||!(link.url.indexOf('https://')===0||link.url.indexOf('http://')===0))return;
  call('recordLinkClick',link.id,visitorToken).catch(error=>console.warn('[LINK CORE] click log failed',error));
 });
 $('loginForm').addEventListener('submit',async e=>{e.preventDefault();$('loginButton').disabled=true;$('loginError').textContent='認証中…';$('loginRetry').classList.add('hidden');let loadingLinks=false;try{const auth=await call('authenticateVisitor',$('sitePassword').value);if(!auth||!auth.token)throw new Error('閲覧用トークンを取得できませんでした。');visitorToken=auth.token;$('loginPanel').classList.add('hidden');$('linksPanel').classList.remove('hidden');loadingLinks=true;$('loadStatus').textContent='リンクを読み込み中…';$('list').classList.add('loading-skeleton');const data=await call('getLinks',auth.token);links=Array.isArray(data.links)?data.links:[];categories=Array.isArray(data.categories)?data.categories:Array.from(new Set(links.map(x=>x.category).filter(Boolean))).sort();$('sitePassword').value='';$('loginError').textContent='';$('loadStatus').textContent='';render()}catch(err){visitorToken='';if(loadingLinks){$('linksPanel').classList.add('hidden');$('loginPanel').classList.remove('hidden')}$('loginError').textContent=err.message||'ログインできませんでした。';$('loginRetry').classList.remove('hidden');$('loginButton').disabled=false;$('sitePassword').focus()}});
