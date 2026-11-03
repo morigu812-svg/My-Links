@@ -669,7 +669,8 @@ main { width:100%; max-width:none !important; }
 #list .item.visitor-visible{border-color:rgba(177,132,255,.58)!important;box-shadow:0 0 0 1px rgba(177,132,255,.10),0 0 9px rgba(155,105,245,.13)!important}
 #list .item.visitor-hidden{filter:brightness(.82)}
 </style>
-<meta name="robots" content="noindex, nofollow, noarchive">\n</head>
+<meta name="robots" content="noindex, nofollow, noarchive">
+</head>
 <body>
 <section id="authGate" class="auth-gate" aria-labelledby="authTitle">
   <form id="authForm" class="auth-card">
@@ -1372,7 +1373,8 @@ main { width:100%; max-width:none !important; }
     $('addBtn').style.display='';$('search').disabled=false;$('search').placeholder='検索';render();
   }
   document.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>{clickLogPanel.hidden=true;document.querySelector('.workspace').hidden=false;}));
-$('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEventListener('click',()=>{chatOverlay.classList.remove('open');});\n  setInterval(()=>{if(chatOverlay.classList.contains('open'))refreshAdminChat();},15000);
+$('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEventListener('click',()=>{chatOverlay.classList.remove('open');});
+  setInterval(()=>{if(chatOverlay.classList.contains('open'))refreshAdminChat();},15000);
   chatForm.addEventListener('submit',async e=>{e.preventDefault();const message=chatInput.value.trim();if(!message)return;chatSend.disabled=true;try{const r=await serverCall('sendChatMessage',message);chatInput.value='';renderChatMessages(Array.isArray(r.messages)?r.messages:[]);chatLoaded=true;}catch(error){const s=document.createElement('div');s.className='chat-status';s.textContent=error.message||'送信できませんでした。';chatMessages.appendChild(s);}finally{chatSend.disabled=false;chatInput.focus();}});
 
   const memoOverlay = $('memoOverlay');
