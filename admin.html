@@ -780,7 +780,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
     <div id="clickLogStatus" role="status" aria-live="polite"></div>
     <div id="noticeReadAdminBox" class="click-log-status-card"><strong>お知らせ既読数</strong><span id="noticeReadAdminCount">未取得</span><button id="refreshNoticeReadCount" class="btn" type="button">↻ 更新</button></div>
     <div class="click-log-table-wrap"><table class="click-log-table">
-      <thead><tr><th>クリック日時</th><th>リンク名</th><th>URL</th><th>操作</th></tr></thead>
+      <thead><tr><th>クリック日時</th><th>リンク名</th><th>ブラウザID</th><th>URL</th><th>操作</th></tr></thead>
       <tbody id="clickLogRows"><tr><td colspan="4">まだ履歴はありません。</td></tr></tbody>
     </table></div>
   </section>
@@ -1331,11 +1331,12 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   let clickLogsLoaded=false,clickLogsLoading=false;
   function renderClickLogs(logs){
     const body=$('clickLogRows');body.replaceChildren();
-    if(!logs.length){const tr=document.createElement('tr');const td=document.createElement('td');td.colSpan=4;td.className='click-log-empty';td.textContent='まだクリック履歴はありません。';tr.appendChild(td);body.appendChild(tr);return;}
+    if(!logs.length){const tr=document.createElement('tr');const td=document.createElement('td');td.colSpan=5;td.className='click-log-empty';td.textContent='まだクリック履歴はありません。';tr.appendChild(td);body.appendChild(tr);return;}
     logs.forEach(log=>{
       const tr=document.createElement('tr');const time=document.createElement('td');const date=new Date(log.clickedAt);
       time.textContent=isNaN(date.getTime())?'日時不明':date.toLocaleString('ja-JP');
       const title=document.createElement('td');title.textContent=log.title||'（タイトルなし）';
+      const browserCell=document.createElement('td');browserCell.textContent=log.browserId||'旧データ（未識別）';browserCell.className='log-browser-id';
       const urlCell=document.createElement('td');urlCell.className='log-url';
       if(log.url.indexOf('https://')===0||log.url.indexOf('http://')===0){const a=document.createElement('a');a.href=log.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent=log.url;urlCell.appendChild(a);}else{urlCell.textContent=log.url||'';}
       const actionCell=document.createElement('td');actionCell.className='click-log-action';
@@ -1345,7 +1346,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
         try{const result=await serverCall('deleteClickLog',log.id);if(!result||!result.ok)throw new Error('削除完了の応答がありません。');tr.remove();const remaining=body.querySelectorAll('tr').length;if(!remaining){renderClickLogs([]);}const count=body.querySelectorAll('tr').length;$('clickLogStatus').textContent='履歴を1件削除しました。';}
         catch(error){remove.disabled=false;$('clickLogStatus').textContent='削除に失敗しました：'+(error.message||'通信エラー');}
       });
-      actionCell.appendChild(remove);tr.append(time,title,urlCell,actionCell);body.appendChild(tr);
+      actionCell.appendChild(remove);tr.append(time,title,browserCell,urlCell,actionCell);body.appendChild(tr);
     });
   }
   async function refreshClickLogs(){
