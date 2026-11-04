@@ -1212,17 +1212,25 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
     $('viewTitle').textContent = folderName || 'My Desktop';
     const back = state.category ? `<div class="folder-toolbar"><button type="button" data-folder-back>‹ ${state.category !== '__uncategorized__' && folderParent(state.category) ? '親フォルダーに戻る' : 'フォルダー一覧に戻る'}</button><span>My Desktop　›　${esc(state.category === '__uncategorized__' ? '未分類' : state.category.split('/').join('　›　'))}</span></div>` : '';
     const childHtml = folderChildren.map(folder => folderButton(folder.name, folder.key, folder.count)).join('');
-    const linkHtml = links.map(link => `
-      <div class="item ${link.visibleToVisitors === true ? 'visitor-visible' : 'visitor-hidden'}" data-id="${esc(link.id)}">
-        <button type="button" class="star" aria-pressed="${link.favorite}" aria-label="お気に入り">★</button>
-        <div class="body">
-          <a class="title" href="${esc(safeHref(link.url))}" target="_blank" rel="noopener noreferrer">${esc(link.title)}</a>
-          ${link.isNew ? '<span class="new-label">NEW</span>' : ''}
-          <div class="meta">${esc(host(link.url))}${link.category ? `<span class="tag">${esc(link.category)}</span>` : ''}</div>
-          ${link.memo ? `<div class="memo">${esc(link.memo)}</div>` : ''}
+    const linkHtml = links.map(link => {
+      const href = safeHref(link.url);
+      const shot = /^https?:\/\//i.test(link.url) ? 'https://s.wordpress.com/mshots/v1/' + encodeURIComponent(link.url) + '?w=900' : '';
+      return `
+      <div class="item lc-preview-card ${link.visibleToVisitors === true ? 'visitor-visible' : 'visitor-hidden'}" data-id="${esc(link.id)}">
+        <a class="lc-preview-shot" href="${esc(href)}" target="_blank" rel="noopener noreferrer" aria-label="${esc(link.title)}を開く">${shot ? `<img src="${esc(shot)}" alt="${esc(link.title)} のトップページ" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none'">` : ''}</a>
+        <div class="lc-preview-info">
+          <button type="button" class="star" aria-pressed="${link.favorite}" aria-label="お気に入り">★</button>
+          <div class="lc-preview-main">
+            <a class="title" href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(link.title)}</a>
+            ${link.isNew ? '<span class="new-label">NEW</span>' : ''}
+            <div class="meta">${esc(host(link.url))}${link.category ? ` · ${esc(link.category)}` : ''}</div>
+            ${link.memo ? `<div class="memo">${esc(link.memo)}</div>` : ''}
+          </div>
+          <span class="lc-preview-arrow" aria-hidden="true">↗</span>
         </div>
-        <div class="acts"><button type="button" class="edit">編集</button><button type="button" class="del">削除</button></div>
-      </div>`).join('');
+        <div class="lc-preview-actions"><button type="button" class="edit">編集</button><button type="button" class="del">削除</button></div>
+      </div>`;
+    }).join('');
     $('resultCount').textContent = folderChildren.length + ' フォルダー / ' + links.length + ' 件';
     $('list').innerHTML = back + childHtml + linkHtml + (!folderChildren.length && !links.length ? '<div class="empty">このフォルダーは空です。</div>' : '');
   }
@@ -1759,6 +1767,25 @@ body,.finder-window,.finder-toolbar,.finder-layout,.finder-content,.sidebar,
 #finderWindow .finder-toolbar .traffic-lights>span:nth-child(2){background:#febc2e!important}
 #finderWindow .finder-toolbar .traffic-lights>span:nth-child(3){background:#28c840!important}
 .new-badge[hidden]{display:none!important}
+
+/* LINK CORE Padlet-style website previews */
+.lc-preview-card{display:flex;flex-direction:column;overflow:hidden;min-width:0;padding:0!important;border:1px solid #28485c!important;border-radius:14px!important;background:linear-gradient(145deg,#101c2c,#0b1422)!important;box-shadow:0 4px 16px rgba(0,0,0,.18)!important;transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+.lc-preview-card:hover{transform:translateY(-2px);border-color:#35d9ff!important;box-shadow:0 8px 24px rgba(0,210,255,.12)!important}
+.lc-preview-shot{position:relative;display:block;width:100%;aspect-ratio:16/9;overflow:hidden;background:linear-gradient(135deg,#14283d,#0b1728);border-bottom:1px solid #284257}
+.lc-preview-shot img{display:block;width:100%;height:100%;object-fit:cover;object-position:top center}
+.lc-preview-shot::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 65%,rgba(4,10,20,.25));pointer-events:none}
+.lc-preview-info{display:flex;align-items:flex-start;gap:10px;padding:13px 14px 14px;min-width:0}
+.lc-preview-main{flex:1;min-width:0}
+.lc-preview-card .title{display:block;font-size:15px;font-weight:700;line-height:1.45;color:#edf7ff!important;text-decoration:none;overflow-wrap:anywhere}
+.lc-preview-card .meta{margin-top:5px;color:#9bb0c5!important;font-size:11px;overflow-wrap:anywhere}
+.lc-preview-card .memo{margin-top:7px;color:#c0cfdd!important;font-size:12px;line-height:1.55}
+.lc-preview-arrow{flex:0 0 auto;color:#35d9ff;font-size:18px;padding-top:1px}
+.lc-preview-actions{display:flex;gap:7px;justify-content:flex-end;padding:0 12px 12px}
+.lc-preview-actions button{padding:5px 10px;border:1px solid #36566c;border-radius:7px;background:#122338;color:#dcecf8;font-size:11px}
+.lc-preview-actions button:hover{border-color:#35d9ff;color:#fff}
+@media(min-width:680px){#list:has(.lc-preview-card){display:grid;grid-template-columns:repeat(auto-fill,minmax(245px,1fr));align-items:start;gap:15px}#list:has(.lc-preview-card)>.folder-toolbar{grid-column:1/-1}#list:has(.lc-preview-card)>.folder-card{min-width:0}}
+@media(max-width:560px){.lc-preview-info{padding:11px}.lc-preview-card .title{font-size:14px}}
+
 </style>
 <div id="lc-release-overlay" aria-hidden="true">
  <section id="lc-release-dialog" role="dialog" aria-modal="true" aria-labelledby="lc-release-title">
