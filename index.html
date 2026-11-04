@@ -505,7 +505,7 @@ $('list').addEventListener('click',event=>{
  }
  if(clickLogPending.has(String(link.id)))return;
  clickLogPending.add(String(link.id));
- call('recordLinkClick',link.id,visitorToken)
+ call('recordLinkClick',link.id,getNoticeBrowserId(),visitorToken)
   .then(result=>{if(result&&result.ok)showClickLogNotice('「'+link.title+'」のクリック履歴を保存しました。',false);else throw new Error('GASから保存完了の応答がありませんでした。');})
   .catch(error=>{
     const message=error&&error.message?error.message:String(error||'不明なエラー');
