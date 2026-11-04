@@ -280,7 +280,7 @@ body.night-mode .hero,body.night-mode .stat-card,body.night-mode .workspace,body
 body.night-mode .item a{color:#8ba6b9!important}
 
 
-/* Loading shimmer: a soft, flowing highlight while links are being fetched. */
+.notice-read-card{margin:0 0 16px;padding:14px 16px;border:1px solid #3b819d;border-radius:11px;background:linear-gradient(120deg,rgba(12,38,59,.96),rgba(10,22,42,.96));box-shadow:0 0 16px #00cfff12;color:#e8f5ff}.notice-read-card[hidden]{display:none!important}.notice-read-title{margin-bottom:7px;color:#73eaff;font-size:12px;font-weight:850;letter-spacing:.08em}.notice-read-body{font-size:12px;line-height:1.9;color:#d8e9f5}.notice-read-actions{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:10px}.notice-read-actions button{padding:7px 12px;border:1px solid #35d9ff;border-radius:7px;border-radius:7px;background:linear-gradient(135deg,#087fa9,#273f9b);color:#fff;font-size:11px;font-weight:750}.notice-read-actions button:disabled{opacity:.55;cursor:default}#noticeReadCount{color:#ffe58a;font-size:11px;font-weight:800}#noticeReadStatus{color:#8edfff;font-size:11px}/* Loading shimmer: a soft, flowing highlight while links are being fetched. */
 .loading-skeleton{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;width:100%;}
 .loading-card{min-height:112px;padding:16px;border:1px solid rgba(53,217,255,.18);border-radius:12px;background:linear-gradient(110deg,rgba(13,28,49,.88) 25%,rgba(32,72,96,.58) 38%,rgba(13,28,49,.88) 52%);background-size:220% 100%;animation:linkCoreShimmer 1.45s ease-in-out infinite;}
 .loading-line{height:9px;margin:5px 0 12px;border-radius:6px;background:rgba(154,201,224,.12);}
@@ -339,7 +339,7 @@ body.window-resizing,body.window-resizing *{user-select:none!important}
 <div class="side-label">カテゴリ</div><div id="sideCats" class="side-cats"></div>
 </aside><section class="finder-content"><div class="workspace">
 <div class="section-heading"><div><span class="section-kicker">MY DESKTOP / LINK LIBRARY</span><h2 id="viewTitle">お気に入り</h2></div><span class="section-note">ICON VIEW</span></div>
-<div class="list-heading"><span class="list-heading-title"><span class="heading-dot">◆</span> LINK FEED</span><span class="result-count" id="count"></span></div>
+<div id="noticeReadCard" class="notice-read-card" hidden><div class="notice-read-title">お知らせ・リンク修正</div><div class="notice-read-body">ごめんなさい！YouTubeの項目にある「みんとtube+」のリンクを間違えていました！<br>新リンク：YouTube ＞ みんとtube+<br>新リンク：ブログ ＞ 制限回避リンク集</div><div class="notice-read-actions"><button type="button" id="markNoticeRead">確認して既読にする</button><span id="noticeReadCount">既読 0件</span><span id="noticeReadStatus" role="status"></span></div></div><div class="list-heading"><span class="list-heading-title"><span class="heading-dot">◆</span> LINK FEED</span><span class="result-count" id="count"></span></div>
 <div class="status" id="loadStatus" role="status" aria-live="polite"></div>
 <div class="list loading-skeleton" id="list" role="region" aria-label="リンク一覧" aria-live="polite" aria-busy="true"><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div></div>
 </div></section></div>
@@ -515,7 +515,37 @@ $('list').addEventListener('click',event=>{
   })
   .finally(()=>clickLogPending.delete(String(link.id)));
 });
-$('loginForm').addEventListener('submit',async e=>{e.preventDefault();$('loginButton').disabled=true;$('loginError').textContent='認証中…';$('loginRetry').classList.add('hidden');let loadingLinks=false;try{await visitorWarmupPromise;const auth=await call('authenticateVisitor',$('sitePassword').value);if(!auth||!auth.token)throw new Error('閲覧用トークンを取得できませんでした。');visitorToken=auth.token;$('loginPanel').classList.add('hidden');$('linksPanel').classList.remove('hidden');loadingLinks=true;$('loadStatus').textContent='リンクを読み込み中…';$('list').classList.add('loading-skeleton');const data={links:auth.links,categories:auth.categories};links=Array.isArray(data.links)?data.links:[];categories=Array.isArray(data.categories)?data.categories:Array.from(new Set(links.map(x=>x.category).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'ja'));if(view==='favorites'&&!links.some(x=>x.favorite))view='all';$('sitePassword').value='';$('loginError').textContent='';$('loadStatus').textContent='';render()}catch(err){visitorToken='';if(loadingLinks){$('linksPanel').classList.add('hidden');$('loginPanel').classList.remove('hidden')}$('loginError').textContent=err.message||'ログインできませんでした。';$('loginRetry').classList.remove('hidden');$('loginButton').disabled=false;$('sitePassword').focus()}});
+
+const NOTICE_ID='link-fix-20261104';
+const NOTICE_BROWSER_KEY='linkCoreNoticeBrowserIdV1';
+function getNoticeBrowserId(){
+ let id=localStorage.getItem(NOTICE_BROWSER_KEY);
+ if(!id){id=(crypto.randomUUID&&crypto.randomUUID())||('browser-'+Date.now()+'-'+Math.random().toString(36).slice(2));localStorage.setItem(NOTICE_BROWSER_KEY,id);}
+ return id;
+}
+async function loadNoticeReadState(){
+ if(!visitorToken)return;
+ const card=$('noticeReadCard'),button=$('markNoticeRead');
+ card.hidden=false;
+ const already=localStorage.getItem('linkCoreNoticeRead:'+NOTICE_ID)==='1';
+ button.disabled=already;button.textContent=already?'既読済み':'確認して既読にする';
+ try{const result=await call('getNoticeReadCount',visitorToken,NOTICE_ID);$('noticeReadCount').textContent='既読 '+Number(result.count||0)+'件';}
+ catch(error){$('noticeReadStatus').textContent='既読数を取得できませんでした。';}
+}
+$('markNoticeRead').addEventListener('click',async()=>{
+ if(!visitorToken)return;
+ const button=$('markNoticeRead');
+ if(localStorage.getItem('linkCoreNoticeRead:'+NOTICE_ID)==='1'){button.disabled=true;return;}
+ button.disabled=true;$('noticeReadStatus').textContent='登録中…';
+ try{
+  const result=await call('markNoticeRead',visitorToken,NOTICE_ID,getNoticeBrowserId());
+  localStorage.setItem('linkCoreNoticeRead:'+NOTICE_ID,'1');
+  button.textContent='既読済み';$('noticeReadCount').textContent='既読 '+Number(result.count||0)+'件';
+  $('noticeReadStatus').textContent=result.added?'既読にしました。':'このブラウザでは既読済みです。';
+ }catch(error){$('noticeReadStatus').textContent=error.message||'既読登録に失敗しました。';button.disabled=false;}
+});
+
+$('loginForm').addEventListener('submit',async e=>{e.preventDefault();$('loginButton').disabled=true;$('loginError').textContent='認証中…';$('loginRetry').classList.add('hidden');let loadingLinks=false;try{await visitorWarmupPromise;const auth=await call('authenticateVisitor',$('sitePassword').value);if(!auth||!auth.token)throw new Error('閲覧用トークンを取得できませんでした。');visitorToken=auth.token;$('loginPanel').classList.add('hidden');$('linksPanel').classList.remove('hidden');loadingLinks=true;$('loadStatus').textContent='リンクを読み込み中…';$('list').classList.add('loading-skeleton');const data={links:auth.links,categories:auth.categories};links=Array.isArray(data.links)?data.links:[];categories=Array.isArray(data.categories)?data.categories:Array.from(new Set(links.map(x=>x.category).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'ja'));if(view==='favorites'&&!links.some(x=>x.favorite))view='all';$('sitePassword').value='';$('loginError').textContent='';$('loadStatus').textContent='';render();loadNoticeReadState()}catch(err){visitorToken='';if(loadingLinks){$('linksPanel').classList.add('hidden');$('loginPanel').classList.remove('hidden')}$('loginError').textContent=err.message||'ログインできませんでした。';$('loginRetry').classList.remove('hidden');$('loginButton').disabled=false;$('sitePassword').focus()}});
 
 $('loginRetry').addEventListener('click',()=>{$('loginRetry').classList.add('hidden');$('loginForm').requestSubmit()});
 // タブへ戻った際にセッションを確認し、期限切れならその場でパスワード欄へ戻す。
