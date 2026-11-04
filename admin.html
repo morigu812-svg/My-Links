@@ -778,6 +778,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
       <div class="click-log-actions"><button id="refreshClickLogs" class="btn" type="button">↻ 再読み込み</button><button id="deleteClickLogs" class="btn danger" type="button">履歴をすべて削除</button></div>
     </div>
     <div id="clickLogStatus" role="status" aria-live="polite"></div>
+    <div id="noticeReadAdminBox" class="click-log-status-card"><strong>お知らせ既読数</strong><span id="noticeReadAdminCount">未取得</span><button id="refreshNoticeReadCount" class="btn" type="button">↻ 更新</button></div>
     <div class="click-log-table-wrap"><table class="click-log-table">
       <thead><tr><th>クリック日時</th><th>リンク名</th><th>URL</th><th>操作</th></tr></thead>
       <tbody id="clickLogRows"><tr><td colspan="4">まだ履歴はありません。</td></tr></tbody>
@@ -944,7 +945,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   }
 
   function serverCall(method, ...args) {
-    const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'saveOfficialLink', 'deleteOfficialLink', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'sendChatMessage', 'getClickLogs', 'deleteClickLogs', 'deleteClickLog'];
+    const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'saveOfficialLink', 'deleteOfficialLink', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'sendChatMessage', 'getClickLogs', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount'];
     if (protectedMethods.includes(method)) {
       const token = sessionStorage.getItem(ADMIN_TOKEN_KEY) || '';
       // 呼び出し元（埋め込みメモ帳など）が既にトークンを渡している場合は二重追加しない。
@@ -1362,6 +1363,14 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
     if(!clickLogsLoaded)refreshClickLogs();
   }
   $('sideClickLogs').addEventListener('click',openClickLogs);
+  async function refreshNoticeReadCount(){
+    const output=$('noticeReadAdminCount'),button=$('refreshNoticeReadCount');
+    if(button)button.disabled=true;
+    try{const result=await serverCall('getNoticeReadCount','link-fix-20261104');output.textContent='既読 '+Number(result.count||0)+'件';}
+    catch(error){output.textContent='取得失敗：'+(error.message||'通信エラー');}
+    finally{if(button)button.disabled=false;}
+  }
+  $('refreshNoticeReadCount').addEventListener('click',refreshNoticeReadCount);
   $('refreshClickLogs').addEventListener('click',refreshClickLogs);
   $('deleteClickLogs').addEventListener('click',async()=>{
     if(!sessionStorage.getItem(ADMIN_TOKEN_KEY)){alert('先に管理者ログインをしてください。');return;}
