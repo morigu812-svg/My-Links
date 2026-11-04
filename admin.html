@@ -949,7 +949,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   }
 
   function serverCall(method, ...args) {
-    const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'saveOfficialLink', 'deleteOfficialLink', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'sendChatMessage', 'getClickLogs', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount'];
+    const protectedMethods = ['getLinks', 'getLinkPreviews', 'getOfficialLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'saveOfficialLink', 'deleteOfficialLink', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'sendChatMessage', 'getClickLogs', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount'];
     if (protectedMethods.includes(method)) {
       const token = sessionStorage.getItem(ADMIN_TOKEN_KEY) || '';
       // 呼び出し元（埋め込みメモ帳など）が既にトークンを渡している場合は二重追加しない。
@@ -1193,7 +1193,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
     const waiting=items.filter(item=>/^https?:\/\//i.test(item.url)&&!linkPreviewCache.has(item.url)&&!linkPreviewPending.has(item.url));
     if(!waiting.length){applyLinkPreviewImages(items);return;}
     waiting.forEach(item=>linkPreviewPending.add(item.url));
-    try{const response=await serverCall('getLinkPreviews',waiting.map(item=>item.url));Object.keys(response||{}).forEach(url=>linkPreviewCache.set(url,response[url]||{}));}
+    try{const response=await serverCall('getLinkPreviews',waiting.map(item=>item.url));(Array.isArray(response)?response:[]).forEach(meta=>{if(meta&&meta.url)linkPreviewCache.set(meta.url,meta);});}
     catch(error){console.warn('[LINK CORE] preview metadata failed',error);waiting.forEach(item=>linkPreviewCache.set(item.url,{}));}
     finally{waiting.forEach(item=>linkPreviewPending.delete(item.url));applyLinkPreviewImages(items);}
   }
