@@ -1101,3 +1101,84 @@ function markNoticeRead(viewerToken, noticeId, browserId) {
     return {added:true,count:rows.filter(row=>row[0]===id).length};
   }finally{lock.releaseLock();}
 }
+
+
+/* サイトのOGP情報をGAS側で取得するプレビュー機能 */
+const LINK_PREVIEW_CACHE_SECONDS = 21600;
+function linkPreviewCacheKey_(url) {
+  const bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, url);
+  return 'LINK_CORE_PREVIEW_' + bytes.map(b => ('0' + ((b + 256) % 256).toString(16)).slice(-2)).join('').slice(0, 40);
+}
+function isPublicPreviewUrl_(value) {
+  const url = normalizeUrl_(value);
+  const parsed = url.match(/^https?:\/\/([^\/:?#]+)(?::\d+)?(?:[\/?#]|$)/i);
+  if (!parsed) throw new Error('URLの形式が正しくありません。');
+  const host = parsed[1].toLowerCase().replace(/^\[|\]$/g, '');
+  if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local') ||
+      host === '0.0.0.0' || host === '::1' ||
+      /^(10\.|127\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.)/.test(host) ||
+      /^\d{1,3}(?:\.\d{1,3}){3}$/.test(host) ||
+      !host.includes('.')) throw new Error('公開WebサイトのURLのみ取得できます。');
+  return url;
+}
+function decodeHtmlEntities_(value) {
+  return String(value || '').replace(/&amp;/gi,'&').replace(/&quot;/gi,'"')
+    .replace(/&#39;|&apos;/gi,"'").replace(/&lt;/gi,'<').replace(/&gt;/gi,'>')
+    .replace(/&#(\d+);/g,(_,n)=>String.fromCharCode(Number(n)))
+    .replace(/&#x([0-9a-f]+);/gi,(_,n)=>String.fromCharCode(parseInt(n,16)));
+}
+function extractMetaContent_(html, key) {
+  const escaped = key.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  const patterns = [
+    new RegExp('<meta[^>]+(?:property|name)\\s*=\\s*["\\']'+escaped+'["\\'][^>]+content\\s*=\\s*["\\']([^"\\']*)["\\'][^>]*>','i'),
+    new RegExp('<meta[^>]+content\\s*=\\s*["\\']([^"\\']*)["\\'][^>]+(?:property|name)\\s*=\\s*["\\']'+escaped+'["\\'][^>]*>','i')
+  ];
+  for (let i=0;i<patterns.length;i++){const m=html.match(patterns[i]);if(m)return decodeHtmlEntities_(m[1]);}
+  return '';
+}
+function getLinkPreviewOne_(rawUrl) {
+  const url = isPublicPreviewUrl_(rawUrl);
+  const key = linkPreviewCacheKey_(url);
+  const cached = CacheService.getScriptCache().get(key);
+  if (cached) { try { return JSON.parse(cached); } catch (_) {} }
+  const result = {url:url,title:'',description:'',image:'',siteName:''};
+  try {
+    const response = UrlFetchApp.fetch(url,{muteHttpExceptions:true,followRedirects:false,
+      validateHttpsCertificates:true,timeout:10000,headers:{'User-Agent':'Mozilla/5.0 (compatible; LINKCOREPreview/1.0)'}});
+    const status = response.getResponseCode();
+    if (status >= 300 && status < 400) {
+      const headers = response.getAllHeaders();
+      const location = headers.Location || headers.location;
+      if (location) {
+        const next = /^https?:\/\//i.test(String(location)) ? String(location) : new URL; // relative redirect is handled below
+        if (next !== new URL) throw new Error('redirect');
+      }
+    }
+    if (status >= 200 && status < 300) {
+      const headers = response.getHeaders();
+      const type = String(headers['Content-Type'] || headers['content-type'] || '');
+      if (/text\/html|application\/xhtml/i.test(type)) {
+        const html = response.getContentText().slice(0,1000000);
+        result.title = extractMetaContent_(html,'og:title') || ((html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)||[])[1]||'').replace(/<[^>]*>/g,'').trim();
+        result.description = extractMetaContent_(html,'og:description') || extractMetaContent_(html,'description');
+        result.siteName = extractMetaContent_(html,'og:site_name');
+        let image = extractMetaContent_(html,'og:image') || extractMetaContent_(html,'twitter:image');
+        if (image) {
+          if (/^\/\//.test(image)) image = 'https:' + image;
+          else if (/^\//.test(image)) image = url.match(/^(https?:\/\/[^/]+)/i)[1] + image;
+          else if (!/^https?:\/\//i.test(image)) image = url.replace(/\/$/,'') + '/' + image.replace(/^\.\//,'');
+          if (/^https?:\/\//i.test(image)) result.image = image;
+        }
+      }
+    }
+  } catch (error) {
+    console.warn('LINK CORE preview fetch failed: ' + url + ' : ' + error);
+  }
+  CacheService.getScriptCache().put(key,JSON.stringify(result),LINK_PREVIEW_CACHE_SECONDS);
+  return result;
+}
+function getLinkPreviews(urls, viewerToken) {
+  requireLinkViewer_(viewerToken);
+  if (!Array.isArray(urls)) throw new Error('URL一覧が不正です。');
+  return urls.slice(0,30).map(url => getLinkPreviewOne_(url));
+}
