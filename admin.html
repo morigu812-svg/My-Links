@@ -816,8 +816,8 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
     <input id="fTitle" type="text" maxlength="200" required>
     <label for="fUrl">URL</label>
     <input id="fUrl" type="text" inputmode="url" placeholder="https://example.com" required>
-    <label for="fCat">カテゴリ</label>
-    <input id="fCat" type="text" maxlength="50" list="catList">
+    <label for="fCat">フォルダー（階層は「/」で区切る）</label>
+    <input id="fCat" type="text" maxlength="50" list="catList" placeholder="例：ブログ/技術">
     <datalist id="catList"></datalist>
     <label for="fMemo">メモ</label>
     <textarea id="fMemo" rows="3"></textarea>
@@ -1157,48 +1157,62 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
     render();
   }
 
+  function folderParts(path) { return String(path || '').split('/').map(part => part.trim()).filter(Boolean); }
+  function folderParent(path) { const parts = folderParts(path); parts.pop(); return parts.join('/'); }
+  function childFolders(path, sourceLinks) {
+    const prefix = path ? path + '/' : '';
+    const names = new Set();
+    (sourceLinks || []).forEach(link => {
+      const category = String(link.category || '').trim();
+      if (!category.startsWith(prefix)) return;
+      const next = category.slice(prefix.length).split('/')[0];
+      if (next) names.add(next);
+    });
+    return Array.from(names).sort((x, y) => x.localeCompare(y, 'ja')).map(name => {
+      const key = prefix + name;
+      const count = (sourceLinks || []).filter(link => String(link.category || '') === key || String(link.category || '').startsWith(key + '/')).length;
+      return { name, key, count };
+    });
+  }
   function visibleLinks() {
     const q = state.query.trim().toLowerCase();
-
     return state.links
       .filter(link => state.view !== 'favorites' || link.favorite)
-      .filter(link => state.category === '__uncategorized__' ? !String(link.category || '').trim() : (!state.category || link.category === state.category))
-      .filter(link => !q || [link.title, link.url, link.memo, link.category]
-        .some(text => text.toLowerCase().includes(q)))
+      .filter(link => state.category === '__uncategorized__' ? !String(link.category || '').trim() : (!state.category || String(link.category || '') === state.category))
+      .filter(link => !q || [link.title, link.url, link.memo, link.category].some(text => text.toLowerCase().includes(q)))
       .sort((a, b) => state.view === 'recent'
         ? String(b.createdAt || '').localeCompare(String(a.createdAt || ''))
         : (b.favorite - a.favorite) || String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
   }
-
   function render() {
     $('list').setAttribute('aria-busy', 'false');
     $('list').classList.remove('loading-skeleton');
     const folderIcon = "<svg class=\"folder-icon\" viewBox=\"0 0 64 52\" aria-hidden=\"true\"><path d=\"M4 10a5 5 0 0 1 5-5h17l7 7h22a5 5 0 0 1 5 5v4H4z\" fill=\"currentColor\" opacity=\".72\"/><path d=\"M4 17a5 5 0 0 1 5-5h46a5 5 0 0 1 5 5v27a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z\" fill=\"currentColor\"/><path d=\"M4 22h56\" stroke=\"#fff\" stroke-opacity=\".35\" stroke-width=\"2\"/></svg>";
     const folderButton = (name, key, count) => `<button type="button" class="folder-card" data-open-folder="${esc(key)}">${folderIcon}<span class="folder-card-name">${esc(name)}</span><span class="folder-card-count">${count} 個のリンク</span></button>`;
-    const sideFolders = state.categories.map(cat => `<button type="button" class="side-item ${state.category === cat ? 'selected' : ''}" data-side-cat="${esc(cat)}"><span class="side-folder-mini">${folderIcon}</span> ${esc(cat)}</button>`);
+    const sideFolders = state.categories.map(cat => {
+      const depth = Math.max(0, folderParts(cat).length - 1);
+      const label = folderParts(cat).slice(-1)[0] || cat;
+      return `<button type="button" class="side-item ${state.category === cat ? 'selected' : ''}" style="padding-left:${10 + depth * 12}px" data-side-cat="${esc(cat)}"><span class="side-folder-mini">${folderIcon}</span> ${esc(label)}</button>`;
+    });
     if (state.links.some(link => !String(link.category || '').trim())) sideFolders.push(`<button type="button" class="side-item ${state.category === '__uncategorized__' ? 'selected' : ''}" data-side-cat="__uncategorized__"><span class="side-folder-mini">${folderIcon}</span> 未分類</button>`);
     $('sideCats').innerHTML = sideFolders.join('') || '<div class="side-empty">フォルダがありません</div>';
     $('catList').innerHTML = state.categories.map(c => `<option value="${esc(c)}">`).join('');
-
     if (!state.category && (state.view === 'desktop' || state.view === 'all') && !state.query.trim()) {
-      const folders = state.categories.map(cat => ({name:cat,key:cat,count:state.links.filter(link => link.category === cat).length}));
+      const folders = childFolders('', state.links);
       const uncategorized = state.links.filter(link => !String(link.category || '').trim()).length;
       if (uncategorized) folders.push({name:'未分類',key:'__uncategorized__',count:uncategorized});
       $('viewTitle').textContent = 'My Desktop';
       $('resultCount').textContent = folders.length + ' フォルダ';
-      $('list').innerHTML = folders.length ? folders.map(folder => folderButton(folder.name,folder.key,folder.count)).join('') : '<div class="empty">フォルダがありません。「リンクを追加」からリンクを登録できます。</div>';
+      $('list').innerHTML = folders.length ? folders.map(folder => folderButton(folder.name, folder.key, folder.count)).join('') : '<div class="empty">フォルダがありません。「リンクを追加」から登録できます。</div>';
       return;
     }
-
     const links = visibleLinks();
-    $('resultCount').textContent = `${links.length} / ${state.links.length} 件を表示`;
+    const folderChildren = state.category && state.category !== '__uncategorized__' ? childFolders(state.category, state.links) : [];
     const folderName = state.category === '__uncategorized__' ? '未分類' : state.category;
-    const back = state.category ? `<div class="folder-toolbar"><button type="button" data-folder-back>‹ フォルダ一覧に戻る</button><span>My Desktop　›　${esc(folderName)}</span></div>` : '';
-    if (!links.length) {
-      $('list').innerHTML = back + `<div class="empty">${state.links.length ? '条件に合うリンクがありません。' : 'まだリンクがありません。「リンクを追加」から登録してください。'}</div>`;
-      return;
-    }
-    $('list').innerHTML = back + links.map(link => `
+    $('viewTitle').textContent = folderName || 'My Desktop';
+    const back = state.category ? `<div class="folder-toolbar"><button type="button" data-folder-back>‹ ${state.category !== '__uncategorized__' && folderParent(state.category) ? '親フォルダーに戻る' : 'フォルダー一覧に戻る'}</button><span>My Desktop　›　${esc(state.category === '__uncategorized__' ? '未分類' : state.category.split('/').join('　›　'))}</span></div>` : '';
+    const childHtml = folderChildren.map(folder => folderButton(folder.name, folder.key, folder.count)).join('');
+    const linkHtml = links.map(link => `
       <div class="item ${link.visibleToVisitors === true ? 'visitor-visible' : 'visitor-hidden'}" data-id="${esc(link.id)}">
         <button type="button" class="star" aria-pressed="${link.favorite}" aria-label="お気に入り">★</button>
         <div class="body">
@@ -1209,7 +1223,10 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
         </div>
         <div class="acts"><button type="button" class="edit">編集</button><button type="button" class="del">削除</button></div>
       </div>`).join('');
+    $('resultCount').textContent = folderChildren.length + ' フォルダー / ' + links.length + ' 件';
+    $('list').innerHTML = back + childHtml + linkHtml + (!folderChildren.length && !links.length ? '<div class="empty">このフォルダーは空です。</div>' : '');
   }
+
   async function run(label, task, doneText) {
     if (state.busy) return;
     setBusy(true);
@@ -1584,7 +1601,7 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
   $('list').addEventListener('click', event => {
     const folder = event.target.closest('[data-open-folder]');
     if (folder) { state.category = folder.dataset.openFolder; state.view = 'all'; $('viewTitle').textContent = state.category === '__uncategorized__' ? '未分類' : state.category; updateSidebar(); render(); return; }
-    if (event.target.closest('[data-folder-back]')) { state.category = ''; state.view = 'all'; $('viewTitle').textContent = 'My Desktop'; updateSidebar(); render(); return; }
+    if (event.target.closest('[data-folder-back]')) { state.category = state.category === '__uncategorized__' ? '' : folderParent(state.category); state.view = 'all'; $('viewTitle').textContent = state.category || 'My Desktop'; updateSidebar(); render(); return; }
     const item = event.target.closest('.item');
     if (!item) return;
     const link = state.links.find(l => l.id === item.dataset.id);
@@ -1746,7 +1763,8 @@ body,.finder-window,.finder-toolbar,.finder-layout,.finder-content,.sidebar,
 <div id="lc-release-overlay" aria-hidden="true">
  <section id="lc-release-dialog" role="dialog" aria-modal="true" aria-labelledby="lc-release-title">
   <header id="lc-release-head"><div><small>LINK CORE / CHANGELOG</small><h2 id="lc-release-title">リリースノート</h2></div><button id="lc-release-close" type="button" aria-label="閉じる">×</button></header>
-  <div id="lc-release-content"><article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v2.1.0</span><time datetime="2026-11-04">2026年11月4日</time></div><h3>ブラウザー識別・通知管理・ホーム画面アイコンを改善</h3><ul><li>リンクのクリック履歴にブラウザーIDを記録し、どのブラウザー環境から操作されたか確認できるようにしました。</li><li>お知らせの既読状態をブラウザーごとに管理し、管理者画面から既読件数を確認できるようにしました。</li><li>ホーム画面に追加したときのLINK COREアイコンを、専用のアイコン画像に更新しました。</li><li>利用者画面・管理者画面から、内部ブラウザーやウィンドウの移動・サイズ変更などの機能を整理し、リンクをシンプルに開けるようにしました。</li></ul></article>
+  <div id="lc-release-content"><article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v2.2.0</span><time datetime="2026-11-05">2026年11月5日</time></div><h3>フォルダーの階層化に対応</h3><ul><li>フォルダーの中にサブフォルダーを作れるようになりました。</li><li>フォルダー名を「親フォルダー/子フォルダー」の形式で指定すると、階層として表示されます。</li><li>親フォルダー内では、その直下のサブフォルダーとリンクを表示します。</li><li>階層をたどるパンくず表示と、親フォルダーへ戻る操作に対応しました。</li><li>既存のカテゴリ名・リンク情報・スプレッドシートの列構成は変更していません。</li></ul></article>
+   <article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v2.1.0</span><time datetime="2026-11-04">2026年11月4日</time></div><h3>ブラウザー識別・通知管理・ホーム画面アイコンを改善</h3><ul><li>リンクのクリック履歴にブラウザーIDを記録し、どのブラウザー環境から操作されたか確認できるようにしました。</li><li>お知らせの既読状態をブラウザーごとに管理し、管理者画面から既読件数を確認できるようにしました。</li><li>ホーム画面に追加したときのLINK COREアイコンを、専用のアイコン画像に更新しました。</li><li>利用者画面・管理者画面から、内部ブラウザーやウィンドウの移動・サイズ変更などの機能を整理し、リンクをシンプルに開けるようにしました。</li></ul></article>
    
    <article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v2.0.0</span><time datetime="2026-11-03">2026年11月3日</time></div><h3>カテゴリーをフォルダ形式に変更</h3><ul><li>利用者画面・管理者画面のMy Desktopに、既存カテゴリーをフォルダアイコンで表示するようにしました。</li><li>フォルダを開くと、そのカテゴリーに登録されたリンクだけを表示します。</li><li>フォルダ内から一覧へ戻る操作と、サイドバーから直接フォルダを開く操作に対応しました。</li><li>カテゴリーが未設定のリンクは「未分類」フォルダにまとめて表示します。</li><li>既存のリンク情報やスプレッドシートの保存形式は変更していません。</li></ul></article>
    <article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v1.9.0</span><time datetime="2026-11-03">2026年11月3日</time></div><h3>NEW表示とログイン時の読み込みを改善</h3><ul><li>利用者画面でNEW付きのリンクを開くと、そのブラウザーではNEW表示が消えるようになりました。</li><li>管理者チャット・ブラウザ・リリースノートのサイドバーにあるNEW表示も、各タブを開くとブラウザーごとに既読として保存されます。</li><li>ページを再読み込みしても既読状態を維持し、別のブラウザーでは未読状態を個別に管理します。</li><li>ログイン画面を表示している間にGASとの接続・リンク一覧のキャッシュ準備を進め、ログイン後の待ち時間を減らすよう改善しました。</li></ul></article>
