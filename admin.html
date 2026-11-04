@@ -660,6 +660,8 @@ main { width:100%; max-width:none !important; }
 #finderWindow>.finder-layout{flex:1 1 auto;min-height:0}
 #finderWindow .finder-content{min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;touch-action:pan-y pan-x}
 #finderWindow .finder-toolbar{flex:0 0 auto;touch-action:pan-y pan-x}
+/* OGP preview media */
+.lc-preview-media{position:relative;width:100%;height:100%;min-height:120px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:linear-gradient(135deg,#14283d,#0b1728)}.lc-preview-media img{width:100%;height:100%;min-height:120px;object-fit:cover;object-position:top center}.preview-loading{color:#8ca9bc;font-size:11px}.preview-site-label{position:absolute;left:8px;bottom:7px;padding:3px 7px;border-radius:5px;background:#06101dcc;color:#eaf8ff;font-size:10px;max-width:85%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.preview-no-image:after{content:'サイト画像なし';color:#9ab0c2;font-size:12px}
 </style>
 <style>
 .click-log-panel{min-width:0;padding:25px 27px}
@@ -1184,6 +1186,32 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
         ? String(b.createdAt || '').localeCompare(String(a.createdAt || ''))
         : (b.favorite - a.favorite) || String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
   }
+
+  const linkPreviewCache = new Map();
+  const linkPreviewPending = new Set();
+  async function loadLinkPreviews(items) {
+    const waiting=items.filter(item=>/^https?:\/\//i.test(item.url)&&!linkPreviewCache.has(item.url)&&!linkPreviewPending.has(item.url));
+    if(!waiting.length){applyLinkPreviewImages(items);return;}
+    waiting.forEach(item=>linkPreviewPending.add(item.url));
+    try{const response=await serverCall('getLinkPreviews',waiting.map(item=>item.url));Object.keys(response||{}).forEach(url=>linkPreviewCache.set(url,response[url]||{}));}
+    catch(error){console.warn('[LINK CORE] preview metadata failed',error);waiting.forEach(item=>linkPreviewCache.set(item.url,{}));}
+    finally{waiting.forEach(item=>linkPreviewPending.delete(item.url));applyLinkPreviewImages(items);}
+  }
+  function applyLinkPreviewImages(items){
+    items.forEach(item=>{
+      const media=Array.from(document.querySelectorAll('.lc-preview-media')).find(el=>el.dataset.previewUrl===item.url);
+      if(!media||media.dataset.loaded==='1')return;
+      const meta=linkPreviewCache.get(item.url);if(!meta)return;
+      media.dataset.loaded='1';
+      const img=document.createElement('img');img.alt=(meta.title||item.title||'サイト')+' のプレビュー';img.loading='lazy';img.referrerPolicy='no-referrer';
+      let host='';try{host=new URL(item.url).hostname}catch(_){}
+      const favicon='https://www.google.com/s2/favicons?domain='+encodeURIComponent(host)+'&sz=256';
+      img.onerror=()=>{if(img.dataset.fallback!=='1'){img.dataset.fallback='1';img.src=favicon;}else{img.remove();media.classList.add('preview-no-image');}};
+      img.src=meta.image||favicon;media.appendChild(img);
+      const label=document.createElement('span');label.className='preview-site-label';label.textContent=meta.siteName||host;media.appendChild(label);
+    });
+  }
+
   function render() {
     $('list').setAttribute('aria-busy', 'false');
     $('list').classList.remove('loading-skeleton');
@@ -1214,11 +1242,9 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
     const childHtml = folderChildren.map(folder => folderButton(folder.name, folder.key, folder.count)).join('');
     const linkHtml = links.map(link => {
       const href = safeHref(link.url);
-      const shot = /^https?:\/\//i.test(link.url) ? 'https://image.thum.io/get/width/900/crop/506/noanimate/' + encodeURIComponent(link.url) : '';
-      const fallbackShot = /^https?:\/\//i.test(link.url) ? 'https://s.wordpress.com/mshots/v1/' + encodeURIComponent(link.url) + '?w=900' : '';
       return `
       <div class="item lc-preview-card ${link.visibleToVisitors === true ? 'visitor-visible' : 'visitor-hidden'}" data-id="${esc(link.id)}">
-        <a class="lc-preview-shot" href="${esc(href)}" target="_blank" rel="noopener noreferrer" aria-label="${esc(link.title)}を開く">${shot ? `<img src="${esc(shot)}" data-fallback="${esc(fallbackShot)}" alt="${esc(link.title)} のトップページ" loading="lazy" referrerpolicy="no-referrer" onerror="if(this.dataset.fallback&&this.src!==this.dataset.fallback){this.src=this.dataset.fallback;this.dataset.fallback='';}else{this.closest('.lc-preview-shot').classList.add('preview-unavailable');this.remove();}">` : ''}</a>
+        <a class="lc-preview-shot" href="${esc(href)}" target="_blank" rel="noopener noreferrer" aria-label="${esc(link.title)}を開く"><div class="lc-preview-media" data-preview-url="${esc(link.url)}"><span class="preview-loading">サイト情報を取得中…</span></div></a>
         <div class="lc-preview-info">
           <button type="button" class="star" aria-pressed="${link.favorite}" aria-label="お気に入り">★</button>
           <div class="lc-preview-main">
@@ -1234,6 +1260,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
     }).join('');
     $('resultCount').textContent = folderChildren.length + ' フォルダー / ' + links.length + ' 件';
     $('list').innerHTML = back + childHtml + linkHtml + (!folderChildren.length && !links.length ? '<div class="empty">このフォルダーは空です。</div>' : '');
+    loadLinkPreviews(links);
   }
 
   async function run(label, task, doneText) {
