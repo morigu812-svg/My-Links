@@ -1058,3 +1058,39 @@ function deleteClickLog(logId, adminToken) {
     lock.releaseLock();
   }
 }
+
+
+/* LINK CORE notice read receipts. One receipt per browser and notice. */
+const NOTICE_READ_SHEET_NAME = 'NoticeReads';
+function ensureNoticeReadSheet_() {
+  const id = PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY);
+  if (!id) throw new Error('スプレッドシートIDが未設定です。');
+  const ss = SpreadsheetApp.openById(id);
+  let sheet = ss.getSheetByName(NOTICE_READ_SHEET_NAME);
+  if (!sheet) sheet = ss.insertSheet(NOTICE_READ_SHEET_NAME);
+  if (sheet.getLastColumn() === 0) sheet.getRange(1,1,1,3).setValues([['お知らせID','ブラウザID','既読日時']]);
+  return sheet;
+}
+function getNoticeReadCount(viewerToken, noticeId) {
+  requireLinkViewer_(viewerToken);
+  const id = cleanText_(noticeId,80);
+  if (!id) throw new Error('お知らせIDが不正です。');
+  const sheet=ensureNoticeReadSheet_(),last=sheet.getLastRow();
+  if(last<2)return {count:0};
+  const rows=sheet.getRange(2,1,last-1,2).getDisplayValues();
+  return {count:rows.filter(row=>row[0]===id).length};
+}
+function markNoticeRead(viewerToken, noticeId, browserId) {
+  requireLinkViewer_(viewerToken);
+  const id=cleanText_(noticeId,80),browser=cleanText_(browserId,100);
+  if(!id||!/^[A-Za-z0-9_-]{8,100}$/.test(browser))throw new Error('既読情報が不正です。');
+  const lock=LockService.getScriptLock();lock.waitLock(10000);
+  try{
+    const sheet=ensureNoticeReadSheet_(),last=sheet.getLastRow();
+    let rows=last>=2?sheet.getRange(2,1,last-1,2).getDisplayValues():[];
+    if(rows.some(row=>row[0]===id&&row[1]===browser))return {added:false,count:rows.filter(row=>row[0]===id).length};
+    sheet.appendRow([id,browser,new Date()]);
+    rows=sheet.getRange(2,1,sheet.getLastRow()-1,2).getDisplayValues();
+    return {added:true,count:rows.filter(row=>row[0]===id).length};
+  }finally{lock.releaseLock();}
+}
