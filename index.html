@@ -428,11 +428,29 @@ document.querySelectorAll('.sidebar .side-item[id]').forEach(button=>{
  if(readSideTabIds.has(button.id)){const badge=button.querySelector('.new-badge');if(badge)badge.remove();}
 });
 function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function folderParts(path){return String(path||'').split('/').map(part=>part.trim()).filter(Boolean)}
+function folderParent(path){const parts=folderParts(path);parts.pop();return parts.join('/')}
+function childFolders(path, sourceLinks){
+ const prefix=path?path+'/':'';
+ const names=new Set();
+ (sourceLinks||[]).forEach(link=>{
+  const category=String(link.category||'').trim();
+  if(!category.startsWith(prefix))return;
+  const rest=category.slice(prefix.length);
+  const next=rest.split('/')[0];
+  if(next)names.add(next);
+ });
+ return Array.from(names).sort((x,y)=>x.localeCompare(y,'ja')).map(name=>{
+  const key=prefix+name;
+  const count=(sourceLinks||[]).filter(link=>String(link.category||'')===key||String(link.category||'').startsWith(key+'/')).length;
+  return {name,key,count};
+ });
+}
 function visibleLinks(){
  const q=$('search').value.trim().toLowerCase();
  let items=links.filter(x=>x.visibleToVisitors!==false&&String(x.visibleToVisitors).toLowerCase()!=='false').filter(x=>[x.title,x.url,x.memo,x.category].some(v=>String(v||'').toLowerCase().includes(q)));
  if(selectedCategory==='__uncategorized__')items=items.filter(x=>!String(x.category||'').trim());
- else if(selectedCategory)items=items.filter(x=>x.category===selectedCategory);
+ else if(selectedCategory)items=items.filter(x=>String(x.category||'')===selectedCategory);
  else if(view==='favorites')items=items.filter(x=>x.favorite);
  else if(view==='recent')items=items.slice().sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
  return items;
@@ -442,15 +460,15 @@ function render(){
  $('list').classList.remove('loading-skeleton');
  const folderIcon="<svg class=\"folder-icon\" viewBox=\"0 0 64 52\" aria-hidden=\"true\"><path d=\"M4 10a5 5 0 0 1 5-5h17l7 7h22a5 5 0 0 1 5 5v4H4z\" fill=\"currentColor\" opacity=\".72\"/><path d=\"M4 17a5 5 0 0 1 5-5h46a5 5 0 0 1 5 5v27a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z\" fill=\"currentColor\"/><path d=\"M4 22h56\" stroke=\"#fff\" stroke-opacity=\".35\" stroke-width=\"2\"/></svg>";
  const folderButton=(name,key,count)=>'<button type="button" class="folder-card" data-open-folder="'+esc(key)+'">'+folderIcon+'<span class="folder-card-name">'+esc(name)+'</span><span class="folder-card-count">'+count+' 個のリンク</span></button>';
- const catButtons=categories.map(cat=>'<button type="button" class="side-item '+(selectedCategory===cat?'selected':'')+'" data-category="'+esc(cat)+'"><span class="side-folder-mini">'+folderIcon+'</span> '+esc(cat)+'</button>').join('');
+ const visible=links.filter(x=>x.visibleToVisitors!==false&&String(x.visibleToVisitors).toLowerCase()!=='false');
+ const catButtons=categories.map(cat=>{const depth=Math.max(0,folderParts(cat).length-1);const label=folderParts(cat).slice(-1)[0]||cat;return '<button type="button" class="side-item '+(selectedCategory===cat?'selected':'')+'" style="padding-left:'+(10+depth*12)+'px" data-category="'+esc(cat)+'"><span class="side-folder-mini">'+folderIcon+'</span> '+esc(label)+'</button>';}).join('');
  $('sideCats').innerHTML=catButtons||'<div style="padding:4px 10px;color:#999;font-size:11px">フォルダがありません</div>';
  document.querySelectorAll('[data-view]').forEach(btn=>btn.classList.toggle('selected',!selectedCategory&&btn.dataset.view===view));
  const titles={desktop:'My Desktop',all:'すべてのリンク',favorites:'お気に入り',recent:'最近追加した項目'};
  $('viewTitle').textContent=selectedCategory==='__uncategorized__'?'未分類':(selectedCategory||titles[view]||'すべてのリンク');
  const query=$('search').value.trim();
  if(!selectedCategory&&(view==='desktop'||view==='all')&&!query){
-  const visible=links.filter(x=>x.visibleToVisitors!==false&&String(x.visibleToVisitors).toLowerCase()!=='false');
-  const folders=categories.map(cat=>({name:cat,key:cat,count:visible.filter(x=>x.category===cat).length}));
+  const folders=childFolders('',visible);
   const uncategorized=visible.filter(x=>!String(x.category||'').trim()).length;
   if(uncategorized)folders.push({name:'未分類',key:'__uncategorized__',count:uncategorized});
   $('count').textContent=folders.length+' フォルダ';
@@ -458,11 +476,14 @@ function render(){
   $('list').innerHTML=folders.length?folders.map(f=>folderButton(f.name,f.key,f.count)).join(''):'<div class="empty">フォルダがありません。</div>';
   return;
  }
- const visible=visibleLinks();
- $('count').textContent=visible.length+' 件';
+ const folderChildren=selectedCategory&&selectedCategory!=='__uncategorized__'?childFolders(selectedCategory,visible):[];
+ const currentLinks=visibleLinks();
+ const linkCards=currentLinks.map(x=>'<article class="item" data-link-id="'+esc(x.id)+'"><div class="body"><a class="title" data-open-mode="external" href="'+esc(/^https?:\/\//i.test(x.url)?x.url:'#')+'" target="_blank" rel="noopener noreferrer">'+esc(x.title)+'</a>'+(x.isNew&&!readNewLinkIds.has(String(x.id))?'<span class="new-label">NEW</span>':'')+'<div class="meta">'+(x.category?'<span class="tag">'+esc(x.category)+'</span>':'')+'</div>'+(x.memo?'<div class="memo">'+esc(x.memo)+'</div>':'')+'</div><span class="item-arrow" aria-hidden="true">↗</span></article>').join('');
+ const back=selectedCategory&&selectedCategory!=='__uncategorized__'?'<div class="folder-toolbar"><button type="button" data-folder-back>‹ '+(folderParent(selectedCategory)?'親フォルダーに戻る':'フォルダー一覧に戻る')+'</button><span>My Desktop　›　'+esc(selectedCategory.split('/').join('　›　'))+'</span></div>':(selectedCategory?'<div class="folder-toolbar"><button type="button" data-folder-back>‹ フォルダー一覧に戻る</button><span>My Desktop　›　未分類</span></div>':'');
+ const childHtml=folderChildren.map(f=>folderButton(f.name,f.key,f.count)).join('');
+ $('count').textContent=folderChildren.length+' フォルダー / '+currentLinks.length+' 件';
  $('loadStatus').textContent='';
- const back=selectedCategory?'<div class="folder-toolbar"><button type="button" data-folder-back>‹ フォルダ一覧に戻る</button><span>My Desktop　›　'+esc(selectedCategory==='__uncategorized__'?'未分類':selectedCategory)+'</span></div>':'';
- $('list').innerHTML=back+(visible.length?visible.map(x=>'<article class="item" data-link-id="'+esc(x.id)+'"><div class="body"><a class="title" data-open-mode="external" href="'+esc(/^https?:\/\//i.test(x.url)?x.url:'#')+'" target="_blank" rel="noopener noreferrer">'+esc(x.title)+'</a>'+(x.isNew&&!readNewLinkIds.has(String(x.id))?'<span class="new-label">NEW</span>':'')+'<div class="meta">'+(x.category?'<span class="tag">'+esc(x.category)+'</span>':'')+'</div>'+(x.memo?'<div class="memo">'+esc(x.memo)+'</div>':'')+'</div><span class="item-arrow" aria-hidden="true">↗</span></article>').join(''):'<div class="empty">表示できるリンクがありません。</div>');
+ $('list').innerHTML=back+childHtml+linkCards+(!folderChildren.length&&!currentLinks.length?'<div class="empty">このフォルダーは空です。</div>':'');
 }
 const chatOverlay=$('chatOverlay'),chatMessages=$('chatMessages'),chatForm=$('chatForm'),chatInput=$('chatInput'),chatSend=$('chatSend');let chatLoading=false,chatLoaded=false;
 function renderChat(messages){chatMessages.replaceChildren();if(!messages.length){const e=document.createElement('div');e.className='chat-empty';e.textContent='まだメッセージはありません。最初のメッセージを送ってみましょう。';chatMessages.appendChild(e);return;}messages.forEach(item=>{const bubble=document.createElement('article');bubble.className='chat-message'+(item.author==='管理者'?' admin':'');const meta=document.createElement('div');meta.className='chat-message-meta';const author=document.createElement('strong');author.textContent=item.author==='管理者'?'管理者':'利用者';const time=document.createElement('time');const date=new Date(item.createdAt);time.textContent=isNaN(date.getTime())?'':date.toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});const body=document.createElement('div');body.className='chat-message-body';body.textContent=item.message;meta.append(author,time);bubble.append(meta,body);chatMessages.appendChild(bubble);});chatMessages.scrollTop=chatMessages.scrollHeight;}
@@ -767,7 +788,8 @@ main.wrap{width:100%;max-width:none!important;margin:0;padding:22px 24px}
 <div id="lc-release-overlay" aria-hidden="true">
  <section id="lc-release-dialog" role="dialog" aria-modal="true" aria-labelledby="lc-release-title">
   <header id="lc-release-head"><div><small>LINK CORE / CHANGELOG</small><h2 id="lc-release-title">リリースノート</h2></div><button id="lc-release-close" type="button" aria-label="閉じる">×</button></header>
-  <div id="lc-release-content"><article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v2.1.0</span><time datetime="2026-11-04">2026年11月4日</time></div><h3>ブラウザー識別・通知管理・ホーム画面アイコンを改善</h3><ul><li>リンクのクリック履歴にブラウザーIDを記録し、どのブラウザー環境から操作されたか確認できるようにしました。</li><li>お知らせの既読状態をブラウザーごとに管理し、管理者画面から既読件数を確認できるようにしました。</li><li>ホーム画面に追加したときのLINK COREアイコンを、専用のアイコン画像に更新しました。</li><li>利用者画面・管理者画面から、内部ブラウザーやウィンドウの移動・サイズ変更などの機能を整理し、リンクをシンプルに開けるようにしました。</li></ul></article>
+  <div id="lc-release-content"><article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v2.2.0</span><time datetime="2026-11-05">2026年11月5日</time></div><h3>フォルダーの階層化に対応</h3><ul><li>フォルダーの中にサブフォルダーを作れるようになりました。</li><li>フォルダー名を「親フォルダー/子フォルダー」の形式で指定すると、階層として表示されます。</li><li>親フォルダー内では、その直下のサブフォルダーとリンクを表示します。</li><li>階層をたどるパンくず表示と、親フォルダーへ戻る操作に対応しました。</li><li>既存のカテゴリ名・リンク情報・スプレッドシートの列構成は変更していません。</li></ul></article>
+   <article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v2.1.0</span><time datetime="2026-11-04">2026年11月4日</time></div><h3>ブラウザー識別・通知管理・ホーム画面アイコンを改善</h3><ul><li>リンクのクリック履歴にブラウザーIDを記録し、どのブラウザー環境から操作されたか確認できるようにしました。</li><li>お知らせの既読状態をブラウザーごとに管理し、管理者画面から既読件数を確認できるようにしました。</li><li>ホーム画面に追加したときのLINK COREアイコンを、専用のアイコン画像に更新しました。</li><li>利用者画面・管理者画面から、内部ブラウザーやウィンドウの移動・サイズ変更などの機能を整理し、リンクをシンプルに開けるようにしました。</li></ul></article>
    
    <article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v2.0.0</span><time datetime="2026-11-03">2026年11月3日</time></div><h3>カテゴリーをフォルダ形式に変更</h3><ul><li>利用者画面・管理者画面のMy Desktopに、既存カテゴリーをフォルダアイコンで表示するようにしました。</li><li>フォルダを開くと、そのカテゴリーに登録されたリンクだけを表示します。</li><li>フォルダ内から一覧へ戻る操作と、サイドバーから直接フォルダを開く操作に対応しました。</li><li>カテゴリーが未設定のリンクは「未分類」フォルダにまとめて表示します。</li><li>既存のリンク情報やスプレッドシートの保存形式は変更していません。</li></ul></article>
    <article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v1.9.0</span><time datetime="2026-11-03">2026年11月3日</time></div><h3>NEW表示とログイン時の読み込みを改善</h3><ul><li>利用者画面でNEW付きのリンクを開くと、そのブラウザーではNEW表示が消えるようになりました。</li><li>管理者チャット・ブラウザ・リリースノートのサイドバーにあるNEW表示も、各タブを開くとブラウザーごとに既読として保存されます。</li><li>ページを再読み込みしても既読状態を維持し、別のブラウザーでは未読状態を個別に管理します。</li><li>ログイン画面を表示している間にGASとの接続・リンク一覧のキャッシュ準備を進め、ログイン後の待ち時間を減らすよう改善しました。</li></ul></article>
