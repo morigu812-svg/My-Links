@@ -1072,7 +1072,10 @@ function ensureNoticeReadSheet_() {
   return sheet;
 }
 function getNoticeReadCount(viewerToken, noticeId) {
-  requireLinkViewer_(viewerToken);
+  if (typeof viewerToken !== 'string' || !viewerToken ||
+      CacheService.getScriptCache().get('LINK_CORE_ADMIN_' + viewerToken) !== 'yes') {
+    throw new Error('既読件数の確認は管理者のみ利用できます。');
+  }
   const id = cleanText_(noticeId,80);
   if (!id) throw new Error('お知らせIDが不正です。');
   const sheet=ensureNoticeReadSheet_(),last=sheet.getLastRow();
