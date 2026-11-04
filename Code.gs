@@ -1074,7 +1074,8 @@ function ensureNoticeReadSheet_() {
   if (sheet.getLastColumn() === 0) sheet.getRange(1,1,1,3).setValues([['お知らせID','ブラウザID','既読日時']]);
   return sheet;
 }
-function getNoticeReadCount(viewerToken, noticeId) {
+function getNoticeReadCount(noticeId, viewerToken) {
+  // 管理者画面の serverCall() は認証トークンを引数の最後に追加する。
   if (typeof viewerToken !== 'string' || !viewerToken ||
       CacheService.getScriptCache().get('LINK_CORE_ADMIN_' + viewerToken) !== 'yes') {
     throw new Error('既読件数の確認は管理者のみ利用できます。');
