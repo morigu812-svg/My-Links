@@ -953,7 +953,7 @@ function sendChatMessage(message, viewerToken) {
 
 /* LINK CORE click history. Only authenticated visitors can write; only admins can read. */
 const CLICK_LOG_SHEET_NAME = 'ClickLogs';
-const CLICK_LOG_HEADERS = ['ID', 'リンクID', 'リンク名', 'URL', 'クリック日時'];
+const CLICK_LOG_HEADERS = ['ID', 'リンクID', 'リンク名', 'URL', 'クリック日時', 'ブラウザID'];
 function ensureClickLogSheet_() {
   const id = PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY);
   if (!id) throw new Error('スプレッドシートIDが未設定です。');
@@ -965,9 +965,10 @@ function ensureClickLogSheet_() {
   } else if (sheet.getLastColumn() === 0) {
     sheet.getRange(1, 1, 1, CLICK_LOG_HEADERS.length).setValues([CLICK_LOG_HEADERS]);
   }
+  if (sheet.getLastColumn() < CLICK_LOG_HEADERS.length) sheet.getRange(1, 1, 1, CLICK_LOG_HEADERS.length).setValues([CLICK_LOG_HEADERS]);
   return sheet;
 }
-function recordLinkClick(linkId, visitorToken) {
+function recordLinkClick(linkId, browserId, visitorToken) {
   let stage = '利用者認証';
   try {
     if (typeof visitorToken !== 'string' || !visitorToken ||
@@ -975,9 +976,11 @@ function recordLinkClick(linkId, visitorToken) {
       throw new Error('利用者ログインが必要です。ログインの有効期限が切れている可能性があります。');
     }
 
-    stage = 'リンクIDの確認';
+    stage = 'リンクID・ブラウザIDの確認';
     const id = cleanText_(linkId, 200);
+    const browser = cleanText_(browserId, 100);
     if (!id) throw new Error('リンクIDがありません。');
+    if (!/^[A-Za-z0-9_-]{8,100}$/.test(browser)) throw new Error('ブラウザIDが不正です。');
 
     stage = 'リンク一覧の読み込み';
     // 一覧キャッシュを再利用し、クリックのたびに Links シートを開かない。
@@ -992,7 +995,7 @@ function recordLinkClick(linkId, visitorToken) {
     lock.waitLock(10000);
     try {
       const logSheet = ensureClickLogSheet_();
-      logSheet.appendRow([Utilities.getUuid(), safeCell_(selected.id), safeCell_(selected.title), safeCell_(selected.url), new Date()]);
+      logSheet.appendRow([Utilities.getUuid(), safeCell_(selected.id), safeCell_(selected.title), safeCell_(selected.url), new Date(), safeCell_(browser)]);
       return {ok: true, title: selected.title, savedAt: new Date().toISOString()};
     } finally {
       lock.releaseLock();
@@ -1009,10 +1012,10 @@ function getClickLogs(adminToken) {
   const last = sheet.getLastRow();
   if (last < 2) return {logs: []};
   const first = Math.max(2, last - 499);
-  const rows = sheet.getRange(first, 1, last - first + 1, CLICK_LOG_HEADERS.length).getValues();
+  const rows = sheet.getRange(first, 1, last - first + 1, Math.max(CLICK_LOG_HEADERS.length, sheet.getLastColumn())).getValues();
   return {logs: rows.filter(row => row[0] !== '').reverse().map(row => ({
     id: String(row[0] || ''), linkId: String(row[1] || ''), title: String(row[2] || ''),
-    url: String(row[3] || ''), clickedAt: toIso_(row[4])
+    url: String(row[3] || ''), clickedAt: toIso_(row[4]), browserId: String(row[5] || '')
   }))};
 }
 
