@@ -402,7 +402,7 @@ async function loadLinkPreviews(items) {
  const waiting=items.filter(item=>/^https?:\/\//i.test(item.url)&&!linkPreviewCache.has(item.url)&&!linkPreviewPending.has(item.url));
  if(!waiting.length){applyLinkPreviewImages(items);return;}
  waiting.forEach(item=>linkPreviewPending.add(item.url));
- try{const response=await call('getLinkPreviews',waiting.map(item=>item.url),visitorToken);Object.keys(response||{}).forEach(url=>linkPreviewCache.set(url,response[url]||{}));}
+ try{const response=await call('getLinkPreviews',waiting.map(item=>item.url),visitorToken);(Array.isArray(response)?response:[]).forEach(meta=>{if(meta&&meta.url)linkPreviewCache.set(meta.url,meta);});}
  catch(error){console.warn('[LINK CORE] preview metadata failed',error);waiting.forEach(item=>linkPreviewCache.set(item.url,{}));}
  finally{waiting.forEach(item=>linkPreviewPending.delete(item.url));applyLinkPreviewImages(items);}
 }
