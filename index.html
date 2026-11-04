@@ -478,7 +478,7 @@ function render(){
  }
  const folderChildren=selectedCategory&&selectedCategory!=='__uncategorized__'?childFolders(selectedCategory,visible):[];
  const currentLinks=visibleLinks();
- const linkCards=currentLinks.map(x=>'<article class="item" data-link-id="'+esc(x.id)+'"><div class="body"><a class="title" data-open-mode="external" href="'+esc(/^https?:\/\//i.test(x.url)?x.url:'#')+'" target="_blank" rel="noopener noreferrer">'+esc(x.title)+'</a>'+(x.isNew&&!readNewLinkIds.has(String(x.id))?'<span class="new-label">NEW</span>':'')+'<div class="meta">'+(x.category?'<span class="tag">'+esc(x.category)+'</span>':'')+'</div>'+(x.memo?'<div class="memo">'+esc(x.memo)+'</div>':'')+'</div><span class="item-arrow" aria-hidden="true">↗</span></article>').join('');
+ const linkCards=currentLinks.map(x=>{const href=/^https?:\/\//i.test(x.url)?x.url:'#';const shot=/^https?:\/\//i.test(x.url)?'https://s.wordpress.com/mshots/v1/'+encodeURIComponent(x.url)+'?w=900':'';return '<article class="item lc-preview-card" data-link-id="'+esc(x.id)+'"><a class="lc-preview-shot" data-open-mode="external" href="'+esc(href)+'" target="_blank" rel="noopener noreferrer" aria-label="'+esc(x.title)+'を開く">'+(shot?'<img src="'+esc(shot)+'" alt="'+esc(x.title)+' のトップページ" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display=\'none\'">':'')+'</a><div class="lc-preview-info"><div class="lc-preview-main"><a class="title" data-open-mode="external" href="'+esc(href)+'" target="_blank" rel="noopener noreferrer">'+esc(x.title)+'</a>'+(x.isNew&&!readNewLinkIds.has(String(x.id))?'<span class="new-label">NEW</span>':'')+'<div class="meta">'+esc((()=>{try{return new URL(x.url).hostname}catch(e){return x.category||''}})())+'</div>'+(x.memo?'<div class="memo">'+esc(x.memo)+'</div>':'')+'</div><span class="lc-preview-arrow" aria-hidden="true">↗</span></div></article>';}).join('');
  const back=selectedCategory&&selectedCategory!=='__uncategorized__'?'<div class="folder-toolbar"><button type="button" data-folder-back>‹ '+(folderParent(selectedCategory)?'親フォルダーに戻る':'フォルダー一覧に戻る')+'</button><span>My Desktop　›　'+esc(selectedCategory.split('/').join('　›　'))+'</span></div>':(selectedCategory?'<div class="folder-toolbar"><button type="button" data-folder-back>‹ フォルダー一覧に戻る</button><span>My Desktop　›　未分類</span></div>':'');
  const childHtml=folderChildren.map(f=>folderButton(f.name,f.key,f.count)).join('');
  $('count').textContent=folderChildren.length+' フォルダー / '+currentLinks.length+' 件';
@@ -784,6 +784,22 @@ main.wrap{width:100%;max-width:none!important;margin:0;padding:22px 24px}
   transform:scale(1.12);
   box-shadow:0 0 0 2px rgba(40,200,64,.25),0 0 14px rgba(40,200,64,.6)!important;
 }
+
+/* LINK CORE Padlet-style website previews */
+.lc-preview-card{display:flex;flex-direction:column;overflow:hidden;min-width:0;padding:0!important;border:1px solid #cbd5e1!important;border-radius:13px!important;background:#fff!important;box-shadow:0 3px 12px rgba(20,35,55,.07)!important;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
+.lc-preview-card:hover{transform:translateY(-2px);border-color:#67b9df!important;box-shadow:0 9px 24px rgba(20,80,120,.13)!important}
+.lc-preview-shot{position:relative;display:block;width:100%;aspect-ratio:16/9;overflow:hidden;background:linear-gradient(135deg,#e8edf4,#dce6f1);border-bottom:1px solid #e1e7ef}
+.lc-preview-shot img{display:block;width:100%;height:100%;object-fit:cover;object-position:top center}
+.lc-preview-shot::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 65%,rgba(8,18,32,.10));pointer-events:none}
+.lc-preview-info{display:flex;align-items:flex-start;gap:10px;padding:13px 14px 14px;min-width:0}
+.lc-preview-main{flex:1;min-width:0}
+.lc-preview-card .title{display:block;font-size:15px;font-weight:700;line-height:1.45;color:#172b42!important;text-decoration:none;overflow-wrap:anywhere}
+.lc-preview-card .meta{margin-top:5px;color:#718096!important;font-size:11px;overflow-wrap:anywhere}
+.lc-preview-card .memo{margin-top:7px;color:#526174!important;font-size:12px;line-height:1.55}
+.lc-preview-arrow{flex:0 0 auto;color:#4386b7;font-size:18px;padding-top:1px}
+@media(min-width:680px){#list:has(.lc-preview-card){display:grid;grid-template-columns:repeat(auto-fill,minmax(245px,1fr));align-items:start;gap:15px}#list:has(.lc-preview-card)>.folder-toolbar{grid-column:1/-1}#list:has(.lc-preview-card)>.folder-card{min-width:0}}
+@media(max-width:560px){.lc-preview-info{padding:11px}.lc-preview-card .title{font-size:14px}}
+
 </style>
 <div id="lc-release-overlay" aria-hidden="true">
  <section id="lc-release-dialog" role="dialog" aria-modal="true" aria-labelledby="lc-release-title">
