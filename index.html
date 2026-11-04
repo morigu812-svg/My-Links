@@ -339,7 +339,7 @@ body.window-resizing,body.window-resizing *{user-select:none!important}
 <div class="side-label">カテゴリ</div><div id="sideCats" class="side-cats"></div>
 </aside><section class="finder-content"><div class="workspace">
 <div class="section-heading"><div><span class="section-kicker">MY DESKTOP / LINK LIBRARY</span><h2 id="viewTitle">お気に入り</h2></div><span class="section-note">ICON VIEW</span></div>
-<div id="noticeReadCard" class="notice-read-card" hidden><div class="notice-read-title">お知らせ・リンク修正</div><div class="notice-read-body">ごめんなさい！YouTubeの項目にある「みんとtube+」のリンクを間違えていました！<br>新リンク：YouTube ＞ みんとtube+<br>新リンク：ブログ ＞ 制限回避リンク集</div><div class="notice-read-actions"><button type="button" id="markNoticeRead">確認して既読にする</button><span id="noticeReadCount">既読 0件</span><span id="noticeReadStatus" role="status"></span></div></div><div class="list-heading"><span class="list-heading-title"><span class="heading-dot">◆</span> LINK FEED</span><span class="result-count" id="count"></span></div>
+<div id="noticeReadCard" class="notice-read-card" hidden><div class="notice-read-title">お知らせ・リンク修正</div><div class="notice-read-body">ごめんなさい！YouTubeの項目にある「みんとtube+」のリンクを間違えていました！<br>新リンク：YouTube ＞ みんとtube+<br>新リンク：ブログ ＞ 制限回避リンク集</div><div class="notice-read-actions"><button type="button" id="markNoticeRead">確認して既読にする</button><span id="noticeReadStatus" role="status"></span></div></div><div class="list-heading"><span class="list-heading-title"><span class="heading-dot">◆</span> LINK FEED</span><span class="result-count" id="count"></span></div>
 <div class="status" id="loadStatus" role="status" aria-live="polite"></div>
 <div class="list loading-skeleton" id="list" role="region" aria-label="リンク一覧" aria-live="polite" aria-busy="true"><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div></div>
 </div></section></div>
@@ -523,14 +523,12 @@ function getNoticeBrowserId(){
  if(!id){id=(crypto.randomUUID&&crypto.randomUUID())||('browser-'+Date.now()+'-'+Math.random().toString(36).slice(2));localStorage.setItem(NOTICE_BROWSER_KEY,id);}
  return id;
 }
-async function loadNoticeReadState(){
+function loadNoticeReadState(){
  if(!visitorToken)return;
  const card=$('noticeReadCard'),button=$('markNoticeRead');
  card.hidden=false;
  const already=localStorage.getItem('linkCoreNoticeRead:'+NOTICE_ID)==='1';
  button.disabled=already;button.textContent=already?'既読済み':'確認して既読にする';
- try{const result=await call('getNoticeReadCount',visitorToken,NOTICE_ID);$('noticeReadCount').textContent='既読 '+Number(result.count||0)+'件';}
- catch(error){$('noticeReadStatus').textContent='既読数を取得できませんでした。';}
 }
 $('markNoticeRead').addEventListener('click',async()=>{
  if(!visitorToken)return;
@@ -540,7 +538,7 @@ $('markNoticeRead').addEventListener('click',async()=>{
  try{
   const result=await call('markNoticeRead',visitorToken,NOTICE_ID,getNoticeBrowserId());
   localStorage.setItem('linkCoreNoticeRead:'+NOTICE_ID,'1');
-  button.textContent='既読済み';$('noticeReadCount').textContent='既読 '+Number(result.count||0)+'件';
+  button.textContent='既読済み';
   $('noticeReadStatus').textContent=result.added?'既読にしました。':'このブラウザでは既読済みです。';
  }catch(error){$('noticeReadStatus').textContent=error.message||'既読登録に失敗しました。';button.disabled=false;}
 });
