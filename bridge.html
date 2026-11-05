@@ -53,9 +53,21 @@
     if (!request || request.type !== 'DAILY_CORE_REQUEST') return;
 
     const { id, method, args } = request;
-    if (typeof id !== 'string' || !ALLOWED_METHODS.has(method) || !Array.isArray(args)) {
+    // 診断情報を返し、古いフロントエンドや別デプロイ版との不一致を特定できるようにする。
+    const validId = typeof id === 'string' && id.length > 0;
+    const validMethod = typeof method === 'string' && ALLOWED_METHODS.has(method);
+    const validArgs = Array.isArray(args);
+    if (!validId || !validMethod || !validArgs) {
+      const detail = [
+        'id=' + (typeof id),
+        'method=' + (typeof method === 'string' ? method : typeof method),
+        'args=' + (Array.isArray(args) ? 'array' : typeof args),
+        'origin=' + event.origin
+      ].join(', ');
+      console.error('[LINK CORE Bridge] Invalid request: ' + detail);
       send(event.source, {
-        type: 'DAILY_CORE_RESPONSE', id, ok: false, error: '不正なリクエストです。'
+        type: 'DAILY_CORE_RESPONSE', id, ok: false,
+        error: '不正なリクエストです。[' + detail + ']'
       }, event.origin);
       return;
     }
