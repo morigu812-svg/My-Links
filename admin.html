@@ -660,13 +660,9 @@ main { width:100%; max-width:none !important; }
 #finderWindow>.finder-layout{flex:1 1 auto;min-height:0}
 #finderWindow .finder-content{min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;touch-action:pan-y pan-x}
 #finderWindow .finder-toolbar{flex:0 0 auto;touch-action:pan-y pan-x}
-/* OGP preview media */
-.lc-preview-media{position:relative;width:100%;height:100%;min-height:120px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:linear-gradient(135deg,#14283d,#0b1728)}.lc-preview-media img{width:100%;height:100%;min-height:120px;object-fit:cover;object-position:top center}.preview-loading{color:#8ca9bc;font-size:11px}.preview-site-label{position:absolute;left:8px;bottom:7px;padding:3px 7px;border-radius:5px;background:#06101dcc;color:#eaf8ff;font-size:10px;max-width:85%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.preview-no-image:after{content:'サイト画像なし';color:#9ab0c2;font-size:12px}
 
-/* サムネイル表示を一時停止 */
-.lc-preview-shot,.lc-preview-media{display:none!important}
-.lc-preview-card{display:flex!important;flex-direction:column!important}
-.lc-preview-info{width:100%}
+.lc-link-card{display:flex!important;flex-direction:column!important}
+.lc-link-info{width:100%}
 </style>
 <style>
 .click-log-panel{min-width:0;padding:25px 27px}
@@ -902,15 +898,26 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
     }
   }
 
+  function isBridgeFrame(source) {
+    // GAS の中継 iframe をたどり、設定したブリッジの配下か確認する。
+    while (source && source !== window) {
+      if (source === frame.contentWindow) return true;
+      const parent = source.parent;
+      if (parent === source) break;
+      source = parent;
+    }
+    return false;
+  }
+
   window.addEventListener('message', event => {
     if (!isGasOrigin(event.origin)) return;
     const data = event.data;
     if (!data || typeof data !== 'object') return;
 
-    // GAS Webアプリは中継iframeを使う場合があるため、信頼済みGAS originからの最初のREADYを受理する。
+    // 設定したGASブリッジ配下の送信元を確認する。
     // 以降の応答は、このREADY送信元とoriginに固定する。
     if (data.type === 'DAILY_CORE_BRIDGE_READY') {
-      if (bridgeWindow) return;
+      if (bridgeWindow || !isBridgeFrame(event.source)) return;
       bridgeWindow = event.source;
       bridgeOrigin = event.origin;
 
@@ -954,7 +961,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   }
 
   function serverCall(method, ...args) {
-    const protectedMethods = ['getLinks', 'getLinkPreviews', 'getOfficialLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'saveOfficialLink', 'deleteOfficialLink', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'sendChatMessage', 'getClickLogs', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount'];
+    const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'saveOfficialLink', 'deleteOfficialLink', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'sendChatMessage', 'getClickLogs', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount'];
     if (protectedMethods.includes(method)) {
       const token = sessionStorage.getItem(ADMIN_TOKEN_KEY) || '';
       // 呼び出し元（埋め込みメモ帳など）が既にトークンを渡している場合は二重追加しない。
@@ -1160,61 +1167,35 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   function apply(data) {
     state.links = data.links;
     state.categories = data.categories;
-    if (state.category && state.category !== '__uncategorized__' && state.categories.indexOf(state.category) === -1) state.category = '';
+    if (state.category && state.category !== '__uncategorized__' && !state.categories.map(folderPath).some(path => path === state.category || path.startsWith(state.category + '/'))) state.category = '';
     render();
   }
 
   function folderParts(path) { return String(path || '').split('/').map(part => part.trim()).filter(Boolean); }
   function folderParent(path) { const parts = folderParts(path); parts.pop(); return parts.join('/'); }
+  function folderPath(path) { return folderParts(path).join('/'); }
   function childFolders(path, sourceLinks) {
     const prefix = path ? path + '/' : '';
-    const names = new Set();
-    (sourceLinks || []).forEach(link => {
-      const category = String(link.category || '').trim();
-      if (!category.startsWith(prefix)) return;
-      const next = category.slice(prefix.length).split('/')[0];
-      if (next) names.add(next);
-    });
-    return Array.from(names).sort((x, y) => x.localeCompare(y, 'ja')).map(name => {
-      const key = prefix + name;
-      const count = (sourceLinks || []).filter(link => String(link.category || '') === key || String(link.category || '').startsWith(key + '/')).length;
-      return { name, key, count };
-    });
+    const counts = new Map();
+    for (const link of sourceLinks) {
+      const category = folderPath(link.category);
+      if (!category.startsWith(prefix)) continue;
+      const name = category.slice(prefix.length).split('/')[0];
+      if (name) counts.set(name, (counts.get(name) || 0) + 1);
+    }
+    return Array.from(counts.keys()).sort((a, b) => a.localeCompare(b, 'ja')).map(name => ({
+      name, key: prefix + name, count: counts.get(name)
+    }));
   }
   function visibleLinks() {
     const q = state.query.trim().toLowerCase();
     return state.links
       .filter(link => state.view !== 'favorites' || link.favorite)
-      .filter(link => state.category === '__uncategorized__' ? !String(link.category || '').trim() : (!state.category || String(link.category || '') === state.category))
-      .filter(link => !q || [link.title, link.url, link.memo, link.category].some(text => text.toLowerCase().includes(q)))
+      .filter(link => state.category === '__uncategorized__' ? !folderPath(link.category) : (!state.category || folderPath(link.category) === state.category))
+      .filter(link => !q || [link.title, link.url, link.memo, link.category].some(text => String(text || '').toLowerCase().includes(q)))
       .sort((a, b) => state.view === 'recent'
         ? String(b.createdAt || '').localeCompare(String(a.createdAt || ''))
         : (b.favorite - a.favorite) || String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
-  }
-
-  const linkPreviewCache = new Map();
-  const linkPreviewPending = new Set();
-  async function loadLinkPreviews(items) {
-    const waiting=items.filter(item=>/^https?:\/\//i.test(item.url)&&!linkPreviewCache.has(item.url)&&!linkPreviewPending.has(item.url));
-    if(!waiting.length){applyLinkPreviewImages(items);return;}
-    waiting.forEach(item=>linkPreviewPending.add(item.url));
-    try{const response=await serverCall('getLinkPreviews',waiting.map(item=>item.url));(Array.isArray(response)?response:[]).forEach(meta=>{if(meta&&meta.url)linkPreviewCache.set(meta.url,meta);});}
-    catch(error){console.warn('[LINK CORE] preview metadata failed',error);waiting.forEach(item=>linkPreviewCache.set(item.url,{}));}
-    finally{waiting.forEach(item=>linkPreviewPending.delete(item.url));applyLinkPreviewImages(items);}
-  }
-  function applyLinkPreviewImages(items){
-    items.forEach(item=>{
-      const media=Array.from(document.querySelectorAll('.lc-preview-media')).find(el=>el.dataset.previewUrl===item.url);
-      if(!media||media.dataset.loaded==='1')return;
-      const meta=linkPreviewCache.get(item.url);if(!meta)return;
-      media.dataset.loaded='1';
-      const img=document.createElement('img');img.alt=(meta.title||item.title||'サイト')+' のプレビュー';img.loading='lazy';img.referrerPolicy='no-referrer';
-      let host='';try{host=new URL(item.url).hostname}catch(_){}
-      const favicon='https://www.google.com/s2/favicons?domain='+encodeURIComponent(host)+'&sz=256';
-      img.onerror=()=>{if(img.dataset.fallback!=='1'){img.dataset.fallback='1';img.src=favicon;}else{img.remove();media.classList.add('preview-no-image');}};
-      img.src=meta.image||favicon;media.appendChild(img);
-      const label=document.createElement('span');label.className='preview-site-label';label.textContent=meta.siteName||host;media.appendChild(label);
-    });
   }
 
   function render() {
@@ -1222,17 +1203,17 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
     $('list').classList.remove('loading-skeleton');
     const folderIcon = "<svg class=\"folder-icon\" viewBox=\"0 0 64 52\" aria-hidden=\"true\"><path d=\"M4 10a5 5 0 0 1 5-5h17l7 7h22a5 5 0 0 1 5 5v4H4z\" fill=\"currentColor\" opacity=\".72\"/><path d=\"M4 17a5 5 0 0 1 5-5h46a5 5 0 0 1 5 5v27a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z\" fill=\"currentColor\"/><path d=\"M4 22h56\" stroke=\"#fff\" stroke-opacity=\".35\" stroke-width=\"2\"/></svg>";
     const folderButton = (name, key, count) => `<button type="button" class="folder-card" data-open-folder="${esc(key)}">${folderIcon}<span class="folder-card-name">${esc(name)}</span><span class="folder-card-count">${count} 個のリンク</span></button>`;
-    const sideFolders = state.categories.map(cat => {
+    const sideFolders = Array.from(new Set(state.categories.map(folderPath).filter(Boolean))).map(cat => {
       const depth = Math.max(0, folderParts(cat).length - 1);
       const label = folderParts(cat).slice(-1)[0] || cat;
       return `<button type="button" class="side-item ${state.category === cat ? 'selected' : ''}" style="padding-left:${10 + depth * 12}px" data-side-cat="${esc(cat)}"><span class="side-folder-mini">${folderIcon}</span> ${esc(label)}</button>`;
     });
-    if (state.links.some(link => !String(link.category || '').trim())) sideFolders.push(`<button type="button" class="side-item ${state.category === '__uncategorized__' ? 'selected' : ''}" data-side-cat="__uncategorized__"><span class="side-folder-mini">${folderIcon}</span> 未分類</button>`);
+    if (state.links.some(link => !folderPath(link.category))) sideFolders.push(`<button type="button" class="side-item ${state.category === '__uncategorized__' ? 'selected' : ''}" data-side-cat="__uncategorized__"><span class="side-folder-mini">${folderIcon}</span> 未分類</button>`);
     $('sideCats').innerHTML = sideFolders.join('') || '<div class="side-empty">フォルダがありません</div>';
     $('catList').innerHTML = state.categories.map(c => `<option value="${esc(c)}">`).join('');
     if (!state.category && (state.view === 'desktop' || state.view === 'all') && !state.query.trim()) {
       const folders = childFolders('', state.links);
-      const uncategorized = state.links.filter(link => !String(link.category || '').trim()).length;
+      const uncategorized = state.links.filter(link => !folderPath(link.category)).length;
       if (uncategorized) folders.push({name:'未分類',key:'__uncategorized__',count:uncategorized});
       $('viewTitle').textContent = 'My Desktop';
       $('resultCount').textContent = folders.length + ' フォルダ';
@@ -1248,19 +1229,18 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
     const linkHtml = links.map(link => {
       const href = safeHref(link.url);
       return `
-      <div class="item lc-preview-card ${link.visibleToVisitors === true ? 'visitor-visible' : 'visitor-hidden'}" data-id="${esc(link.id)}">
-        <a class="lc-preview-shot" href="${esc(href)}" target="_blank" rel="noopener noreferrer" aria-label="${esc(link.title)}を開く"><div class="lc-preview-media" data-preview-url="${esc(link.url)}"><span class="preview-loading">サイト情報を取得中…</span></div></a>
-        <div class="lc-preview-info">
+      <div class="item lc-link-card ${link.visibleToVisitors === true ? 'visitor-visible' : 'visitor-hidden'}" data-id="${esc(link.id)}">
+        <div class="lc-link-info">
           <button type="button" class="star" aria-pressed="${link.favorite}" aria-label="お気に入り">★</button>
-          <div class="lc-preview-main">
+          <div class="lc-link-main">
             <a class="title" href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(link.title)}</a>
             ${link.isNew ? '<span class="new-label">NEW</span>' : ''}
             <div class="meta">${esc(host(link.url))}${link.category ? ` · ${esc(link.category)}` : ''}</div>
             ${link.memo ? `<div class="memo">${esc(link.memo)}</div>` : ''}
           </div>
-          <span class="lc-preview-arrow" aria-hidden="true">↗</span>
+          <span class="lc-link-arrow" aria-hidden="true">↗</span>
         </div>
-        <div class="lc-preview-actions"><button type="button" class="edit">編集</button><button type="button" class="del">削除</button></div>
+        <div class="lc-link-actions"><button type="button" class="edit">編集</button><button type="button" class="del">削除</button></div>
       </div>`;
     }).join('');
     $('resultCount').textContent = folderChildren.length + ' フォルダー / ' + links.length + ' 件';
@@ -1801,27 +1781,59 @@ body,.finder-window,.finder-toolbar,.finder-layout,.finder-content,.sidebar,
 #finderWindow .finder-toolbar .traffic-lights>span:nth-child(3){background:#28c840!important}
 .new-badge[hidden]{display:none!important}
 
-/* LINK CORE Padlet-style website previews */
-.lc-preview-card{display:flex;flex-direction:column;overflow:hidden;min-width:0;padding:0!important;border:1px solid #28485c!important;border-radius:14px!important;background:linear-gradient(145deg,#101c2c,#0b1422)!important;box-shadow:0 4px 16px rgba(0,0,0,.18)!important;transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
-.lc-preview-card:hover{transform:translateY(-2px);border-color:#35d9ff!important;box-shadow:0 8px 24px rgba(0,210,255,.12)!important}
-.lc-preview-shot{position:relative;display:block;width:100%;aspect-ratio:16/9;overflow:hidden;background:linear-gradient(135deg,#14283d,#0b1728);border-bottom:1px solid #284257}
-.lc-preview-shot img{display:block;width:100%;height:100%;object-fit:cover;object-position:top center}
-.lc-preview-shot::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 65%,rgba(4,10,20,.25));pointer-events:none}
-.lc-preview-info{display:flex;align-items:flex-start;gap:10px;padding:13px 14px 14px;min-width:0}
-.lc-preview-main{flex:1;min-width:0}
-.lc-preview-card .title{display:block;font-size:15px;font-weight:700;line-height:1.45;color:#edf7ff!important;text-decoration:none;overflow-wrap:anywhere}
-.lc-preview-card .meta{margin-top:5px;color:#9bb0c5!important;font-size:11px;overflow-wrap:anywhere}
-.lc-preview-card .memo{margin-top:7px;color:#c0cfdd!important;font-size:12px;line-height:1.55}
-.lc-preview-arrow{flex:0 0 auto;color:#35d9ff;font-size:18px;padding-top:1px}
-.lc-preview-actions{display:flex;gap:7px;justify-content:flex-end;padding:0 12px 12px}
-.lc-preview-actions button{padding:5px 10px;border:1px solid #36566c;border-radius:7px;background:#122338;color:#dcecf8;font-size:11px}
-.lc-preview-actions button:hover{border-color:#35d9ff;color:#fff}
-@media(min-width:680px){#list:has(.lc-preview-card){display:grid;grid-template-columns:repeat(auto-fill,minmax(245px,1fr));align-items:start;gap:15px}#list:has(.lc-preview-card)>.folder-toolbar{grid-column:1/-1}#list:has(.lc-preview-card)>.folder-card{min-width:0}}
-@media(max-width:560px){.lc-preview-info{padding:11px}.lc-preview-card .title{font-size:14px}}
+/* LINK CORE Link cards */
+.lc-link-card{display:flex;flex-direction:column;overflow:hidden;min-width:0;padding:0!important;border:1px solid #28485c!important;border-radius:14px!important;background:linear-gradient(145deg,#101c2c,#0b1422)!important;box-shadow:0 4px 16px rgba(0,0,0,.18)!important;transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+.lc-link-card:hover{transform:translateY(-2px);border-color:#35d9ff!important;box-shadow:0 8px 24px rgba(0,210,255,.12)!important}
+.lc-link-info{display:flex;align-items:flex-start;gap:10px;padding:13px 14px 14px;min-width:0}
+.lc-link-main{flex:1;min-width:0}
+.lc-link-card .title{display:block;font-size:15px;font-weight:700;line-height:1.45;color:#edf7ff!important;text-decoration:none;overflow-wrap:anywhere}
+.lc-link-card .meta{margin-top:5px;color:#9bb0c5!important;font-size:11px;overflow-wrap:anywhere}
+.lc-link-card .memo{margin-top:7px;color:#c0cfdd!important;font-size:12px;line-height:1.55}
+.lc-link-arrow{flex:0 0 auto;color:#35d9ff;font-size:18px;padding-top:1px}
+.lc-link-actions{display:flex;gap:7px;justify-content:flex-end;padding:0 12px 12px}
+.lc-link-actions button{padding:5px 10px;border:1px solid #36566c;border-radius:7px;background:#122338;color:#dcecf8;font-size:11px}
+.lc-link-actions button:hover{border-color:#35d9ff;color:#fff}
+@media(min-width:680px){#list:has(.lc-link-card){display:grid;grid-template-columns:repeat(auto-fill,minmax(245px,1fr));align-items:start;gap:15px}#list:has(.lc-link-card)>.folder-toolbar{grid-column:1/-1}#list:has(.lc-link-card)>.folder-card{min-width:0}}
+@media(max-width:560px){.lc-link-info{padding:11px}.lc-link-card .title{font-size:14px}}
 
 
-.lc-preview-shot.preview-unavailable{display:flex;align-items:center;justify-content:center}
-.lc-preview-shot.preview-unavailable::before{content:"サイトプレビューを取得できません";position:relative;z-index:1;color:#718096;font-size:12px;text-align:center;padding:12px}
+
+@media (max-width: 720px) {
+  .sidebar .side-item { min-height: 44px; }
+  .sidebar .side-cats { display: flex; flex: 0 0 auto; flex-direction: row; gap: 5px; }
+  #list > .folder-toolbar, #list > .empty { grid-column: 1 / -1; }
+  #list > .folder-toolbar { flex-wrap: wrap; overflow-wrap: anywhere; }
+  #list > .folder-toolbar button { min-height: 44px; }
+  #finderWindow .toolbar-search input, .chat-compose textarea { font-size: 16px; }
+  .chat-overlay {
+    right: 8px;
+    bottom: max(8px, env(safe-area-inset-bottom));
+    width: min(410px, calc(100% - 16px));
+    height: min(620px, calc(100dvh - 24px));
+  }
+  .chat-head-actions button, .chat-compose button { min-height: 44px; }
+  .chat-head { flex-wrap: wrap; }
+}
+@media (max-width: 520px) {
+  #list:has(.lc-link-card) { grid-template-columns: minmax(0, 1fr); }
+  .lc-link-card .title { display: flex; align-items: center; min-height: 44px; }
+}
+
+@media (max-width: 720px) {
+  #finderWindow .finder-toolbar {
+    grid-template-columns: 60px minmax(0, 1fr) auto;
+    grid-template-rows: minmax(44px, auto) auto;
+    height: auto;
+    padding: 4px 10px 8px;
+  }
+  #finderWindow .toolbar-tools { display: flex; grid-area: 1 / 3; }
+  #finderWindow .toolbar-search { grid-area: 2 / 1 / auto / -1; min-width: 0; }
+  #nightModeBtn, .lc-link-actions button, .lc-link-info .star { min-width: 44px; min-height: 44px; }
+  .auth-gate { overflow-y: auto; align-items: safe center; }
+  .auth-gate input, dialog input[type=text], dialog input[type=url], dialog textarea, dialog select,
+  .official-add-form input { font-size: 16px; }
+  dialog { max-height: calc(100dvh - 24px); overflow-y: auto; padding: 16px; }
+}
 </style>
 <div id="lc-release-overlay" aria-hidden="true">
  <section id="lc-release-dialog" role="dialog" aria-modal="true" aria-labelledby="lc-release-title">
