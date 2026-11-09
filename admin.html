@@ -827,7 +827,8 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
     <textarea id="fMemo" rows="3"></textarea>
     <label class="check"><input id="fNew" type="checkbox"> NEWラベルを表示する</label>
     <label class="check"><input id="fFav" type="checkbox"> お気に入りにする</label>
-    <label class="check"><input id="fVisible" type="checkbox" checked> 利用者ページに公開する</label>
+    <label class="check"><input id="fVisible" type="checkbox"> 利用者ページに公開する</label>
+    <p id="linkSaveStatus" role="status"></p>
     <div class="foot">
       <button id="cancelBtn" class="btn" type="button">キャンセル</button>
       <button id="saveBtn" class="btn primary" type="submit">保存する</button>
@@ -1003,7 +1004,13 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
     if (authGate) authGate.classList.add('is-hidden');
   }
 
+  let resumeLinkEdit = false;
   function showAdminReauthentication(message) {
+    const dialog = $('dlg');
+    if (dialog.open) {
+      resumeLinkEdit = true;
+      dialog.close();
+    }
     sessionStorage.removeItem(ADMIN_TOKEN_KEY);
     sessionStorage.removeItem(AUTH_KEY);
     document.body.classList.add('auth-locked');
@@ -1076,6 +1083,10 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
       console.error('[LINK CORE] 認証後のリンク読み込みに失敗しました', error);
     } finally {
       setBusy(false);
+      if (resumeLinkEdit && sessionStorage.getItem(ADMIN_TOKEN_KEY)) {
+        resumeLinkEdit = false;
+        $('dlg').showModal();
+      }
     }
   });
 
@@ -1113,7 +1124,15 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   function apply(data) {
     state.links = data.links;
     state.categories = data.categories;
-    if (state.category && state.category !== '__uncategorized__' && !state.categories.map(folderPath).some(path => path === state.category || path.startsWith(state.category + '/'))) state.category = '';
+    if (state.category === '__uncategorized__') {
+      if (!state.links.some(link => !folderPath(link.category))) state.category = '';
+    } else if (state.category) {
+      const paths = state.categories.map(folderPath);
+      while (state.category && !paths.some(path => path === state.category || path.startsWith(state.category + '/'))) {
+        state.category = folderParent(state.category);
+      }
+    }
+    updateSidebar();
     render();
   }
 
@@ -1175,7 +1194,8 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
     const links = visibleLinks();
     const folderChildren = state.category && state.category !== '__uncategorized__' ? childFolders(state.category, state.links) : [];
     const folderName = state.category === '__uncategorized__' ? '未分類' : state.category;
-    $('viewTitle').textContent = folderName || 'My Desktop';
+    const titles = { favorites: 'お気に入り', recent: '最近追加した項目' };
+    $('viewTitle').textContent = folderName || titles[state.view] || 'My Desktop';
     const back = state.category ? `<div class="folder-toolbar"><button type="button" data-folder-back>‹ ${state.category !== '__uncategorized__' && folderParent(state.category) ? '親フォルダーに戻る' : 'フォルダー一覧に戻る'}</button><span>My Desktop　›　${esc(state.category === '__uncategorized__' ? '未分類' : state.category.split('/').join('　›　'))}</span></div>` : '';
     const childHtml = folderChildren.map(folder => folderButton(folder.name, folder.key, folder.count)).join('');
     const linkHtml = links.map(link => {
@@ -1215,7 +1235,9 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   }
 
   function openForm(link) {
+    if (state.busy) return;
     $('form').reset();
+    $('linkSaveStatus').textContent = '';
     $('fId').value = link ? link.id : '';
     $('fTitle').value = link ? link.title : '';
     $('fUrl').value = link ? link.url : '';
@@ -1223,7 +1245,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
     $('fMemo').value = link ? link.memo : '';
     $('fNew').checked = link ? link.isNew === true : false;
     $('fFav').checked = link ? link.favorite : false;
-    $('fVisible').checked = link ? link.visibleToVisitors !== false : true;
+    $('fVisible').checked = link ? link.visibleToVisitors === true : false;
     $('dlgTitle').textContent = link ? 'リンクを編集' : 'リンクを追加';
     $('saveBtn').textContent = link ? '変更を保存' : '保存する';
     $('dlg').showModal();
@@ -1233,20 +1255,42 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   $('addBtn').addEventListener('click', () => openForm(null));
   $('cancelBtn').addEventListener('click', () => $('dlg').close());
 
-  $('form').addEventListener('submit', event => {
+  $('dlg').addEventListener('cancel', event => {
+    if (state.busy) event.preventDefault();
+  });
+
+  $('form').addEventListener('submit', async event => {
     event.preventDefault();
+    if (state.busy) return;
+    const idField = $('fId');
+    // 通信が途切れても、再試行時は同じ行に保存する。
+    if (!idField.value) idField.value = (crypto.randomUUID && crypto.randomUUID()) || ('link-' + Date.now() + '-' + Math.random().toString(36).slice(2));
     const input = {
-      id: $('fId').value,
+      id: idField.value,
       title: $('fTitle').value,
       url: $('fUrl').value,
       category: $('fCat').value,
       memo: $('fMemo').value,
       isNew: $('fNew').checked,
-      favorite: $('fFav').checked,      visibleToVisitors: $('fVisible').checked,
+      favorite: $('fFav').checked,
+      visibleToVisitors: $('fVisible').checked,
       openMode: 'external'
     };
-    $('dlg').close();
-    run('保存中…', () => serverCall('saveLink', input), '保存しました。');
+    setBusy(true);
+    const fields = $('form').querySelectorAll('input, textarea, #cancelBtn');
+    fields.forEach(field => { field.disabled = true; });
+    const status = $('linkSaveStatus');
+    status.textContent = '保存中…';
+    try {
+      apply(await serverCall('saveLink', input));
+      $('dlg').close();
+      setStatus('保存しました。', '');
+    } catch (error) {
+      status.textContent = '保存に失敗しました：' + error.message;
+    } finally {
+      fields.forEach(field => { field.disabled = false; });
+      setBusy(false);
+    }
   });
 
   // スマホ・タブレットで検索欄の外をタップしたらキーボードを閉じる
@@ -1603,6 +1647,7 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
     let bridgeMs = 0;
     let fetchMs = 0;
     let renderMs = 0;
+    setBusy(true);
     setStatus('接続を準備しています…', '');
     try {
       const bridgeStartedAt = performance.now();
@@ -1791,7 +1836,7 @@ body,.finder-window,.finder-toolbar,.finder-layout,.finder-content,.sidebar,
 <div id="lc-release-overlay" aria-hidden="true">
  <section id="lc-release-dialog" role="dialog" aria-modal="true" aria-labelledby="lc-release-title">
   <header id="lc-release-head"><div><small>LINK CORE / CHANGELOG</small><h2 id="lc-release-title">リリースノート</h2></div><button id="lc-release-close" type="button" aria-label="閉じる">×</button></header>
-  <div id="lc-release-content"><article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v2.2.0</span><time datetime="2026-11-05">2026年11月5日</time></div><h3>フォルダーの階層化に対応</h3><ul><li>フォルダーの中にサブフォルダーを作れるようになりました。</li><li>フォルダー名を「親フォルダー/子フォルダー」の形式で指定すると、階層として表示されます。</li><li>親フォルダー内では、その直下のサブフォルダーとリンクを表示します。</li><li>階層をたどるパンくず表示と、親フォルダーへ戻る操作に対応しました。</li><li>既存のカテゴリ名・リンク情報・スプレッドシートの列構成は変更していません。</li></ul></article>
+  <div id="lc-release-content"><article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v2.2.2</span><time datetime="2026-11-10">2026年11月10日</time></div><h3>管理者のリンク保存とフォルダー表示を改善</h3><ul><li>保存に失敗した場合は入力内容を保持し、同じ画面から再試行できます。</li><li>新規リンクは、公開にチェックしたときに利用者画面へ表示されます。</li><li>編集中のフォルダーが空になった場合は、残っている親フォルダーへ戻ります。</li></ul></article><article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v2.2.0</span><time datetime="2026-11-05">2026年11月5日</time></div><h3>フォルダーの階層化に対応</h3><ul><li>フォルダーの中にサブフォルダーを作れるようになりました。</li><li>フォルダー名を「親フォルダー/子フォルダー」の形式で指定すると、階層として表示されます。</li><li>親フォルダー内では、その直下のサブフォルダーとリンクを表示します。</li><li>階層をたどるパンくず表示と、親フォルダーへ戻る操作に対応しました。</li><li>既存のカテゴリ名・リンク情報・スプレッドシートの列構成は変更していません。</li></ul></article>
    <article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v2.1.0</span><time datetime="2026-11-04">2026年11月4日</time></div><h3>ブラウザー識別・通知管理・ホーム画面アイコンを改善</h3><ul><li>リンクのクリック履歴にブラウザーIDを記録し、どのブラウザー環境から操作されたか確認できるようにしました。</li><li>お知らせの既読状態をブラウザーごとに管理し、管理者画面から既読件数を確認できるようにしました。</li><li>ホーム画面に追加したときのLINK COREアイコンを、専用のアイコン画像に更新しました。</li><li>利用者画面・管理者画面から、内部ブラウザーやウィンドウの移動・サイズ変更などの機能を整理し、リンクをシンプルに開けるようにしました。</li></ul></article>
    
    <article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v2.0.0</span><time datetime="2026-11-03">2026年11月3日</time></div><h3>カテゴリーをフォルダ形式に変更</h3><ul><li>利用者画面・管理者画面のMy Desktopに、既存カテゴリーをフォルダアイコンで表示するようにしました。</li><li>フォルダを開くと、そのカテゴリーに登録されたリンクだけを表示します。</li><li>フォルダ内から一覧へ戻る操作と、サイドバーから直接フォルダを開く操作に対応しました。</li><li>カテゴリーが未設定のリンクは「未分類」フォルダにまとめて表示します。</li><li>既存のリンク情報やスプレッドシートの保存形式は変更していません。</li></ul></article>
