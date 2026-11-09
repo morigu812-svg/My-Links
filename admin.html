@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
+<link rel="preconnect" href="https://script.google.com">
 <link rel="preconnect" href="https://script.google.com" crossorigin>
 <link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
 <link rel="dns-prefetch" href="//script.google.com">
@@ -881,11 +882,6 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   const AUTH_KEY = 'myLinksUnlocked';
   const ADMIN_TOKEN_KEY = 'linkCoreAdminToken';
 
-  // 未認証で開いた場合は、GASブリッジのREADY直後にサーバー側のリンク取得・キャッシュ準備を開始する。
-  // リンク本体は認証前のブラウザには返さない。
-  const needsAdminWarmup = sessionStorage.getItem(AUTH_KEY) !== 'yes' || !sessionStorage.getItem(ADMIN_TOKEN_KEY);
-  let adminWarmupPromise = Promise.resolve();
-
   function isGasOrigin(origin) {
     if (origin === 'https://script.google.com' ||
         origin === 'https://script.googleusercontent.com') return true;
@@ -920,10 +916,6 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
       if (bridgeWindow || !isBridgeFrame(event.source)) return;
       bridgeWindow = event.source;
       bridgeOrigin = event.origin;
-
-      // GAS接続完了を合図に、パスワード入力中のバックグラウンド取得を即時開始する。
-      // このリクエストが先にリンク一覧をサーバーキャッシュへ準備し、認証後は同じキャッシュを利用する。
-      if (needsAdminWarmup) adminWarmupPromise = checkAdminSetupStatus();
 
       markReady();
       return;
@@ -1005,42 +997,10 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   const authTitle = $('authTitle');
   const authDescription = $('authDescription');
   const authSubmit = $('authSubmit');
-  const passwordLabel = $('passwordLabel');
-  const confirmPasswordGroup = $('confirmPasswordGroup');
-  const confirmPasswordField = $('confirmPassword');
-  const visitorPasswordField = $('visitorPassword');
-  const visitorPasswordConfirmField = $('visitorPasswordConfirm');
-  let setupMode = false;
 
   if (sessionStorage.getItem(AUTH_KEY) === 'yes' && sessionStorage.getItem(ADMIN_TOKEN_KEY)) {
     document.body.classList.remove('auth-locked');
     if (authGate) authGate.classList.add('is-hidden');
-  }
-
-  function setAuthMode(configured) {
-    setupMode = !configured;
-    confirmPasswordGroup.hidden = true;
-    confirmPasswordField.required = false;
-    visitorPasswordField.required = false;
-    visitorPasswordConfirmField.required = false;
-    if (setupMode) {
-      authTitle.textContent = '管理者設定が必要です';
-      authDescription.textContent = '管理者パスワードは Apps Script のスクリプト プロパティで設定してください。この画面から初回パスワードは登録できません。';
-      passwordLabel.textContent = '管理者パスワード';
-      authField.autocomplete = 'current-password';
-      authField.disabled = true;
-      authSubmit.disabled = true;
-      authError.textContent = 'LINK_CORE_ADMIN_PASSWORD と LINK_CORE_VISITOR_PASSWORD が設定されるとログインできます。';
-    } else {
-      authTitle.textContent = '管理者ログイン';
-      authDescription.textContent = '管理者だけがリンクの追加・編集・削除を行えます。';
-      passwordLabel.textContent = '管理者パスワード';
-      authField.autocomplete = 'current-password';
-      authField.disabled = false;
-      authSubmit.disabled = false;
-      authError.textContent = '';
-      authSubmit.textContent = '管理者としてログイン';
-    }
   }
 
   function showAdminReauthentication(message) {
@@ -1048,7 +1008,6 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
     sessionStorage.removeItem(AUTH_KEY);
     document.body.classList.add('auth-locked');
     authGate.classList.remove('is-hidden');
-    setAuthMode(true);
     authTitle.textContent = '管理者ログイン';
     authDescription.textContent = 'ログインの有効期限が切れました。管理者パスワードを再入力してください。';
     authError.textContent = message || '管理者ログインの有効期限が切れました。再ログインしてください。';
@@ -1058,57 +1017,44 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
     authField.focus();
   }
 
-  async function checkAdminSetupStatus() {
-    try {
-      const status = await serverCall('getAdminSetupStatus');
-      setAuthMode(!!status.configured);
-    } catch (error) {
-      authError.textContent = '設定状態を確認できませんでした：' + (error.message || '通信エラー');
-    }
-  }
-
   authForm.addEventListener('submit', async event => {
     event.preventDefault();
-    authError.textContent = setupMode ? 'パスワードを設定中…' : '認証中…';
+    authError.textContent = '認証中…';
     authSubmit.disabled = true;
 
-    // まず認証だけを完了させ、成功した瞬間にリンク画面へ切り替える。
-    let token;
+    const loginStartedAt = performance.now();
+    let authResult;
     try {
-      if (setupMode) throw new Error('管理者パスワードが未設定です。Apps Script のスクリプト プロパティで設定してください。');
-      const authResult = await serverCall('authenticateAdmin', authField.value);
+      authResult = await serverCall('authenticateAdmin', authField.value, true);
       if (!authResult || !authResult.token) throw new Error('認証トークンを受け取れませんでした。');
-      token = authResult.token;
-      sessionStorage.setItem(ADMIN_TOKEN_KEY, token);
+      sessionStorage.setItem(ADMIN_TOKEN_KEY, authResult.token);
       sessionStorage.setItem(AUTH_KEY, 'yes');
     } catch (error) {
       sessionStorage.removeItem(ADMIN_TOKEN_KEY);
       sessionStorage.removeItem(AUTH_KEY);
-      authError.textContent = error.message || (setupMode ? '設定に失敗しました。' : 'ログインに失敗しました。');
+      authError.textContent = error.message || 'ログインに失敗しました。';
       authField.select();
       authSubmit.disabled = false;
       return;
     }
 
-    // 認証成功後はデータ取得を待たずに画面を表示し、既存のスケルトンを見せる。
+    // 旧GAS版や初回一覧の取得エラー時は、認証後に一覧だけを再取得する。
     document.body.classList.remove('auth-locked');
     if (authGate) authGate.classList.add('is-hidden');
     authField.value = '';
     setBusy(true);
     setStatus('認証完了。リンクを読み込んでいます…', '');
 
-    const fetchStartedAt = performance.now();
     try {
-      // ログイン画面で開始したサーバー側キャッシュ準備の完了を待ってから一覧を取得する。
-      await adminWarmupPromise;
-      const result = await serverCall('getLinks');
+      const hasInitialLinks = Array.isArray(authResult.links) && Array.isArray(authResult.categories);
+      const result = hasInitialLinks ? authResult : await serverCall('getLinks');
       if (!result || !Array.isArray(result.links) || !Array.isArray(result.categories)) {
         throw new Error('GASの応答形式が想定と異なります。GASのデプロイ版を確認してください。');
       }
       const renderStartedAt = performance.now();
       apply(result);
       const renderMs = performance.now() - renderStartedAt;
-      const fetchMs = performance.now() - fetchStartedAt;
+      const fetchMs = renderStartedAt - loginStartedAt;
       const seconds = value => (value / 1000).toFixed(2);
       const server = result._performance || null;
       const serverSummary = server
@@ -1117,7 +1063,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
           '・キャッシュ保存 ' + seconds(server.cacheWriteMs) + '・絞込 ' + seconds(server.filterMs) +
           '秒／' + (server.cacheHit ? 'HIT' : 'MISS') + '）'
         : '';
-      setStatus('読み込み完了（' + result.links.length + '件）｜取得 ' + seconds(fetchMs) +
+      setStatus('読み込み完了（' + result.links.length + '件）｜認証・取得 ' + seconds(fetchMs) +
         '秒・描画 ' + seconds(renderMs) + '秒' + serverSummary, '');
       console.info('[LINK CORE 性能計測・認証後読み込み]', {
         fetchMs: Math.round(fetchMs),
@@ -1198,19 +1144,25 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
         : (b.favorite - a.favorite) || String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
   }
 
+  let renderedLinks, renderedCategories, renderedCategory;
   function render() {
     $('list').setAttribute('aria-busy', 'false');
     $('list').classList.remove('loading-skeleton');
     const folderIcon = "<svg class=\"folder-icon\" viewBox=\"0 0 64 52\" aria-hidden=\"true\"><path d=\"M4 10a5 5 0 0 1 5-5h17l7 7h22a5 5 0 0 1 5 5v4H4z\" fill=\"currentColor\" opacity=\".72\"/><path d=\"M4 17a5 5 0 0 1 5-5h46a5 5 0 0 1 5 5v27a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z\" fill=\"currentColor\"/><path d=\"M4 22h56\" stroke=\"#fff\" stroke-opacity=\".35\" stroke-width=\"2\"/></svg>";
     const folderButton = (name, key, count) => `<button type="button" class="folder-card" data-open-folder="${esc(key)}">${folderIcon}<span class="folder-card-name">${esc(name)}</span><span class="folder-card-count">${count} 個のリンク</span></button>`;
-    const sideFolders = Array.from(new Set(state.categories.map(folderPath).filter(Boolean))).map(cat => {
-      const depth = Math.max(0, folderParts(cat).length - 1);
-      const label = folderParts(cat).slice(-1)[0] || cat;
-      return `<button type="button" class="side-item ${state.category === cat ? 'selected' : ''}" style="padding-left:${10 + depth * 12}px" data-side-cat="${esc(cat)}"><span class="side-folder-mini">${folderIcon}</span> ${esc(label)}</button>`;
-    });
-    if (state.links.some(link => !folderPath(link.category))) sideFolders.push(`<button type="button" class="side-item ${state.category === '__uncategorized__' ? 'selected' : ''}" data-side-cat="__uncategorized__"><span class="side-folder-mini">${folderIcon}</span> 未分類</button>`);
-    $('sideCats').innerHTML = sideFolders.join('') || '<div class="side-empty">フォルダがありません</div>';
-    $('catList').innerHTML = state.categories.map(c => `<option value="${esc(c)}">`).join('');
+    if (renderedLinks !== state.links || renderedCategories !== state.categories || renderedCategory !== state.category) {
+      const sideFolders = Array.from(new Set(state.categories.map(folderPath).filter(Boolean))).map(cat => {
+        const depth = Math.max(0, folderParts(cat).length - 1);
+        const label = folderParts(cat).slice(-1)[0] || cat;
+        return `<button type="button" class="side-item ${state.category === cat ? 'selected' : ''}" style="padding-left:${10 + depth * 12}px" data-side-cat="${esc(cat)}"><span class="side-folder-mini">${folderIcon}</span> ${esc(label)}</button>`;
+      });
+      if (state.links.some(link => !folderPath(link.category))) sideFolders.push(`<button type="button" class="side-item ${state.category === '__uncategorized__' ? 'selected' : ''}" data-side-cat="__uncategorized__"><span class="side-folder-mini">${folderIcon}</span> 未分類</button>`);
+      $('sideCats').innerHTML = sideFolders.join('') || '<div class="side-empty">フォルダがありません</div>';
+      $('catList').innerHTML = state.categories.map(c => `<option value="${esc(c)}">`).join('');
+      renderedLinks = state.links;
+      renderedCategories = state.categories;
+      renderedCategory = state.category;
+    }
     if (!state.category && (state.view === 'desktop' || state.view === 'all') && !state.query.trim()) {
       const folders = childFolders('', state.links);
       const uncategorized = state.links.filter(link => !folderPath(link.category)).length;
@@ -1314,9 +1266,10 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
     });
   })();
 
+  let searchFrame = 0;
   $('search').addEventListener('input', event => {
     state.query = event.target.value;
-    render();
+    if (!searchFrame) searchFrame = requestAnimationFrame(() => { searchFrame = 0; render(); });
   });
 
   $('sideCats').addEventListener('click', event => {

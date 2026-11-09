@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="ja">
 <head>
+<link rel="preconnect" href="https://script.google.com">
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -379,12 +380,7 @@ window.addEventListener('message',event=>{
   // 設定したGASブリッジ配下の送信元を確認する。
   if(bridgeWindow || !isBridgeFrame(event.source))return;
   bridgeWindow=event.source;bridgeOrigin=event.origin;
-  // ログイン画面を表示したまま、サーバー側で公開リンク一覧のキャッシュを先行準備する。
-  // リンク本文は未認証ブラウザーへ返さず、認証時の取得だけを高速化する。
   readyResolve();
-  call('getAdminSetupStatus').catch(error=>{
-   console.warn('[LINK CORE] visitor cache warm-up failed:',error);
-  });
   return;
  }
  if(d.type==='DAILY_CORE_RESPONSE'){
@@ -487,23 +483,31 @@ function childFolders(path, sourceLinks) {
     name, key: prefix + name, count: counts.get(name)
   }));
 }
+function publicLinks(items) {
+ return Array.isArray(items) ? items.filter(link => String(link.visibleToVisitors).toLowerCase() !== 'false') : [];
+}
 function visibleLinks(){
  const q=$('search').value.trim().toLowerCase();
- let items=links.filter(x=>x.visibleToVisitors!==false&&String(x.visibleToVisitors).toLowerCase()!=='false').filter(x=>[x.title,x.url,x.memo,x.category].some(v=>String(v||'').toLowerCase().includes(q)));
+ let items=q?links.filter(x=>[x.title,x.url,x.memo,x.category].some(v=>String(v||'').toLowerCase().includes(q))):links;
  if(selectedCategory==='__uncategorized__')items=items.filter(x=>!folderPath(x.category));
  else if(selectedCategory)items=items.filter(x=>folderPath(x.category)===selectedCategory);
  else if(view==='favorites')items=items.filter(x=>x.favorite);
  else if(view==='recent')items=items.slice().sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
  return items;
 }
+let renderedCategories, renderedCategory;
 function render(){
  $('list').setAttribute('aria-busy','false');
  $('list').classList.remove('loading-skeleton');
  const folderIcon="<svg class=\"folder-icon\" viewBox=\"0 0 64 52\" aria-hidden=\"true\"><path d=\"M4 10a5 5 0 0 1 5-5h17l7 7h22a5 5 0 0 1 5 5v4H4z\" fill=\"currentColor\" opacity=\".72\"/><path d=\"M4 17a5 5 0 0 1 5-5h46a5 5 0 0 1 5 5v27a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z\" fill=\"currentColor\"/><path d=\"M4 22h56\" stroke=\"#fff\" stroke-opacity=\".35\" stroke-width=\"2\"/></svg>";
  const folderButton=(name,key,count)=>'<button type="button" class="folder-card" data-open-folder="'+esc(key)+'">'+folderIcon+'<span class="folder-card-name">'+esc(name)+'</span><span class="folder-card-count">'+count+' 個のリンク</span></button>';
- const visible=links.filter(x=>x.visibleToVisitors!==false&&String(x.visibleToVisitors).toLowerCase()!=='false');
- const catButtons=Array.from(new Set(categories.map(folderPath).filter(Boolean))).map(cat=>{const depth=Math.max(0,folderParts(cat).length-1);const label=folderParts(cat).slice(-1)[0]||cat;return '<button type="button" class="side-item '+(selectedCategory===cat?'selected':'')+'" style="padding-left:'+(10+depth*12)+'px" data-category="'+esc(cat)+'"><span class="side-folder-mini">'+folderIcon+'</span> '+esc(label)+'</button>';}).join('');
- $('sideCats').innerHTML=catButtons||'<div style="padding:4px 10px;color:#999;font-size:11px">フォルダがありません</div>';
+ const visible=links;
+ if (renderedCategories !== categories || renderedCategory !== selectedCategory) {
+  const catButtons=Array.from(new Set(categories.map(folderPath).filter(Boolean))).map(cat=>{const depth=Math.max(0,folderParts(cat).length-1);const label=folderParts(cat).slice(-1)[0]||cat;return '<button type="button" class="side-item '+(selectedCategory===cat?'selected':'')+'" style="padding-left:'+(10+depth*12)+'px" data-category="'+esc(cat)+'"><span class="side-folder-mini">'+folderIcon+'</span> '+esc(label)+'</button>';}).join('');
+  $('sideCats').innerHTML=catButtons||'<div style="padding:4px 10px;color:#999;font-size:11px">フォルダがありません</div>';
+  renderedCategories = categories;
+  renderedCategory = selectedCategory;
+ }
  document.querySelectorAll('[data-view]').forEach(btn=>btn.classList.toggle('selected',!selectedCategory&&btn.dataset.view===view));
  const titles={desktop:'My Desktop',all:'すべてのリンク',favorites:'お気に入り',recent:'最近追加した項目'};
  $('viewTitle').textContent=selectedCategory==='__uncategorized__'?'未分類':(selectedCategory||titles[view]||'すべてのリンク');
@@ -544,10 +548,13 @@ function showVisitorLogin(message){
 async function refreshChat(){if(!visitorToken||chatLoading)return;const button=$('refreshChat');chatLoading=true;button.disabled=true;button.classList.add('is-refreshing');button.setAttribute('aria-busy','true');try{const r=await call('getChatMessages',visitorToken);renderChat(Array.isArray(r.messages)?r.messages:[]);chatLoaded=true;}catch(e){if(isVisitorAuthError(e))showVisitorLogin('ログインの有効期限が切れました。もう一度サイトのパスワードを入力してください。');else chatMessages.textContent='読み込みに失敗しました：'+(e.message||'通信エラー');}finally{chatLoading=false;button.disabled=false;button.classList.remove('is-refreshing');button.removeAttribute('aria-busy');}}
 function openChat(){if(!visitorToken){$('loginError').textContent='先に利用者ログインをしてください。';return;}markSideTabAsRead('openChat');chatOverlay.classList.add('open');if(!chatLoaded)refreshChat();}
 $('openChat').addEventListener('click',openChat);$('refreshChat').addEventListener('click',refreshChat);$('closeChat').addEventListener('click',()=>{chatOverlay.classList.remove('open');});
-setInterval(()=>{if(chatOverlay.classList.contains('open'))refreshChat();},15000);
+setInterval(()=>{if(document.visibilityState==='visible'&&chatOverlay.classList.contains('open'))refreshChat();},15000);
 chatForm.addEventListener('submit',async e=>{e.preventDefault();const message=chatInput.value.trim();if(!message||!visitorToken)return;chatSend.disabled=true;try{const r=await call('sendChatMessage',message,visitorToken);chatInput.value='';renderChat(Array.isArray(r.messages)?r.messages:[]);chatLoaded=true;}catch(error){if(isVisitorAuthError(error)){showVisitorLogin('ログインの有効期限が切れました。もう一度サイトのパスワードを入力してください。');}else{const s=document.createElement('div');s.className='chat-status';s.textContent=error.message||'送信できませんでした。';chatMessages.appendChild(s);}}finally{chatSend.disabled=false;if(visitorToken)chatInput.focus();}});
 
-$('search').addEventListener('input',render);
+let searchFrame = 0;
+$('search').addEventListener('input', () => {
+ if (!searchFrame) searchFrame = requestAnimationFrame(() => { searchFrame = 0; render(); });
+});
 
 $('sideCats').addEventListener('click',event=>{const btn=event.target.closest('[data-category]');if(!btn)return;selectedCategory=btn.dataset.category;view='all';render()});
 $('list').addEventListener('click',event=>{const folder=event.target.closest('[data-open-folder]');if(folder){selectedCategory=folder.dataset.openFolder;view='all';render();return;}if(event.target.closest('[data-folder-back]')){selectedCategory=selectedCategory==='__uncategorized__'?'':folderParent(selectedCategory);view=selectedCategory?'all':'desktop';render();}});
@@ -607,7 +614,7 @@ $('markNoticeRead').addEventListener('click',async()=>{
  }catch(error){$('noticeReadStatus').textContent=error.message||'既読登録に失敗しました。';button.disabled=false;}
 });
 
-$('loginForm').addEventListener('submit',async e=>{e.preventDefault();$('loginButton').disabled=true;$('loginError').textContent='認証中…';$('loginRetry').classList.add('hidden');let loadingLinks=false;try{const auth=await call('authenticateVisitor',$('sitePassword').value);if(!auth||!auth.token)throw new Error('閲覧用トークンを取得できませんでした。');visitorToken=auth.token;$('loginPanel').classList.add('hidden');$('linksPanel').classList.remove('hidden');loadingLinks=true;$('loadStatus').textContent='リンクを読み込み中…';$('list').classList.add('loading-skeleton');const data={links:auth.links,categories:auth.categories};links=Array.isArray(data.links)?data.links:[];categories=Array.isArray(data.categories)?data.categories:Array.from(new Set(links.map(x=>x.category).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'ja'));if(view==='favorites'&&!links.some(x=>x.favorite))view='all';$('sitePassword').value='';$('loginError').textContent='';$('loadStatus').textContent='';render();loadNoticeReadState()}catch(err){visitorToken='';if(loadingLinks){$('linksPanel').classList.add('hidden');$('loginPanel').classList.remove('hidden')}$('loginError').textContent=err.message||'ログインできませんでした。';$('loginRetry').classList.remove('hidden');$('loginButton').disabled=false;$('sitePassword').focus()}});
+$('loginForm').addEventListener('submit',async e=>{e.preventDefault();$('loginButton').disabled=true;$('loginError').textContent='認証中…';$('loginRetry').classList.add('hidden');let loadingLinks=false;try{const auth=await call('authenticateVisitor',$('sitePassword').value);if(!auth||!auth.token)throw new Error('閲覧用トークンを取得できませんでした。');visitorToken=auth.token;$('loginPanel').classList.add('hidden');$('linksPanel').classList.remove('hidden');loadingLinks=true;$('loadStatus').textContent='リンクを読み込み中…';$('list').classList.add('loading-skeleton');const data={links:auth.links,categories:auth.categories};links=publicLinks(data.links);categories=Array.isArray(data.categories)?data.categories:Array.from(new Set(links.map(x=>x.category).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'ja'));if(view==='favorites'&&!links.some(x=>x.favorite))view='all';$('sitePassword').value='';$('loginError').textContent='';$('loadStatus').textContent='';render();loadNoticeReadState()}catch(err){visitorToken='';if(loadingLinks){$('linksPanel').classList.add('hidden');$('loginPanel').classList.remove('hidden')}$('loginError').textContent=err.message||'ログインできませんでした。';$('loginRetry').classList.remove('hidden');$('loginButton').disabled=false;$('sitePassword').focus()}});
 
 $('loginRetry').addEventListener('click',()=>{$('loginRetry').classList.add('hidden');$('loginForm').requestSubmit()});
 // タブへ戻った際にセッションを確認し、期限切れならその場でパスワード欄へ戻す。
@@ -617,7 +624,7 @@ document.addEventListener('visibilitychange',async()=>{
   visitorSessionCheckInFlight=true;lastVisitorSessionCheck=Date.now();
   try{
     const data=await call('getLinks',visitorToken);
-    links=Array.isArray(data.links)?data.links:[];
+    links=publicLinks(data.links);
     categories=Array.isArray(data.categories)?data.categories:[];
     render();
   }catch(error){

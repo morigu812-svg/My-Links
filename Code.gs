@@ -379,7 +379,7 @@ function authenticateVisitor(password) {
   const token = Utilities.getUuid() + Utilities.getUuid();
   CacheService.getScriptCache().put('LINK_CORE_VISITOR_' + token, 'yes', 21600);
   // 認証直後のリンク取得を同じ応答にまとめ、ブラウザーとの往復を1回減らす。
-  const initialLinks = getLinksForToken_(token);
+  const initialLinks = getLinksForToken_(token, false);
   return {
     ok: true, token: token, expiresIn: 21600,
     links: initialLinks.links, categories: initialLinks.categories
@@ -393,7 +393,7 @@ function requireLinkViewer_(token) {
   throw new Error('閲覧にはサイトのパスワード認証が必要です。');
 }
 
-function authenticateAdmin(password) {
+function authenticateAdmin(password, includeLinks) {
   const rateState = getAuthRateState_('ADMIN');
   checkAuthRateLimit_(rateState);
   const expected = PropertiesService.getScriptProperties().getProperty('LINK_CORE_ADMIN_PASSWORD');
@@ -406,7 +406,16 @@ function authenticateAdmin(password) {
   const token = Utilities.getUuid() + Utilities.getUuid();
   CacheService.getScriptCache().put('LINK_CORE_ADMIN_' + token, 'yes', 21600);
 
-  // 認証だけを先に返し、ブラウザ側でリンク画面を表示してから一覧を取得する。
+  // 管理画面だけ、認証成功後に一覧を同じ応答で返す。メモ帳はトークンだけ受け取る。
+  if (includeLinks === true) {
+    try {
+      const { links, categories } = getLinksForToken_(token, true);
+      return { ok: true, token: token, expiresIn: 21600, links: links, categories: categories };
+    } catch (error) {
+      console.warn('LINK CORE initial admin links failed:', error);
+      // 一覧の一時エラーで認証成功を取り消さない。管理画面から再取得できる。
+    }
+  }
   return {
     ok: true,
     token: token,
