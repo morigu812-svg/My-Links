@@ -346,7 +346,7 @@ body.window-resizing,body.window-resizing *{user-select:none!important}
 <div class="side-label">カテゴリ</div><div id="sideCats" class="side-cats"></div>
 </aside><section class="finder-content"><div class="workspace">
 <div class="section-heading"><div><span class="section-kicker">MY DESKTOP / LINK LIBRARY</span><h2 id="viewTitle">お気に入り</h2></div><span class="section-note">ICON VIEW</span></div>
-<div id="noticeReadCard" class="notice-read-card" hidden><div class="notice-read-title">お知らせ・リンク修正</div><div class="notice-read-body">ごめんなさい！YouTubeの項目にある「みんとtube+」のリンクを間違えていました！<br>新リンク：YouTube ＞ みんとtube+<br>新リンク：ブログ ＞ 制限回避リンク集</div><div class="notice-read-actions"><button type="button" id="markNoticeRead">確認して既読にする</button><span id="noticeReadStatus" role="status"></span></div></div><div class="list-heading"><span class="list-heading-title"><span class="heading-dot">◆</span> LINK FEED</span><span class="result-count" id="count"></span></div>
+<div id="noticeReadCard" class="notice-read-card" hidden><div class="notice-read-title">お知らせ・リンク修正</div><div class="notice-read-body">ごめんなさい！YouTubeの項目にある「みんとtube+」のリンクを間違えていました！<br>新リンク：YouTube ＞ みんとtube+<br>新リンク：ブログ ＞ 制限回避リンク集</div><div class="notice-read-actions"><button type="button" id="markNoticeRead">確認して既読にする</button><span id="noticeReadStatus" role="status"></span></div></div><div class="list-heading"><span class="list-heading-title"><span class="heading-dot">◆</span> LINK FEED</span><span class="result-count" id="count"></span><button class="retry-button" id="refreshLinks" type="button">リンクを更新</button></div>
 <div class="status" id="loadStatus" role="status" aria-live="polite"></div>
 <div class="list loading-skeleton" id="list" role="region" aria-label="リンク一覧" aria-live="polite" aria-busy="true"><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div></div>
 </div></section></div>
@@ -430,7 +430,7 @@ function showClickLogNotice(message,isError){
  clearTimeout(clickNoticeTimer);clickNoticeTimer=setTimeout(()=>box.classList.remove('show'),isError?12000:2600);
 }
 
-let links=[],categories=[],view='desktop',selectedCategory='',visitorToken='';
+let links=[],categories=[],view='favorites',selectedCategory='',visitorToken='';
 
 const READ_NEW_LINKS_KEY='linkCoreReadNewLinksV1';
 let readNewLinkIds=new Set();
@@ -488,7 +488,8 @@ function publicLinks(items) {
 }
 function visibleLinks(){
  const q=$('search').value.trim().toLowerCase();
- let items=q?links.filter(x=>[x.title,x.url,x.memo,x.category].some(v=>String(v||'').toLowerCase().includes(q))):links;
+ if(q)return links.filter(x=>[x.title,x.url,x.memo,x.category].some(v=>String(v||'').toLowerCase().includes(q)));
+ let items=links;
  if(selectedCategory==='__uncategorized__')items=items.filter(x=>!folderPath(x.category));
  else if(selectedCategory)items=items.filter(x=>folderPath(x.category)===selectedCategory);
  else if(view==='favorites')items=items.filter(x=>x.favorite);
@@ -510,8 +511,8 @@ function render(){
  }
  document.querySelectorAll('[data-view]').forEach(btn=>btn.classList.toggle('selected',!selectedCategory&&btn.dataset.view===view));
  const titles={desktop:'My Desktop',all:'すべてのリンク',favorites:'お気に入り',recent:'最近追加した項目'};
- $('viewTitle').textContent=selectedCategory==='__uncategorized__'?'未分類':(selectedCategory||titles[view]||'すべてのリンク');
  const query=$('search').value.trim();
+ $('viewTitle').textContent=query?'リンクの検索結果':selectedCategory==='__uncategorized__'?'未分類':(selectedCategory||titles[view]||'すべてのリンク');
  if(!selectedCategory&&(view==='desktop'||view==='all')&&!query){
   const folders=childFolders('',visible);
   const uncategorized=visible.filter(x=>!folderPath(x.category)).length;
@@ -521,14 +522,14 @@ function render(){
   $('list').innerHTML=folders.length?folders.map(f=>folderButton(f.name,f.key,f.count)).join(''):'<div class="empty">フォルダがありません。</div>';
   return;
  }
- const folderChildren=selectedCategory&&selectedCategory!=='__uncategorized__'?childFolders(selectedCategory,visible):[];
+ const folderChildren=!query&&selectedCategory&&selectedCategory!=='__uncategorized__'?childFolders(selectedCategory,visible):[];
  const currentLinks=visibleLinks();
  const linkCards=currentLinks.map(x=>{const href=/^https?:\/\//i.test(x.url)?x.url:'#';return '<article class="item lc-link-card" data-link-id="'+esc(x.id)+'"><div class="lc-link-info"><div class="lc-link-main"><a class="title" data-open-mode="external" href="'+esc(href)+'" target="_blank" rel="noopener noreferrer">'+esc(x.title)+'</a>'+(x.isNew&&!readNewLinkIds.has(String(x.id))?'<span class="new-label">NEW</span>':'')+'<div class="meta">'+esc((()=>{try{return new URL(x.url).hostname}catch(e){return x.category||''}})())+'</div>'+(x.memo?'<div class="memo">'+esc(x.memo)+'</div>':'')+'</div><span class="lc-link-arrow" aria-hidden="true">↗</span></div></article>';}).join('');
- const back=selectedCategory&&selectedCategory!=='__uncategorized__'?'<div class="folder-toolbar"><button type="button" data-folder-back>‹ '+(folderParent(selectedCategory)?'親フォルダーに戻る':'フォルダー一覧に戻る')+'</button><span>My Desktop　›　'+esc(selectedCategory.split('/').join('　›　'))+'</span></div>':(selectedCategory?'<div class="folder-toolbar"><button type="button" data-folder-back>‹ フォルダー一覧に戻る</button><span>My Desktop　›　未分類</span></div>':'');
+ const back=query?'':selectedCategory&&selectedCategory!=='__uncategorized__'?'<div class="folder-toolbar"><button type="button" data-folder-back>‹ '+(folderParent(selectedCategory)?'親フォルダーに戻る':'フォルダー一覧に戻る')+'</button><span>My Desktop　›　'+esc(selectedCategory.split('/').join('　›　'))+'</span></div>':(selectedCategory?'<div class="folder-toolbar"><button type="button" data-folder-back>‹ フォルダー一覧に戻る</button><span>My Desktop　›　未分類</span></div>':'');
  const childHtml=folderChildren.map(f=>folderButton(f.name,f.key,f.count)).join('');
  $('count').textContent=folderChildren.length+' フォルダー / '+currentLinks.length+' 件';
  $('loadStatus').textContent='';
- $('list').innerHTML=back+childHtml+linkCards+(!folderChildren.length&&!currentLinks.length?'<div class="empty">このフォルダーは空です。</div>':'');
+ $('list').innerHTML=back+childHtml+linkCards+(!folderChildren.length&&!currentLinks.length?'<div class="empty">'+(query?'検索条件に一致するリンクがありません。':selectedCategory?'このフォルダーは空です。':'表示できるリンクがありません。')+'</div>':'');
  
 }
 const chatOverlay=$('chatOverlay'),chatMessages=$('chatMessages'),chatForm=$('chatForm'),chatInput=$('chatInput'),chatSend=$('chatSend');let chatLoading=false,chatLoaded=false;
@@ -536,6 +537,7 @@ function renderChat(messages){chatMessages.replaceChildren();if(!messages.length
 function isVisitorAuthError(error){return /閲覧にはサイトのパスワード認証が必要|利用者用パスワード|認証が必要/.test(error&&error.message?error.message:String(error||''));}
 function showVisitorLogin(message){
   visitorToken='';
+  chatLoaded=false;
   chatOverlay.classList.remove('open');
   $('linksPanel').classList.add('hidden');
   $('loginPanel').classList.remove('hidden');
@@ -548,7 +550,6 @@ function showVisitorLogin(message){
 async function refreshChat(){if(!visitorToken||chatLoading)return;const button=$('refreshChat');chatLoading=true;button.disabled=true;button.classList.add('is-refreshing');button.setAttribute('aria-busy','true');try{const r=await call('getChatMessages',visitorToken);renderChat(Array.isArray(r.messages)?r.messages:[]);chatLoaded=true;}catch(e){if(isVisitorAuthError(e))showVisitorLogin('ログインの有効期限が切れました。もう一度サイトのパスワードを入力してください。');else chatMessages.textContent='読み込みに失敗しました：'+(e.message||'通信エラー');}finally{chatLoading=false;button.disabled=false;button.classList.remove('is-refreshing');button.removeAttribute('aria-busy');}}
 function openChat(){if(!visitorToken){$('loginError').textContent='先に利用者ログインをしてください。';return;}markSideTabAsRead('openChat');chatOverlay.classList.add('open');if(!chatLoaded)refreshChat();}
 $('openChat').addEventListener('click',openChat);$('refreshChat').addEventListener('click',refreshChat);$('closeChat').addEventListener('click',()=>{chatOverlay.classList.remove('open');});
-setInterval(()=>{if(document.visibilityState==='visible'&&chatOverlay.classList.contains('open'))refreshChat();},15000);
 chatForm.addEventListener('submit',async e=>{e.preventDefault();const message=chatInput.value.trim();if(!message||!visitorToken)return;chatSend.disabled=true;try{const r=await call('sendChatMessage',message,visitorToken);chatInput.value='';renderChat(Array.isArray(r.messages)?r.messages:[]);chatLoaded=true;}catch(error){if(isVisitorAuthError(error)){showVisitorLogin('ログインの有効期限が切れました。もう一度サイトのパスワードを入力してください。');}else{const s=document.createElement('div');s.className='chat-status';s.textContent=error.message||'送信できませんでした。';chatMessages.appendChild(s);}}finally{chatSend.disabled=false;if(visitorToken)chatInput.focus();}});
 
 let searchFrame = 0;
@@ -589,49 +590,103 @@ $('list').addEventListener('click',event=>{
 
 const NOTICE_ID='link-fix-20261104';
 const NOTICE_BROWSER_KEY='linkCoreNoticeBrowserIdV1';
+let noticeBrowserId='', noticeRead=false;
+function readNoticeStorage(key){
+ try{return localStorage.getItem(key)}catch(_){return null}
+}
+function writeNoticeStorage(key,value){
+ try{localStorage.setItem(key,value)}catch(_){}
+}
 function getNoticeBrowserId(){
- let id=localStorage.getItem(NOTICE_BROWSER_KEY);
- if(!id){id=(crypto.randomUUID&&crypto.randomUUID())||('browser-'+Date.now()+'-'+Math.random().toString(36).slice(2));localStorage.setItem(NOTICE_BROWSER_KEY,id);}
- return id;
+ if(!noticeBrowserId){
+  noticeBrowserId=readNoticeStorage(NOTICE_BROWSER_KEY)||(crypto.randomUUID&&crypto.randomUUID())||('browser-'+Date.now()+'-'+Math.random().toString(36).slice(2));
+  writeNoticeStorage(NOTICE_BROWSER_KEY,noticeBrowserId);
+ }
+ return noticeBrowserId;
+}
+function isNoticeRead(){
+ return noticeRead||readNoticeStorage('linkCoreNoticeRead:'+NOTICE_ID)==='1';
 }
 function loadNoticeReadState(){
  if(!visitorToken)return;
  const card=$('noticeReadCard'),button=$('markNoticeRead');
  card.hidden=false;
- const already=localStorage.getItem('linkCoreNoticeRead:'+NOTICE_ID)==='1';
+ const already=isNoticeRead();
  button.disabled=already;button.textContent=already?'既読済み':'確認して既読にする';
 }
 $('markNoticeRead').addEventListener('click',async()=>{
  if(!visitorToken)return;
  const button=$('markNoticeRead');
- if(localStorage.getItem('linkCoreNoticeRead:'+NOTICE_ID)==='1'){button.disabled=true;return;}
+ if(isNoticeRead()){button.disabled=true;return;}
  button.disabled=true;$('noticeReadStatus').textContent='登録中…';
  try{
   const result=await call('markNoticeRead',visitorToken,NOTICE_ID,getNoticeBrowserId());
-  localStorage.setItem('linkCoreNoticeRead:'+NOTICE_ID,'1');
+  noticeRead=true;
+  writeNoticeStorage('linkCoreNoticeRead:'+NOTICE_ID,'1');
   button.textContent='既読済み';
   $('noticeReadStatus').textContent=result.added?'既読にしました。':'このブラウザでは既読済みです。';
  }catch(error){$('noticeReadStatus').textContent=error.message||'既読登録に失敗しました。';button.disabled=false;}
 });
 
-$('loginForm').addEventListener('submit',async e=>{e.preventDefault();$('loginButton').disabled=true;$('loginError').textContent='認証中…';$('loginRetry').classList.add('hidden');let loadingLinks=false;try{const auth=await call('authenticateVisitor',$('sitePassword').value);if(!auth||!auth.token)throw new Error('閲覧用トークンを取得できませんでした。');visitorToken=auth.token;$('loginPanel').classList.add('hidden');$('linksPanel').classList.remove('hidden');loadingLinks=true;$('loadStatus').textContent='リンクを読み込み中…';$('list').classList.add('loading-skeleton');const data={links:auth.links,categories:auth.categories};links=publicLinks(data.links);categories=Array.isArray(data.categories)?data.categories:Array.from(new Set(links.map(x=>x.category).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'ja'));if(view==='favorites'&&!links.some(x=>x.favorite))view='all';$('sitePassword').value='';$('loginError').textContent='';$('loadStatus').textContent='';render();loadNoticeReadState()}catch(err){visitorToken='';if(loadingLinks){$('linksPanel').classList.add('hidden');$('loginPanel').classList.remove('hidden')}$('loginError').textContent=err.message||'ログインできませんでした。';$('loginRetry').classList.remove('hidden');$('loginButton').disabled=false;$('sitePassword').focus()}});
-
-$('loginRetry').addEventListener('click',()=>{$('loginRetry').classList.add('hidden');$('loginForm').requestSubmit()});
-// タブへ戻った際にセッションを確認し、期限切れならその場でパスワード欄へ戻す。
-let lastVisitorSessionCheck=0,visitorSessionCheckInFlight=false;
-document.addEventListener('visibilitychange',async()=>{
-  if(document.visibilityState!=='visible'||!visitorToken||visitorSessionCheckInFlight||Date.now()-lastVisitorSessionCheck<30000)return;
-  visitorSessionCheckInFlight=true;lastVisitorSessionCheck=Date.now();
-  try{
-    const data=await call('getLinks',visitorToken);
-    links=publicLinks(data.links);
-    categories=Array.isArray(data.categories)?data.categories:[];
-    render();
-  }catch(error){
-    if(isVisitorAuthError(error))showVisitorLogin('ログインの有効期限が切れました。もう一度サイトのパスワードを入力してください。');
-    else $('loadStatus').textContent='リンクの再取得に失敗しました：'+(error.message||'通信エラー');
-  }finally{visitorSessionCheckInFlight=false;}
+function applyVisitorLinks(data){
+ if(!data||!Array.isArray(data.links))throw new Error('リンク一覧を取得できませんでした。');
+ links=publicLinks(data.links);
+ categories=Array.from(new Set(links.map(x=>x.category).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'ja'));
+}
+$('loginForm').addEventListener('submit',async event=>{
+ event.preventDefault();
+ const button=$('loginButton'), password=$('sitePassword');
+ if(button.disabled)return;
+ button.disabled=true;
+ $('loginError').textContent='認証中…';
+ $('loginRetry').classList.add('hidden');
+ try{
+  const auth=await call('authenticateVisitor',password.value);
+  if(!auth||!auth.token)throw new Error('閲覧用トークンを取得できませんでした。');
+  applyVisitorLinks(Array.isArray(auth.links)?auth:await call('getLinks',auth.token));
+  visitorToken=auth.token;
+  view=links.some(link=>link.favorite)?'favorites':'all';
+  selectedCategory='';
+  $('search').value='';
+  $('loginPanel').classList.add('hidden');
+  $('linksPanel').classList.remove('hidden');
+  password.value='';
+  $('loginError').textContent='';
+  render();
+  loadNoticeReadState();
+ }catch(error){
+  visitorToken='';
+  $('linksPanel').classList.add('hidden');
+  $('loginPanel').classList.remove('hidden');
+  $('loginError').textContent=error.message||'ログインできませんでした。';
+  $('loginRetry').classList.toggle('hidden',!password.value);
+  password.focus();
+ }finally{button.disabled=false;}
 });
+$('loginRetry').addEventListener('click',()=>$('loginForm').requestSubmit());
+
+$('refreshLinks').addEventListener('click',async()=>{
+ const button=$('refreshLinks'), token=visitorToken;
+ if(!token||button.disabled)return;
+ button.disabled=true;
+ $('loadStatus').textContent='リンク一覧を更新中…';
+ try{
+  const data=await call('getLinks',token);
+  if(token!==visitorToken)return;
+  applyVisitorLinks(data);
+  if(selectedCategory&&!links.some(link=>{
+   const path=folderPath(link.category);
+   return selectedCategory==='__uncategorized__'?!path:path===selectedCategory||path.startsWith(selectedCategory+'/');
+  }))selectedCategory='';
+  render();
+  $('loadStatus').textContent='リンク一覧を更新しました。';
+ }catch(error){
+  if(token!==visitorToken)return;
+  if(isVisitorAuthError(error))showVisitorLogin();
+  else $('loadStatus').textContent='リンクの再取得に失敗しました：'+(error.message||'通信エラー');
+ }finally{button.disabled=false;}
+});
+
 })();
 
 /* Dismiss search focus when the user taps anywhere outside the search control (including iOS Safari). */
@@ -794,6 +849,9 @@ main.wrap{width:100%;max-width:none!important;margin:0;padding:22px 24px}
 .section-heading h2{margin:4px 0 0;color:#e5fbff;font-size:25px;font-weight:750}
 .section-kicker{color:#64dff2;font-size:9px;font-weight:800;letter-spacing:.12em}.section-note{color:#6e96ab;font-size:9px;letter-spacing:.12em}
 .list-heading{display:flex;align-items:center;justify-content:space-between;padding:12px 0 10px;border-top:1px solid #17475e}
+.list-heading{flex-wrap:wrap}
+#refreshLinks{letter-spacing:normal;min-height:36px}
+@media(max-width:720px){#refreshLinks{min-height:44px}}
 .list-heading-title{color:#a4c7d9;font-size:10px;font-weight:850;letter-spacing:.13em}.heading-dot{color:#00d9ff}.result-count{color:#8ca5b7;font-size:11px}
 .status:not(:empty){margin:0 0 10px;padding:8px 10px;border:1px solid #20516c;border-radius:6px;background:#081c30;color:#a8eaff;font-size:12px}
 .list{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;min-width:0}
@@ -887,7 +945,7 @@ main.wrap{width:100%;max-width:none!important;margin:0;padding:22px 24px}
 <div id="lc-release-overlay" aria-hidden="true">
  <section id="lc-release-dialog" role="dialog" aria-modal="true" aria-labelledby="lc-release-title">
   <header id="lc-release-head"><div><small>LINK CORE / CHANGELOG</small><h2 id="lc-release-title">リリースノート</h2></div><button id="lc-release-close" type="button" aria-label="閉じる">×</button></header>
-  <div id="lc-release-content"><article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v2.2.0</span><time datetime="2026-11-05">2026年11月5日</time></div><h3>フォルダーの階層化に対応</h3><ul><li>フォルダーの中にサブフォルダーを作れるようになりました。</li><li>フォルダー名を「親フォルダー/子フォルダー」の形式で指定すると、階層として表示されます。</li><li>親フォルダー内では、その直下のサブフォルダーとリンクを表示します。</li><li>階層をたどるパンくず表示と、親フォルダーへ戻る操作に対応しました。</li><li>既存のカテゴリ名・リンク情報・スプレッドシートの列構成は変更していません。</li></ul></article>
+  <div id="lc-release-content"><article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v2.2.1</span><time datetime="2026-11-10">2026年11月10日</time></div><h3>利用者画面のログイン・検索・更新を改善</h3><ul><li>ブラウザーの保存領域が使えない場合もログインできます。</li><li>検索は、開いているフォルダーに関係なく閲覧可能なリンク全体から探します。</li><li>リンク一覧とチャットはボタンで更新できます。</li></ul></article><article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v2.2.0</span><time datetime="2026-11-05">2026年11月5日</time></div><h3>フォルダーの階層化に対応</h3><ul><li>フォルダーの中にサブフォルダーを作れるようになりました。</li><li>フォルダー名を「親フォルダー/子フォルダー」の形式で指定すると、階層として表示されます。</li><li>親フォルダー内では、その直下のサブフォルダーとリンクを表示します。</li><li>階層をたどるパンくず表示と、親フォルダーへ戻る操作に対応しました。</li><li>既存のカテゴリ名・リンク情報・スプレッドシートの列構成は変更していません。</li></ul></article>
    <article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v2.1.0</span><time datetime="2026-11-04">2026年11月4日</time></div><h3>ブラウザー識別・通知管理・ホーム画面アイコンを改善</h3><ul><li>リンクのクリック履歴にブラウザーIDを記録し、どのブラウザー環境から操作されたか確認できるようにしました。</li><li>お知らせの既読状態をブラウザーごとに管理し、管理者画面から既読件数を確認できるようにしました。</li><li>ホーム画面に追加したときのLINK COREアイコンを、専用のアイコン画像に更新しました。</li><li>利用者画面・管理者画面から、内部ブラウザーやウィンドウの移動・サイズ変更などの機能を整理し、リンクをシンプルに開けるようにしました。</li></ul></article>
    
    <article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v2.0.0</span><time datetime="2026-11-03">2026年11月3日</time></div><h3>カテゴリーをフォルダ形式に変更</h3><ul><li>利用者画面・管理者画面のMy Desktopに、既存カテゴリーをフォルダアイコンで表示するようにしました。</li><li>フォルダを開くと、そのカテゴリーに登録されたリンクだけを表示します。</li><li>フォルダ内から一覧へ戻る操作と、サイドバーから直接フォルダを開く操作に対応しました。</li><li>カテゴリーが未設定のリンクは「未分類」フォルダにまとめて表示します。</li><li>既存のリンク情報やスプレッドシートの保存形式は変更していません。</li></ul></article>
