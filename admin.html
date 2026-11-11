@@ -12,6 +12,8 @@
 <link rel="icon" type="image/svg+xml" href="./link-core-icon.svg?v=1">
 <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png?v=3">
 <meta name="apple-mobile-web-app-title" content="LINK CORE">
+<meta name="theme-color" content="#0b1020">
+<link rel="manifest" href="./manifest.webmanifest">
 <style>
 :root {
   color-scheme:dark; --bg:#0b1020; --panel:rgba(255,255,255,.07); --panel-2:rgba(255,255,255,.1);
@@ -680,6 +682,14 @@ main { width:100%; max-width:none !important; }
 .click-log-table a{color:#73dfff}
 .click-log-empty{text-align:center;color:var(--muted,#9aabba)!important;padding:28px!important}
 @media(max-width:700px){.click-log-panel{padding:18px 12px}.click-log-table{min-width:620px}}
+/* ゴミ箱：行ごとの操作ボタン */
+.trash-actions{display:flex;gap:6px;white-space:nowrap}
+.trash-actions .btn{padding:6px 10px;font-size:12px}
+/* 削除直後の「元に戻す」トースト：右下に固定表示し、10秒で自動的に消える */
+.undo-toast{position:fixed;right:22px;bottom:22px;z-index:12000;display:flex;align-items:center;gap:10px;max-width:min(560px,calc(100vw - 32px));padding:12px 14px;border:1px solid #2c7895;border-radius:10px;background:#081a2c;color:#dff7ff;box-shadow:0 12px 38px #0009;font-size:13px}
+.undo-toast[hidden]{display:none!important}
+.undo-toast button{flex-shrink:0;padding:7px 12px;border:1px solid #35d9ff;border-radius:7px;background:linear-gradient(135deg,#087fa9,#273f9b);color:#fff;font-size:12px;font-weight:700;cursor:pointer}
+.undo-toast button.undo-toast-close{padding:7px 10px;border-color:#28516c;background:#10283e;color:#bfeeff}
 </style>
 
 <style id="visitor-visible-card-highlight">
@@ -759,6 +769,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
       <button class="side-item" type="button" id="sideMemos"><span>▤</span> メモ帳</button>
       <button class="side-item" type="button" id="sideChat"><span>✉</span> 利用者チャット <span class="new-badge" id="chatUnreadBadge" hidden>NEW</span></button>
       <button class="side-item" type="button" id="sideClickLogs"><span>◷</span> クリック履歴</button>
+      <button class="side-item" type="button" id="sideTrash"><span>🗑</span> ゴミ箱</button>
       <button class="side-item" type="button" id="sideReleaseNotes"><span>▤</span> リリースノート <span class="new-badge">NEW</span></button>
       <div class="side-label">カテゴリ</div>
       <div id="sideCats" class="side-cats"></div>
@@ -790,6 +801,17 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
       <tbody id="clickLogRows"><tr><td colspan="4">まだ履歴はありません。</td></tr></tbody>
     </table></div>
   </section>
+  <section id="trashPanel" class="click-log-panel" hidden aria-label="ゴミ箱">
+    <div class="section-heading">
+      <div><span class="section-kicker">LINK CORE / TRASH</span><h2>ゴミ箱</h2><p>削除したリンクはここに移動します。復元するか、完全に削除できます。</p></div>
+      <div class="click-log-actions"><button id="refreshTrash" class="btn" type="button">↻ 再読み込み</button><button id="emptyTrash" class="btn danger" type="button">ゴミ箱を空にする</button></div>
+    </div>
+    <div id="trashStatus" role="status" aria-live="polite"></div>
+    <div class="click-log-table-wrap"><table class="click-log-table">
+      <thead><tr><th>削除日時</th><th>リンク名</th><th>カテゴリ</th><th>URL</th><th>操作</th></tr></thead>
+      <tbody id="trashRows"><tr><td colspan="5">まだ削除したリンクはありません。</td></tr></tbody>
+    </table></div>
+  </section>
     <section id="officialPanel" class="official-panel" aria-label="公式リンク">
       <div class="official-hero">
         <div class="official-eyebrow">LINK CORE / QUICK LAUNCHER</div>
@@ -812,6 +834,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   <footer class="site-footer"><span><b>LC.</b> LINK CORE</span><span>YOUR LINKS. YOUR FLOW.</span><span>DESIGNED TO STAY ORGANIZED <i>✳</i></span></footer>
 </main>
 
+<div id="undoToast" class="undo-toast" hidden role="status" aria-live="polite"><span id="undoToastText"></span><button id="undoToastRestore" type="button">元に戻す</button><button id="undoToastClose" type="button" aria-label="閉じる">×</button></div>
 <dialog id="dlg">
   <form id="form" method="dialog">
     <h2 id="dlgTitle">リンクを追加</h2>
@@ -954,7 +977,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   }
 
   function serverCall(method, ...args) {
-    const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'saveOfficialLink', 'deleteOfficialLink', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'sendChatMessage', 'getClickLogs', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount'];
+    const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'saveOfficialLink', 'deleteOfficialLink', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'sendChatMessage', 'getClickLogs', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash'];
     if (protectedMethods.includes(method)) {
       const token = sessionStorage.getItem(ADMIN_TOKEN_KEY) || '';
       // 呼び出し元（埋め込みメモ帳など）が既にトークンを渡している場合は二重追加しない。
@@ -1323,6 +1346,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
     state.view = 'all';
     document.querySelector('.workspace').hidden = false;
     $('clickLogPanel').hidden = true;
+    $('trashPanel').hidden = true;
     $('officialPanel').classList.remove('active');
     document.querySelector('.finder-toolbar').classList.remove('official-toolbar');
     $('addBtn').style.display = '';
@@ -1336,6 +1360,9 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
 
   function updateSidebar() {
     document.querySelectorAll('[data-view]').forEach(button => button.classList.toggle('selected', button.dataset.view === state.view && !state.category));
+    // ゴミ箱パネルが開いている間だけ、ゴミ箱ボタンを選択状態にする。
+    const trashButton = $('sideTrash');
+    if (trashButton) trashButton.classList.toggle('selected', !$('trashPanel').hidden);
   }
   document.querySelectorAll('[data-view]').forEach(button => button.addEventListener('click', () => {
     state.view = button.dataset.view;
@@ -1345,6 +1372,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
     // officialPanel is inside finder-content; hide only the workspace, never its parent.
     document.querySelector('.workspace').hidden = isOfficial;
     $('clickLogPanel').hidden = true;
+    $('trashPanel').hidden = true;
     $('officialPanel').classList.toggle('active', isOfficial);
     document.querySelector('.finder-toolbar').classList.toggle('official-toolbar', isOfficial);
     $('addBtn').style.display = isOfficial ? 'none' : '';
@@ -1362,7 +1390,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   function renderChatMessages(messages){chatMessages.replaceChildren();if(!messages.length){const e=document.createElement('div');e.className='chat-empty';e.textContent='まだメッセージはありません。利用者からの投稿を待っています。';chatMessages.appendChild(e);return;}messages.forEach(item=>{const bubble=document.createElement('article');bubble.className='chat-message'+(item.author==='管理者'?' admin':'');const meta=document.createElement('div');meta.className='chat-message-meta';const author=document.createElement('strong');author.textContent=item.author==='管理者'?'管理者':'利用者';const time=document.createElement('time');const date=new Date(item.createdAt);time.textContent=isNaN(date.getTime())?'':date.toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});const body=document.createElement('div');body.className='chat-message-body';body.textContent=item.message;meta.append(author,time);bubble.append(meta,body);chatMessages.appendChild(bubble);});chatMessages.scrollTop=chatMessages.scrollHeight;}
   function updateAdminChatBadge(){const badge=$('chatUnreadBadge');if(!badge)return;badge.hidden=adminUnreadCount<1;badge.textContent=adminUnreadCount>99?'99+':String(adminUnreadCount);badge.setAttribute('aria-label',adminUnreadCount+'件の未読メッセージ');}
   async function refreshAdminChat(){if(chatLoading||!sessionStorage.getItem(ADMIN_TOKEN_KEY))return;const button=$('refreshChat');chatLoading=true;if(button){button.disabled=true;button.classList.add('is-refreshing');button.setAttribute('aria-busy','true');}try{const r=await serverCall('getChatMessages');const messages=Array.isArray(r.messages)?r.messages:[];const latest=messages.length?messages[messages.length-1].id:'';if(chatLoaded&&latest&&lastAdminChatId&&latest!==lastAdminChatId&&!chatOverlay.classList.contains('open')){const previousIndex=messages.findIndex(item=>item.id===lastAdminChatId);adminUnreadCount+=previousIndex>=0?messages.length-previousIndex-1:1;updateAdminChatBadge();}if(latest)lastAdminChatId=latest;renderChatMessages(messages);chatLoaded=true;}catch(e){if(chatOverlay.classList.contains('open'))chatMessages.textContent='読み込みに失敗しました：'+(e.message||'通信エラー');}finally{chatLoading=false;if(button){button.disabled=false;button.classList.remove('is-refreshing');button.removeAttribute('aria-busy');}}}
-  function openAdminChat(){if(!sessionStorage.getItem(ADMIN_TOKEN_KEY)){alert('先に管理者ログインをしてください。');return;}leaveClickLogs();adminUnreadCount=0;updateAdminChatBadge();chatOverlay.classList.add('open');refreshAdminChat();}
+  function openAdminChat(){if(!sessionStorage.getItem(ADMIN_TOKEN_KEY)){alert('先に管理者ログインをしてください。');return;}leaveClickLogs();leaveTrash();adminUnreadCount=0;updateAdminChatBadge();chatOverlay.classList.add('open');refreshAdminChat();}
   $('sideChat').addEventListener('click',openAdminChat);
   const clickLogPanel=$('clickLogPanel');
   let clickLogsLoaded=false,clickLogsLoading=false;
@@ -1396,7 +1424,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
     if(!sessionStorage.getItem(ADMIN_TOKEN_KEY)){alert('先に管理者ログインをしてください。');return;}
     document.querySelector('.workspace').hidden=true;$('officialPanel').classList.remove('active');
     document.querySelector('.finder-toolbar').classList.remove('official-toolbar');
-    clickLogPanel.hidden=false;$('addBtn').style.display='none';$('search').disabled=true;$('search').placeholder='クリック履歴';$('viewTitle').textContent='クリック履歴';
+    clickLogPanel.hidden=false;$('trashPanel').hidden=true;$('addBtn').style.display='none';$('search').disabled=true;$('search').placeholder='クリック履歴';$('viewTitle').textContent='クリック履歴';
     document.querySelectorAll('[data-view]').forEach(button=>button.classList.remove('selected'));
     if(!clickLogsLoaded)refreshClickLogs();
   }
@@ -1424,6 +1452,135 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
     $('addBtn').style.display='';$('search').disabled=false;$('search').placeholder='検索';render();
   }
 
+  /* === ゴミ箱 + 削除直後の「元に戻す」 ===
+     削除はサーバー側で Trash シートへ移動するだけなので、10秒以内ならここから復元できる。
+     ゴミ箱パネルからも復元・完全削除ができる。公式リンクは対象外（従来どおり即削除）。 */
+  const trashPanel=$('trashPanel');
+  let trashLoaded=false,trashLoading=false;
+  let undoToastTimer=0,undoTarget=null;
+  function showUndoToast(link){
+    const toast=$('undoToast');if(!toast)return;
+    undoTarget={id:link.id,title:link.title||'（タイトルなし）'};
+    $('undoToastText').textContent='「'+undoTarget.title+'」を削除しました。ゴミ箱に移動しています。';
+    toast.hidden=false;
+    clearTimeout(undoToastTimer);
+    undoToastTimer=setTimeout(hideUndoToast,10000);
+  }
+  function hideUndoToast(){
+    const toast=$('undoToast');if(toast)toast.hidden=true;
+    undoTarget=null;clearTimeout(undoToastTimer);
+  }
+  async function undoDelete(){
+    if(!undoTarget||state.busy)return;
+    const target=undoTarget;hideUndoToast();
+    setBusy(true);setStatus('元に戻しています…');
+    try{
+      apply(await serverCall('restoreTrash',target.id));
+      trashLoaded=false;
+      setStatus('「'+target.title+'」を元に戻しました。','');
+    }catch(error){
+      setStatus('元に戻せませんでした：'+(error.message||'通信エラー'),'error');
+    }finally{setBusy(false);}
+  }
+  async function deleteLinkWithUndo(link){
+    if(state.busy)return;
+    setBusy(true);setStatus('削除中…');
+    try{
+      apply(await serverCall('deleteLink',link.id));
+      trashLoaded=false;
+      setStatus('削除しました。ゴミ箱から元に戻せます。','');
+      showUndoToast(link);
+    }catch(error){
+      setStatus('削除に失敗しました：'+(error.message||'通信エラー'),'error');
+    }finally{setBusy(false);}
+  }
+  function renderTrash(items){
+    const body=$('trashRows');body.replaceChildren();
+    if(!items.length){
+      const tr=document.createElement('tr');const td=document.createElement('td');
+      td.colSpan=5;td.className='click-log-empty';td.textContent='ゴミ箱は空です。';
+      tr.appendChild(td);body.appendChild(tr);return;
+    }
+    items.forEach(item=>{
+      const tr=document.createElement('tr');
+      const time=document.createElement('td');const date=new Date(item.deletedAt);
+      time.textContent=isNaN(date.getTime())?'日時不明':date.toLocaleString('ja-JP');
+      const title=document.createElement('td');title.textContent=item.title||'（タイトルなし）';
+      const category=document.createElement('td');category.textContent=item.category||'未分類';
+      const urlCell=document.createElement('td');urlCell.className='log-url';
+      if(item.url.indexOf('https://')===0||item.url.indexOf('http://')===0){
+        const a=document.createElement('a');a.href=item.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent=item.url;urlCell.appendChild(a);
+      }else{urlCell.textContent=item.url||'';}
+      const actionCell=document.createElement('td');actionCell.className='trash-actions';
+      const restore=document.createElement('button');restore.type='button';restore.className='btn';restore.textContent='復元';
+      restore.addEventListener('click',async()=>{
+        restore.disabled=true;
+        try{
+          apply(await serverCall('restoreTrash',item.id));
+          trashLoaded=false;
+          $('trashStatus').textContent='「'+(item.title||'（タイトルなし）')+'」を元に戻しました。';
+          refreshTrash();
+        }catch(error){restore.disabled=false;$('trashStatus').textContent='復元に失敗しました：'+(error.message||'通信エラー');}
+      });
+      const remove=document.createElement('button');remove.type='button';remove.className='btn danger';remove.textContent='完全に削除';
+      remove.addEventListener('click',async()=>{
+        if(!confirm('「'+(item.title||'（タイトルなし）')+'」を完全に削除しますか？\nこの操作は取り消せません。'))return;
+        remove.disabled=true;
+        try{
+          const result=await serverCall('deleteTrashPermanently',item.id);
+          renderTrash(Array.isArray(result.trash)?result.trash:[]);
+          $('trashStatus').textContent='完全に削除しました。';
+        }catch(error){remove.disabled=false;$('trashStatus').textContent='削除に失敗しました：'+(error.message||'通信エラー');}
+      });
+      actionCell.append(restore,remove);
+      tr.append(time,title,category,urlCell,actionCell);body.appendChild(tr);
+    });
+  }
+  async function refreshTrash(){
+    if(trashLoading)return;trashLoading=true;
+    const button=$('refreshTrash');if(button)button.disabled=true;
+    $('trashStatus').textContent='ゴミ箱を読み込んでいます…';
+    try{
+      const result=await serverCall('getTrash');
+      const items=Array.isArray(result.trash)?result.trash:[];
+      renderTrash(items);trashLoaded=true;
+      $('trashStatus').textContent=items.length+' 件の削除済みリンクがあります。';
+    }catch(error){
+      $('trashStatus').textContent='読み込みに失敗しました：'+(error.message||'通信エラー');
+    }finally{trashLoading=false;if(button)button.disabled=false;}
+  }
+  function openTrash(){
+    if(!sessionStorage.getItem(ADMIN_TOKEN_KEY)){alert('先に管理者ログインをしてください。');return;}
+    leaveClickLogs();
+    document.querySelector('.workspace').hidden=true;$('officialPanel').classList.remove('active');
+    document.querySelector('.finder-toolbar').classList.remove('official-toolbar');
+    trashPanel.hidden=false;$('addBtn').style.display='none';$('search').disabled=true;$('search').placeholder='ゴミ箱';$('viewTitle').textContent='ゴミ箱';
+    document.querySelectorAll('[data-view]').forEach(button=>button.classList.remove('selected'));
+    $('sideTrash').classList.add('selected');
+    if(!trashLoaded)refreshTrash();
+  }
+  function leaveTrash(){
+    if(trashPanel.hidden)return;
+    trashPanel.hidden=true;$('sideTrash').classList.remove('selected');
+    document.querySelector('.workspace').hidden=false;
+    $('addBtn').style.display='';$('search').disabled=false;$('search').placeholder='検索';render();
+  }
+  $('sideTrash').addEventListener('click',openTrash);
+  $('refreshTrash').addEventListener('click',refreshTrash);
+  $('emptyTrash').addEventListener('click',async()=>{
+    if(!confirm('ゴミ箱をすべて空にします。\nこの操作は取り消せません。よろしいですか？'))return;
+    const button=$('emptyTrash');button.disabled=true;$('trashStatus').textContent='ゴミ箱を空にしています…';
+    try{
+      const result=await serverCall('emptyTrash');
+      renderTrash([]);trashLoaded=true;
+      $('trashStatus').textContent='ゴミ箱を空にしました（'+Number(result.deleted||0)+'件）。';
+    }catch(error){
+      $('trashStatus').textContent='ゴミ箱を空にできませんでした：'+(error.message||'通信エラー');
+    }finally{button.disabled=false;}
+  });
+  $('undoToastRestore').addEventListener('click',undoDelete);
+  $('undoToastClose').addEventListener('click',hideUndoToast);
+
 $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEventListener('click',()=>{chatOverlay.classList.remove('open');});
   setInterval(()=>{if(document.visibilityState==='visible'&&sessionStorage.getItem(ADMIN_TOKEN_KEY))refreshAdminChat();},30000);
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&sessionStorage.getItem(ADMIN_TOKEN_KEY))refreshAdminChat();});
@@ -1432,7 +1589,7 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
   const memoOverlay = $('memoOverlay');
   const memoFrame = $('memoFrame');
   function openIntegratedMemos() {
-    leaveClickLogs();
+    leaveClickLogs();leaveTrash();
     const token = sessionStorage.getItem(ADMIN_TOKEN_KEY);
     if (!token) { alert('先に管理者ログインをしてください。'); return; }
     memoOverlay.classList.add('open');
@@ -1474,6 +1631,7 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
       state.category = '';
       document.querySelector('.workspace').hidden = false;
       $('clickLogPanel').hidden = true;
+      $('trashPanel').hidden = true;
       $('officialPanel').classList.remove('active');
       document.querySelector('.finder-toolbar').classList.remove('official-toolbar');
       $('addBtn').style.display = '';
@@ -1631,7 +1789,7 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
       openForm(link);
     } else if (event.target.closest('.del')) {
       if (confirm(`「${link.title}」を削除しますか？`)) {
-        run('削除中…', () => serverCall('deleteLink', link.id), '削除しました。');
+        deleteLinkWithUndo(link);
       }
     }
   });
@@ -1871,6 +2029,17 @@ body,.finder-window,.finder-toolbar,.finder-layout,.finder-content,.sidebar,
 
 <script id="lc-viewport-recovery">
 (function(){function clampWindows(){document.querySelectorAll('.finder-window').forEach(el=>{if(el.classList.contains('hidden'))return;const fixed=el.classList.contains('lc-browser-window')||el.style.position==='fixed';if(!fixed)return;const r=el.getBoundingClientRect();if(r.width>innerWidth-16)el.style.width=Math.max(280,innerWidth-16)+'px';if(r.height>innerHeight-16)el.style.height=Math.max(220,innerHeight-16)+'px';const w=el.getBoundingClientRect();el.style.left=Math.max(8,Math.min(w.left,innerWidth-w.width-8))+'px';el.style.top=Math.max(8,Math.min(w.top,innerHeight-w.height-8))+'px';});}window.addEventListener('resize',clampWindows,{passive:true});})();
+</script>
+<script id="lc-pwa-script">
+/* PWA：Service Worker を登録する。失敗しても管理画面自体は止めない。 */
+(function(){
+  if(!('serviceWorker' in navigator))return;
+  window.addEventListener('load',function(){
+    navigator.serviceWorker.register('./sw.js').catch(function(err){
+      console.warn('Service Workerの登録に失敗しました。',err);
+    });
+  });
+})();
 </script>
 </body>
 </html>
