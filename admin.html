@@ -770,6 +770,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
       <button class="side-item" type="button" id="sideChat"><span>✉</span> 利用者チャット <span class="new-badge" id="chatUnreadBadge" hidden>NEW</span></button>
       <button class="side-item" type="button" id="sideClickLogs"><span>◷</span> クリック履歴</button>
       <button class="side-item" type="button" id="sideTrash"><span>🗑</span> ゴミ箱</button>
+      <button class="side-item" type="button" id="sideDiagnosis"><span>🩺</span> リンク診断</button>
       <button class="side-item" type="button" id="sideReleaseNotes"><span>▤</span> リリースノート <span class="new-badge">NEW</span></button>
       <div class="side-label">カテゴリ</div>
       <div id="sideCats" class="side-cats"></div>
@@ -810,6 +811,17 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
     <div class="click-log-table-wrap"><table class="click-log-table">
       <thead><tr><th>削除日時</th><th>リンク名</th><th>カテゴリ</th><th>URL</th><th>操作</th></tr></thead>
       <tbody id="trashRows"><tr><td colspan="5">まだ削除したリンクはありません。</td></tr></tbody>
+    </table></div>
+  </section>
+  <section id="diagnosisPanel" class="click-log-panel" hidden aria-label="リンク診断">
+    <div class="section-heading">
+      <div><span class="section-kicker">LINK CORE / LINK HEALTH</span><h2>リンク診断</h2><p>重複したURLと、開けなくなったリンクを調べます。リンクの削除や変更はしません。</p></div>
+      <div class="click-log-actions"><button id="runDiagnosis" class="btn primary" type="button">▶ 診断する</button></div>
+    </div>
+    <div id="diagnosisStatus" role="status" aria-live="polite"></div>
+    <div class="click-log-table-wrap"><table class="click-log-table">
+      <thead><tr><th>状態</th><th>タイトル</th><th>URL</th><th>問題</th><th>操作</th></tr></thead>
+      <tbody id="diagnosisRows"><tr><td colspan="5">まだ診断していません。「診断する」を押してください。</td></tr></tbody>
     </table></div>
   </section>
     <section id="officialPanel" class="official-panel" aria-label="公式リンク">
@@ -977,7 +989,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   }
 
   function serverCall(method, ...args) {
-    const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'saveOfficialLink', 'deleteOfficialLink', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'sendChatMessage', 'getClickLogs', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash'];
+    const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'saveOfficialLink', 'deleteOfficialLink', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'sendChatMessage', 'getClickLogs', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks'];
     if (protectedMethods.includes(method)) {
       const token = sessionStorage.getItem(ADMIN_TOKEN_KEY) || '';
       // 呼び出し元（埋め込みメモ帳など）が既にトークンを渡している場合は二重追加しない。
@@ -1299,6 +1311,15 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
       visibleToVisitors: $('fVisible').checked,
       openMode: 'external'
     };
+    // 同じURLのリンクが既にある場合は、保存前に確認する（ブロックはしない）。
+    const editingLink = input.id ? state.links.find(function(link){ return link.id===input.id; }) : null;
+    const canonicalUrl = normalizeUrlForCompare(input.url);
+    if (canonicalUrl && (!editingLink || normalizeUrlForCompare(editingLink.url)!==canonicalUrl)) {
+      const existing = state.links.find(function(link){ return link.id!==input.id && normalizeUrlForCompare(link.url)===canonicalUrl; });
+      if (existing && !confirm('同じURLのリンクが既にあります。\n「'+(existing.title||'（タイトルなし）')+'」（'+(existing.category||'未分類')+'）\nこのまま保存しますか？')) {
+        return;
+      }
+    }
     setBusy(true);
     const fields = $('form').querySelectorAll('input, textarea, #cancelBtn');
     fields.forEach(field => { field.disabled = true; });
@@ -1347,6 +1368,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
     document.querySelector('.workspace').hidden = false;
     $('clickLogPanel').hidden = true;
     $('trashPanel').hidden = true;
+    $('diagnosisPanel').hidden = true;
     $('officialPanel').classList.remove('active');
     document.querySelector('.finder-toolbar').classList.remove('official-toolbar');
     $('addBtn').style.display = '';
@@ -1363,6 +1385,8 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
     // ゴミ箱パネルが開いている間だけ、ゴミ箱ボタンを選択状態にする。
     const trashButton = $('sideTrash');
     if (trashButton) trashButton.classList.toggle('selected', !$('trashPanel').hidden);
+    const diagnosisButton = $('sideDiagnosis');
+    if (diagnosisButton) diagnosisButton.classList.toggle('selected', !$('diagnosisPanel').hidden);
   }
   document.querySelectorAll('[data-view]').forEach(button => button.addEventListener('click', () => {
     state.view = button.dataset.view;
@@ -1373,6 +1397,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
     document.querySelector('.workspace').hidden = isOfficial;
     $('clickLogPanel').hidden = true;
     $('trashPanel').hidden = true;
+    $('diagnosisPanel').hidden = true;
     $('officialPanel').classList.toggle('active', isOfficial);
     document.querySelector('.finder-toolbar').classList.toggle('official-toolbar', isOfficial);
     $('addBtn').style.display = isOfficial ? 'none' : '';
@@ -1390,7 +1415,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   function renderChatMessages(messages){chatMessages.replaceChildren();if(!messages.length){const e=document.createElement('div');e.className='chat-empty';e.textContent='まだメッセージはありません。利用者からの投稿を待っています。';chatMessages.appendChild(e);return;}messages.forEach(item=>{const bubble=document.createElement('article');bubble.className='chat-message'+(item.author==='管理者'?' admin':'');const meta=document.createElement('div');meta.className='chat-message-meta';const author=document.createElement('strong');author.textContent=item.author==='管理者'?'管理者':'利用者';const time=document.createElement('time');const date=new Date(item.createdAt);time.textContent=isNaN(date.getTime())?'':date.toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});const body=document.createElement('div');body.className='chat-message-body';body.textContent=item.message;meta.append(author,time);bubble.append(meta,body);chatMessages.appendChild(bubble);});chatMessages.scrollTop=chatMessages.scrollHeight;}
   function updateAdminChatBadge(){const badge=$('chatUnreadBadge');if(!badge)return;badge.hidden=adminUnreadCount<1;badge.textContent=adminUnreadCount>99?'99+':String(adminUnreadCount);badge.setAttribute('aria-label',adminUnreadCount+'件の未読メッセージ');}
   async function refreshAdminChat(){if(chatLoading||!sessionStorage.getItem(ADMIN_TOKEN_KEY))return;const button=$('refreshChat');chatLoading=true;if(button){button.disabled=true;button.classList.add('is-refreshing');button.setAttribute('aria-busy','true');}try{const r=await serverCall('getChatMessages');const messages=Array.isArray(r.messages)?r.messages:[];const latest=messages.length?messages[messages.length-1].id:'';if(chatLoaded&&latest&&lastAdminChatId&&latest!==lastAdminChatId&&!chatOverlay.classList.contains('open')){const previousIndex=messages.findIndex(item=>item.id===lastAdminChatId);adminUnreadCount+=previousIndex>=0?messages.length-previousIndex-1:1;updateAdminChatBadge();}if(latest)lastAdminChatId=latest;renderChatMessages(messages);chatLoaded=true;}catch(e){if(chatOverlay.classList.contains('open'))chatMessages.textContent='読み込みに失敗しました：'+(e.message||'通信エラー');}finally{chatLoading=false;if(button){button.disabled=false;button.classList.remove('is-refreshing');button.removeAttribute('aria-busy');}}}
-  function openAdminChat(){if(!sessionStorage.getItem(ADMIN_TOKEN_KEY)){alert('先に管理者ログインをしてください。');return;}leaveClickLogs();leaveTrash();adminUnreadCount=0;updateAdminChatBadge();chatOverlay.classList.add('open');refreshAdminChat();}
+  function openAdminChat(){if(!sessionStorage.getItem(ADMIN_TOKEN_KEY)){alert('先に管理者ログインをしてください。');return;}leaveClickLogs();leaveTrash();leaveDiagnosis();adminUnreadCount=0;updateAdminChatBadge();chatOverlay.classList.add('open');refreshAdminChat();}
   $('sideChat').addEventListener('click',openAdminChat);
   const clickLogPanel=$('clickLogPanel');
   let clickLogsLoaded=false,clickLogsLoading=false;
@@ -1422,6 +1447,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   }
   function openClickLogs(){
     if(!sessionStorage.getItem(ADMIN_TOKEN_KEY)){alert('先に管理者ログインをしてください。');return;}
+    leaveDiagnosis();
     document.querySelector('.workspace').hidden=true;$('officialPanel').classList.remove('active');
     document.querySelector('.finder-toolbar').classList.remove('official-toolbar');
     clickLogPanel.hidden=false;$('trashPanel').hidden=true;$('addBtn').style.display='none';$('search').disabled=true;$('search').placeholder='クリック履歴';$('viewTitle').textContent='クリック履歴';
@@ -1555,7 +1581,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   }
   function openTrash(){
     if(!sessionStorage.getItem(ADMIN_TOKEN_KEY)){alert('先に管理者ログインをしてください。');return;}
-    leaveClickLogs();
+    leaveClickLogs();leaveDiagnosis();
     document.querySelector('.workspace').hidden=true;$('officialPanel').classList.remove('active');
     document.querySelector('.finder-toolbar').classList.remove('official-toolbar');
     trashPanel.hidden=false;$('addBtn').style.display='none';$('search').disabled=true;$('search').placeholder='ゴミ箱';$('viewTitle').textContent='ゴミ箱';
@@ -1585,6 +1611,168 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   $('undoToastRestore').addEventListener('click',undoDelete);
   $('undoToastClose').addEventListener('click',hideUndoToast);
 
+  /* === リンク診断：重複チェック＋リンク切れチェック ===
+     サーバー側で URL ごとに死活確認する。診断は読み取り専用で、リンクを変更・削除しない。
+     管理画面は1回の呼び出しが 15 秒でタイムアウトするため、8件ずつに分けて繰り返し呼ぶ。 */
+  const diagnosisPanel=$('diagnosisPanel');
+  let diagnosisRunning=false;
+  let diagnosisResults=[];
+  let diagnosisDuplicates=[];
+  let diagnosisTotalUrls=0;
+  function diagnosisStatusLabel(status){
+    return status==='ok'?'OK':status==='dead'?'切れている':status==='unknown'?'要確認':'未判定';
+  }
+  // Code.gs の normalizeUrlForCompare_ と同じ考え方（サーバー側が正）。
+  // 保存前の重複警告だけに使う簡易版。
+  function normalizeUrlForCompare(url){
+    let text=String(url||'').trim();
+    if(!text)return '';
+    if(!/^https?:\/\//i.test(text)){
+      if(/^[a-z][a-z0-9+.-]*:\/\//i.test(text))return '';
+      text='https://'+text;
+    }
+    const match=text.match(/^https?:\/\/([^\/:?#]+)(?::(\d+))?([^?#]*)(\?[^#]*)?(#.*)?$/i);
+    if(!match)return '';
+    // GAS の normalizeUrl_ と同じ形式チェック（空白などを含む不正な URL を弾く）。
+    if(!/^https?:\/\/[^\s/$.?#][^\s]*$/i.test(text))return '';
+    let host=match[1].toLowerCase();
+    if(host.indexOf('www.')===0)host=host.slice(4);
+    let port=match[2]||'';
+    if(port==='80'||port==='443')port='';
+    let path=match[3]||'';
+    if(path.length>1&&path.slice(-1)==='/')path=path.slice(0,-1);
+    if(path==='/')path='';
+    const tracking=['fbclid','gclid','gbraid','wbraid','igshid','msclkid','yclid','dclid','_ga','_gl','mc_cid','mc_eid','vero_id','fb_action_ids','fb_source','twclid','li_fat_id','srsltid'];
+    let query='';
+    if(match[4]){
+      const kept=match[4].slice(1).split('&').filter(function(part){return part!=='';}).filter(function(part){
+        const name=part.split('=')[0].toLowerCase();
+        return name.indexOf('utm_')!==0&&tracking.indexOf(name)===-1;
+      });
+      kept.sort();
+      if(kept.length)query='?'+kept.join('&');
+    }
+    return 'https://'+host+(port?':'+port:'')+path+query;
+  }
+  function diagnosisRowsFromResults(results, linksById){
+    const rows=[];
+    results.forEach(function(result){
+      (result.linkIds||[]).forEach(function(id){
+        const link=linksById[id]||{id:id,title:'',category:'',createdAt:'',url:result.url};
+        rows.push({id:id,title:link.title,category:link.category,url:result.url,status:result.status,code:result.code,reason:result.reason,duplicateCount:result.linkIds.length});
+      });
+    });
+    return rows;
+  }
+  function updateDiagnosisSummary(){
+    const total=diagnosisResults.length;
+    const dead=diagnosisResults.filter(function(x){return x.status==='dead';}).length;
+    const unknown=diagnosisResults.filter(function(x){return x.status==='unknown';}).length;
+    const dupLinks=diagnosisResults.filter(function(x){return x.duplicateCount>1;}).length;
+    const ok=total-dead-unknown;
+    $('diagnosisStatus').textContent='診断完了：'+total+'件中 OK '+ok+'件／切れている '+dead+'件／要確認 '+unknown+'件／重複 '+diagnosisDuplicates.length+'組（'+dupLinks+'件のリンク）';
+  }
+  function renderDiagnosis(){
+    const body=$('diagnosisRows');body.replaceChildren();
+    if(!diagnosisResults.length){
+      const tr=document.createElement('tr');const td=document.createElement('td');
+      td.colSpan=5;td.className='click-log-empty';td.textContent='問題のあるリンクはありませんでした。';
+      tr.appendChild(td);body.appendChild(tr);return;
+    }
+    // 問題のあるリンクを先に並べる：切れている → 要確認 → 重複 → OK。
+    const order={dead:0,unknown:1,dup:2,ok:3};
+    const rows=diagnosisResults.slice().sort(function(a,b){
+      const ra=a.status==='ok'&&a.duplicateCount>1?'dup':a.status;
+      const rb=b.status==='ok'&&b.duplicateCount>1?'dup':b.status;
+      return order[ra]-order[rb]||String(a.title||'').localeCompare(String(b.title||''),'ja');
+    });
+    rows.forEach(function(item){
+      const tr=document.createElement('tr');
+      const statusCell=document.createElement('td');statusCell.textContent=diagnosisStatusLabel(item.status);
+      const title=document.createElement('td');title.textContent=item.title||'（タイトルなし）';
+      const urlCell=document.createElement('td');urlCell.className='log-url';
+      if(item.url.indexOf('https://')===0||item.url.indexOf('http://')===0){const a=document.createElement('a');a.href=item.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent=item.url;urlCell.appendChild(a);}else{urlCell.textContent=item.url||'';}
+      const issue=document.createElement('td');
+      const issues=[];
+      if(item.status==='dead')issues.push('リンク切れ（'+(item.reason||'開けません')+'）');
+      if(item.status==='unknown')issues.push('要確認（'+(item.reason||'判定できませんでした')+'）');
+      if(item.duplicateCount>1)issues.push('重複：同じURLが'+item.duplicateCount+'件');
+      issue.textContent=issues.length?issues.join('／'):'問題なし';
+      const actionCell=document.createElement('td');actionCell.className='trash-actions';
+      const open=document.createElement('a');open.className='btn';open.href=item.url;open.target='_blank';open.rel='noopener noreferrer';open.textContent='開く';
+      const remove=document.createElement('button');remove.type='button';remove.className='btn danger';remove.textContent='削除';
+      remove.addEventListener('click',async()=>{
+        if(!confirm('「'+(item.title||'（タイトルなし）')+'」を削除しますか？\nゴミ箱に移動します。'))return;
+        await deleteLinkWithUndo({id:item.id,title:item.title});
+        // 削除に失敗した場合は一覧に残っているので、診断結果の行も残す。
+        if(state.links.some(function(link){return link.id===item.id;}))return;
+        diagnosisResults=diagnosisResults.filter(function(x){return x.id!==item.id;});
+        renderDiagnosis();updateDiagnosisSummary();
+      });
+      actionCell.append(open,remove);
+      tr.append(statusCell,title,urlCell,issue,actionCell);body.appendChild(tr);
+    });
+  }
+  function renderDiagnosisError(message){
+    const body=$('diagnosisRows');body.replaceChildren();
+    const tr=document.createElement('tr');const td=document.createElement('td');
+    td.colSpan=5;td.className='click-log-empty';td.textContent='診断に失敗しました。時間をおいて「診断する」を押してください。';
+    tr.appendChild(td);body.appendChild(tr);
+    $('diagnosisStatus').textContent='診断に失敗しました：'+message;
+  }
+  async function runDiagnosis(){
+    if(diagnosisRunning)return;
+    if(!sessionStorage.getItem(ADMIN_TOKEN_KEY)){alert('先に管理者ログインをしてください。');return;}
+    diagnosisRunning=true;
+    const button=$('runDiagnosis');if(button)button.disabled=true;
+    diagnosisResults=[];diagnosisDuplicates=[];diagnosisTotalUrls=0;
+    const diagBody=$('diagnosisRows');diagBody.replaceChildren();
+    const diagTr=document.createElement('tr');const diagTd=document.createElement('td');
+    diagTd.colSpan=5;diagTd.className='click-log-empty';diagTd.textContent='診断しています…';
+    diagTr.appendChild(diagTd);diagBody.appendChild(diagTr);
+    const linksById={};
+    state.links.forEach(function(link){linksById[link.id]=link;});
+    let offset=0;let done=false;let failed=false;let failMessage='';
+    $('diagnosisStatus').textContent='診断しています…';
+    try{
+      while(!done){
+        const result=await serverCall('diagnoseLinks',offset);
+        diagnosisDuplicates=Array.isArray(result.duplicates)?result.duplicates:[];
+        diagnosisTotalUrls=Number(result.totalUrls||0);
+        diagnosisResults=diagnosisResults.concat(diagnosisRowsFromResults(Array.isArray(result.results)?result.results:[],linksById));
+        renderDiagnosis();
+        $('diagnosisStatus').textContent='診断中… '+Math.min(Number(result.checked||0),diagnosisTotalUrls)+'/'+diagnosisTotalUrls+'件のURLを確認中';
+        if(result.done||result.nextOffset==null||result.nextOffset<0){done=true;}
+        else{offset=result.nextOffset;}
+      }
+    }catch(error){
+      // バッチ単位で失敗しても、ここまでの結果は残す。最初から1件も取れていない場合は
+      // 空の表示と誤読されないよう、エラー行に置き換える（ゴミ箱と同じ方針）。
+      failed=true;failMessage=error.message||'通信エラー';
+      if(!diagnosisResults.length)renderDiagnosisError(failMessage);
+    }finally{diagnosisRunning=false;if(button)button.disabled=false;}
+    if(!failed)updateDiagnosisSummary();
+    else if(diagnosisResults.length)$('diagnosisStatus').textContent='診断が途中で止まりました：'+failMessage+'（ここまでの結果を表示中。「診断する」で最初からやり直せます）';
+  }
+  function openDiagnosis(){
+    if(!sessionStorage.getItem(ADMIN_TOKEN_KEY)){alert('先に管理者ログインをしてください。');return;}
+    leaveClickLogs();leaveTrash();
+    document.querySelector('.workspace').hidden=true;$('officialPanel').classList.remove('active');
+    document.querySelector('.finder-toolbar').classList.remove('official-toolbar');
+    diagnosisPanel.hidden=false;$('addBtn').style.display='none';$('search').disabled=true;$('search').placeholder='リンク診断';$('viewTitle').textContent='リンク診断';
+    document.querySelectorAll('[data-view]').forEach(button=>button.classList.remove('selected'));
+    $('sideDiagnosis').classList.add('selected');
+  }
+  function leaveDiagnosis(){
+    if(diagnosisPanel.hidden)return;
+    diagnosisPanel.hidden=true;$('sideDiagnosis').classList.remove('selected');
+    document.querySelector('.workspace').hidden=false;
+    $('addBtn').style.display='';$('search').disabled=false;$('search').placeholder='検索';render();
+  }
+  $('sideDiagnosis').addEventListener('click',openDiagnosis);
+  $('runDiagnosis').addEventListener('click',runDiagnosis);
+
+
 $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEventListener('click',()=>{chatOverlay.classList.remove('open');});
   setInterval(()=>{if(document.visibilityState==='visible'&&sessionStorage.getItem(ADMIN_TOKEN_KEY))refreshAdminChat();},30000);
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&sessionStorage.getItem(ADMIN_TOKEN_KEY))refreshAdminChat();});
@@ -1593,7 +1781,7 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
   const memoOverlay = $('memoOverlay');
   const memoFrame = $('memoFrame');
   function openIntegratedMemos() {
-    leaveClickLogs();leaveTrash();
+    leaveClickLogs();leaveTrash();leaveDiagnosis();
     const token = sessionStorage.getItem(ADMIN_TOKEN_KEY);
     if (!token) { alert('先に管理者ログインをしてください。'); return; }
     memoOverlay.classList.add('open');
@@ -1636,6 +1824,7 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
       document.querySelector('.workspace').hidden = false;
       $('clickLogPanel').hidden = true;
       $('trashPanel').hidden = true;
+      $('diagnosisPanel').hidden = true;
       $('officialPanel').classList.remove('active');
       document.querySelector('.finder-toolbar').classList.remove('official-toolbar');
       $('addBtn').style.display = '';
