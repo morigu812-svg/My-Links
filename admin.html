@@ -817,7 +817,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   <section id="diagnosisPanel" class="click-log-panel" hidden aria-label="リンク診断">
     <div class="section-heading">
       <div><span class="section-kicker">LINK CORE / LINK HEALTH</span><h2>リンク診断</h2><p>重複したURLと、開けなくなったリンクを調べます。リンクの削除や変更はしません。</p></div>
-      <div class="click-log-actions"><button id="runDiagnosis" class="btn primary" type="button">▶ 診断する</button></div>
+      <div class="click-log-actions"><button id="runDiagnosis" class="btn primary" type="button">▶ 診断する</button><button id="resumeDiagnosis" class="btn" type="button" style="display:none">↻ 続きから再開</button></div>
     </div>
     <div id="diagnosisStatus" role="status" aria-live="polite"></div>
     <div class="click-log-table-wrap"><table class="click-log-table">
@@ -1122,6 +1122,13 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
       if (resumeLinkEdit && sessionStorage.getItem(ADMIN_TOKEN_KEY)) {
         resumeLinkEdit = false;
         $('dlg').showModal();
+      } else if (diagnosisResumeOffset != null && sessionStorage.getItem(ADMIN_TOKEN_KEY) && state.links && state.links.length) {
+        // 診断中の認証切れで保留していた再開位置があれば、診断パネルを開いて続きから自動で再開する。
+        // リンク編集中のダイアログを再表示する場合は、そちらを優先して自動再開はしない
+        // （保留位置は残るため、診断パネルの「続きから再開」で再開できる）。
+        const resumeFrom = diagnosisResumeOffset;
+        openDiagnosis();
+        runDiagnosis(resumeFrom);
       }
     }
   });
@@ -1620,6 +1627,9 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   let diagnosisResults=[];
   let diagnosisDuplicates=[];
   let diagnosisTotalUrls=0;
+  // 診断中の認証切れで保留している再開位置（次に確認する URL の offset）。
+  // null のときは保留中の再開はない。ページを再読み込みすると消える（結果も一緒に消えるため）。
+  let diagnosisResumeOffset=null;
   function diagnosisStatusLabel(status){
     return status==='ok'?'OK':status==='dead'?'切れている':status==='unknown'?'要確認':'未判定';
   }
@@ -1721,20 +1731,38 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
     tr.appendChild(td);body.appendChild(tr);
     $('diagnosisStatus').textContent='診断に失敗しました：'+message;
   }
-  async function runDiagnosis(){
+  // startOffset が保留中の再開位置と一致する場合だけ、続きから診断を再開する。
+  // それ以外（「診断する」ボタンの手動押下を含む）は最初からの実行で、結果を破棄する。
+  async function runDiagnosis(startOffset){
     if(diagnosisRunning)return;
     if(!sessionStorage.getItem(ADMIN_TOKEN_KEY)){alert('先に管理者ログインをしてください。');return;}
+    const isResume=typeof startOffset==='number'&&startOffset>=0&&startOffset===diagnosisResumeOffset;
     diagnosisRunning=true;
     const button=$('runDiagnosis');if(button)button.disabled=true;
-    diagnosisResults=[];diagnosisDuplicates=[];diagnosisTotalUrls=0;
-    const diagBody=$('diagnosisRows');diagBody.replaceChildren();
-    const diagTr=document.createElement('tr');const diagTd=document.createElement('td');
-    diagTd.colSpan=5;diagTd.className='click-log-empty';diagTd.textContent='診断しています…';
-    diagTr.appendChild(diagTd);diagBody.appendChild(diagTr);
+    const resumeButton=$('resumeDiagnosis');if(resumeButton)resumeButton.style.display='none';
+    let offset=0;let done=false;let failed=false;let failMessage='';let authFailed=false;
+    if(isResume){
+      offset=startOffset;
+      // 再開中の再失敗時は catch で再記録するため、ここで一度クリアする。
+      diagnosisResumeOffset=null;
+      $('diagnosisStatus').textContent='再ログインしました。診断を'+(offset+1)+'件目から再開します…';
+      if(!diagnosisResults.length){
+        const diagBody=$('diagnosisRows');diagBody.replaceChildren();
+        const diagTr=document.createElement('tr');const diagTd=document.createElement('td');
+        diagTd.colSpan=5;diagTd.className='click-log-empty';diagTd.textContent='診断しています…';
+        diagTr.appendChild(diagTd);diagBody.appendChild(diagTr);
+      }
+    }else{
+      diagnosisResumeOffset=null;
+      diagnosisResults=[];diagnosisDuplicates=[];diagnosisTotalUrls=0;
+      const diagBody=$('diagnosisRows');diagBody.replaceChildren();
+      const diagTr=document.createElement('tr');const diagTd=document.createElement('td');
+      diagTd.colSpan=5;diagTd.className='click-log-empty';diagTd.textContent='診断しています…';
+      diagTr.appendChild(diagTd);diagBody.appendChild(diagTr);
+      $('diagnosisStatus').textContent='診断しています…';
+    }
     const linksById={};
     state.links.forEach(function(link){linksById[link.id]=link;});
-    let offset=0;let done=false;let failed=false;let failMessage='';
-    $('diagnosisStatus').textContent='診断しています…';
     try{
       while(!done){
         const result=await serverCall('diagnoseLinks',offset);
@@ -1750,9 +1778,22 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
       // バッチ単位で失敗しても、ここまでの結果は残す。最初から1件も取れていない場合は
       // 空の表示と誤読されないよう、エラー行に置き換える（ゴミ箱と同じ方針）。
       failed=true;failMessage=error.message||'通信エラー';
+      // 認証エラー（GAS の CacheService から管理者トークンが消えた等）の場合は、
+      // 失敗したバッチの位置を覚えておき、再ログイン後に続きから再開できるようにする。
+      // offset は失敗したバッチの開始位置＝ここまで確認済みの URL 数。
+      authFailed=/管理者ログインが必要|ログインし直してください|有効期限/.test(failMessage);
+      if(authFailed)diagnosisResumeOffset=offset;
       if(!diagnosisResults.length)renderDiagnosisError(failMessage);
-    }finally{diagnosisRunning=false;if(button)button.disabled=false;}
-    if(!failed)updateDiagnosisSummary();
+    }finally{
+      diagnosisRunning=false;if(button)button.disabled=false;
+      if(resumeButton)resumeButton.style.display=diagnosisResumeOffset!=null?'':'none';
+    }
+    if(!failed){diagnosisResumeOffset=null;updateDiagnosisSummary();}
+    else if(authFailed&&diagnosisResumeOffset!=null){
+      $('diagnosisStatus').textContent=offset>0
+        ?'ログインの有効期限が切れました。ここまで'+offset+'件を確認済みで、結果は残っています。再ログインすると、'+(offset+1)+'件目から診断を自動で再開します。'
+        :'ログインの有効期限が切れました。再ログインすると、診断を最初から自動で再開します。';
+    }
     else if(diagnosisResults.length)$('diagnosisStatus').textContent='診断が途中で止まりました：'+failMessage+'（ここまでの結果を表示中。「診断する」で最初からやり直せます）';
   }
   function openDiagnosis(){
@@ -1771,7 +1812,12 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
     $('addBtn').style.display='';$('search').disabled=false;$('search').placeholder='検索';render();
   }
   $('sideDiagnosis').addEventListener('click',openDiagnosis);
-  $('runDiagnosis').addEventListener('click',runDiagnosis);
+  // 手動の「診断する」は常に最初からの実行（保留中の再開は破棄する）。
+  $('runDiagnosis').addEventListener('click',()=>runDiagnosis());
+  // 保留中の再開があるときにだけ表示されるボタン。自動再開が動かなかった場合の予備。
+  $('resumeDiagnosis').addEventListener('click',()=>{
+    if(diagnosisResumeOffset!=null)runDiagnosis(diagnosisResumeOffset);
+  });
 
 
 $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEventListener('click',()=>{chatOverlay.classList.remove('open');});
