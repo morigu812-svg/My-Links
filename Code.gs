@@ -610,7 +610,9 @@ function toggleFavorite(id, favorite, adminToken) {
 }
 
 /**
- * リンクを削除する。
+ * リンクを削除する。行を即座に消すのではなく、まず Trash シートへ移動する。
+ * Trash への保存に失敗した場合は Links から削除しない（誤削除の防止）。
+ * 管理画面の「元に戻す」は restoreTrash で Trash から Links へ戻す。
  */
 function deleteLink(id, adminToken) {
   requireAdmin_(adminToken);
@@ -632,7 +634,11 @@ function deleteLink(id, adminToken) {
 
       for (let i = ids.length - 1; i >= 0; i--) {
         if (ids[i][0] === linkId) {
-          sheet.deleteRow(i + 2);
+          const targetRow = i + 2;
+          const rowValues = sheet.getRange(targetRow, 1, 1, sheet.getLastColumn()).getValues()[0];
+          // Trash へ先に保存してから Links から削除する。
+          moveRowToTrash_(rowValues, columns);
+          sheet.deleteRow(targetRow);
           break;
         }
       }
@@ -640,6 +646,210 @@ function deleteLink(id, adminToken) {
 
     invalidateLinksCache_();
     return refreshLinksCacheFromSheet_(sheet);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+
+/* ゴミ箱：削除したリンクを Trash シートへ退避し、復元・完全削除できるようにする。
+   対象は通常リンクのみ。公式リンク（OfficialLinks）の削除は従来どおり即削除のまま。 */
+const TRASH_SHEET_NAME = 'Trash';
+const TRASH_HEADERS = ['ID', 'タイトル', 'URL', 'カテゴリ', 'メモ', 'お気に入り', '作成日時', '更新日時', '利用者に公開', '開き方', 'NEWラベル', '削除日時'];
+
+function ensureTrashSheet_() {
+  const spreadsheetId = PropertiesService
+    .getScriptProperties()
+    .getProperty(SPREADSHEET_PROPERTY);
+  if (!spreadsheetId) throw new Error('スプレッドシートIDが未設定です。');
+  const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+  let sheet = spreadsheet.getSheetByName(TRASH_SHEET_NAME);
+  if (!sheet) sheet = spreadsheet.insertSheet(TRASH_SHEET_NAME);
+  const lastColumn = sheet.getLastColumn();
+  if (lastColumn === 0) {
+    sheet.getRange(1, 1, 1, TRASH_HEADERS.length).setValues([TRASH_HEADERS]);
+  } else {
+    const existing = sheet.getRange(1, 1, 1, lastColumn).getDisplayValues()[0];
+    TRASH_HEADERS.forEach(header => {
+      if (existing.indexOf(header) === -1) {
+        sheet.getRange(1, sheet.getLastColumn() + 1).setValue(header);
+        existing.push(header);
+      }
+    });
+  }
+  return sheet;
+}
+
+/** Trash シートの列名 → 列番号（1始まり）。不足列があればエラーにする。 */
+function getTrashColumnMap_(sheet) {
+  const lastColumn = sheet.getLastColumn();
+  if (lastColumn < 1) throw new Error('Trashシートのヘッダーがありません。');
+  const headers = sheet.getRange(1, 1, 1, lastColumn).getDisplayValues()[0];
+  const map = {};
+  headers.forEach((header, index) => {
+    if (header) map[header] = index + 1;
+  });
+  TRASH_HEADERS.forEach(header => {
+    if (!map[header]) throw new Error('Trashシートに必要な列がありません: ' + header);
+  });
+  return map;
+}
+
+/** Links の1行分を Trash の行に変換する。 */
+function rowToTrashValues_(rowValues, columns) {
+  const get = header => rowValues[columns[header] - 1];
+  return [
+    get('ID'), get('タイトル'), get('URL'), get('カテゴリ'), get('メモ'),
+    get('お気に入り'), get('作成日時'), get('更新日時'), get('利用者に公開'),
+    get('開き方'), get('NEWラベル'), new Date()
+  ];
+}
+
+/** Links の1行分を Trash シートへ追加する。deleteLink 内（ロック取得中）から呼ぶ。 */
+function moveRowToTrash_(rowValues, columns) {
+  const trashSheet = ensureTrashSheet_();
+  const width = Math.max(TRASH_HEADERS.length, trashSheet.getLastColumn());
+  const values = rowToTrashValues_(rowValues, columns);
+  while (values.length < width) values.push('');
+  trashSheet.appendRow(values.slice(0, width));
+}
+
+/** Trash の1行を管理画面へ返す形に変換する。 */
+function trashRowToItem_(row, columns) {
+  const get = header => row[columns[header] - 1];
+  const favorite = get('お気に入り');
+  return {
+    id: String(get('ID') || ''),
+    title: String(get('タイトル') || ''),
+    url: String(get('URL') || ''),
+    category: String(get('カテゴリ') || ''),
+    memo: String(get('メモ') || ''),
+    favorite: favorite === true || String(favorite).toLowerCase() === 'true',
+    visibleToVisitors: get('利用者に公開') === true || String(get('利用者に公開')).toLowerCase() === 'true',
+    openMode: String(get('開き方') || 'internal').toLowerCase() === 'external' ? 'external' : 'internal',
+    isNew: get('NEWラベル') === true || String(get('NEWラベル')).toLowerCase() === 'true',
+    createdAt: toIso_(get('作成日時')),
+    updatedAt: toIso_(get('更新日時')),
+    deletedAt: toIso_(get('削除日時'))
+  };
+}
+
+/** ゴミ箱の一覧を返す（新しい削除順）。管理者のみ。 */
+function getTrash(adminToken) {
+  requireAdmin_(adminToken);
+  const sheet = ensureTrashSheet_();
+  const columns = getTrashColumnMap_(sheet);
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return { trash: [] };
+  const width = sheet.getLastColumn();
+  const rows = sheet.getRange(2, 1, lastRow - 1, width).getValues();
+  const trash = rows
+    .filter(row => String(row[columns['ID'] - 1] || '') !== '')
+    .map(row => trashRowToItem_(row, columns))
+    .reverse();
+  return { trash: trash };
+}
+
+/**
+ * ゴミ箱の1件を Links へ復元する。作成日時・更新日時も元のまま戻す。
+ * 同じIDのリンクが既に Links にある場合は、重複を避けるため復元せずエラーにする。
+ * 戻り値は getLinks と同じ形（{links, categories}）で、管理画面の apply() がそのまま使える。
+ */
+function restoreTrash(id, adminToken) {
+  requireAdmin_(adminToken);
+  const trashId = cleanText_(id, 200);
+  if (!trashId) throw new Error('復元するリンクIDがありません。');
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+
+  try {
+    const trashSheet = ensureTrashSheet_();
+    const trashColumns = getTrashColumnMap_(trashSheet);
+    const trashLastRow = trashSheet.getLastRow();
+    let trashRowIndex = -1;
+    let trashRowValues = null;
+    if (trashLastRow >= 2) {
+      const ids = trashSheet
+        .getRange(2, trashColumns['ID'], trashLastRow - 1, 1)
+        .getDisplayValues();
+      for (let i = 0; i < ids.length; i++) {
+        if (ids[i][0] === trashId) {
+          trashRowIndex = i + 2;
+          trashRowValues = trashSheet.getRange(trashRowIndex, 1, 1, trashSheet.getLastColumn()).getValues()[0];
+          break;
+        }
+      }
+    }
+    if (trashRowIndex === -1) throw new Error('ゴミ箱にそのリンクがありません。');
+
+    const sheet = ensureSheet_();
+    const columns = getColumnMap_(sheet);
+    const lastRow = sheet.getLastRow();
+    if (lastRow >= 2) {
+      const ids = sheet.getRange(2, columns['ID'], lastRow - 1, 1).getDisplayValues();
+      for (let i = 0; i < ids.length; i++) {
+        if (ids[i][0] === trashId) throw new Error('同じIDのリンクが既にあります。ゴミ箱の項目を削除してから再登録してください。');
+      }
+    }
+
+    // Trash の値を Links の列順に並べ替えて末尾へ追加する。
+    const width = sheet.getLastColumn();
+    const rowValues = new Array(width).fill('');
+    TRASH_HEADERS.forEach(header => {
+      if (header === '削除日時' || !columns[header]) return;
+      rowValues[columns[header] - 1] = trashRowValues[trashColumns[header] - 1];
+    });
+    sheet.getRange(lastRow + 1, 1, 1, width).setValues([rowValues]);
+
+    trashSheet.deleteRow(trashRowIndex);
+    invalidateLinksCache_();
+    return refreshLinksCacheFromSheet_(sheet);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/** ゴミ箱の1件を完全に削除する（復元不可）。管理者のみ。 */
+function deleteTrashPermanently(id, adminToken) {
+  requireAdmin_(adminToken);
+  const trashId = cleanText_(id, 200);
+  if (!trashId) throw new Error('削除するリンクIDがありません。');
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+
+  try {
+    const sheet = ensureTrashSheet_();
+    const columns = getTrashColumnMap_(sheet);
+    const lastRow = sheet.getLastRow();
+    if (lastRow >= 2) {
+      const ids = sheet.getRange(2, columns['ID'], lastRow - 1, 1).getDisplayValues();
+      for (let i = ids.length - 1; i >= 0; i--) {
+        if (ids[i][0] === trashId) {
+          sheet.deleteRow(i + 2);
+          break;
+        }
+      }
+    }
+    return getTrash(adminToken);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/** ゴミ箱をすべて空にする（復元不可）。管理者のみ。 */
+function emptyTrash(adminToken) {
+  requireAdmin_(adminToken);
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const sheet = ensureTrashSheet_();
+    const lastRow = sheet.getLastRow();
+    const deleted = Math.max(0, lastRow - 1);
+    if (lastRow > 1) sheet.deleteRows(2, lastRow - 1);
+    SpreadsheetApp.flush();
+    return { ok: true, deleted: deleted, trash: [] };
   } finally {
     lock.releaseLock();
   }
