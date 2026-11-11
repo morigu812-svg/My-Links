@@ -1546,6 +1546,10 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
       renderTrash(items);trashLoaded=true;
       $('trashStatus').textContent=items.length+' 件の削除済みリンクがあります。';
     }catch(error){
+      const body=$('trashRows');body.replaceChildren();
+      const tr=document.createElement('tr');const td=document.createElement('td');
+      td.colSpan=5;td.className='click-log-empty';td.textContent='読み込みに失敗しました。時間をおいて「再読み込み」を押してください。';
+      tr.appendChild(td);body.appendChild(tr);trashLoaded=false;
       $('trashStatus').textContent='読み込みに失敗しました：'+(error.message||'通信エラー');
     }finally{trashLoading=false;if(button)button.disabled=false;}
   }
