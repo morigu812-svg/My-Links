@@ -1320,3 +1320,169 @@ function markNoticeRead(viewerToken, noticeId, browserId) {
     return {added:true,count:rows.filter(row=>row[0]===id).length};
   }finally{lock.releaseLock();}
 }
+
+/* リンク診断：重複チェック＋リンク切れチェック（管理者のみ。読み取り専用）。
+   診断はリンクを変更・削除しない。死活チェックは GAS（UrlFetchApp）から行う。
+   ブラウザーから直接 fetch すると CORS でブロックされるため、サーバー側で行う。
+   1回の呼び出しは 8 URL ずつ処理する（管理画面は 15 秒の応答制限があるため、
+   フロントエンドが offset を進めながら繰り返し呼ぶ）。 */
+const DIAGNOSIS_BATCH_SIZE = 8;
+const DIAGNOSIS_TRACKING_PARAMS = ['fbclid', 'gclid', 'gbraid', 'wbraid', 'igshid', 'msclkid', 'yclid', 'dclid', '_ga', '_gl', 'mc_cid', 'mc_eid', 'vero_id', 'fb_action_ids', 'fb_source', 'twclid', 'li_fat_id', 'srsltid'];
+const DIAGNOSIS_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+
+/**
+ * 比較用の URL 正規化。normalizeUrl_ より強い正規化で、実質同じリンクを同一とみなす。
+ * - ホスト小文字化、www. 除去、既定ポート（:80 / :443）除去
+ * - パス末尾の / 除去、フラグメント除去
+ * - utm_* などの追跡パラメーター除去、残りのクエリは並べ替え
+ * - スキームは https にそろえる（http/https の違いだけの重複も検出するため）
+ * 正規化できない URL は null を返す。
+ */
+function normalizeUrlForCompare_(value) {
+  var url;
+  try {
+    url = normalizeUrl_(value);
+  } catch (_) {
+    return null;
+  }
+  var match = url.match(/^https?:\/\/([^\/:?#]+)(?::(\d+))?([^?#]*)(\?[^#]*)?(#.*)?$/i);
+  if (!match) return null;
+  var host = match[1].toLowerCase();
+  if (host.indexOf('www.') === 0) host = host.slice(4);
+  var port = match[2] || '';
+  if (port === '80' || port === '443') port = '';
+  var path = match[3] || '';
+  if (path.length > 1 && path.slice(-1) === '/') path = path.slice(0, -1);
+  if (path === '/') path = '';
+  var query = '';
+  if (match[4]) {
+    var kept = match[4].slice(1).split('&').filter(function(part) {
+      if (!part) return false;
+      var name = part.split('=')[0].toLowerCase();
+      return name.indexOf('utm_') !== 0 && DIAGNOSIS_TRACKING_PARAMS.indexOf(name) === -1;
+    });
+    kept.sort();
+    if (kept.length) query = '?' + kept.join('&');
+  }
+  return 'https://' + host + (port ? ':' + port : '') + path + query;
+}
+
+/**
+ * 重複グループを返す。同じ正規化 URL を持つリンクが 2 件以上ある組だけを返す。
+ * 件数の多い組から並べる。
+ */
+function diagnoseDuplicates_(links) {
+  var groups = {};
+  var order = [];
+  links.forEach(function(link) {
+    var key = normalizeUrlForCompare_(link.url);
+    if (!key) return;
+    if (!groups[key]) {
+      groups[key] = {key: key, url: link.url, links: []};
+      order.push(key);
+    }
+    groups[key].links.push({id: link.id, title: link.title, category: link.category, createdAt: link.createdAt, url: link.url});
+  });
+  return order.map(function(key) { return groups[key]; })
+    .filter(function(group) { return group.links.length > 1; })
+    .sort(function(a, b) {
+      return b.links.length - a.links.length || (a.key < b.key ? -1 : a.key > b.key ? 1 : 0);
+    });
+}
+
+function checkOneUrlResult_(response) {
+  var code = response.getResponseCode();
+  if (code >= 200 && code < 400) return {status: 'ok', code: code, reason: ''};
+  if (code === 403) return {status: 'unknown', code: code, reason: 'アクセスが拒否されました（403）。ボット対策の可能性があります。'};
+  if (code >= 400) return {status: 'dead', code: code, reason: 'HTTP ' + code + ' が返されました。'};
+  return {status: 'unknown', code: code, reason: 'HTTP ' + code + ' が返されました。'};
+}
+
+/**
+ * 複数 URL の死活を並行確認する。fetchAll が1件の失敗で全体を投げた場合は
+ * 1件ずつ確認し直す（1件の失敗でバッチ全体を落とさない）。
+ * UrlFetchApp にリクエスト単位のタイムアウト指定はないため、バッチを小さくして
+ * 1回の呼び出し時間を抑えている。
+ */
+function checkBatchUrls_(urls) {
+  var results = {};
+  var requests = urls.map(function(url) {
+    return {url: url, muteHttpExceptions: true, followRedirects: true, headers: {'User-Agent': DIAGNOSIS_USER_AGENT}};
+  });
+  try {
+    var responses = UrlFetchApp.fetchAll(requests);
+    responses.forEach(function(response, i) {
+      if (!response) {
+        results[urls[i]] = {status: 'unknown', code: 0, reason: '応答がありませんでした。'};
+        return;
+      }
+      results[urls[i]] = checkOneUrlResult_(response);
+    });
+  } catch (e) {
+    urls.forEach(function(url) {
+      if (results[url]) return;
+      try {
+        var response = UrlFetchApp.fetch(url, {muteHttpExceptions: true, followRedirects: true, headers: {'User-Agent': DIAGNOSIS_USER_AGENT}});
+        results[url] = checkOneUrlResult_(response);
+      } catch (err) {
+        results[url] = {status: 'unknown', code: 0, reason: String(err && err.message ? err.message : err)};
+      }
+    });
+  }
+  return results;
+}
+
+/**
+ * リンク診断を1バッチ分実行する（管理者のみ）。
+ * offset は重複を除いた URL 一覧の中の開始位置。フロントエンドが done になるまで
+ * offset を進めながら繰り返し呼ぶ。
+ * 戻り値：{totalLinks, totalUrls, checked, nextOffset(-1 なら完了), done, duplicates, results}
+ * results の1件：{url, status('ok'|'dead'|'unknown'), code, reason, linkIds}
+ * - ok: 2xx、またはリダイレクト後の 3xx
+ * - dead: 4xx / 5xx
+ * - unknown: タイムアウト・取得失敗・403 など。切れているとは断定しない。
+ * 診断は読み取り専用で、リンクの追加・変更・削除はしない。
+ */
+function diagnoseLinks(adminToken, offset) {
+  requireAdmin_(adminToken);
+  var start = Math.max(0, parseInt(offset, 10) || 0);
+  var links = readLinksForDisplay_().links;
+  var duplicates = diagnoseDuplicates_(links);
+  // URL ごとに1件にまとめる（重複リンクは同じ URL を1回だけ確認する）。
+  var targets = [];
+  var seen = {};
+  links.forEach(function(link) {
+    var key = normalizeUrlForCompare_(link.url);
+    if (!key) {
+      targets.push({key: 'INVALID:' + link.id, url: link.url, linkIds: [link.id], invalid: true});
+      return;
+    }
+    if (seen[key]) {
+      seen[key].linkIds.push(link.id);
+      return;
+    }
+    var target = {key: key, url: link.url, linkIds: [link.id], invalid: false};
+    seen[key] = target;
+    targets.push(target);
+  });
+  var batch = targets.slice(start, start + DIAGNOSIS_BATCH_SIZE);
+  var fetchUrls = batch.filter(function(target) { return !target.invalid; }).map(function(target) { return target.url; });
+  var checked = fetchUrls.length ? checkBatchUrls_(fetchUrls) : {};
+  var results = batch.map(function(target) {
+    if (target.invalid) {
+      return {url: target.url, status: 'unknown', code: 0, reason: 'URLの形式が正しくありません。', linkIds: target.linkIds};
+    }
+    var check = checked[target.url] || {status: 'unknown', code: 0, reason: '確認できませんでした。'};
+    return {url: target.url, status: check.status, code: check.code, reason: check.reason, linkIds: target.linkIds};
+  });
+  var nextOffset = start + batch.length;
+  return {
+    totalLinks: links.length,
+    totalUrls: targets.length,
+    checked: nextOffset,
+    nextOffset: nextOffset >= targets.length ? -1 : nextOffset,
+    done: nextOffset >= targets.length,
+    duplicates: duplicates,
+    results: results
+  };
+}
