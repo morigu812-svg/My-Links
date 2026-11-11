@@ -13,10 +13,10 @@
 <meta name="theme-color" id="themeColorMeta" content="#050914">
 <link rel="manifest" href="./manifest.webmanifest">
 <script>
-/* LINK CORE テーマ初期化：描画前に適用してチラつきを防ぐ。既定はダーク（従来の見た目）。
-   保存済みの選択があればそれを優先し、なければ prefers-color-scheme に従う。 */
+/* LINK CORE テーマ初期化：描画前に適用してチラつきを防ぐ。既定はダーク。
+   保存済みの選択があればそれを優先し、なければダーク（OS の設定には従わない）。 */
 (function(){try{var s=null;try{s=localStorage.getItem('linkCoreViewerTheme');}catch(e){}
-var light=s==='light'||(!s&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches);
+var light=s==='light';
 if(light)document.documentElement.classList.add('light-mode');}catch(e){}})();
 </script>
 <style>
@@ -498,13 +498,7 @@ html.light-mode ::selection{background:rgba(52,120,212,.25)!important;color:#262
   document.querySelectorAll('.theme-toggle-btn').forEach(function(btn){
     btn.addEventListener('click',function(){apply(!isLight(),true);});
   });
-  /* 保存済みの選択がない場合だけ、OS の設定変更に追従する。 */
-  try{
-    var saved=null;try{saved=localStorage.getItem(KEY);}catch(e){}
-    if(!saved&&window.matchMedia){
-      window.matchMedia('(prefers-color-scheme: light)').addEventListener('change',function(e){apply(e.matches,false);});
-    }
-  }catch(e){}
+  /* OS の設定変更には追従しない。既定はダークで、切替は ◐ ボタンの保存済み選択だけが決める。 */
   apply(isLight(),false);
 })();
 </script>

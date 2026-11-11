@@ -1443,7 +1443,7 @@ function checkBatchUrls_(urls) {
  * - unknown: タイムアウト・取得失敗・403 など。切れているとは断定しない。
  * 診断は読み取り専用で、リンクの追加・変更・削除はしない。
  */
-function diagnoseLinks(adminToken, offset) {
+function diagnoseLinks(offset, adminToken) {
   requireAdmin_(adminToken);
   var start = Math.max(0, parseInt(offset, 10) || 0);
   var links = readLinksForDisplay_().links;
