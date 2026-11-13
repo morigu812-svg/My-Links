@@ -766,6 +766,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
       <button class="side-item selected" type="button" data-view="all"><span>▦</span> すべてのリンク</button>
       <div class="side-label">クイックアクセス</div>
       <button class="side-item" type="button" data-view="official"><span>✦</span> 公式リンク</button>
+      <button class="side-item" type="button" id="logoutAllBrowsers">全ブラウザをログアウト</button>
       <button class="side-item" type="button" id="sideMemos"><span>▤</span> メモ帳</button>
       <button class="side-item" type="button" id="sideChat"><span>✉</span> 利用者チャット <span class="new-badge" id="chatUnreadBadge" hidden>NEW</span></button>
       <button class="side-item" type="button" id="sideClickLogs"><span>◷</span> クリック履歴</button>
@@ -990,7 +991,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   }
 
   function serverCall(method, ...args) {
-    const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'saveOfficialLink', 'deleteOfficialLink', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'sendChatMessage', 'getClickLogs', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks'];
+    const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'saveOfficialLink', 'deleteOfficialLink', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'sendChatMessage', 'getClickLogs', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers'];
     if (protectedMethods.includes(method)) {
       const token = sessionStorage.getItem(ADMIN_TOKEN_KEY) || '';
       // 呼び出し元（埋め込みメモ帳など）が既にトークンを渡している場合は二重追加しない。
@@ -1040,6 +1041,23 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
     if (authGate) authGate.classList.add('is-hidden');
   }
 
+  $('logoutAllBrowsers').addEventListener('click', async event => {
+    const button = event.currentTarget;
+    if (button.disabled || !confirm('管理者・利用者を含む全ブラウザをログアウトしますか？')) return;
+    button.disabled = true;
+    try {
+      const result = await serverCall('logoutAllBrowsers');
+      if (!result || result.ok !== true) throw new Error('完了を確認できませんでした。');
+      sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+      sessionStorage.removeItem(AUTH_KEY);
+      location.reload();
+    } catch (error) {
+      alert('一括ログアウトの結果を確認できませんでした。' + error.message);
+    } finally {
+      button.disabled = false;
+    }
+  });
+
   let resumeLinkEdit = false;
   function showAdminReauthentication(message) {
     const dialog = $('dlg');
@@ -1049,6 +1067,9 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
     }
     sessionStorage.removeItem(ADMIN_TOKEN_KEY);
     sessionStorage.removeItem(AUTH_KEY);
+    chatOverlay.classList.remove('open');
+    closeIntegratedMemos();
+    memoFrame.src = 'about:blank';
     document.body.classList.add('auth-locked');
     authGate.classList.remove('is-hidden');
     authTitle.textContent = '管理者ログイン';
