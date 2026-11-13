@@ -1,26 +1,3556 @@
 <!doctype html>
 <html lang="ja">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>サイト運営の一時中断のお知らせ | My Links</title>
-  <style>
-    html { color-scheme: light; background: #fff; color: #222; }
-    body { font-family: system-ui, sans-serif; margin: 0; }
-    main { max-width: 40rem; margin: 12vh auto 0; padding: 0 1.5rem; line-height: 1.8; }
-    h1 { font-size: 1.5rem; }
-  </style>
+<link rel="preconnect" href="https://script.google.com">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Zen+Kaku+Gothic+New:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+<title>My Desktop — LINK CORE</title>
+<link rel="icon" type="image/svg+xml" href="./link-core-icon.svg?v=1">
+<link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png?v=3">
+<meta name="apple-mobile-web-app-title" content="LINK CORE">
+<meta name="theme-color" id="themeColorMeta" content="#050914">
+<link rel="manifest" href="./manifest.webmanifest">
+<script>
+/* LINK CORE テーマ初期化：描画前に適用してチラつきを防ぐ。既定はダーク。
+   保存済みの選択があればそれを優先し、なければダーク（OS の設定には従わない）。 */
+(function(){try{var s=null;try{s=localStorage.getItem('linkCoreViewerTheme');}catch(e){}
+var light=s==='light';
+if(light)document.documentElement.classList.add('light-mode');}catch(e){}})();
+</script>
+<style>
+:root{color-scheme:light;font-family:"Space Grotesk","Zen Kaku Gothic New",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#e9edf2;color:#27292d;font-synthesis:none;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;font-feature-settings:"palt"}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:#e9edf2;padding:28px 22px}button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus-visible{outline:2px solid #3478d4;outline-offset:2px}.hidden{display:none!important}.wrap{width:100%;max-width:1180px;margin:0 auto}.finder-window{position:relative;overflow:hidden;min-height:650px;border:1px solid #c9cbd0;border-radius:12px;background:#fff;box-shadow:0 18px 55px rgba(30,38,50,.17)}.finder-toolbar{height:58px;display:grid;grid-template-columns:120px minmax(0,1fr) 220px;align-items:center;gap:12px;padding:0 17px;background:linear-gradient(#fbfbfc,#f0f1f3);border-bottom:1px solid #d5d6da}.traffic-lights{display:flex;align-items:center;gap:8px}.traffic-lights span{display:block;width:12px;height:12px;border-radius:50%;box-shadow:inset 0 1px 1px rgba(255,255,255,.7),0 0 0 1px rgba(0,0,0,.08)}.traffic-lights span:nth-child(1){background:#ff5f57}.traffic-lights span:nth-child(2){background:#febc2e}.traffic-lights span:nth-child(3){background:#28c840}.finder-title{justify-self:center;color:#35373b;font-size:14px;font-weight:650;white-space:nowrap}.toolbar-search{display:flex;align-items:center;gap:7px;min-width:0;padding:6px 9px;border:1px solid #d3d5d9;border-radius:7px;background:#fff;color:#777b82}.toolbar-search span{font-size:14px}.toolbar-search input{width:100%;min-width:0;padding:0;border:0;outline:0;background:transparent;color:#292b30;font-size:12px}.toolbar-search input::placeholder{color:#999ca2}.finder-layout{display:grid;grid-template-columns:220px minmax(0,1fr);min-height:590px}.sidebar{padding:17px 10px 22px;background:#f4f5f7;border-right:1px solid #e0e1e4}.side-label{margin:17px 10px 7px;color:#85888f;font-size:10px;font-weight:750;letter-spacing:.04em}.side-item{display:flex;align-items:center;gap:9px;width:100%;padding:7px 10px;border:1px solid transparent;border-radius:6px;background:transparent;text-align:left;color:#36383d;font-size:12px}.side-item>span{display:inline-flex;justify-content:center;width:17px;color:#6e8fc5;font-size:15px}.side-item:hover{background:#e7e9ed}.side-item.selected{border-color:#d0dff6;background:#dce8fa;color:#174c96}.side-item.selected>span{color:#3478d4}.finder-content{min-width:0;padding:25px 27px;background:#fff}.content-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:17px;padding-bottom:13px;border-bottom:1px solid #ececef}.content-heading h1{margin:0;color:#26282d;font-size:25px;line-height:1.25;font-weight:700;letter-spacing:-.025em}
+.brand{font-family:"Space Grotesk","Zen Kaku Gothic New",sans-serif;font-size:10px;font-weight:700;letter-spacing:.2em;color:#4388bd;text-transform:uppercase}
+.finder-title{font-family:"Space Grotesk","Zen Kaku Gothic New",sans-serif;font-weight:600;letter-spacing:.025em}
+.content-heading h1{font-weight:800;letter-spacing:-.035em}
+button,input,textarea{font-family:inherit}.content-heading p{margin:5px 0 0;color:#898c92;font-size:11px}.count{flex-shrink:0;color:#8a8d93;font-size:11px}.list-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 0 9px;border-top:1px solid #e7e8eb;color:#858990;font-size:10px}.list{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}.item{position:relative;min-width:0;min-height:126px;padding:15px;border:1px solid #e0e2e6;border-radius:9px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.035);transition:border-color .15s,background .15s}.item:hover{border-color:#b8cbe7;background:#fbfcff}.item a{display:inline-block;max-width:100%;color:#26282c;text-decoration:none;font-size:14px;font-weight:650;overflow-wrap:anywhere}.item a:hover{color:#1769c2;text-decoration:underline}.new-label{display:inline-flex;align-items:center;vertical-align:middle;margin:0 0 7px 9px;padding:2px 7px;border:1px solid #ffe45c;border-radius:5px;background:rgba(255,228,92,.10);color:#fff29a;font-size:9px;font-weight:900;letter-spacing:.12em;line-height:1.5;text-shadow:0 0 5px rgba(255,226,75,.95),0 0 11px rgba(255,210,40,.7);box-shadow:0 0 6px rgba(255,220,70,.45),inset 0 0 5px rgba(255,220,70,.12)}.url{margin-top:7px;color:#858990;font-size:11px;overflow-wrap:anywhere;word-break:break-word}.category{display:inline-block;margin-top:8px;padding:2px 7px;border:1px solid #e1e4e9;border-radius:5px;background:#f4f5f7;color:#62666d;font-size:10px}.memo{margin-top:8px;color:#656970;font-size:12px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}.item-arrow{position:absolute;right:12px;top:12px;color:#a0a3a9;font-size:13px}.empty{grid-column:1/-1;padding:42px 18px;border:1px dashed #d7d9de;border-radius:9px;color:#7c8087;text-align:center;font-size:13px}.status{min-height:18px;margin:0 0 10px;color:#656970;font-size:12px}.status.error,.error{color:#b4232d}.login-window{max-width:620px;min-height:0;margin:8vh auto 0}.login-window .finder-toolbar{grid-template-columns:120px 1fr 120px}.login-window .finder-title{grid-column:2}.login-body{padding:32px 36px 34px;background:#fff}.login-body h1{margin:0 0 7px;color:#26282c;font-size:27px}.login-body p{margin:0 0 25px;color:#777b82;font-size:13px;line-height:1.65}.login-body label{display:block;margin-bottom:7px;color:#41444a;font-size:12px}.login-row{display:flex;gap:9px}.login-row input{min-width:0;flex:1;padding:11px 12px;border:1px solid #d1d4da;border-radius:7px;background:#fff;color:#25272b}.login-row button{padding:10px 17px;border:1px solid #3478d4;border-radius:7px;background:#3478d4;color:#fff;font-size:12px;font-weight:650}.login-row button:disabled{opacity:.55;cursor:wait}.error{min-height:20px;margin-top:10px;font-size:12px}footer{margin:13px 2px;color:#7f838a;font-size:10px;text-align:right}a.admin{color:#777c84;text-decoration:none}a.admin:hover{color:#245d9e;text-decoration:underline}
+@media(max-width:760px){body{padding:10px}.finder-toolbar{grid-template-columns:72px minmax(0,1fr);grid-template-rows:28px 32px;height:72px;padding:5px 10px;gap:4px 10px}.traffic-lights{grid-column:1;grid-row:1}.finder-title{grid-column:2;grid-row:1;justify-self:start;font-size:13px}.toolbar-search{grid-column:1/-1;grid-row:2}.finder-layout{grid-template-columns:155px minmax(0,1fr)}.sidebar{padding:12px 6px}.side-item{gap:5px;padding:7px 5px;font-size:11px}.finder-content{padding:17px 12px}.list{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:9px}.login-window{margin:6vh auto 0}}
+@media(max-width:520px){body{padding:0;background:#fff}.finder-window{min-height:100vh;border-radius:0;border-left:0;border-right:0}.finder-layout{grid-template-columns:112px minmax(0,1fr)}.sidebar{padding:10px 4px}.side-label{margin:14px 5px 6px;font-size:9px}.side-item{gap:4px;padding:7px 4px;font-size:10px}.side-item>span{width:14px;font-size:13px}.finder-content{padding:14px 9px}.content-heading h1{font-size:21px}.content-heading p{font-size:10px}.count{font-size:10px}.list{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.item{min-height:112px;padding:10px}.item a{font-size:12px}.url{font-size:10px}.memo{font-size:11px}.login-window{margin:0;min-height:100vh}.login-window .finder-window{border-radius:0}.login-body{padding:28px 20px}.login-body h1{font-size:24px}.login-row{flex-direction:column}.login-row button{width:100%}footer{padding:0 10px}}
+
+/* === CYBERPUNK THEME OVERRIDES === */
+:root{color-scheme:dark;background:#050812;color:#e8faff}
+html{background:#050812}
+body{background:radial-gradient(ellipse at 12% 0%,rgba(0,238,255,.12),transparent 34%),radial-gradient(ellipse at 92% 12%,rgba(177,54,255,.15),transparent 32%),linear-gradient(145deg,#050812,#0a1020 60%,#080817);color:#e8faff}
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.22;background-image:linear-gradient(rgba(0,238,255,.09) 1px,transparent 1px),linear-gradient(90deg,rgba(0,238,255,.09) 1px,transparent 1px);background-size:34px 34px;mask-image:linear-gradient(to bottom,#000,transparent 90%)}
+.finder-window{background:rgba(7,13,28,.94);border:1px solid #18506a;border-radius:16px;box-shadow:0 0 0 1px rgba(0,238,255,.06),0 0 35px rgba(0,210,255,.12),0 24px 70px #0009;backdrop-filter:blur(18px)}
+.finder-toolbar{background:linear-gradient(100deg,#101d32,#111126);border-bottom:1px solid #17495d}
+.finder-title{color:#dffbff;letter-spacing:.12em;text-transform:uppercase;text-shadow:0 0 14px #00d9ff66}
+.toolbar-search{background:#060d1b;border-color:#22536a;color:#80eaff}
+.toolbar-search input{color:#e8faff}.toolbar-search input::placeholder{color:#66869b}
+.sidebar{background:rgba(7,17,32,.94);border-right:1px solid #173b52}
+.side-label{color:#4ca8bf;letter-spacing:.18em;text-transform:uppercase}
+.side-item{color:#b9d5e6;border-radius:8px;transition:background .18s,border-color .18s,box-shadow .18s}
+.side-item>span{color:#00d9ff}
+.side-item:hover{background:#10283b;border-color:#1a5b70;box-shadow:inset 0 0 18px #00d9ff0d}
+.side-item.selected{background:linear-gradient(100deg,#10344a,#171c3a);border-color:#00d9ff;color:#eaffff;box-shadow:0 0 15px #00d9ff1f,inset 3px 0 #00e5ff}
+.side-item.selected>span{color:#00f0ff}
+.finder-content{background:linear-gradient(145deg,rgba(8,15,30,.98),rgba(10,13,31,.98))}
+.content-heading{border-bottom-color:#1a3e54}
+.content-heading h1,.content-heading h2,.finder-content h2{color:#e5fbff;text-shadow:0 0 18px #00d9ff22}
+.finder-content p,.finder-content small{color:#8eacc0}
+.finder-content a{color:#65eaff}
+.finder-content a:hover{color:#fff;text-shadow:0 0 10px #00d9ff}
+.finder-content button,.finder-content .button,.finder-content [role=button]{border-color:#16708b;background:linear-gradient(135deg,#10334b,#171c3b);color:#c8faff;transition:transform .18s,box-shadow .18s,border-color .18s}
+.finder-content button:hover,.finder-content .button:hover,.finder-content [role=button]:hover{transform:translateY(-1px);border-color:#00eaff;box-shadow:0 0 18px #00d9ff26}
+.finder-content input,.finder-content select,.finder-content textarea{background:#060d1a!important;border-color:#21485d!important;color:#e8faff!important}
+.finder-content input::placeholder,.finder-content textarea::placeholder{color:#68879b}
+.finder-content input:focus,.finder-content select:focus,.finder-content textarea:focus{border-color:#00eaff!important;box-shadow:0 0 0 3px #00d9ff1c}
+.finder-content [class*=card],.finder-content [class*=tile],.finder-content [class*=item-card],.finder-content [class*=group]{border-color:#1c4358}
+.finder-content hr{border-color:#1a3e54}
+footer{color:#6d8ea2}
+footer a{color:#55eaff!important}
+::selection{background:#00d9ff55;color:#fff}
+@media(max-width:720px){body{padding:12px 8px}.finder-window{border-radius:12px}.finder-toolbar{grid-template-columns:70px minmax(0,1fr);height:auto;min-height:58px;padding:10px}.toolbar-search{grid-column:1/-1}.finder-layout{grid-template-columns:1fr}.sidebar{border-right:0;border-bottom:1px solid #173b52}.finder-content{padding:18px 14px}}
+
+
+/* === DIM MODE + FIT-TO-SCREEN CONTROLS === */
+.traffic-lights{gap:8px}
+.traffic-lights .traffic-green{display:block;width:12px;height:12px;min-width:12px;padding:0;border:0;border-radius:50%;background:#28c840;box-shadow:inset 0 1px 1px rgba(255,255,255,.55),0 0 0 1px rgba(0,0,0,.14),0 0 10px rgba(40,200,64,.25);cursor:pointer}
+.traffic-lights .traffic-green:hover{transform:scale(1.12);box-shadow:0 0 0 2px rgba(40,200,64,.25),0 0 15px rgba(40,200,64,.65)}
+.traffic-lights .traffic-green:focus-visible{outline:2px solid #00f0ff;outline-offset:4px}@media(max-width:720px){}
+
+
+/* Refined low-glare graphite and muted jade palette */
+:root{color-scheme:dark;background:#050708;color:#e5eeeb}html,body{background:#050708!important;color:#e5eeeb}body{background:#050708!important}.finder-window{background:#080d0e;border-color:#263536;box-shadow:0 18px 55px #0009}.finder-toolbar{background:#0b1112;border-color:#243334}.finder-title{color:#dce7e3}.toolbar-search{background:#070b0c;border-color:#293a3b;color:#9aa9a5}.toolbar-search input{color:#e5eeeb}.toolbar-search input::placeholder{color:#71817d}.finder-layout,.finder-content{background:#080d0e}.sidebar{background:#071124;border-color:#202f30}.side-label{color:#68ddff}.side-item{color:#bac8c4}.side-item>span{color:#35d9ff}.side-item:hover{background:#111c1c}.side-item.selected{border-color:#23708d;background:#102a43;color:#f0fbff;box-shadow:none}.side-item.selected>span{color:#35d9ff}.content-heading{border-color:#202f30}.content-heading h1{color:#e5eeeb}.content-heading p,.count{color:#a8bfd4}.list-heading{border-color:#202f30;color:#91acc2}.item{background:#0b1213;border-color:#263637;box-shadow:none}.item:hover{background:#10243c;border-color:#35d9ff}.item a{color:#73eaff}.item a:hover{color:#c5f7ff}.url,.memo{color:#a8bfd4}.category{background:#111a1a;border-color:#2c4140;color:#b3c7c1}.item-arrow{color:#8acac1}.empty{border-color:#344747;color:#9baaa6;background:#0a1112}.login-body{background:#0b1213}.login-body h1{color:#e5eeeb}.login-body p{color:#a8bfd4}.login-row input{background:#070c0d;border-color:#304343;color:#e5eeeb}.login-row button{background:#234f46;border-color:#397e6d;color:#f1fbf7}@media(max-width:720px){}
+
+/* === LINK CORE / OFFICIAL PAGE CYBER RESTORE === */
+:root{--core-line:#294b4b;--core-jade:#72d7b6;--core-cyan:#83dce0;--core-panel:#091112}
+body{position:relative;isolation:isolate;background:radial-gradient(ellipse at 50% -12%,#0c203b 0,transparent 48%),radial-gradient(ellipse at 100% 35%,#101d35 0,transparent 32%),#050914!important}
+body::before{opacity:.26;background-image:linear-gradient(#12344b22 1px,transparent 1px),linear-gradient(90deg,#12344b22 1px,transparent 1px);background-size:28px 28px}
+.finder-window{border:1px solid #20516c!important;border-radius:14px;box-shadow:0 0 0 1px #00cfff12,0 0 28px #00cfff18,0 28px 80px #000b!important}
+.finder-toolbar{background:linear-gradient(100deg,#101f38,#0a1428 65%,#11152c)!important;border-bottom:1px solid #20516c!important}
+.finder-title{font-family:"Space Grotesk","Zen Kaku Gothic New",sans-serif!important;letter-spacing:.12em!important;color:#d9f7ff!important;text-shadow:0 0 12px #00d9ff22}
+.traffic-lights .traffic-green{box-shadow:0 0 0 1px #0008,0 0 10px #42dc7860!important}
+.sidebar{background:linear-gradient(180deg,#0a1213,#080d0f)!important;border-right:1px solid #263e3c!important}
+.side-label{font-family:"Space Grotesk","Zen Kaku Gothic New",sans-serif;font-size:10px;letter-spacing:.2em!important;color:#68ddff!important}
+.side-item{border-radius:6px!important;font-family:"Space Grotesk","Zen Kaku Gothic New",sans-serif!important;letter-spacing:.015em}
+.side-item.selected{border-color:#23708d!important;background:linear-gradient(90deg,#102a43,#101f38)!important;box-shadow:inset 2px 0 #35d9ff,0 0 15px #00cfff18!important}
+.finder-content{background:linear-gradient(145deg,#071124,#071124 60%,#091426)!important}
+.content-heading{position:relative;border-bottom:1px solid #20516c!important}
+.content-heading::after{content:"";position:absolute;bottom:-1px;left:0;width:90px;height:1px;background:#35d9ff;box-shadow:0 0 9px #35d9ff}
+.content-heading h1{font-family:"Space Grotesk","Zen Kaku Gothic New",sans-serif!important;letter-spacing:-.04em!important;text-shadow:0 0 16px #00d9ff22!important}
+.content-heading p{font-family:"Space Grotesk","Zen Kaku Gothic New",sans-serif!important;letter-spacing:.035em}
+.list-heading{font-family:"Space Grotesk","Zen Kaku Gothic New",sans-serif!important;letter-spacing:.16em;text-transform:uppercase;border-color:#20516c!important}
+.item{position:relative;overflow:hidden;background:linear-gradient(145deg,#0d1c31,#091426)!important;border:1px solid #20516c!important;border-radius:8px!important;transition:transform .18s,border-color .18s,box-shadow .18s!important}
+.item::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:#35d9ff;opacity:.55}
+.item:hover{transform:translateY(-2px);background:linear-gradient(145deg,#10243c,#0b1416)!important;border-color:#35d9ff!important;box-shadow:0 5px 24px #0005,0 0 16px #00cfff20!important}
+.item a{color:#73eaff!important;font-family:"Space Grotesk","Zen Kaku Gothic New",sans-serif!important}
+.item a:hover{color:#c5f7ff!important;text-shadow:0 0 9px #00d9ff33!important}
+.url{color:#829b96!important;font-family:"Space Grotesk","Zen Kaku Gothic New",sans-serif!important}
+.category{background:#11201d!important;border-color:#35564c!important;color:#9bd7bf!important;font-family:"Space Grotesk","Zen Kaku Gothic New",sans-serif!important}
+.memo{color:#b0c0ba!important}
+.empty{border-color:#34504c!important;background:#0a1213!important;color:#8eaaa2!important}.status{font-family:"Space Grotesk","Zen Kaku Gothic New",sans-serif!important}
+footer{font-family:"Space Grotesk","Zen Kaku Gothic New",sans-serif!important;letter-spacing:.06em}
+a.admin{color:#7faaa0!important}
+.login-body{background:linear-gradient(145deg,#0c1515,#080e10)!important}
+.login-body h1{font-family:"Space Grotesk","Zen Kaku Gothic New",sans-serif!important;color:#d8f6eb!important}
+.login-body label{color:#9cbab0!important}
+.login-row button{background:linear-gradient(135deg,#214c40,#19352f)!important;border-color:#548b76!important;box-shadow:0 0 15px #5bc9a010}
+@media(max-width:720px){.finder-window{border-radius:11px}.finder-layout{grid-template-columns:1fr}.sidebar{border-bottom:1px solid #263e3c!important}.finder-content{padding:18px 14px}}
+
+
+/* === Match visitor page to LINK CORE admin navy + cyan palette === */
+:root{color-scheme:dark;background:#070b13;color:#e8f0fa}
+html{background:#070b13!important}
+body{
+ color:#e8f0fa!important;
+ background:radial-gradient(ellipse at 12% 0%,rgba(35,91,170,.20),transparent 36%),radial-gradient(ellipse at 90% 18%,rgba(0,194,255,.09),transparent 32%),linear-gradient(145deg,#070b13,#0b1220 55%,#060a11)!important;
+}
+body::before{opacity:.22!important;background-image:linear-gradient(#52bfff0b 1px,transparent 1px),linear-gradient(90deg,#52bfff0b 1px,transparent 1px)!important;background-size:30px 30px!important}
+.finder-window{background:#080e18!important;border-color:#263b55!important;box-shadow:0 0 0 1px #52bfff08,0 0 28px #168bd010,0 28px 80px #000b!important}
+.finder-toolbar{background:linear-gradient(100deg,#101a2b,#0b1220 65%,#11182a)!important;border-color:#263c59!important}
+.finder-title{color:#e1f4ff!important;text-shadow:0 0 12px #45cfff16!important;letter-spacing:.08em}
+.toolbar-search{background:#080f1b!important;border-color:#294560!important;color:#8adfff!important}
+.toolbar-search input{background:transparent!important;color:#e8f0fa!important}
+.toolbar-search input::placeholder{color:#718ba6!important}
+.sidebar{background:linear-gradient(180deg,#0b1422,#080e18)!important;border-color:#203650!important}
+.side-label{color:#72dfff!important;letter-spacing:.16em!important}
+.side-item{color:#b9c9dc!important;border-color:transparent!important;background:transparent!important}
+.side-item>span{color:#42d9ff!important}
+.side-item:hover{background:#10243a!important;border-color:#244965!important;box-shadow:0 0 12px #1abbe80a!important}
+.side-item.selected{background:linear-gradient(100deg,#102e49,#14213b)!important;border-color:#18c8f4!important;color:#e8faff!important;box-shadow:inset 2px 0 #42d9ff,0 0 14px #1abbe80c!important}
+.side-item.selected>span{color:#42d9ff!important}
+.finder-content{background:linear-gradient(145deg,#080e18,#0b1220)!important}
+.content-heading{border-bottom-color:#263b55!important}
+.content-heading h1{color:#e1f4ff!important;text-shadow:0 0 14px #45cfff12!important}
+.content-heading p{color:#9aacc2!important}
+.count,.list-heading{color:#8fa5bb!important}
+.list-heading{border-color:#263b55!important}
+.item{background:linear-gradient(145deg,#0e1928,#0a111d)!important;border:1px solid #263e59!important;border-radius:9px!important;box-shadow:inset 0 1px #ffffff08!important}
+.item:hover{background:linear-gradient(145deg,#12243a,#0c1727)!important;border-color:#36c9f5!important;box-shadow:0 5px 24px #0005,0 0 16px #24bde510!important}
+.item a{color:#83e7ff!important}
+.item a:hover{color:#f0fcff!important;text-shadow:0 0 9px #35d8ff35!important}
+.url,.memo{color:#9aacc2!important}
+.category{background:#11263a!important;border-color:#294f70!important;color:#8adfff!important}
+.item-arrow{color:#8adfff!important}
+.empty{background:#0a1320!important;border-color:#315779!important;color:#9aacc2!important}
+.status{color:#a9eaff!important;font-family:"Space Grotesk","Zen Kaku Gothic New",sans-serif!important}
+.status:not(:empty){padding:9px 12px!important;border:1px solid #23678a!important;border-left:3px solid #35d8ff!important;border-radius:7px!important;background:linear-gradient(100deg,rgba(8,32,52,.96),rgba(10,19,35,.96))!important}
+.status.error,.error{color:#ffb5c3!important}
+.login-body{background:linear-gradient(145deg,#0b1422,#080e18)!important}
+.login-body h1{color:#e1f4ff!important}
+.login-body p,.login-body label{color:#9aacc2!important}
+.login-row input{background:#060c16!important;border-color:#294560!important;color:#e8f0fa!important}
+.login-row input::placeholder{color:#718ba6!important}
+.login-row button{background:linear-gradient(135deg,#087fa9,#244caa)!important;border:1px solid #28c9f4!important;color:#f3fcff!important;box-shadow:0 0 15px #12bce810!important}
+.login-row button:hover{border-color:#8cecff!important;box-shadow:0 0 18px #12bce825!important}
+.error{color:#ffb5c3!important}
+footer{color:#718ba6!important}
+a.admin{color:#8adfff!important}
+a.admin:hover{color:#e1faff!important;text-shadow:0 0 9px #35d8ff35!important}::selection{background:#35d8ff55!important;color:#fff!important}
+@media(max-width:520px){body{background:#070b13!important}.finder-window{border-color:#263b55!important}}
+
+
+/* Force the public LINKS window (not only the page body) to match admin cyber theme */
+#loginPanel,#linksPanel,.finder-window{
+ background:#080e18!important;
+ color:#e8f0fa!important;
+ border:1px solid #263b55!important;
+ box-shadow:0 0 0 1px #52bfff0b,0 0 26px #168bd018,0 28px 80px #000b!important;
+}
+#loginPanel .finder-toolbar,#linksPanel .finder-toolbar{
+ background:linear-gradient(100deg,#101a2b,#0b1220 65%,#11182a)!important;
+ border-bottom:1px solid #263c59!important;
+}
+#linksPanel .finder-layout{background:#080e18!important}
+#linksPanel .sidebar{background:linear-gradient(180deg,#0b1422,#080e18)!important;border-right:1px solid #203650!important}
+#linksPanel .finder-content{background:linear-gradient(145deg,#080e18,#0b1220)!important;color:#e8f0fa!important}
+#linksPanel .content-heading{border-bottom:1px solid #263b55!important}
+#linksPanel .content-heading h1{color:#e1f4ff!important}
+#linksPanel .content-heading p,#linksPanel .count{color:#9aacc2!important}
+#linksPanel .list-heading{color:#8fa5bb!important;border-bottom:1px solid #263b55!important}
+#linksPanel .item{
+ background:linear-gradient(145deg,#0e1928,#0a111d)!important;
+ color:#e8f0fa!important;border:1px solid #263e59!important;
+ box-shadow:inset 0 1px #ffffff08!important;
+}
+#linksPanel .item:hover{background:linear-gradient(145deg,#12243a,#0c1727)!important;border-color:#36c9f5!important;box-shadow:0 5px 24px #0005,0 0 16px #24bde510!important}
+#linksPanel .item a{color:#83e7ff!important}
+#linksPanel .item .url,#linksPanel .item .memo{color:#9aacc2!important}
+#linksPanel .item .category{background:#11263a!important;border:1px solid #294f70!important;color:#8adfff!important}
+#linksPanel .item-arrow{color:#8adfff!important}
+#linksPanel .empty{background:#0a1320!important;border:1px solid #315779!important;color:#9aacc2!important}
+#linksPanel .status:not(:empty){background:linear-gradient(100deg,#082034,#0a1323)!important;color:#a9eaff!important;border:1px solid #23678a!important;border-left:3px solid #35d8ff!important;border-radius:7px!important}
+#loginPanel .login-row input{background:#060c16!important;border:1px solid #294560!important;color:#e8f0fa!important}
+#loginPanel .login-row button{background:linear-gradient(135deg,#087fa9,#244caa)!important;border:1px solid #28c9f4!important;color:#f3fcff!important}
+
+
+/* FINAL THEME OVERRIDE — public page: deep navy + cyan outlines and glow */
+:root{color-scheme:dark!important;background:#050914!important;color:#e8f5ff!important}
+html,body{background:#050914!important;color:#e8f5ff!important}
+body{background:radial-gradient(ellipse at 50% 0%,#0b1b33 0%,#050914 62%) fixed!important}
+#loginPanel,#linksPanel,.finder-window{
+ background:linear-gradient(145deg,rgba(10,21,42,.98),rgba(6,13,28,.98))!important;
+ border:1px solid #17617b!important;border-radius:14px!important;
+ box-shadow:0 0 0 1px #19d9ff12,0 0 28px #00cfff18,0 24px 70px #0009!important;
+ color:#e8f5ff!important;
+}
+#loginPanel .finder-toolbar,#linksPanel .finder-toolbar{
+ background:linear-gradient(100deg,#101d35,#0b1428 65%,#11152c)!important;
+ border-bottom:1px solid #15536c!important;
+}
+#loginPanel .finder-title,#linksPanel .finder-title{color:#e5faff!important;text-shadow:0 0 12px #00d9ff22!important}
+#linksPanel .finder-layout{background:#071124!important}
+#linksPanel .sidebar{background:linear-gradient(180deg,#09172a,#070e1c)!important;border-right:1px solid #153b55!important}
+#linksPanel .side-label{color:#59dfff!important}
+#linksPanel .side-item{color:#bcd6e9!important;background:transparent!important;border:1px solid transparent!important;box-shadow:none!important}
+#linksPanel .side-item>span{color:#29d9ff!important}
+#linksPanel .side-item:hover{background:#10243b!important;border-color:#1a4b65!important;box-shadow:0 0 12px #00d9ff12!important}
+#linksPanel .side-item.selected{background:linear-gradient(100deg,#10334a,#171b3a)!important;border-color:#00cfff!important;color:#f0fcff!important;box-shadow:inset 2px 0 #32e4ff,0 0 15px #00cfff1c!important}
+#linksPanel .finder-content{background:linear-gradient(145deg,#081326,#0a1022)!important;color:#e8f5ff!important}
+#linksPanel .content-heading{border-color:#21435e!important}
+#linksPanel .content-heading h1{color:#e5f8ff!important}
+#linksPanel .content-heading p,#linksPanel .count{color:#92abc3!important}
+#linksPanel .list-heading{color:#88a6c0!important;border-color:#21435e!important}
+#linksPanel .item{background:linear-gradient(145deg,#0d1c31,#091426)!important;border:1px solid #20516c!important;border-radius:10px!important;box-shadow:inset 0 1px #ffffff08,0 0 13px #00cfff08!important}
+#linksPanel .item:hover{background:linear-gradient(145deg,#102741,#0c1930)!important;border-color:#35d9ff!important;box-shadow:0 0 18px #00cfff22!important}
+#linksPanel .item a{color:#73eaff!important}
+#linksPanel .item .url,#linksPanel .item .memo{color:#a3bad0!important}
+#linksPanel .item .category{background:#102b42!important;border:1px solid #225777!important;color:#8ce8ff!important}
+#linksPanel .item-arrow{color:#6de8ff!important}
+#linksPanel .empty{background:#09172a!important;border:1px dashed #27617c!important;color:#a3bad0!important}
+#linksPanel .status:not(:empty){background:#081c30!important;color:#a8eaff!important;border:1px solid #236b8c!important;border-left:3px solid #25d9ff!important;border-radius:7px!important;box-shadow:0 0 14px #00cfff0d!important}
+#loginPanel .login-body{background:transparent!important}
+#loginPanel .login-body h1{color:#e8f8ff!important}
+#loginPanel .login-body p,#loginPanel .login-body label{color:#a8bed2!important}
+#loginPanel .login-row input{background:#060e1d!important;border:1px solid #28506b!important;color:#e8f5ff!important}
+#loginPanel .login-row input:focus{border-color:#24d9ff!important;box-shadow:0 0 0 2px #24d9ff20!important}
+#loginPanel .login-row button{background:linear-gradient(135deg,#087fa9,#273f9b)!important;border:1px solid #29d9ff!important;color:#f5fdff!important;box-shadow:0 0 16px #00cfff1c!important}
+#linksPanel .toolbar-search{background:#060e1d!important;border:1px solid #28506b!important;color:#6de8ff!important}
+#linksPanel .toolbar-search input{background:transparent!important;color:#e8f5ff!important}
+#linksPanel .toolbar-search input::placeholder{color:#7798b3!important}
+#loginPanel .traffic-lights span,#linksPanel .traffic-lights span{box-shadow:0 0 0 1px #ffffff16!important}
+a.admin{color:#63e4ff!important}
+::selection{background:#00d9ff55!important;color:#fff!important}
+
+
+/* Definitive navy/cyan palette override — replace legacy green styling */
+:root{
+ color-scheme:dark!important;
+ --bg:#050914!important;--panel:#0a1528!important;--panel-2:#0d1c32!important;
+ --ink:#e8f5ff!important;--sub:#a8bfd4!important;--muted:#7895ad!important;
+ --line:#20516c!important;--accent:#35d9ff!important;--accent-ink:#03111c!important;
+ --star:#35d9ff!important;--danger:#ff6bba!important;
+ background:#050914!important;color:#e8f5ff!important
+}
+html,body{background:#050914!important;color:#e8f5ff!important}
+body{background:radial-gradient(ellipse at 50% 0%,#0c203b 0%,#050914 62%) fixed!important}
+body::before{opacity:.1!important;background-image:linear-gradient(#12344b55 1px,transparent 1px),linear-gradient(90deg,#12344b55 1px,transparent 1px)!important}
+.hero,.stat-card,.workspace,.panel,.section,.form-card,.link-card,.memo-card,
+.finder-window,.login-window,.login-body,.workspace-inner,.section-card{
+ background:linear-gradient(145deg,#0b1930,#071124)!important;
+ border-color:#20516c!important;color:#e8f5ff!important;
+ box-shadow:0 0 22px #00cfff12!important
+}
+.finder-toolbar,.toolbar,.topbar{background:linear-gradient(100deg,#101f38,#0a1428)!important;border-color:#20516c!important}
+.finder-layout,.finder-content,.content,.workspace-content{background:#071124!important;color:#e8f5ff!important}
+.sidebar{background:linear-gradient(180deg,#09182c,#060f1e)!important;border-color:#17415a!important}
+.side-label,.eyebrow,.section-note{color:#68ddff!important}
+.side-item{color:#c0d8e9!important;background:transparent!important;border-color:transparent!important;box-shadow:none!important}
+.side-item>span{color:#35d9ff!important}
+.side-item:hover,.side-item.selected{background:#102a43!important;border-color:#23708d!important;color:#f0fbff!important;box-shadow:inset 2px 0 #35d9ff,0 0 14px #00cfff18!important}
+.content-heading,.list-heading,.section-heading,.bar{border-color:#20516c!important}
+h1,h2,h3,.finder-title,.content-heading h1,.section-heading h2,.stat-card strong{color:#e8f5ff!important}
+p,.hero-copy,.hero-copy span,.content-heading p,.count,.url,.memo,.stat-foot{color:#a8bfd4!important}
+.item,.link-card,.memo-card,.official-card{background:linear-gradient(145deg,#0d1c31,#091426)!important;border:1px solid #20516c!important;color:#e8f5ff!important;box-shadow:inset 0 1px #ffffff08,0 0 13px #00cfff08!important}
+.item:hover,.link-card:hover,.memo-card:hover,.official-card:hover{background:#10243c!important;border-color:#35d9ff!important;box-shadow:0 0 18px #00cfff20!important}
+.item a,a{color:#73eaff!important}
+.item a:hover,a:hover{color:#c5f7ff!important}
+.category,.tag,.badge,.live-pill{background:#10283e!important;border-color:#245777!important;color:#8ce8ff!important}
+input,textarea,select,.search-wrap,.toolbar-search{background:#060e1d!important;border-color:#28516c!important;color:#e8f5ff!important}
+input::placeholder,textarea::placeholder{color:#7895ad!important}
+button,.btn{background:#0d263d!important;border-color:#286582!important;color:#a9efff!important}
+button:hover,.btn:hover{background:#12334d!important;border-color:#35d9ff!important;box-shadow:0 0 14px #00cfff1c!important}
+button.primary,.btn.primary,.login-row button,button[type=submit]{background:linear-gradient(135deg,#087fa9,#273f9b)!important;border-color:#35d9ff!important;color:#fff!important}
+.star-icon,.stat-icon,.folder-icon,.official-icon{background:#10283e!important;border-color:#286582!important;color:#35d9ff!important}
+.empty{background:#09172a!important;border-color:#27617c!important;color:#a8bfd4!important}
+.status,.notice{background:#081c30!important;border-color:#236b8c!important;color:#a8eaff!important}
+a.admin{color:#68ddff!important}
+/* 旧 body.night-mode 用の3行は削除：クラスを付けるボタンもJSも存在せず到達不能だったため。
+   閲覧画面のテーマ切替は html.light-mode（下の「ライトモード」節）で行う。 */
+
+
+.notice-read-card{margin:0 0 16px;padding:14px 16px;border:1px solid #3b819d;border-radius:11px;background:linear-gradient(120deg,rgba(12,38,59,.96),rgba(10,22,42,.96));box-shadow:0 0 16px #00cfff12;color:#e8f5ff}.notice-read-card[hidden]{display:none!important}.notice-read-title{margin-bottom:7px;color:#73eaff;font-size:12px;font-weight:850;letter-spacing:.08em}.notice-read-body{font-size:12px;line-height:1.9;color:#d8e9f5}.notice-read-actions{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:10px}.notice-read-actions button{padding:7px 12px;border:1px solid #35d9ff;border-radius:7px;border-radius:7px;background:linear-gradient(135deg,#087fa9,#273f9b);color:#fff;font-size:11px;font-weight:750}.notice-read-actions button:disabled{opacity:.55;cursor:default}#noticeReadCount{color:#ffe58a;font-size:11px;font-weight:800}#noticeReadStatus{color:#8edfff;font-size:11px}/* Loading shimmer: a soft, flowing highlight while links are being fetched. */
+.loading-skeleton{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;width:100%;}
+.loading-card{min-height:112px;padding:16px;border:1px solid rgba(53,217,255,.18);border-radius:12px;background:linear-gradient(110deg,rgba(13,28,49,.88) 25%,rgba(32,72,96,.58) 38%,rgba(13,28,49,.88) 52%);background-size:220% 100%;animation:linkCoreShimmer 1.45s ease-in-out infinite;}
+.loading-line{height:9px;margin:5px 0 12px;border-radius:6px;background:rgba(154,201,224,.12);}
+.loading-line.short{width:46%;}.loading-line.long{width:82%;}
+@keyframes linkCoreShimmer{0%{background-position:100% 0}100%{background-position:-120% 0}}
+@media(prefers-reduced-motion:reduce){.loading-card{animation:none;background:rgba(13,28,49,.9)}}
+.side-item>span.new-badge{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;width:auto!important;min-width:0;margin-left:auto;padding:2px 6px;border:1px solid #ffe45c;border-radius:5px;background:rgba(255,228,92,.10);color:#fff29a!important;font-size:9px!important;font-weight:900;letter-spacing:.08em;line-height:1.3;white-space:nowrap;text-shadow:0 0 5px rgba(255,226,75,.95),0 0 10px rgba(255,210,40,.7);box-shadow:0 0 6px rgba(255,220,70,.45),inset 0 0 4px rgba(255,220,70,.12)}.chat-launch{gap:8px}
+/* Shared chat */.chat-launch{margin-top:6px}.chat-overlay{position:fixed;right:22px;bottom:22px;z-index:10000;width:min(410px,calc(100vw - 28px));height:min(620px,calc(100vh - 44px));display:none;flex-direction:column;overflow:hidden;border:1px solid #286b8c;border-radius:16px;background:#081426;box-shadow:0 18px 60px #000b,0 0 24px #00cfff20;color:#e8f5ff}.chat-overlay.open{display:flex}.chat-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 15px;border-bottom:1px solid #20516c;background:linear-gradient(100deg,#10213a,#0b1428)}.chat-head strong{font-size:14px;letter-spacing:.04em}.chat-head-actions{display:flex;align-items:center;gap:6px}.refresh-icon{display:inline-block;font-size:16px;line-height:1;transform-origin:center}.chat-head button.is-refreshing .refresh-icon{animation:chat-refresh-spin .75s linear infinite}@keyframes chat-refresh-spin{to{transform:rotate(360deg)}}.chat-head button:disabled{opacity:.72;cursor:wait}.chat-head button{border:1px solid #28516c;border-radius:7px;padding:5px 9px;background:#10283e;color:#bfeeff}.chat-subtitle{padding:8px 14px;color:#8faec6;font-size:11px;border-bottom:1px solid #17354c}.chat-messages{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:10px;padding:13px;background:linear-gradient(145deg,#071124,#0a1425)}.chat-message{max-width:92%;align-self:flex-start;padding:9px 11px;border:1px solid #24516d;border-radius:10px;background:#10243a;overflow-wrap:anywhere}.chat-message.admin{border-color:#267d9b;background:#102d43}.chat-message-meta{display:flex;justify-content:space-between;gap:12px;margin-bottom:4px;color:#73dfff;font-size:10px}.chat-message-body{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.6;color:#e5f3ff}.chat-empty,.chat-status{padding:12px;color:#91abc2;font-size:12px;text-align:center}.chat-compose{display:flex;gap:8px;padding:11px;border-top:1px solid #20516c;background:#091426}.chat-compose textarea{flex:1;min-width:0;min-height:42px;max-height:110px;resize:vertical;padding:9px 10px;border:1px solid #28516c;border-radius:8px;background:#060e1d;color:#e8f5ff;font:inherit;font-size:13px}.chat-compose button{align-self:flex-end;padding:10px 13px;border:1px solid #35d9ff;border-radius:8px;background:linear-gradient(135deg,#087fa9,#273f9b);color:white;font-weight:650}.chat-compose button:disabled{opacity:.5;cursor:wait}@media(max-width:520px){.chat-overlay{right:8px;bottom:8px;width:calc(100vw - 16px);height:min(72vh,620px)}}
+/* Click-history diagnostics */
+.click-log-notice{position:fixed;left:50%;bottom:18px;z-index:12000;transform:translate(-50%,12px);width:min(620px,calc(100vw - 28px));padding:12px 15px;border:1px solid #2c7895;border-radius:10px;background:#081a2c;color:#dff7ff;box-shadow:0 12px 38px #0009;font-size:12px;line-height:1.6;opacity:0;pointer-events:none;transition:opacity .18s ease,transform .18s ease;overflow-wrap:anywhere}.click-log-notice.show{opacity:1;transform:translate(-50%,0)}.click-log-notice.error{border-color:#b85b67;background:#29121b;color:#ffe6e9}.click-log-notice strong{display:block;margin-bottom:2px;font-size:12px}
+
+/* Invisible, narrow resize hit areas */
+.wrap{width:100%;max-width:none}
+.finder-window{position:relative;resize:none;width:min(1180px,calc(100vw - 44px));max-width:none;max-height:none;margin-left:auto;margin-right:auto;overflow:hidden}
+.finder-window.is-resizing{transition:none!important;user-select:none!important}
+.resize-handle{position:absolute;z-index:1000;display:block!important;padding:0;margin:0;border:0!important;background:transparent!important;box-shadow:none!important;opacity:1;touch-action:none;user-select:none;pointer-events:auto}
+.resize-handle:hover{background:transparent!important;box-shadow:none!important;transform:none!important}
+.resize-handle.n,.resize-handle.s{left:14px;right:14px;height:8px;cursor:ns-resize}
+.resize-handle.n{top:0}.resize-handle.s{bottom:0}
+.resize-handle.e,.resize-handle.w{top:14px;bottom:14px;width:8px;cursor:ew-resize}
+.resize-handle.e{right:0}.resize-handle.w{left:0}
+.resize-handle.nw,.resize-handle.ne,.resize-handle.sw,.resize-handle.se{width:14px;height:14px;background:transparent!important}
+.resize-handle.nw{top:0;left:0;cursor:nwse-resize}
+.resize-handle.se{right:0;bottom:0;cursor:nwse-resize}
+.resize-handle.ne{right:0;top:0;cursor:nesw-resize}
+.resize-handle.sw{left:0;bottom:0;cursor:nesw-resize}
+body.window-resizing,body.window-resizing *{user-select:none!important}
+@media(max-width:720px){.finder-window{width:calc(100vw - 16px);max-width:none;max-height:none;overflow:hidden}.resize-handle{display:block!important}}
+
+.finder-toolbar{cursor:default}
+/* Finder-style category folders */
+.folder-icon{width:54px;height:44px;color:#e5b84f;filter:drop-shadow(0 3px 7px rgba(0,0,0,.25))}.finder-content .folder-card{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;min-height:132px;padding:14px 10px;border:1px solid #28536b;border-radius:12px;background:linear-gradient(145deg,rgba(17,39,61,.92),rgba(13,19,39,.96));color:#e8b94f;cursor:pointer;transition:transform .16s,border-color .16s,box-shadow .16s}.folder-card:hover{transform:translateY(-2px);border-color:#4edfff;box-shadow:0 0 18px rgba(0,217,255,.16)}.folder-card-name{max-width:100%;overflow-wrap:anywhere;color:#e9f8ff;font-size:13px;font-weight:750}.folder-card-count{color:#8caabd;font-size:10px}.side-folder-mini{width:18px!important;height:16px;flex:none}.side-folder-mini .folder-icon{width:18px;height:15px;filter:none;color:#d9ad4c}.folder-toolbar{grid-column:1/-1;display:flex;align-items:center;gap:12px;margin:0 0 5px;padding:0 0 12px;border-bottom:1px solid #1a3e54;color:#8eacc0;font-size:11px}.folder-toolbar button{padding:6px 10px;border:1px solid #28536b;border-radius:7px;background:#10283b;color:#bcefff;cursor:pointer}
+
+.lc-link-card{display:flex!important;flex-direction:row!important}
+.lc-link-info{width:100%}
+
+/* === テーマ切替ボタン === */
+.toolbar-tools{display:flex;align-items:center;justify-content:flex-end;gap:8px}
+.theme-toggle-btn{display:grid;place-items:center;width:29px;height:25px;padding:0;border-radius:5px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.06);color:#bfeeff;font:inherit;font-size:15px;line-height:1;cursor:pointer;box-shadow:none}
+.theme-toggle-btn:hover{background:rgba(255,255,255,.13);border-color:rgba(255,255,255,.12)}
+.theme-toggle-btn:focus-visible{outline:2px solid #35d9ff;outline-offset:2px}
+.side-item .theme-toggle-label{width:auto!important;color:inherit!important;font-size:12px!important}
+
+/* === ライトモード：既定のダーク（サイバーパンク）を、元のFinder風ライトに戻す ===
+   上のダーク上書きは !important 付きが多いため、こちらも !important で打ち消す。
+   html.light-mode を付けることで、ダーク側より詳細度が高くなり、後勝ちする。 */
+html.light-mode{color-scheme:light!important;background:#e9edf2!important;color:#27292d!important}
+html.light-mode body{background:#e9edf2!important;color:#27292d!important}
+html.light-mode body::before{opacity:0!important;background-image:none!important}
+html.light-mode .finder-window,html.light-mode #loginPanel,html.light-mode #linksPanel{background:#fff!important;border:1px solid #c9cbd0!important;border-radius:12px!important;box-shadow:0 18px 55px rgba(30,38,50,.17)!important;color:#27292d!important}
+html.light-mode .finder-toolbar,html.light-mode #loginPanel .finder-toolbar,html.light-mode #linksPanel .finder-toolbar{background:linear-gradient(#fbfbfc,#f0f1f3)!important;border-bottom:1px solid #d5d6da!important}
+html.light-mode .finder-title,html.light-mode #loginPanel .finder-title,html.light-mode #linksPanel .finder-title{color:#35373b!important;text-shadow:none!important;letter-spacing:.025em!important;text-transform:none!important}
+html.light-mode .toolbar-search,html.light-mode #linksPanel .toolbar-search{background:#fff!important;border:1px solid #d3d5d9!important;color:#777b82!important}
+html.light-mode .toolbar-search input,html.light-mode #linksPanel .toolbar-search input{background:transparent!important;color:#292b30!important}
+html.light-mode .toolbar-search input::placeholder,html.light-mode #linksPanel .toolbar-search input::placeholder{color:#999ca2!important}
+html.light-mode .theme-toggle-btn{background:#fff!important;border:1px solid #d3d5d9!important;color:#36383d!important}
+html.light-mode .theme-toggle-btn:hover{background:#f4f5f7!important;border-color:#b8cbe7!important}
+html.light-mode .theme-toggle-btn:focus-visible{outline-color:#3478d4!important}
+html.light-mode .traffic-lights span{box-shadow:inset 0 1px 1px rgba(255,255,255,.7),0 0 0 1px rgba(0,0,0,.08)!important}
+html.light-mode .sidebar,html.light-mode #linksPanel .sidebar{background:#f4f5f7!important;border-right:1px solid #e0e1e4!important}
+html.light-mode .side-label,html.light-mode #linksPanel .side-label{color:#85888f!important;letter-spacing:.04em!important;text-transform:none!important}
+html.light-mode .side-item,html.light-mode #linksPanel .side-item{color:#36383d!important;background:transparent!important;border:1px solid transparent!important;box-shadow:none!important}
+html.light-mode .side-item>span,html.light-mode #linksPanel .side-item>span{color:#6e8fc5!important}
+html.light-mode .side-item:hover,html.light-mode #linksPanel .side-item:hover{background:#e7e9ed!important;border-color:transparent!important;box-shadow:none!important}
+html.light-mode .side-item.selected,html.light-mode #linksPanel .side-item.selected{background:#dce8fa!important;border-color:#d0dff6!important;color:#174c96!important;box-shadow:none!important}
+html.light-mode .side-item.selected>span,html.light-mode #linksPanel .side-item.selected>span{color:#3478d4!important}
+html.light-mode .finder-content,html.light-mode #linksPanel .finder-content,html.light-mode .finder-layout,html.light-mode #linksPanel .finder-layout{background:#fff!important;color:#27292d!important}
+html.light-mode .hero,html.light-mode .stat-card,html.light-mode .workspace,html.light-mode .panel,html.light-mode .section,html.light-mode .form-card,html.light-mode .section-card,html.light-mode .workspace-inner,html.light-mode .login-window{background:#fff!important;border-color:#e0e2e6!important;color:#27292d!important;box-shadow:none!important}
+html.light-mode .content-heading,html.light-mode #linksPanel .content-heading,html.light-mode .list-heading,html.light-mode #linksPanel .list-heading,html.light-mode .section-heading,html.light-mode .bar{border-color:#ececef!important}
+html.light-mode h1,html.light-mode h2,html.light-mode h3,html.light-mode .content-heading h1,html.light-mode #linksPanel .content-heading h1,html.light-mode .section-heading h2,html.light-mode .stat-card strong{color:#26282d!important;text-shadow:none!important}
+html.light-mode p,html.light-mode .content-heading p,html.light-mode #linksPanel .content-heading p,html.light-mode .count,html.light-mode #linksPanel .count{color:#898c92!important}
+html.light-mode .list-heading,html.light-mode #linksPanel .list-heading,html.light-mode .count{color:#858990!important}
+html.light-mode .section-kicker,html.light-mode .section-note,html.light-mode .eyebrow{color:#4388bd!important}
+html.light-mode .item,html.light-mode #linksPanel .item,html.light-mode .link-card,html.light-mode .memo-card,html.light-mode .official-card{background:#fff!important;border:1px solid #e0e2e6!important;border-radius:9px!important;color:#26282d!important;box-shadow:0 1px 2px rgba(0,0,0,.035)!important;transform:none!important}
+html.light-mode .item::before{opacity:0!important}
+html.light-mode .item:hover,html.light-mode #linksPanel .item:hover,html.light-mode .link-card:hover,html.light-mode .memo-card:hover,html.light-mode .official-card:hover{background:#fbfcff!important;border-color:#b8cbe7!important;box-shadow:0 1px 2px rgba(0,0,0,.035)!important;transform:none!important}
+html.light-mode .item a,html.light-mode #linksPanel .item a,html.light-mode a{color:#26282d!important;text-shadow:none!important}
+html.light-mode .item a:hover,html.light-mode #linksPanel .item a:hover,html.light-mode a:hover{color:#1769c2!important;text-shadow:none!important}
+html.light-mode .url,html.light-mode #linksPanel .item .url{color:#858990!important}
+html.light-mode .memo,html.light-mode #linksPanel .item .memo{color:#656970!important}
+html.light-mode .category,html.light-mode #linksPanel .item .category,html.light-mode .tag,html.light-mode .badge,html.light-mode .live-pill{background:#f4f5f7!important;border:1px solid #e1e4e9!important;color:#62666d!important}
+html.light-mode .item-arrow,html.light-mode #linksPanel .item-arrow{color:#a0a3a9!important}
+html.light-mode .empty,html.light-mode #linksPanel .empty{background:transparent!important;border:1px dashed #d7d9de!important;color:#858990!important}
+html.light-mode .status,html.light-mode .notice{background:#fff!important;border-color:#e0e2e6!important;color:#656970!important}
+html.light-mode .status:not(:empty),html.light-mode #linksPanel .status:not(:empty){background:#f4f5f7!important;border:1px solid #e0e2e6!important;border-left:3px solid #3478d4!important;color:#656970!important;box-shadow:none!important}
+html.light-mode .status.error,html.light-mode .error{color:#c0392b!important}
+html.light-mode .login-body,html.light-mode #loginPanel .login-body{background:#fff!important}
+html.light-mode .login-body h1,html.light-mode #loginPanel .login-body h1{color:#26282d!important;text-shadow:none!important}
+html.light-mode .login-body p,html.light-mode .login-body label,html.light-mode #loginPanel .login-body p,html.light-mode #loginPanel .login-body label{color:#656970!important}
+html.light-mode .login-row input,html.light-mode #loginPanel .login-row input{background:#fff!important;border:1px solid #d3d5d9!important;color:#292b30!important}
+html.light-mode .login-row input::placeholder,html.light-mode #loginPanel .login-row input::placeholder{color:#999ca2!important}
+html.light-mode .login-row input:focus,html.light-mode #loginPanel .login-row input:focus{border-color:#3478d4!important;box-shadow:0 0 0 3px rgba(52,120,212,.15)!important}
+html.light-mode .login-row button,html.light-mode #loginPanel .login-row button{background:#3478d4!important;border:1px solid #3478d4!important;color:#fff!important;box-shadow:none!important}
+html.light-mode .login-row button:hover,html.light-mode #loginPanel .login-row button:hover{background:#2b6ac2!important;border-color:#2b6ac2!important;box-shadow:none!important}
+html.light-mode input,html.light-mode textarea,html.light-mode select,html.light-mode .search-wrap{background:#fff!important;border-color:#d3d5d9!important;color:#292b30!important}
+html.light-mode input::placeholder,html.light-mode textarea::placeholder{color:#999ca2!important}
+html.light-mode input:focus,html.light-mode textarea:focus,html.light-mode select:focus{border-color:#3478d4!important;box-shadow:0 0 0 3px rgba(52,120,212,.15)!important}
+html.light-mode button,html.light-mode .btn{background:#fff!important;border-color:#d3d5d9!important;color:#26282d!important;box-shadow:none!important}
+html.light-mode button:hover,html.light-mode .btn:hover{background:#f4f5f7!important;border-color:#b8cbe7!important;box-shadow:none!important}
+html.light-mode button.primary,html.light-mode .btn.primary,html.light-mode button[type=submit]{background:#3478d4!important;border-color:#3478d4!important;color:#fff!important}
+html.light-mode .star-icon,html.light-mode .stat-icon,html.light-mode .official-icon{background:transparent!important;border-color:transparent!important;color:#e5a100!important}
+html.light-mode .folder-icon{background:transparent!important;border-color:transparent!important;color:#e5b84f!important;filter:drop-shadow(0 3px 7px rgba(0,0,0,.15))!important}
+html.light-mode .folder-card{background:#fff!important;border:1px solid #e0e2e6!important;color:#26282d!important;box-shadow:0 1px 2px rgba(0,0,0,.035)!important}
+html.light-mode .folder-card:hover{border-color:#b8cbe7!important;box-shadow:0 1px 2px rgba(0,0,0,.035)!important;transform:none!important}
+html.light-mode .folder-card-name{color:#26282d!important}
+html.light-mode .folder-card-count{color:#858990!important}
+html.light-mode .folder-toolbar button{background:#fff!important;border:1px solid #e0e2e6!important;color:#26282d!important}
+html.light-mode .notice-read-card{background:#eef7fc!important;border:1px solid #bcd9e8!important;color:#26282d!important;box-shadow:none!important}
+html.light-mode .notice-read-title{color:#1769c2!important}
+html.light-mode .notice-read-body{color:#4a5560!important}
+html.light-mode .notice-read-actions button{background:#3478d4!important;border:1px solid #3478d4!important;color:#fff!important}
+html.light-mode #noticeReadCount{color:#b7791f!important}
+html.light-mode #noticeReadStatus{color:#3478d4!important}
+html.light-mode .loading-card{border:1px solid #e0e2e6!important;background:linear-gradient(110deg,#f4f5f7 25%,#e7e9ed 38%,#f4f5f7 52%)!important}
+html.light-mode .loading-line{background:rgba(0,0,0,.08)!important}
+html.light-mode .chat-overlay{background:#fff!important;border:1px solid #c9cbd0!important;color:#26282d!important;box-shadow:0 18px 55px rgba(30,38,50,.17)!important}
+html.light-mode .chat-head{background:linear-gradient(#fbfbfc,#f0f1f3)!important;border-bottom:1px solid #d5d6da!important}
+html.light-mode .chat-head button{background:#fff!important;border:1px solid #d3d5d9!important;color:#26282d!important}
+html.light-mode .chat-subtitle{color:#656970!important;border-bottom:1px solid #e0e1e4!important}
+html.light-mode .chat-messages{background:#fff!important}
+html.light-mode .chat-message{background:#f4f5f7!important;border:1px solid #e0e2e6!important}
+html.light-mode .chat-message.admin{background:#dce8fa!important;border-color:#d0dff6!important}
+html.light-mode .chat-message-meta{color:#3478d4!important}
+html.light-mode .chat-message-body{color:#26282d!important}
+html.light-mode .chat-empty,html.light-mode .chat-status{color:#858990!important}
+html.light-mode .chat-compose{background:#f4f5f7!important;border-top:1px solid #e0e1e4!important}
+html.light-mode .chat-compose textarea{background:#fff!important;border:1px solid #d3d5d9!important;color:#292b30!important}
+html.light-mode .chat-compose button{background:#3478d4!important;border:1px solid #3478d4!important;color:#fff!important}
+html.light-mode #lc-release-overlay{background:rgba(30,38,50,.45)!important}
+html.light-mode #lc-release-dialog{background:#fff!important;border:1px solid #c9cbd0!important;color:#26282d!important;box-shadow:0 18px 55px rgba(30,38,50,.25)!important}
+html.light-mode #lc-release-head{background:linear-gradient(#fbfbfc,#f0f1f3)!important;border-bottom:1px solid #d5d6da!important}
+html.light-mode #lc-release-head small{color:#3478d4!important}
+html.light-mode #lc-release-head h2{color:#26282d!important}
+html.light-mode #lc-release-close{background:#fff!important;border:1px solid #d3d5d9!important;color:#26282d!important}
+html.light-mode .lc-release-entry{background:#f4f5f7!important;border:1px solid #e0e2e6!important}
+html.light-mode .lc-release-meta{color:#858990!important}
+html.light-mode .lc-release-version{background:#dce8fa!important;border:1px solid #d0dff6!important;color:#174c96!important}
+html.light-mode .lc-release-entry h3{color:#26282d!important}
+html.light-mode .lc-release-entry ul{color:#4a5560!important}
+html.light-mode .click-log-notice{background:#fff!important;border:1px solid #d3d5d9!important;color:#26282d!important;box-shadow:0 12px 38px rgba(30,38,50,.2)!important}
+html.light-mode .click-log-notice.error{background:#fdf0f0!important;border-color:#e0b4b4!important;color:#c0392b!important}
+html.light-mode footer{color:#85888f!important}
+html.light-mode a.admin{color:#1769c2!important}
+html.light-mode a.admin:hover{color:#1769c2!important;text-shadow:none!important}
+html.light-mode ::selection{background:rgba(52,120,212,.25)!important;color:#26282d!important}
+
+</style>
+<meta name="robots" content="noindex, nofollow, noarchive">
+
 </head>
 <body>
-  <main>
-    <h1>サイト運営の一時中断のお知らせ</h1>
-    <p>セキュリティに関する重大な問題が検出されたため、サイトの運営を一時中断しています。再開時期は未定です。</p>
-  </main>
-  <iframe id="visit-log" title="アクセス記録" hidden referrerpolicy="no-referrer"></iframe>
-  <script>
-    const visitUrl = new URL("https://script.google.com/macros/s/AKfycbwvKnZLSpTlZC6AuIx5MPkZmZS7j_9rTQr_y5_YciXvWG65NA-swjI06SZMuVJQgF1z/exec");
-    visitUrl.searchParams.set('visit', String(Date.now()) + '-' + Math.random().toString(36).slice(2));
-    document.getElementById('visit-log').src = visitUrl.href;
-  </script>
-</body>
-</html>
+<main class="wrap">
+<div class="click-log-notice" id="clickLogNotice" role="status" aria-live="polite"></div>
+<section class="finder-window login-window" id="loginPanel">
+  <div class="finder-toolbar"><div class="traffic-lights" aria-label="ウィンドウ操作"><span class="traffic-red" aria-hidden="true"></span><span class="traffic-yellow" aria-hidden="true"></span></div><div class="finder-title">My Desktop</div><div class="toolbar-tools"><button class="theme-toggle-btn" type="button" aria-pressed="false" aria-label="ライトモードに切り替える" title="ライトモードに切り替える">◐</button></div></div>
+  <div class="login-body"><div class="brand">LINK CORE / SHARED DESKTOP</div><h1>リンク一覧</h1><p>サイトのパスワードを入力すると、共有リンクを閲覧できます。</p>
+    <form id="loginForm"><label for="sitePassword">サイトのパスワード</label><div class="login-row"><input id="sitePassword" type="password" autocomplete="current-password" required autofocus><button id="loginButton" type="submit">ログイン</button></div><div class="error" id="loginError" role="alert"></div><button class="retry-button hidden" id="loginRetry" type="button"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:5px"><path d="M20 7v5h-5"/><path d="M20 12a8 8 0 1 1-2.3-5.7L20 9"/></svg>再試行</button></form>
+  </div>
+</section>
+<section class="finder-window hidden" id="linksPanel">
+  <div class="finder-toolbar"><div class="traffic-lights" aria-label="ウィンドウ操作"><span class="traffic-red" aria-hidden="true"></span><span class="traffic-yellow" aria-hidden="true"></span></div><div class="finder-title"><span class="folder-glyph">▰</span> My Desktop <span class="toolbar-chevron">›</span></div><div class="toolbar-tools"><span>▤</span><span>☷</span><button class="theme-toggle-btn" type="button" aria-pressed="false" aria-label="ライトモードに切り替える" title="ライトモードに切り替える">◐</button><button class="share-btn" type="button" id="toolbarShareBtn" aria-label="このページを共有する" title="このページを共有する">⤴</button></div><label class="toolbar-search"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="検索" aria-label="リンクを検索"></label></div>
+  <div class="finder-layout"><aside class="sidebar" aria-label="サイドバー">
+<button class="side-item" type="button" data-view="desktop"><span>▣</span> My Desktop</button>
+<div class="side-label">よく使う項目</div>
+<button class="side-item selected" type="button" data-view="favorites"><span>★</span> お気に入り</button>
+<button class="side-item" type="button" data-view="recent"><span>◷</span> 最近追加した項目</button>
+<button class="side-item" type="button" data-view="all"><span>▦</span> すべてのリンク</button>
+<div class="side-label">クイックアクセス</div>
+<button class="side-item chat-launch" type="button" id="openChat"><span>✉</span> 管理者チャット <span class="new-badge">NEW</span></button>
+<button class="side-item" type="button" id="sideReleaseNotes"><span>▤</span> リリースノート <span class="new-badge">NEW</span></button>
+<button class="side-item" type="button" id="sideShare"><span>⤴</span> このページを共有</button>
+<button class="side-item theme-toggle-btn" type="button" aria-pressed="false" aria-label="ライトモードに切り替える" title="ライトモードに切り替える"><span>◐</span> <span class="theme-toggle-label">ライトモードに切替</span></button>
+<div class="side-label">カテゴリ</div><div id="sideCats" class="side-cats"></div>
+</aside><section class="finder-content"><div class="workspace">
+<div class="section-heading"><div><span class="section-kicker">MY DESKTOP / LINK LIBRARY</span><h2 id="viewTitle">お気に入り</h2></div><span class="section-note">ICON VIEW</span></div>
+<div id="noticeReadCard" class="notice-read-card" hidden><div class="notice-read-title">お知らせ・リンク修正</div><div class="notice-read-body">ごめんなさい！YouTubeの項目にある「みんとtube+」のリンクを間違えていました！<br>新リンク：YouTube ＞ みんとtube+<br>新リンク：ブログ ＞ 制限回避リンク集</div><div class="notice-read-actions"><button type="button" id="markNoticeRead">確認して既読にする</button><span id="noticeReadStatus" role="status"></span></div></div><div class="list-heading"><span class="list-heading-title"><span class="heading-dot">◆</span> LINK FEED</span><span class="result-count" id="count"></span><button class="retry-button" id="refreshLinks" type="button">リンクを更新</button></div>
+<div class="status" id="loadStatus" role="status" aria-live="polite"></div>
+<div class="list loading-skeleton" id="list" role="region" aria-label="リンク一覧" aria-live="polite" aria-busy="true"><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div></div>
+</div></section></div>
+</section>
+<section class="chat-overlay" id="chatOverlay" aria-label="管理者との共通チャット"><div class="chat-head"><strong>LINK CORE / CHAT</strong><div class="chat-head-actions"><button type="button" id="refreshChat"><span class="refresh-icon" aria-hidden="true">↻</span><span>再読み込み</span></button><button type="button" id="closeChat">閉じる</button></div></div><div class="chat-subtitle">利用者と管理者が参加する共通チャットです。サイトの不具合報告などにもご利用ください。</div><div class="chat-messages" id="chatMessages" aria-live="polite"><div class="chat-status">チャットを開いています…</div></div><form class="chat-compose" id="chatForm"><textarea id="chatInput" maxlength="1000" rows="2" placeholder="メッセージを入力…" required></textarea><button id="chatSend" type="submit">送信</button></form></section><footer><a class="admin" href="admin.html">管理者画面</a></footer>
+</main>
+<iframe id="gasBridge" title="通信" hidden></iframe>
+<script id="lc-theme-script">
+/* テーマ切替（閲覧画面）：既定はダーク。localStorage に保存し、未保存時は OS の設定に従う。 */
+(function(){
+  'use strict';
+  var KEY='linkCoreViewerTheme', META_DARK='#050914', META_LIGHT='#e9edf2';
+  function isLight(){return document.documentElement.classList.contains('light-mode');}
+  function apply(light,persist){
+    document.documentElement.classList.toggle('light-mode',light);
+    var meta=document.getElementById('themeColorMeta');
+    if(meta)meta.setAttribute('content',light?META_LIGHT:META_DARK);
+    var label=light?'ダークモードに切り替える':'ライトモードに切り替える';
+    document.querySelectorAll('.theme-toggle-btn').forEach(function(btn){
+      btn.setAttribute('aria-pressed',String(light));
+      btn.setAttribute('aria-label',label);btn.setAttribute('title',label);
+    });
+    document.querySelectorAll('.theme-toggle-label').forEach(function(el){
+      el.textContent=light?'ダークモードに切替':'ライトモードに切替';
+    });
+    if(persist){try{localStorage.setItem(KEY,light?'light':'dark');}catch(e){}}
+  }
+  document.querySelectorAll('.theme-toggle-btn').forEach(function(btn){
+    btn.addEventListener('click',function(){apply(!isLight(),true);});
+  });
+  /* OS の設定変更には追従しない。既定はダークで、切替は ◐ ボタンの保存済み選択だけが決める。 */
+  apply(isLight(),false);
+})();
+</script>
+<script id="lc-pwa-script">
+/* PWA：Service Worker を登録する。失敗しても閲覧自体は止めない。 */
+(function(){
+  if(!('serviceWorker' in navigator))return;
+  window.addEventListener('load',function(){
+    navigator.serviceWorker.register('./sw.js').catch(function(err){
+      console.warn('Service Workerの登録に失敗しました。',err);
+    });
+  });
+})();
+</script>
+<script>
+(() => {
+'use strict';
+const GAS_URL='https://script.google.com/macros/s/AKfycbwr6gUhjgC_zcazwXqDKOqHqiWt1t-NOjrz3IiOjP-NVaXvAJpKOKQ8Ez6It1qKvkxzFw/exec';
+const pending=new Map();let bridgeWindow=null,bridgeOrigin='',readyResolve;
+const bridgeReady=new Promise(resolve=>readyResolve=resolve);
+const frame=document.getElementById('gasBridge');
+function isGasOrigin(origin){if(origin==='https://script.google.com'||origin==='https://script.googleusercontent.com')return true;try{const h=new URL(origin).hostname;return origin.startsWith('https://')&&(h==='googleusercontent.com'||h.endsWith('.googleusercontent.com'))}catch(_){return false}}
+function isBridgeFrame(source) {
+  // GAS の中継 iframe をたどり、設定したブリッジの配下か確認する。
+  while (source && source !== window) {
+    if (source === frame.contentWindow) return true;
+    const parent = source.parent;
+    if (parent === source) break;
+    source = parent;
+  }
+  return false;
+}
+
+window.addEventListener('message',event=>{
+ if(!isGasOrigin(event.origin))return;
+ const d=event.data;if(!d||typeof d!=='object')return;
+ if(d.type==='DAILY_CORE_BRIDGE_READY'){
+  // 設定したGASブリッジ配下の送信元を確認する。
+  if(bridgeWindow || !isBridgeFrame(event.source))return;
+  bridgeWindow=event.source;bridgeOrigin=event.origin;
+  readyResolve();
+  return;
+ }
+ if(d.type==='DAILY_CORE_RESPONSE'){
+  if(event.source!==bridgeWindow||event.origin!==bridgeOrigin||!pending.has(d.id))return;
+  const p=pending.get(d.id);pending.delete(d.id);d.ok?p.resolve(d.result):p.reject(new Error(d.error||'通信エラー'));
+ }
+});
+frame.loading='eager';
+frame.setAttribute('fetchpriority','high');
+frame.src=GAS_URL+'?mode=bridge';
+function waitForBridge() {
+  if (bridgeWindow && bridgeOrigin) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('GASとの接続に時間がかかっています。時間をおいて再試行してください。')), 10000);
+    bridgeReady.then(() => { clearTimeout(timer); resolve(); });
+  });
+}
+function call(method, ...args) {
+  return waitForBridge().then(() => new Promise((resolve, reject) => {
+    const id = (crypto.randomUUID && crypto.randomUUID()) || String(Date.now() + Math.random());
+    const timer = setTimeout(() => {
+      pending.delete(id);
+      reject(new Error('サーバーから応答がありません。時間をおいて再試行してください。'));
+    }, 15000);
+
+    pending.set(id, {
+      resolve: value => { clearTimeout(timer); resolve(value); },
+      reject: error => { clearTimeout(timer); reject(error); }
+    });
+    try {
+      bridgeWindow.postMessage({ type: 'DAILY_CORE_REQUEST', id, method, args }, bridgeOrigin);
+    } catch (error) {
+      pending.delete(id);
+      clearTimeout(timer);
+      reject(error);
+    }
+  }));
+}
+const $=id=>document.getElementById(id);
+let clickNoticeTimer=0;
+function showClickLogNotice(message,isError){
+ const box=$('clickLogNotice');if(!box)return;
+ box.classList.toggle('error',!!isError);box.innerHTML='';
+ const heading=document.createElement('strong');heading.textContent=isError?'クリック履歴を保存できませんでした':'クリック履歴';
+ const detail=document.createElement('span');detail.textContent=message;
+ box.append(heading,detail);box.classList.add('show');
+ clearTimeout(clickNoticeTimer);clickNoticeTimer=setTimeout(()=>box.classList.remove('show'),isError?12000:2600);
+}
+
+let links=[],categories=[],view='favorites',selectedCategory='',visitorToken='';
+
+const READ_NEW_LINKS_KEY='linkCoreReadNewLinksV1';
+let readNewLinkIds=new Set();
+try{
+ const saved=JSON.parse(localStorage.getItem(READ_NEW_LINKS_KEY)||'[]');
+ if(Array.isArray(saved))readNewLinkIds=new Set(saved.map(String));
+}catch(error){console.warn('[LINK CORE] NEW表示の既読情報を読み込めませんでした。',error);}
+function markNewLinkAsRead(link){
+ if(!link||!link.isNew)return;
+ const id=String(link.id);
+ if(readNewLinkIds.has(id))return;
+ readNewLinkIds.add(id);
+ try{localStorage.setItem(READ_NEW_LINKS_KEY,JSON.stringify(Array.from(readNewLinkIds)));}
+ catch(error){console.warn('[LINK CORE] NEW表示の既読情報を保存できませんでした。',error);}
+}
+const READ_SIDE_TABS_KEY='linkCoreReadSideTabsV1';
+let readSideTabIds=new Set();
+try{
+ const saved=JSON.parse(localStorage.getItem(READ_SIDE_TABS_KEY)||'[]');
+ if(Array.isArray(saved))readSideTabIds=new Set(saved.map(String));
+}catch(error){console.warn('[LINK CORE] サイドバーNEWの既読情報を読み込めませんでした。',error);}
+function markSideTabAsRead(id){
+ const key=String(id||'');
+ if(!key||readSideTabIds.has(key))return;
+ readSideTabIds.add(key);
+ try{localStorage.setItem(READ_SIDE_TABS_KEY,JSON.stringify(Array.from(readSideTabIds)));}
+ catch(error){console.warn('[LINK CORE] サイドバーNEWの既読情報を保存できませんでした。',error);}
+ const button=document.getElementById(key);
+ const badge=button&&button.querySelector('.new-badge');
+ if(badge)badge.remove();
+}
+window.markLinkCoreSideTabAsRead=markSideTabAsRead;
+document.querySelectorAll('.sidebar .side-item[id]').forEach(button=>{
+ if(readSideTabIds.has(button.id)){const badge=button.querySelector('.new-badge');if(badge)badge.remove();}
+});
+function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function folderParts(path){return String(path||'').split('/').map(part=>part.trim()).filter(Boolean)}
+function folderParent(path){const parts=folderParts(path);parts.pop();return parts.join('/')}
+function folderPath(path) { return folderParts(path).join('/'); }
+function childFolders(path, sourceLinks) {
+  const prefix = path ? path + '/' : '';
+  const counts = new Map();
+  for (const link of sourceLinks) {
+    const category = folderPath(link.category);
+    if (!category.startsWith(prefix)) continue;
+    const name = category.slice(prefix.length).split('/')[0];
+    if (name) counts.set(name, (counts.get(name) || 0) + 1);
+  }
+  return Array.from(counts.keys()).sort((a, b) => a.localeCompare(b, 'ja')).map(name => ({
+    name, key: prefix + name, count: counts.get(name)
+  }));
+}
+function publicLinks(items) {
+ return Array.isArray(items) ? items.filter(link => String(link.visibleToVisitors).toLowerCase() !== 'false') : [];
+}
+function visibleLinks(){
+ const q=$('search').value.trim().toLowerCase();
+ if(q)return links.filter(x=>[x.title,x.url,x.memo,x.category].some(v=>String(v||'').toLowerCase().includes(q)));
+ let items=links;
+ if(selectedCategory==='__uncategorized__')items=items.filter(x=>!folderPath(x.category));
+ else if(selectedCategory)items=items.filter(x=>folderPath(x.category)===selectedCategory);
+ else if(view==='favorites')items=items.filter(x=>x.favorite);
+ else if(view==='recent')items=items.slice().sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
+ return items;
+}
+let renderedCategories, renderedCategory;
+function render(){
+ $('list').setAttribute('aria-busy','false');
+ $('list').classList.remove('loading-skeleton');
+ const folderIcon="<svg class=\"folder-icon\" viewBox=\"0 0 64 52\" aria-hidden=\"true\"><path d=\"M4 10a5 5 0 0 1 5-5h17l7 7h22a5 5 0 0 1 5 5v4H4z\" fill=\"currentColor\" opacity=\".72\"/><path d=\"M4 17a5 5 0 0 1 5-5h46a5 5 0 0 1 5 5v27a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z\" fill=\"currentColor\"/><path d=\"M4 22h56\" stroke=\"#fff\" stroke-opacity=\".35\" stroke-width=\"2\"/></svg>";
+ const folderButton=(name,key,count)=>'<button type="button" class="folder-card" data-open-folder="'+esc(key)+'">'+folderIcon+'<span class="folder-card-name">'+esc(name)+'</span><span class="folder-card-count">'+count+' 個のリンク</span></button>';
+ const visible=links;
+ if (renderedCategories !== categories || renderedCategory !== selectedCategory) {
+  const catButtons=Array.from(new Set(categories.map(folderPath).filter(Boolean))).map(cat=>{const depth=Math.max(0,folderParts(cat).length-1);const label=folderParts(cat).slice(-1)[0]||cat;return '<button type="button" class="side-item '+(selectedCategory===cat?'selected':'')+'" style="padding-left:'+(10+depth*12)+'px" data-category="'+esc(cat)+'"><span class="side-folder-mini">'+folderIcon+'</span> '+esc(label)+'</button>';}).join('');
+  $('sideCats').innerHTML=catButtons||'<div style="padding:4px 10px;color:#999;font-size:11px">フォルダがありません</div>';
+  renderedCategories = categories;
+  renderedCategory = selectedCategory;
+ }
+ document.querySelectorAll('[data-view]').forEach(btn=>btn.classList.toggle('selected',!selectedCategory&&btn.dataset.view===view));
+ const titles={desktop:'My Desktop',all:'すべてのリンク',favorites:'お気に入り',recent:'最近追加した項目'};
+ const query=$('search').value.trim();
+ $('viewTitle').textContent=query?'リンクの検索結果':selectedCategory==='__uncategorized__'?'未分類':(selectedCategory||titles[view]||'すべてのリンク');
+ if(!selectedCategory&&(view==='desktop'||view==='all')&&!query){
+  const folders=childFolders('',visible);
+  const uncategorized=visible.filter(x=>!folderPath(x.category)).length;
+  if(uncategorized)folders.push({name:'未分類',key:'__uncategorized__',count:uncategorized});
+  $('count').textContent=folders.length+' フォルダ';
+  $('loadStatus').textContent='';
+  $('list').innerHTML=folders.length?folders.map(f=>folderButton(f.name,f.key,f.count)).join(''):'<div class="empty">フォルダがありません。</div>';
+  return;
+ }
+ const folderChildren=!query&&selectedCategory&&selectedCategory!=='__uncategorized__'?childFolders(selectedCategory,visible):[];
+ const currentLinks=visibleLinks();
+ const linkCards=currentLinks.map(x=>{const href=/^https?:\/\//i.test(x.url)?x.url:'#';return '<article class="item lc-link-card" data-link-id="'+esc(x.id)+'"><div class="lc-link-info"><div class="lc-link-main"><a class="title" data-open-mode="external" href="'+esc(href)+'" target="_blank" rel="noopener noreferrer">'+esc(x.title)+'</a>'+(x.isNew&&!readNewLinkIds.has(String(x.id))?'<span class="new-label">NEW</span>':'')+'<div class="meta">'+esc((()=>{try{return new URL(x.url).hostname}catch(e){return x.category||''}})())+'</div>'+(x.memo?'<div class="memo">'+esc(x.memo)+'</div>':'')+'</div><span class="lc-link-arrow" aria-hidden="true">↗</span></div></article>';}).join('');
+ const back=query?'':selectedCategory&&selectedCategory!=='__uncategorized__'?'<div class="folder-toolbar"><button type="button" data-folder-back>‹ '+(folderParent(selectedCategory)?'親フォルダーに戻る':'フォルダー一覧に戻る')+'</button><span>My Desktop　›　'+esc(selectedCategory.split('/').join('　›　'))+'</span></div>':(selectedCategory?'<div class="folder-toolbar"><button type="button" data-folder-back>‹ フォルダー一覧に戻る</button><span>My Desktop　›　未分類</span></div>':'');
+ const childHtml=folderChildren.map(f=>folderButton(f.name,f.key,f.count)).join('');
+ $('count').textContent=folderChildren.length+' フォルダー / '+currentLinks.length+' 件';
+ $('loadStatus').textContent='';
+ $('list').innerHTML=back+childHtml+linkCards+(!folderChildren.length&&!currentLinks.length?'<div class="empty">'+(query?'検索条件に一致するリンクがありません。':selectedCategory?'このフォルダーは空です。':'表示できるリンクがありません。')+'</div>':'');
+ 
+}
+const chatOverlay=$('chatOverlay'),chatMessages=$('chatMessages'),chatForm=$('chatForm'),chatInput=$('chatInput'),chatSend=$('chatSend');let chatLoading=false,chatLoaded=false;
+function renderChat(messages){chatMessages.replaceChildren();if(!messages.length){const e=document.createElement('div');e.className='chat-empty';e.textContent='まだメッセージはありません。最初のメッセージを送ってみましょう。';chatMessages.appendChild(e);return;}messages.forEach(item=>{const bubble=document.createElement('article');bubble.className='chat-message'+(item.author==='管理者'?' admin':'');const meta=document.createElement('div');meta.className='chat-message-meta';const author=document.createElement('strong');author.textContent=item.author==='管理者'?'管理者':'利用者';const time=document.createElement('time');const date=new Date(item.createdAt);time.textContent=isNaN(date.getTime())?'':date.toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});const body=document.createElement('div');body.className='chat-message-body';body.textContent=item.message;meta.append(author,time);bubble.append(meta,body);chatMessages.appendChild(bubble);});chatMessages.scrollTop=chatMessages.scrollHeight;}
+function isVisitorAuthError(error){return /閲覧にはサイトのパスワード認証が必要|利用者用パスワード|認証が必要/.test(error&&error.message?error.message:String(error||''));}
+function showVisitorLogin(message){
+  visitorToken='';
+  chatLoaded=false;
+  chatOverlay.classList.remove('open');
+  $('linksPanel').classList.add('hidden');
+  $('loginPanel').classList.remove('hidden');
+  $('sitePassword').value='';
+  $('loginButton').disabled=false;
+  $('loginRetry').classList.add('hidden');
+  $('loginError').textContent=message||'ログインの有効期限が切れました。もう一度サイトのパスワードを入力してください。';
+  $('sitePassword').focus();
+}
+async function refreshChat(){if(!visitorToken||chatLoading)return;const button=$('refreshChat');chatLoading=true;button.disabled=true;button.classList.add('is-refreshing');button.setAttribute('aria-busy','true');try{const r=await call('getChatMessages',visitorToken);renderChat(Array.isArray(r.messages)?r.messages:[]);chatLoaded=true;}catch(e){if(isVisitorAuthError(e))showVisitorLogin('ログインの有効期限が切れました。もう一度サイトのパスワードを入力してください。');else chatMessages.textContent='読み込みに失敗しました：'+(e.message||'通信エラー');}finally{chatLoading=false;button.disabled=false;button.classList.remove('is-refreshing');button.removeAttribute('aria-busy');}}
+function openChat(){if(!visitorToken){$('loginError').textContent='先に利用者ログインをしてください。';return;}markSideTabAsRead('openChat');chatOverlay.classList.add('open');if(!chatLoaded)refreshChat();}
+$('openChat').addEventListener('click',openChat);$('refreshChat').addEventListener('click',refreshChat);$('closeChat').addEventListener('click',()=>{chatOverlay.classList.remove('open');});
+chatForm.addEventListener('submit',async e=>{e.preventDefault();const message=chatInput.value.trim();if(!message||!visitorToken)return;chatSend.disabled=true;try{const r=await call('sendChatMessage',message,visitorToken);chatInput.value='';renderChat(Array.isArray(r.messages)?r.messages:[]);chatLoaded=true;}catch(error){if(isVisitorAuthError(error)){showVisitorLogin('ログインの有効期限が切れました。もう一度サイトのパスワードを入力してください。');}else{const s=document.createElement('div');s.className='chat-status';s.textContent=error.message||'送信できませんでした。';chatMessages.appendChild(s);}}finally{chatSend.disabled=false;if(visitorToken)chatInput.focus();}});
+
+let searchFrame = 0;
+$('search').addEventListener('input', () => {
+ if (!searchFrame) searchFrame = requestAnimationFrame(() => { searchFrame = 0; render(); });
+});
+
+$('sideCats').addEventListener('click',event=>{const btn=event.target.closest('[data-category]');if(!btn)return;selectedCategory=btn.dataset.category;view='all';render()});
+$('list').addEventListener('click',event=>{const folder=event.target.closest('[data-open-folder]');if(folder){selectedCategory=folder.dataset.openFolder;view='all';render();return;}if(event.target.closest('[data-folder-back]')){selectedCategory=selectedCategory==='__uncategorized__'?'':folderParent(selectedCategory);view=selectedCategory?'all':'desktop';render();}});
+document.querySelector('.sidebar').addEventListener('click',event=>{const btn=event.target.closest('[data-view]');if(!btn)return;selectedCategory='';view=btn.dataset.view;render()});
+const clickLogPending=new Set();
+$('list').addEventListener('click',event=>{
+ const anchor=event.target.closest('a[href]');
+ if(!anchor)return;
+ const card=anchor.closest('[data-link-id]');
+ if(!card)return;
+ if(!visitorToken){showClickLogNotice('利用者ログイン情報がありません。ページを再読み込みしてログインし直してください。',true);return;}
+ const link=links.find(item=>String(item.id)===card.dataset.linkId);
+ if(!link){showClickLogNotice('クリックしたリンクのIDを一覧データから特定できませんでした。リンク一覧を再読み込みしてください。',true);return;}
+ if(!/^https?:\/\//i.test(link.url))return;
+ if(link.isNew&&!readNewLinkIds.has(String(link.id))){
+  markNewLinkAsRead(link);
+  const badge=card.querySelector('.new-label');
+  if(badge)badge.remove();
+ }
+ if(clickLogPending.has(String(link.id)))return;
+ clickLogPending.add(String(link.id));
+ call('recordLinkClick',link.id,getNoticeBrowserId(),visitorToken)
+  .then(result=>{if(result&&result.ok)showClickLogNotice('「'+link.title+'」のクリック履歴を保存しました。',false);else throw new Error('GASから保存完了の応答がありませんでした。');})
+  .catch(error=>{
+    const message=error&&error.message?error.message:String(error||'不明なエラー');
+    console.error('[LINK CORE] click log failed', {linkId:link.id,title:link.title,error});
+    if(isVisitorAuthError(error)){showClickLogNotice('利用者認証の期限切れです。ページを再読み込みしてログインし直してください。',true);}
+    else showClickLogNotice('クリック履歴を保存できませんでした。時間をおいて再試行してください。',true);
+  })
+  .finally(()=>clickLogPending.delete(String(link.id)));
+});
+
+const NOTICE_ID='link-fix-20261104';
+const NOTICE_BROWSER_KEY='linkCoreNoticeBrowserIdV1';
+let noticeBrowserId='', noticeRead=false;
+function readNoticeStorage(key){
+ try{return localStorage.getItem(key)}catch(_){return null}
+}
+function writeNoticeStorage(key,value){
+ try{localStorage.setItem(key,value)}catch(_){}
+}
+function getNoticeBrowserId(){
+ if(!noticeBrowserId){
+  noticeBrowserId=readNoticeStorage(NOTICE_BROWSER_KEY)||(crypto.randomUUID&&crypto.randomUUID())||('browser-'+Date.now()+'-'+Math.random().toString(36).slice(2));
+  writeNoticeStorage(NOTICE_BROWSER_KEY,noticeBrowserId);
+ }
+ return noticeBrowserId;
+}
+function isNoticeRead(){
+ return noticeRead||readNoticeStorage('linkCoreNoticeRead:'+NOTICE_ID)==='1';
+}
+function loadNoticeReadState(){
+ if(!visitorToken)return;
+ const card=$('noticeReadCard'),button=$('markNoticeRead');
+ card.hidden=false;
+ const already=isNoticeRead();
+ button.disabled=already;button.textContent=already?'既読済み':'確認して既読にする';
+}
+$('markNoticeRead').addEventListener('click',async()=>{
+ if(!visitorToken)return;
+ const button=$('markNoticeRead');
+ if(isNoticeRead()){button.disabled=true;return;}
+ button.disabled=true;$('noticeReadStatus').textContent='登録中…';
+ try{
+  const result=await call('markNoticeRead',visitorToken,NOTICE_ID,getNoticeBrowserId());
+  noticeRead=true;
+  writeNoticeStorage('linkCoreNoticeRead:'+NOTICE_ID,'1');
+  button.textContent='既読済み';
+  $('noticeReadStatus').textContent=result.added?'既読にしました。':'このブラウザでは既読済みです。';
+ }catch(error){$('noticeReadStatus').textContent=error.message||'既読登録に失敗しました。';button.disabled=false;}
+});
+
+function applyVisitorLinks(data){
+ if(!data||!Array.isArray(data.links))throw new Error('リンク一覧を取得できませんでした。');
+ links=publicLinks(data.links);
+ categories=Array.from(new Set(links.map(x=>x.category).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'ja'));
+}
+$('loginForm').addEventListener('submit',async event=>{
+ event.preventDefault();
+ const button=$('loginButton'), password=$('sitePassword');
+ if(button.disabled)return;
+ button.disabled=true;
+ $('loginError').textContent='認証中…';
+ $('loginRetry').classList.add('hidden');
+ try{
+  const auth=await call('authenticateVisitor',password.value);
+  if(!auth||!auth.token)throw new Error('閲覧用トークンを取得できませんでした。');
+  applyVisitorLinks(Array.isArray(auth.links)?auth:await call('getLinks',auth.token));
+  visitorToken=auth.token;
+  view=links.some(link=>link.favorite)?'favorites':'all';
+  selectedCategory='';
+  $('search').value='';
+  $('loginPanel').classList.add('hidden');
+  $('linksPanel').classList.remove('hidden');
+  password.value='';
+  $('loginError').textContent='';
+  render();
+  loadNoticeReadState();
+ }catch(error){
+  visitorToken='';
+  $('linksPanel').classList.add('hidden');
+  $('loginPanel').classList.remove('hidden');
+  $('loginError').textContent=error.message||'ログインできませんでした。';
+  $('loginRetry').classList.toggle('hidden',!password.value);
+  password.focus();
+ }finally{button.disabled=false;}
+});
+$('loginRetry').addEventListener('click',()=>$('loginForm').requestSubmit());
+
+$('refreshLinks').addEventListener('click',async()=>{
+ const button=$('refreshLinks'), token=visitorToken;
+ if(!token||button.disabled)return;
+ button.disabled=true;
+ $('loadStatus').textContent='リンク一覧を更新中…';
+ try{
+  const data=await call('getLinks',token);
+  if(token!==visitorToken)return;
+  applyVisitorLinks(data);
+  if(selectedCategory&&!links.some(link=>{
+   const path=folderPath(link.category);
+   return selectedCategory==='__uncategorized__'?!path:path===selectedCategory||path.startsWith(selectedCategory+'/');
+  }))selectedCategory='';
+  render();
+  $('loadStatus').textContent='リンク一覧を更新しました。';
+ }catch(error){
+  if(token!==visitorToken)return;
+  if(isVisitorAuthError(error))showVisitorLogin();
+  else $('loadStatus').textContent='リンクの再取得に失敗しました：'+(error.message||'通信エラー');
+ }finally{button.disabled=false;}
+});
+
+})();
+
+/* Dismiss search focus when the user taps anywhere outside the search control (including iOS Safari). */
+(function(){
+ const search=document.getElementById('search');
+ if(!search)return;
+ function dismissOutside(event){
+   const target=event.target;
+   if(target===search || (target && target.closest && target.closest('.toolbar-search')))return;
+   if(document.activeElement===search || search.matches(':focus')){
+     search.blur();
+     search.setAttribute('inputmode','none');
+     requestAnimationFrame(()=>search.removeAttribute('inputmode'));
+   }
+ }
+ document.addEventListener('pointerdown',dismissOutside,true);
+ document.addEventListener('touchstart',dismissOutside,{capture:true,passive:true});
+ document.addEventListener('click',dismissOutside,true);
+ search.addEventListener('keydown',event=>{
+   if(event.key==='Escape'){
+     search.blur();
+     search.value=search.value;
+   }
+ });
+})();
+
+</script>
+
+<script>
+/* Visitor window resizing: keep the opposite edge fixed. */
+(function(){
+ 'use strict';
+ const panels=[document.getElementById('loginPanel'),document.getElementById('linksPanel')].filter(Boolean);
+ const names=['n','s','e','w','nw','ne','sw','se'];
+ panels.forEach(panel=>names.forEach(name=>{
+   const handle=document.createElement('div');
+   handle.className='resize-handle '+name;
+   handle.dataset.resize=name;
+   handle.setAttribute('aria-hidden','true');
+   panel.appendChild(handle);
+ }));
+ const minWidth=320,minHeight=300,edge=8;
+ let drag=null;
+ function start(event){
+   const handle=event.target.closest('.resize-handle[data-resize]');
+   if(!handle||(event.button!==undefined&&event.button!==0))return;
+   const panel=handle.closest('.finder-window');
+   if(!panel||panel.classList.contains('hidden'))return;
+   const rect=panel.getBoundingClientRect(),direction=handle.dataset.resize;
+   event.preventDefault();event.stopPropagation();
+   panel.style.position='fixed';
+   panel.style.left=rect.left+'px';
+   panel.style.top=rect.top+'px';
+   panel.style.right='auto';
+   panel.style.bottom='auto';
+   panel.style.margin='0';
+   panel.style.transform='none';
+   panel.style.width=rect.width+'px';
+   panel.style.height=rect.height+'px';
+   drag={panel,pointerId:event.pointerId,direction,startX:event.clientX,startY:event.clientY,left:rect.left,top:rect.top,width:rect.width,height:rect.height,right:rect.right,bottom:rect.bottom};
+   panel.classList.add('is-resizing');
+   document.body.classList.add('window-resizing');
+   document.body.style.cursor=getComputedStyle(handle).cursor;
+   try{handle.setPointerCapture(event.pointerId)}catch(_){}
+ }
+ function move(event){
+   if(!drag||event.pointerId!==drag.pointerId)return;
+   event.preventDefault();
+   const d=drag,dx=event.clientX-d.startX,dy=event.clientY-d.startY,dir=d.direction;
+   let left=d.left,top=d.top,width=d.width,height=d.height;
+   if(dir.includes('w')){
+     left=Math.max(edge,Math.min(d.left+dx,d.right-minWidth));
+     width=d.right-left;
+   }else if(dir.includes('e')){
+     width=Math.max(minWidth,Math.min(d.width+dx,window.innerWidth-edge-d.left));
+   }
+   if(dir.includes('n')){
+     top=Math.max(edge,Math.min(d.top+dy,d.bottom-minHeight));
+     height=d.bottom-top;
+   }else if(dir.includes('s')){
+     height=Math.max(minHeight,Math.min(d.height+dy,window.innerHeight-edge-d.top));
+   }
+   d.panel.style.left=left+'px';
+   d.panel.style.top=top+'px';
+   d.panel.style.width=width+'px';
+   d.panel.style.height=height+'px';
+ }
+ function end(event){
+   if(!drag||(event&&event.pointerId!==drag.pointerId))return;
+   drag.panel.classList.remove('is-resizing');
+   document.body.classList.remove('window-resizing');
+   document.body.style.cursor='';
+   drag=null;
+ }
+ document.addEventListener('pointerdown',start,true);
+ window.addEventListener('pointermove',move,{passive:false});
+ window.addEventListener('pointerup',end);
+ window.addEventListener('pointercancel',end);
+ window.addEventListener('blur',()=>end());
+
+})();</script>
+
+
+
+
+
+
+
+<style id="lc-release-notes-style">
+#lc-release-overlay{position:fixed;inset:0;z-index:120000;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(1,6,14,.76);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+#lc-release-overlay.is-open{display:flex}
+#lc-release-dialog{width:min(680px,100%);max-height:min(82vh,820px);overflow:hidden;border:1px solid #24566d;border-radius:18px;background:linear-gradient(145deg,#0c1725,#090e19 70%);box-shadow:0 24px 90px #000b,0 0 35px #00d9ff18;color:#e8f7ff}
+#lc-release-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:20px 22px;border-bottom:1px solid #1d3c50;background:linear-gradient(110deg,#10283a,#101326)}
+#lc-release-head small{display:block;color:#54cfe9;font-size:10px;font-weight:800;letter-spacing:.18em}
+#lc-release-head h2{margin:4px 0 0;font-size:22px;color:#eafaff}
+#lc-release-close{width:34px;height:34px;border:1px solid #315064;border-radius:9px;background:#0a1724;color:#bfeeff;font-size:20px;cursor:pointer}
+#lc-release-content{padding:18px 22px 24px;overflow:auto;max-height:calc(min(82vh,820px) - 88px)}
+.lc-release-entry{position:relative;margin:0 0 15px;padding:16px 17px;border:1px solid #1d4054;border-radius:12px;background:rgba(12,29,44,.72)}
+.lc-release-entry:last-child{margin-bottom:0}
+.lc-release-meta{display:flex;align-items:center;gap:9px;flex-wrap:wrap;color:#8ba9ba;font-size:11px}
+.lc-release-version{padding:3px 8px;border:1px solid #23627b;border-radius:6px;background:#0c2b3b;color:#79e7ff;font-weight:750}
+.lc-release-entry h3{margin:10px 0 8px;font-size:16px;color:#e8faff}
+.lc-release-entry ul{margin:0;padding-left:19px;color:#b4c9d5;font-size:13px;line-height:1.85}
+#lc-release-notes-button{position:relative}
+@media(max-width:520px){#lc-release-overlay{padding:10px}#lc-release-dialog{max-height:90vh;border-radius:14px}#lc-release-content{max-height:calc(90vh - 82px);padding:14px}#lc-release-head{padding:16px}#lc-release-head h2{font-size:19px}}
+
+.lc-release-new-badge,.side-item>.new-badge{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;width:auto!important;min-width:0;margin-left:auto;padding:2px 6px;border:1px solid #ffe45c;border-radius:5px;background:rgba(255,228,92,.10);color:#fff29a!important;font-size:9px!important;font-weight:900;letter-spacing:.08em;line-height:1.3;white-space:nowrap;text-shadow:0 0 5px rgba(255,226,75,.95),0 0 10px rgba(255,210,40,.7);box-shadow:0 0 6px rgba(255,220,70,.45),inset 0 0 4px rgba(255,220,70,.12)}
+
+/* Review fixes: mobile navigation, touch dragging, and viewport recovery */
+.finder-toolbar{touch-action:none}
+@media(max-width:720px){
+ .finder-layout{display:flex!important;flex-direction:column!important;min-width:0}
+ .sidebar{width:100%!important;min-width:0!important;display:flex!important;flex-direction:row!important;align-items:center;gap:5px;overflow-x:auto;overflow-y:hidden;white-space:nowrap;border-right:0!important;border-bottom:1px solid #203c4b;padding:8px!important;scrollbar-width:thin}
+ .sidebar .side-label{display:none!important}
+ .sidebar .side-item{flex:0 0 auto;width:auto!important;min-height:36px;padding:8px 10px!important;font-size:12px!important}
+ .finder-content{min-width:0;padding:12px!important}
+ .item button,.item .btn{min-height:36px;font-size:12px!important}
+ .finder-window,.sidebar,.item,.chat-overlay{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+}
+
+/* Shared Finder appearance — matched to the administrator desktop */
+html,body{width:100%;min-width:0}body{overflow-x:hidden}
+main.wrap{width:100%;max-width:none!important;margin:0;padding:22px 24px}
+.finder-window{width:min(1440px,calc(100vw - 48px));max-width:none;margin:0 auto;border:1px solid #18506a!important;border-radius:15px;background:rgba(7,13,28,.96)!important;box-shadow:0 0 0 1px rgba(0,238,255,.06),0 0 35px rgba(0,210,255,.12),0 24px 70px #0009!important;overflow:hidden}
+.finder-toolbar{height:78px;display:grid;grid-template-columns:190px minmax(160px,1fr) 220px;grid-template-rows:38px 32px;align-items:center;padding:7px 18px 8px;border-bottom:1px solid #17495d!important;background:linear-gradient(100deg,#101d32,#111126)!important}
+.traffic-lights{grid-column:1;grid-row:1}.finder-title{grid-column:2;grid-row:1;color:#e5fbff!important;font-size:14px;font-weight:700}
+.toolbar-tools{grid-column:3;grid-row:1;display:flex;justify-content:flex-end;gap:13px;color:#78b6ca}
+.toolbar-search{grid-column:2/4;grid-row:2;justify-self:end;width:min(320px,100%);max-width:100%;display:flex;align-items:center;gap:9px;padding:5px 10px;border:1px solid #20516c;border-radius:7px;background:#071426;color:#64dff2}
+.toolbar-search input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:#e8faff}
+.finder-layout{display:grid;grid-template-columns:220px minmax(0,1fr);width:100%;min-width:0;min-height:calc(100vh - 102px);background:#071124}
+.sidebar{min-width:0;padding:18px 12px;background:rgba(7,17,32,.98)!important;border-right:1px solid #173b52!important}
+.side-label{margin:18px 9px 7px;color:#64dff2!important;font-size:10px;font-weight:800;letter-spacing:.12em}
+.side-item{display:flex;align-items:center;gap:9px;width:100%;min-height:36px;margin:2px 0;padding:8px 10px;border:1px solid transparent!important;border-radius:7px;background:transparent!important;color:#b9d5e6!important;text-align:left;font-size:12px}
+.side-item>span:first-child{flex:0 0 18px;color:#00d9ff!important;text-align:center}
+.side-item:hover,.side-item.selected{background:linear-gradient(100deg,#10344a,#171c3a)!important;border-color:#00d9ff!important;color:#eaffff!important;box-shadow:0 0 15px #00d9ff1f!important}
+.side-item .new-badge{margin-left:auto}.side-cats{display:flex;flex-direction:column;gap:2px}
+.finder-content{min-width:0;width:100%;padding:24px;background:linear-gradient(145deg,rgba(8,15,30,.98),rgba(10,13,31,.98))!important;color:#e8faff!important}
+.workspace{padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
+.section-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 18px;padding-bottom:13px;border-bottom:1px solid #17475e}
+.section-heading h2{margin:4px 0 0;color:#e5fbff;font-size:25px;font-weight:750}
+.section-kicker{color:#64dff2;font-size:9px;font-weight:800;letter-spacing:.12em}.section-note{color:#6e96ab;font-size:9px;letter-spacing:.12em}
+.list-heading{display:flex;align-items:center;justify-content:space-between;padding:12px 0 10px;border-top:1px solid #17475e}
+.list-heading{flex-wrap:wrap}
+#refreshLinks{letter-spacing:normal;min-height:36px}
+@media(max-width:720px){#refreshLinks{min-height:44px}}
+.list-heading-title{color:#a4c7d9;font-size:10px;font-weight:850;letter-spacing:.13em}.heading-dot{color:#00d9ff}.result-count{color:#8ca5b7;font-size:11px}
+.status:not(:empty){margin:0 0 10px;padding:8px 10px;border:1px solid #20516c;border-radius:6px;background:#081c30;color:#a8eaff;font-size:12px}
+.list{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;min-width:0}
+.item{position:relative;display:flex;align-items:flex-start;gap:10px;min-width:0;min-height:112px;padding:15px;background:linear-gradient(145deg,rgba(8,30,49,.98),rgba(13,17,40,.98))!important;color:#dff7ff!important;border:1px solid #1b6077!important;border-radius:12px!important;box-shadow:0 8px 24px rgba(0,0,0,.28),0 0 0 1px rgba(0,229,255,.035),inset 0 1px rgba(120,240,255,.06)!important;transition:transform .18s,border-color .18s,box-shadow .18s}
+.item:hover{background:linear-gradient(145deg,rgba(9,43,65,.99),rgba(20,22,54,.99))!important;border-color:#00eaff!important;box-shadow:0 10px 28px rgba(0,0,0,.34),0 0 22px rgba(0,217,255,.16)!important;transform:translateY(-2px)}
+.item .body{flex:1;min-width:0}.item .title{display:block;color:#57eaff!important;font-size:14px;font-weight:750;line-height:1.5;overflow-wrap:anywhere;text-decoration:none}
+.item .title:hover{color:#c5f7ff!important;text-decoration:underline}.item .meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
+.item .tag{display:inline-flex;margin:0;padding:2px 8px;border:1px solid #245777;border-radius:999px;background:#10283e;color:#8ce8ff;font-size:10px}
+.item .memo{margin-top:7px;color:#a4c2d4;font-size:12px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}.item-arrow{flex:0 0 auto;color:#4bbdd6;font-size:14px}
+.new-label{display:inline-flex;margin:6px 0 0;padding:2px 7px;border:1px solid #ffe45c;border-radius:5px;background:rgba(255,228,92,.10);color:#fff29a;font-size:9px;font-weight:900;letter-spacing:.12em;text-shadow:0 0 7px rgba(255,226,75,.7)}
+.empty{grid-column:1/-1;padding:42px 18px;text-align:center;color:#a4c7d9;border:1px dashed #24516d;border-radius:10px}
+#loginPanel{max-width:680px;margin:8vh auto 0}#loginPanel .finder-toolbar{grid-template-columns:190px 1fr 220px}
+#loginPanel .login-body{padding:30px;background:linear-gradient(145deg,#0b1930,#071124);color:#e8faff}
+#loginPanel h1{color:#e5fbff;font-size:28px}#loginPanel p,#loginPanel label{color:#a4c7d9}
+#loginPanel input{background:#060e1d;border:1px solid #28516c;color:#e8faff;border-radius:7px;padding:11px}
+#loginPanel button{background:#0d263d;border:1px solid #286582;color:#a9efff;border-radius:7px;padding:10px 15px}
+#loginPanel button[type=submit]{background:linear-gradient(135deg,#087fa9,#273f9b);border-color:#35d9ff;color:#fff}
+@media(max-width:760px){main.wrap{padding:8px}.finder-window{width:100%;border-radius:10px}.finder-toolbar{grid-template-columns:112px minmax(0,1fr);grid-template-rows:34px 32px;padding:6px 10px}.finder-title{grid-column:2;grid-row:1;font-size:13px}.toolbar-tools{display:none}.toolbar-search{grid-column:1/3;grid-row:2;justify-self:stretch;width:100%}.finder-layout{grid-template-columns:160px minmax(0,1fr)}.sidebar{padding:12px 6px}.side-item{font-size:11px;padding:7px 6px;gap:6px}.finder-content{padding:16px 12px}.list{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.item{min-height:105px;padding:10px}.item .title{font-size:12px}}
+@media(max-width:520px){main.wrap{padding:0}.finder-window{border-radius:0;min-height:100vh}.finder-layout{grid-template-columns:112px minmax(0,1fr)}.finder-content{padding:12px 8px}.list{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.item{min-height:110px;padding:9px}.item .title{font-size:12px}.item-arrow{display:none}.side-label{font-size:8px;margin:14px 4px 6px}.side-item{font-size:10px;padding:7px 4px;gap:4px}}
+
+/* Fix: login-panel button styles must not stretch the macOS green traffic-light control. */
+#loginPanel .traffic-lights .traffic-green,
+#linksPanel .traffic-lights .traffic-green{
+  display:block!important;flex:0 0 13px!important;
+  width:13px!important;height:13px!important;
+  min-width:13px!important;min-height:13px!important;
+  margin:0!important;padding:0!important;
+  border:0!important;border-radius:50%!important;
+  appearance:none!important;-webkit-appearance:none!important;
+  background:#28c840!important;
+  box-shadow:inset 0 1px 1px rgba(255,255,255,.55),0 0 0 1px rgba(0,0,0,.22),0 0 9px rgba(40,200,64,.3)!important;
+  cursor:pointer!important;
+}
+#loginPanel .traffic-lights .traffic-green:hover,
+#linksPanel .traffic-lights .traffic-green:hover{
+  transform:scale(1.12);
+  box-shadow:0 0 0 2px rgba(40,200,64,.25),0 0 14px rgba(40,200,64,.6)!important;
+}
+
+/* LINK CORE Link cards */
+.lc-link-card{display:flex;flex-direction:column;overflow:hidden;min-width:0;padding:0!important;border:1px solid #cbd5e1!important;border-radius:13px!important;background:#fff!important;box-shadow:0 3px 12px rgba(20,35,55,.07)!important;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
+.lc-link-card:hover{transform:translateY(-2px);border-color:#67b9df!important;box-shadow:0 9px 24px rgba(20,80,120,.13)!important}
+.lc-link-info{display:flex;align-items:flex-start;gap:10px;padding:13px 14px 14px;min-width:0}
+.lc-link-main{flex:1;min-width:0}
+.lc-link-card .title{display:block;font-size:15px;font-weight:700;line-height:1.45;color:#172b42!important;text-decoration:none;overflow-wrap:anywhere}
+.lc-link-card .meta{margin-top:5px;color:#718096!important;font-size:11px;overflow-wrap:anywhere}
+.lc-link-card .memo{margin-top:7px;color:#526174!important;font-size:12px;line-height:1.55}
+.lc-link-arrow{flex:0 0 auto;color:#4386b7;font-size:18px;padding-top:1px}
+@media(min-width:680px){#list:has(.lc-link-card){display:grid;grid-template-columns:repeat(auto-fill,minmax(245px,1fr));align-items:start;gap:15px}#list:has(.lc-link-card)>.folder-toolbar{grid-column:1/-1}#list:has(.lc-link-card)>.folder-card{min-width:0}}
+@media(max-width:560px){.lc-link-info{padding:11px}.lc-link-card .title{font-size:14px}}
+
+
+
+@media (max-width: 720px) {
+  .sidebar .side-item { min-height: 44px; }
+  .sidebar .side-cats { display: flex; flex: 0 0 auto; flex-direction: row; gap: 5px; }
+  #list > .folder-toolbar, #list > .empty { grid-column: 1 / -1; }
+  #list > .folder-toolbar { flex-wrap: wrap; overflow-wrap: anywhere; }
+  #list > .folder-toolbar button { min-height: 44px; }
+  #linksPanel .toolbar-search input, .chat-compose textarea { font-size: 16px; }
+  .chat-overlay {
+    right: 8px;
+    bottom: max(8px, env(safe-area-inset-bottom));
+    width: min(410px, calc(100% - 16px));
+    height: min(620px, calc(100dvh - 24px));
+  }
+  .chat-head-actions button, .chat-compose button { min-height: 44px; }
+  .chat-head { flex-wrap: wrap; }
+}
+@media (max-width: 520px) {
+  #list:has(.lc-link-card) { grid-template-columns: minmax(0, 1fr); }
+  .lc-link-card .title { display: flex; align-items: center; min-height: 44px; }
+}
+
+@media (max-width: 720px) {
+  #loginPanel { margin: 0 auto; }
+  #loginPanel .finder-toolbar { grid-template-columns: 72px minmax(0, 1fr); }
+  #loginPanel .login-row input { min-width: 0; font-size: 16px; }
+  #loginPanel .login-row button { min-height: 44px; }
+  .finder-toolbar { touch-action: auto; }
+  .finder-window {
+    position: relative !important;
+    inset: auto !important;
+    width: 100% !important;
+    height: auto !important;
+    margin-inline: auto !important;
+  }
+  .resize-handle { display: none !important; }
+}
+</style>
+<div id="lc-release-overlay" aria-hidden="true">
+ <section id="lc-release-dialog" role="dialog" aria-modal="true" aria-labelledby="lc-release-title">
+  <header id="lc-release-head"><div><small>LINK CORE / CHANGELOG</small><h2 id="lc-release-title">リリースノート</h2></div><button id="lc-release-close" type="button" aria-label="閉じる">×</button></header>
+  <div id="lc-release-content"><article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v2.2.1</span><time datetime="2026-11-10">2026年11月10日</time></div><h3>利用者画面のログイン・検索・更新を改善</h3><ul><li>ブラウザーの保存領域が使えない場合もログインできます。</li><li>検索は、開いているフォルダーに関係なく閲覧可能なリンク全体から探します。</li><li>リンク一覧とチャットはボタンで更新できます。</li></ul></article><article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v2.2.0</span><time datetime="2026-11-05">2026年11月5日</time></div><h3>フォルダーの階層化に対応</h3><ul><li>フォルダーの中にサブフォルダーを作れるようになりました。</li><li>フォルダー名を「親フォルダー/子フォルダー」の形式で指定すると、階層として表示されます。</li><li>親フォルダー内では、その直下のサブフォルダーとリンクを表示します。</li><li>階層をたどるパンくず表示と、親フォルダーへ戻る操作に対応しました。</li><li>既存のカテゴリ名・リンク情報・スプレッドシートの列構成は変更していません。</li></ul></article>
+   <article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v2.1.0</span><time datetime="2026-11-04">2026年11月4日</time></div><h3>ブラウザー識別・通知管理・ホーム画面アイコンを改善</h3><ul><li>リンクのクリック履歴にブラウザーIDを記録し、どのブラウザー環境から操作されたか確認できるようにしました。</li><li>お知らせの既読状態をブラウザーごとに管理し、管理者画面から既読件数を確認できるようにしました。</li><li>ホーム画面に追加したときのLINK COREアイコンを、専用のアイコン画像に更新しました。</li><li>利用者画面・管理者画面から、内部ブラウザーやウィンドウの移動・サイズ変更などの機能を整理し、リンクをシンプルに開けるようにしました。</li></ul></article>
+   
+   <article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v2.0.0</span><time datetime="2026-11-03">2026年11月3日</time></div><h3>カテゴリーをフォルダ形式に変更</h3><ul><li>利用者画面・管理者画面のMy Desktopに、既存カテゴリーをフォルダアイコンで表示するようにしました。</li><li>フォルダを開くと、そのカテゴリーに登録されたリンクだけを表示します。</li><li>フォルダ内から一覧へ戻る操作と、サイドバーから直接フォルダを開く操作に対応しました。</li><li>カテゴリーが未設定のリンクは「未分類」フォルダにまとめて表示します。</li><li>既存のリンク情報やスプレッドシートの保存形式は変更していません。</li></ul></article>
+   <article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v1.9.0</span><time datetime="2026-11-03">2026年11月3日</time></div><h3>NEW表示とログイン時の読み込みを改善</h3><ul><li>利用者画面でNEW付きのリンクを開くと、そのブラウザーではNEW表示が消えるようになりました。</li><li>管理者チャット・ブラウザ・リリースノートのサイドバーにあるNEW表示も、各タブを開くとブラウザーごとに既読として保存されます。</li><li>ページを再読み込みしても既読状態を維持し、別のブラウザーでは未読状態を個別に管理します。</li><li>ログイン画面を表示している間にGASとの接続・リンク一覧のキャッシュ準備を進め、ログイン後の待ち時間を減らすよう改善しました。</li></ul></article>
+   <article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v1.8.0</span><time datetime="2026-11-03">2026年11月3日</time></div><h3>読み込み速度と通信負荷を改善</h3><ul><li>リンク一覧を短時間キャッシュし、繰り返しログインした際の取得を高速化しました。</li><li>チャットの取得結果も短時間キャッシュし、スプレッドシートへの読み込み回数を削減しました。</li><li>クリック履歴の保存処理から不要な強制書き込みを取り除きました。</li></ul></article>
+   <article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v1.7.0</span><time datetime="2026-11-03">2026年11月3日</time></div><h3>利用者画面を管理者画面と統一</h3><ul><li>Finder風のツールバー、サイドバー、コンテンツ領域の構成と配色を管理者画面に合わせました。</li><li>リンクカードのレイアウト、枠線、発光エフェクト、文字の見た目を統一しました。</li><li>サイドバーにMy Desktopを追加し、画面切り替え操作を改善しました。</li></ul></article>
+   <article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v1.6.0</span><time datetime="2026-11-03">2026年11月3日</time></div><h3>利用者画面の使いやすさを改善</h3><ul><li>お気に入りが0件の場合は、自動で「すべてのリンク」を表示するようにしました。</li><li>チャットを開いている間、メッセージを自動更新するようにしました。</li><li>スマートフォンではサイドバーを横スクロール式に変更しました。</li><li>埋め込み表示できないWebサイトは、自動で別タブに開くようにしました。</li><li>ウィンドウの移動・リサイズ後に画面外へ出にくいよう調整しました。</li></ul></article>
+   <article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v1.5.0</span><time datetime="2026-11-03">2026年11月3日</time></div><h3>セキュリティと安定性を強化</h3><ul><li>公開設定が空欄のリンクは、利用者画面に表示されないよう変更しました。</li><li>利用者向けのエラー表示を分かりやすくし、内部情報が表示されないよう改善しました。</li><li>iPhone Safariでの全画面表示に関する不具合を修正しました。</li></ul></article>
+<article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v1.4.0</span><time datetime="2026-11-03">2026年11月3日</time></div><h3>表示・デザインを改善</h3><ul><li>NEWラベルを黄色のネオンカラーに変更し、発光エフェクトを追加しました。</li><li>リンクタイトルとNEWラベルの間隔を調整し、見やすくしました。</li><li>利用者画面にログインしたとき、最初に「お気に入り」が表示されるようにしました。</li></ul></article>
+   <article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v1.3.0</span><time datetime="2026-11-03">2026年11月3日</time></div><h3>カード設定・クリック履歴を強化</h3><ul><li>カードの詳細設定から、リンクごとにNEWラベルを表示できるようになりました。</li><li>NEWラベルの設定は保存され、管理者画面・利用者画面の両方に反映されます。</li><li>クリック履歴をすべて削除する機能と、履歴を1件ずつ削除する機能を追加しました。</li></ul></article>
+   <article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v1.2.0</span><time datetime="2026-11-03">2026年11月3日</time></div><h3>フローティングブラウザを追加</h3><ul><li>利用者画面・管理者画面の両方から、サイトをウィンドウ内で開けるようになりました。</li><li>ウィンドウの移動・8方向リサイズに対応しました。</li><li>画面下のタスクバーから、開いているウィンドウの切り替えや復元ができます。</li><li>赤・黄・緑のウィンドウ操作ボタンを追加しました。</li></ul></article>
+   <article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v1.1.0</span><time datetime="2026-11-02">2026年11月2日</time></div><h3>ウィンドウ操作を改善</h3><ul><li>利用者画面・管理者画面のウィンドウをドラッグで移動できるようにしました。</li><li>ウィンドウの端や角をつかんでサイズを変更できるようにしました。</li><li>操作ボタン付近を誤ってドラッグしないよう、移動できる範囲を調整しました。</li></ul></article>
+   <article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v1.0.0</span><time datetime="2026-11-02">2026年11月2日</time></div><h3>LINK CORE デスクトップを更新</h3><ul><li>Finder風の画面構成と、リンクを探しやすいサイドバーを整えました。</li></ul></article>
+  </div>
+ </section>
+</div><style id="lc-share-style">
+.share-btn{display:grid;place-items:center;width:29px;height:25px;padding:0;border-radius:5px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.06);color:#bfeeff;font:inherit;font-size:15px;line-height:1;cursor:pointer;box-shadow:none}
+.share-btn:hover{background:rgba(255,255,255,.13);border-color:rgba(255,255,255,.12)}
+.share-btn:focus-visible{outline:2px solid #35d9ff;outline-offset:2px}
+#lc-share-overlay{position:fixed;inset:0;z-index:120000;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(1,6,14,.76);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+#lc-share-overlay.is-open{display:flex}
+#lc-share-dialog{width:min(420px,100%);max-height:min(82vh,820px);overflow:auto;border:1px solid #24566d;border-radius:18px;background:linear-gradient(145deg,#0c1725,#090e19 70%);box-shadow:0 24px 90px #000b,0 0 35px #00d9ff18;color:#e8f7ff;text-align:center}
+#lc-share-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:20px 22px 0;text-align:left}
+#lc-share-head small{display:block;color:#54cfe9;font-size:10px;font-weight:800;letter-spacing:.18em}
+#lc-share-head h2{margin:4px 0 0;font-size:22px;color:#eafaff}
+#lc-share-close{flex-shrink:0;width:34px;height:34px;border:1px solid #315064;border-radius:9px;background:#0a1724;color:#bfeeff;font-size:20px;cursor:pointer}
+#lc-share-body{padding:10px 22px 24px}
+.lc-share-desc{margin:0 0 16px;color:#a4c7d9;font-size:13px;line-height:1.6}
+#lc-share-qr-wrap{display:inline-block;padding:16px;border-radius:12px;background:#fff;line-height:0;box-shadow:0 0 0 1px rgba(0,0,0,.08)}
+#lc-share-qr-wrap svg{display:block;width:216px;height:auto}
+#lc-share-qr-wrap svg rect{shape-rendering:crispEdges}
+.lc-share-url{margin:16px 0 12px;color:#8fb8c9;font-size:12px;line-height:1.6;overflow-wrap:anywhere;word-break:break-all}
+#lc-share-copy{padding:9px 18px;border:1px solid #315064;border-radius:9px;background:#0a1724;color:#bfeeff;font-size:14px;cursor:pointer}
+#lc-share-copy:hover{border-color:#00f0ff}
+#lc-share-status{min-height:20px;margin:10px 0 0;color:#8fb8c9;font-size:12px}
+html.light-mode .share-btn{background:#fff!important;border:1px solid #d3d5d9!important;color:#36383d!important}
+html.light-mode .share-btn:hover{background:#f4f5f7!important;border-color:#b8cbe7!important}
+html.light-mode .share-btn:focus-visible{outline-color:#3478d4!important}
+html.light-mode #lc-share-overlay{background:rgba(30,38,50,.45)!important}
+html.light-mode #lc-share-dialog{background:#fff!important;border:1px solid #c9cbd0!important;color:#26282d!important;box-shadow:0 18px 55px rgba(30,38,50,.25)!important}
+html.light-mode #lc-share-head small{color:#3478d4!important}
+html.light-mode #lc-share-head h2{color:#26282d!important}
+html.light-mode #lc-share-close{background:#fff!important;border:1px solid #d3d5d9!important;color:#26282d!important}
+html.light-mode .lc-share-desc{color:#656970!important}
+html.light-mode .lc-share-url{color:#656970!important}
+html.light-mode #lc-share-copy{background:#fff!important;border:1px solid #d3d5d9!important;color:#26282d!important}
+html.light-mode #lc-share-copy:hover{border-color:#3478d4!important}
+html.light-mode #lc-share-status{color:#656970!important}
+</style>
+<div id="lc-share-overlay" aria-hidden="true">
+ <section id="lc-share-dialog" role="dialog" aria-modal="true" aria-labelledby="lc-share-title">
+  <header id="lc-share-head"><div><small>LINK CORE / SHARE</small><h2 id="lc-share-title">このページを共有</h2></div><button id="lc-share-close" type="button" aria-label="閉じる">×</button></header>
+  <div id="lc-share-body">
+   <p class="lc-share-desc">スマートフォンのカメラで読み取ると、このページが開きます。</p>
+   <div id="lc-share-qr-wrap"><div id="lc-share-qr" role="img" aria-label="このページのQRコード"></div></div>
+   <p id="lc-share-url" class="lc-share-url"></p>
+   <button id="lc-share-copy" type="button">URLをコピー</button>
+   <div id="lc-share-status" role="status" aria-live="polite"></div>
+  </div>
+ </section>
+</div>
+<script id="lc-qrcode-lib">
+/* Vendored QR Code Generator for JavaScript (Kazuhiko Arase), MIT License.
+   Source: https://github.com/kazuhikoarase/qrcode-generator (js/dist/qrcode.js).
+   Inlined so the viewer works offline and sends nothing to a third-party QR API.
+   The library's own license header follows below. */
+//---------------------------------------------------------------------
+//
+// QR Code Generator for JavaScript
+//
+// Copyright (c) 2009 Kazuhiko Arase
+//
+// URL: http://www.d-project.com/
+//
+// Licensed under the MIT license:
+//  http://www.opensource.org/licenses/mit-license.php
+//
+// The word 'QR Code' is registered trademark of
+// DENSO WAVE INCORPORATED
+//  http://www.denso-wave.com/qrcode/faqpatent-e.html
+//
+//---------------------------------------------------------------------
+
+var qrcode = function() {
+
+  //---------------------------------------------------------------------
+  // qrcode
+  //---------------------------------------------------------------------
+
+  /**
+   * qrcode
+   * @param typeNumber 1 to 40
+   * @param errorCorrectionLevel 'L','M','Q','H'
+   */
+  var qrcode = function(typeNumber, errorCorrectionLevel) {
+
+    var PAD0 = 0xEC;
+    var PAD1 = 0x11;
+
+    var _typeNumber = typeNumber;
+    var _errorCorrectionLevel = QRErrorCorrectionLevel[errorCorrectionLevel];
+    var _modules = null;
+    var _moduleCount = 0;
+    var _dataCache = null;
+    var _dataList = [];
+
+    var _this = {};
+
+    var makeImpl = function(test, maskPattern) {
+
+      _moduleCount = _typeNumber * 4 + 17;
+      _modules = function(moduleCount) {
+        var modules = new Array(moduleCount);
+        for (var row = 0; row < moduleCount; row += 1) {
+          modules[row] = new Array(moduleCount);
+          for (var col = 0; col < moduleCount; col += 1) {
+            modules[row][col] = null;
+          }
+        }
+        return modules;
+      }(_moduleCount);
+
+      setupPositionProbePattern(0, 0);
+      setupPositionProbePattern(_moduleCount - 7, 0);
+      setupPositionProbePattern(0, _moduleCount - 7);
+      setupPositionAdjustPattern();
+      setupTimingPattern();
+      setupTypeInfo(test, maskPattern);
+
+      if (_typeNumber >= 7) {
+        setupTypeNumber(test);
+      }
+
+      if (_dataCache == null) {
+        _dataCache = createData(_typeNumber, _errorCorrectionLevel, _dataList);
+      }
+
+      mapData(_dataCache, maskPattern);
+    };
+
+    var setupPositionProbePattern = function(row, col) {
+
+      for (var r = -1; r <= 7; r += 1) {
+
+        if (row + r <= -1 || _moduleCount <= row + r) continue;
+
+        for (var c = -1; c <= 7; c += 1) {
+
+          if (col + c <= -1 || _moduleCount <= col + c) continue;
+
+          if ( (0 <= r && r <= 6 && (c == 0 || c == 6) )
+              || (0 <= c && c <= 6 && (r == 0 || r == 6) )
+              || (2 <= r && r <= 4 && 2 <= c && c <= 4) ) {
+            _modules[row + r][col + c] = true;
+          } else {
+            _modules[row + r][col + c] = false;
+          }
+        }
+      }
+    };
+
+    var getBestMaskPattern = function() {
+
+      var minLostPoint = 0;
+      var pattern = 0;
+
+      for (var i = 0; i < 8; i += 1) {
+
+        makeImpl(true, i);
+
+        var lostPoint = QRUtil.getLostPoint(_this);
+
+        if (i == 0 || minLostPoint > lostPoint) {
+          minLostPoint = lostPoint;
+          pattern = i;
+        }
+      }
+
+      return pattern;
+    };
+
+    var setupTimingPattern = function() {
+
+      for (var r = 8; r < _moduleCount - 8; r += 1) {
+        if (_modules[r][6] != null) {
+          continue;
+        }
+        _modules[r][6] = (r % 2 == 0);
+      }
+
+      for (var c = 8; c < _moduleCount - 8; c += 1) {
+        if (_modules[6][c] != null) {
+          continue;
+        }
+        _modules[6][c] = (c % 2 == 0);
+      }
+    };
+
+    var setupPositionAdjustPattern = function() {
+
+      var pos = QRUtil.getPatternPosition(_typeNumber);
+
+      for (var i = 0; i < pos.length; i += 1) {
+
+        for (var j = 0; j < pos.length; j += 1) {
+
+          var row = pos[i];
+          var col = pos[j];
+
+          if (_modules[row][col] != null) {
+            continue;
+          }
+
+          for (var r = -2; r <= 2; r += 1) {
+
+            for (var c = -2; c <= 2; c += 1) {
+
+              if (r == -2 || r == 2 || c == -2 || c == 2
+                  || (r == 0 && c == 0) ) {
+                _modules[row + r][col + c] = true;
+              } else {
+                _modules[row + r][col + c] = false;
+              }
+            }
+          }
+        }
+      }
+    };
+
+    var setupTypeNumber = function(test) {
+
+      var bits = QRUtil.getBCHTypeNumber(_typeNumber);
+
+      for (var i = 0; i < 18; i += 1) {
+        var mod = (!test && ( (bits >> i) & 1) == 1);
+        _modules[Math.floor(i / 3)][i % 3 + _moduleCount - 8 - 3] = mod;
+      }
+
+      for (var i = 0; i < 18; i += 1) {
+        var mod = (!test && ( (bits >> i) & 1) == 1);
+        _modules[i % 3 + _moduleCount - 8 - 3][Math.floor(i / 3)] = mod;
+      }
+    };
+
+    var setupTypeInfo = function(test, maskPattern) {
+
+      var data = (_errorCorrectionLevel << 3) | maskPattern;
+      var bits = QRUtil.getBCHTypeInfo(data);
+
+      // vertical
+      for (var i = 0; i < 15; i += 1) {
+
+        var mod = (!test && ( (bits >> i) & 1) == 1);
+
+        if (i < 6) {
+          _modules[i][8] = mod;
+        } else if (i < 8) {
+          _modules[i + 1][8] = mod;
+        } else {
+          _modules[_moduleCount - 15 + i][8] = mod;
+        }
+      }
+
+      // horizontal
+      for (var i = 0; i < 15; i += 1) {
+
+        var mod = (!test && ( (bits >> i) & 1) == 1);
+
+        if (i < 8) {
+          _modules[8][_moduleCount - i - 1] = mod;
+        } else if (i < 9) {
+          _modules[8][15 - i - 1 + 1] = mod;
+        } else {
+          _modules[8][15 - i - 1] = mod;
+        }
+      }
+
+      // fixed module
+      _modules[_moduleCount - 8][8] = (!test);
+    };
+
+    var mapData = function(data, maskPattern) {
+
+      var inc = -1;
+      var row = _moduleCount - 1;
+      var bitIndex = 7;
+      var byteIndex = 0;
+      var maskFunc = QRUtil.getMaskFunction(maskPattern);
+
+      for (var col = _moduleCount - 1; col > 0; col -= 2) {
+
+        if (col == 6) col -= 1;
+
+        while (true) {
+
+          for (var c = 0; c < 2; c += 1) {
+
+            if (_modules[row][col - c] == null) {
+
+              var dark = false;
+
+              if (byteIndex < data.length) {
+                dark = ( ( (data[byteIndex] >>> bitIndex) & 1) == 1);
+              }
+
+              var mask = maskFunc(row, col - c);
+
+              if (mask) {
+                dark = !dark;
+              }
+
+              _modules[row][col - c] = dark;
+              bitIndex -= 1;
+
+              if (bitIndex == -1) {
+                byteIndex += 1;
+                bitIndex = 7;
+              }
+            }
+          }
+
+          row += inc;
+
+          if (row < 0 || _moduleCount <= row) {
+            row -= inc;
+            inc = -inc;
+            break;
+          }
+        }
+      }
+    };
+
+    var createBytes = function(buffer, rsBlocks) {
+
+      var offset = 0;
+
+      var maxDcCount = 0;
+      var maxEcCount = 0;
+
+      var dcdata = new Array(rsBlocks.length);
+      var ecdata = new Array(rsBlocks.length);
+
+      for (var r = 0; r < rsBlocks.length; r += 1) {
+
+        var dcCount = rsBlocks[r].dataCount;
+        var ecCount = rsBlocks[r].totalCount - dcCount;
+
+        maxDcCount = Math.max(maxDcCount, dcCount);
+        maxEcCount = Math.max(maxEcCount, ecCount);
+
+        dcdata[r] = new Array(dcCount);
+
+        for (var i = 0; i < dcdata[r].length; i += 1) {
+          dcdata[r][i] = 0xff & buffer.getBuffer()[i + offset];
+        }
+        offset += dcCount;
+
+        var rsPoly = QRUtil.getErrorCorrectPolynomial(ecCount);
+        var rawPoly = qrPolynomial(dcdata[r], rsPoly.getLength() - 1);
+
+        var modPoly = rawPoly.mod(rsPoly);
+        ecdata[r] = new Array(rsPoly.getLength() - 1);
+        for (var i = 0; i < ecdata[r].length; i += 1) {
+          var modIndex = i + modPoly.getLength() - ecdata[r].length;
+          ecdata[r][i] = (modIndex >= 0)? modPoly.getAt(modIndex) : 0;
+        }
+      }
+
+      var totalCodeCount = 0;
+      for (var i = 0; i < rsBlocks.length; i += 1) {
+        totalCodeCount += rsBlocks[i].totalCount;
+      }
+
+      var data = new Array(totalCodeCount);
+      var index = 0;
+
+      for (var i = 0; i < maxDcCount; i += 1) {
+        for (var r = 0; r < rsBlocks.length; r += 1) {
+          if (i < dcdata[r].length) {
+            data[index] = dcdata[r][i];
+            index += 1;
+          }
+        }
+      }
+
+      for (var i = 0; i < maxEcCount; i += 1) {
+        for (var r = 0; r < rsBlocks.length; r += 1) {
+          if (i < ecdata[r].length) {
+            data[index] = ecdata[r][i];
+            index += 1;
+          }
+        }
+      }
+
+      return data;
+    };
+
+    var createData = function(typeNumber, errorCorrectionLevel, dataList) {
+
+      var rsBlocks = QRRSBlock.getRSBlocks(typeNumber, errorCorrectionLevel);
+
+      var buffer = qrBitBuffer();
+
+      for (var i = 0; i < dataList.length; i += 1) {
+        var data = dataList[i];
+        buffer.put(data.getMode(), 4);
+        buffer.put(data.getLength(), QRUtil.getLengthInBits(data.getMode(), typeNumber) );
+        data.write(buffer);
+      }
+
+      // calc num max data.
+      var totalDataCount = 0;
+      for (var i = 0; i < rsBlocks.length; i += 1) {
+        totalDataCount += rsBlocks[i].dataCount;
+      }
+
+      if (buffer.getLengthInBits() > totalDataCount * 8) {
+        throw 'code length overflow. ('
+          + buffer.getLengthInBits()
+          + '>'
+          + totalDataCount * 8
+          + ')';
+      }
+
+      // end code
+      if (buffer.getLengthInBits() + 4 <= totalDataCount * 8) {
+        buffer.put(0, 4);
+      }
+
+      // padding
+      while (buffer.getLengthInBits() % 8 != 0) {
+        buffer.putBit(false);
+      }
+
+      // padding
+      while (true) {
+
+        if (buffer.getLengthInBits() >= totalDataCount * 8) {
+          break;
+        }
+        buffer.put(PAD0, 8);
+
+        if (buffer.getLengthInBits() >= totalDataCount * 8) {
+          break;
+        }
+        buffer.put(PAD1, 8);
+      }
+
+      return createBytes(buffer, rsBlocks);
+    };
+
+    _this.addData = function(data, mode) {
+
+      mode = mode || 'Byte';
+
+      var newData = null;
+
+      switch(mode) {
+      case 'Numeric' :
+        newData = qrNumber(data);
+        break;
+      case 'Alphanumeric' :
+        newData = qrAlphaNum(data);
+        break;
+      case 'Byte' :
+        newData = qr8BitByte(data);
+        break;
+      case 'Kanji' :
+        newData = qrKanji(data);
+        break;
+      default :
+        throw 'mode:' + mode;
+      }
+
+      _dataList.push(newData);
+      _dataCache = null;
+    };
+
+    _this.isDark = function(row, col) {
+      if (row < 0 || _moduleCount <= row || col < 0 || _moduleCount <= col) {
+        throw row + ',' + col;
+      }
+      return _modules[row][col];
+    };
+
+    _this.getModuleCount = function() {
+      return _moduleCount;
+    };
+
+    _this.make = function() {
+      if (_typeNumber < 1) {
+        var typeNumber = 1;
+
+        for (; typeNumber < 40; typeNumber++) {
+          var rsBlocks = QRRSBlock.getRSBlocks(typeNumber, _errorCorrectionLevel);
+          var buffer = qrBitBuffer();
+
+          for (var i = 0; i < _dataList.length; i++) {
+            var data = _dataList[i];
+            buffer.put(data.getMode(), 4);
+            buffer.put(data.getLength(), QRUtil.getLengthInBits(data.getMode(), typeNumber) );
+            data.write(buffer);
+          }
+
+          var totalDataCount = 0;
+          for (var i = 0; i < rsBlocks.length; i++) {
+            totalDataCount += rsBlocks[i].dataCount;
+          }
+
+          if (buffer.getLengthInBits() <= totalDataCount * 8) {
+            break;
+          }
+        }
+
+        _typeNumber = typeNumber;
+      }
+
+      makeImpl(false, getBestMaskPattern() );
+    };
+
+    _this.createTableTag = function(cellSize, margin) {
+
+      cellSize = cellSize || 2;
+      margin = (typeof margin == 'undefined')? cellSize * 4 : margin;
+
+      var qrHtml = '';
+
+      qrHtml += '<table style="';
+      qrHtml += ' border-width: 0px; border-style: none;';
+      qrHtml += ' border-collapse: collapse;';
+      qrHtml += ' padding: 0px; margin: ' + margin + 'px;';
+      qrHtml += '">';
+      qrHtml += '<tbody>';
+
+      for (var r = 0; r < _this.getModuleCount(); r += 1) {
+
+        qrHtml += '<tr>';
+
+        for (var c = 0; c < _this.getModuleCount(); c += 1) {
+          qrHtml += '<td style="';
+          qrHtml += ' border-width: 0px; border-style: none;';
+          qrHtml += ' border-collapse: collapse;';
+          qrHtml += ' padding: 0px; margin: 0px;';
+          qrHtml += ' width: ' + cellSize + 'px;';
+          qrHtml += ' height: ' + cellSize + 'px;';
+          qrHtml += ' background-color: ';
+          qrHtml += _this.isDark(r, c)? '#000000' : '#ffffff';
+          qrHtml += ';';
+          qrHtml += '"/>';
+        }
+
+        qrHtml += '</tr>';
+      }
+
+      qrHtml += '</tbody>';
+      qrHtml += '</table>';
+
+      return qrHtml;
+    };
+
+    _this.createSvgTag = function(cellSize, margin, alt, title) {
+
+      var opts = {};
+      if (typeof arguments[0] == 'object') {
+        // Called by options.
+        opts = arguments[0];
+        // overwrite cellSize and margin.
+        cellSize = opts.cellSize;
+        margin = opts.margin;
+        alt = opts.alt;
+        title = opts.title;
+      }
+
+      cellSize = cellSize || 2;
+      margin = (typeof margin == 'undefined')? cellSize * 4 : margin;
+
+      // Compose alt property surrogate
+      alt = (typeof alt === 'string') ? {text: alt} : alt || {};
+      alt.text = alt.text || null;
+      alt.id = (alt.text) ? alt.id || 'qrcode-description' : null;
+
+      // Compose title property surrogate
+      title = (typeof title === 'string') ? {text: title} : title || {};
+      title.text = title.text || null;
+      title.id = (title.text) ? title.id || 'qrcode-title' : null;
+
+      var size = _this.getModuleCount() * cellSize + margin * 2;
+      var c, mc, r, mr, qrSvg='', rect;
+
+      rect = 'l' + cellSize + ',0 0,' + cellSize +
+        ' -' + cellSize + ',0 0,-' + cellSize + 'z ';
+
+      qrSvg += '<svg version="1.1" xmlns="http://www.w3.org/2000/svg"';
+      qrSvg += !opts.scalable ? ' width="' + size + 'px" height="' + size + 'px"' : '';
+      qrSvg += ' viewBox="0 0 ' + size + ' ' + size + '" ';
+      qrSvg += ' preserveAspectRatio="xMinYMin meet"';
+      qrSvg += (title.text || alt.text) ? ' role="img" aria-labelledby="' +
+          escapeXml([title.id, alt.id].join(' ').trim() ) + '"' : '';
+      qrSvg += '>';
+      qrSvg += (title.text) ? '<title id="' + escapeXml(title.id) + '">' +
+          escapeXml(title.text) + '</title>' : '';
+      qrSvg += (alt.text) ? '<description id="' + escapeXml(alt.id) + '">' +
+          escapeXml(alt.text) + '</description>' : '';
+      qrSvg += '<rect width="100%" height="100%" fill="white" cx="0" cy="0"/>';
+      qrSvg += '<path d="';
+
+      for (r = 0; r < _this.getModuleCount(); r += 1) {
+        mr = r * cellSize + margin;
+        for (c = 0; c < _this.getModuleCount(); c += 1) {
+          if (_this.isDark(r, c) ) {
+            mc = c*cellSize+margin;
+            qrSvg += 'M' + mc + ',' + mr + rect;
+          }
+        }
+      }
+
+      qrSvg += '" stroke="transparent" fill="black"/>';
+      qrSvg += '</svg>';
+
+      return qrSvg;
+    };
+
+    _this.createDataURL = function(cellSize, margin) {
+
+      cellSize = cellSize || 2;
+      margin = (typeof margin == 'undefined')? cellSize * 4 : margin;
+
+      var size = _this.getModuleCount() * cellSize + margin * 2;
+      var min = margin;
+      var max = size - margin;
+
+      return createDataURL(size, size, function(x, y) {
+        if (min <= x && x < max && min <= y && y < max) {
+          var c = Math.floor( (x - min) / cellSize);
+          var r = Math.floor( (y - min) / cellSize);
+          return _this.isDark(r, c)? 0 : 1;
+        } else {
+          return 1;
+        }
+      } );
+    };
+
+    _this.createImgTag = function(cellSize, margin, alt) {
+
+      cellSize = cellSize || 2;
+      margin = (typeof margin == 'undefined')? cellSize * 4 : margin;
+
+      var size = _this.getModuleCount() * cellSize + margin * 2;
+
+      var img = '';
+      img += '<img';
+      img += '\u0020src="';
+      img += _this.createDataURL(cellSize, margin);
+      img += '"';
+      img += '\u0020width="';
+      img += size;
+      img += '"';
+      img += '\u0020height="';
+      img += size;
+      img += '"';
+      if (alt) {
+        img += '\u0020alt="';
+        img += escapeXml(alt);
+        img += '"';
+      }
+      img += '/>';
+
+      return img;
+    };
+
+    var escapeXml = function(s) {
+      var escaped = '';
+      for (var i = 0; i < s.length; i += 1) {
+        var c = s.charAt(i);
+        switch(c) {
+        case '<': escaped += '&lt;'; break;
+        case '>': escaped += '&gt;'; break;
+        case '&': escaped += '&amp;'; break;
+        case '"': escaped += '&quot;'; break;
+        default : escaped += c; break;
+        }
+      }
+      return escaped;
+    };
+
+    var _createHalfASCII = function(margin) {
+      var cellSize = 1;
+      margin = (typeof margin == 'undefined')? cellSize * 2 : margin;
+
+      var size = _this.getModuleCount() * cellSize + margin * 2;
+      var min = margin;
+      var max = size - margin;
+
+      var y, x, r1, r2, p;
+
+      var blocks = {
+        '██': '█',
+        '█ ': '▀',
+        ' █': '▄',
+        '  ': ' '
+      };
+
+      var blocksLastLineNoMargin = {
+        '██': '▀',
+        '█ ': '▀',
+        ' █': ' ',
+        '  ': ' '
+      };
+
+      var ascii = '';
+      for (y = 0; y < size; y += 2) {
+        r1 = Math.floor((y - min) / cellSize);
+        r2 = Math.floor((y + 1 - min) / cellSize);
+        for (x = 0; x < size; x += 1) {
+          p = '█';
+
+          if (min <= x && x < max && min <= y && y < max && _this.isDark(r1, Math.floor((x - min) / cellSize))) {
+            p = ' ';
+          }
+
+          if (min <= x && x < max && min <= y+1 && y+1 < max && _this.isDark(r2, Math.floor((x - min) / cellSize))) {
+            p += ' ';
+          }
+          else {
+            p += '█';
+          }
+
+          // Output 2 characters per pixel, to create full square. 1 character per pixels gives only half width of square.
+          ascii += (margin < 1 && y+1 >= max) ? blocksLastLineNoMargin[p] : blocks[p];
+        }
+
+        ascii += '\n';
+      }
+
+      if (size % 2 && margin > 0) {
+        return ascii.substring(0, ascii.length - size - 1) + Array(size+1).join('▀');
+      }
+
+      return ascii.substring(0, ascii.length-1);
+    };
+
+    _this.createASCII = function(cellSize, margin) {
+      cellSize = cellSize || 1;
+
+      if (cellSize < 2) {
+        return _createHalfASCII(margin);
+      }
+
+      cellSize -= 1;
+      margin = (typeof margin == 'undefined')? cellSize * 2 : margin;
+
+      var size = _this.getModuleCount() * cellSize + margin * 2;
+      var min = margin;
+      var max = size - margin;
+
+      var y, x, r, p;
+
+      var white = Array(cellSize+1).join('██');
+      var black = Array(cellSize+1).join('  ');
+
+      var ascii = '';
+      var line = '';
+      for (y = 0; y < size; y += 1) {
+        r = Math.floor( (y - min) / cellSize);
+        line = '';
+        for (x = 0; x < size; x += 1) {
+          p = 1;
+
+          if (min <= x && x < max && min <= y && y < max && _this.isDark(r, Math.floor((x - min) / cellSize))) {
+            p = 0;
+          }
+
+          // Output 2 characters per pixel, to create full square. 1 character per pixels gives only half width of square.
+          line += p ? white : black;
+        }
+
+        for (r = 0; r < cellSize; r += 1) {
+          ascii += line + '\n';
+        }
+      }
+
+      return ascii.substring(0, ascii.length-1);
+    };
+
+    _this.renderTo2dContext = function(context, cellSize) {
+      cellSize = cellSize || 2;
+      var length = _this.getModuleCount();
+      for (var row = 0; row < length; row++) {
+        for (var col = 0; col < length; col++) {
+          context.fillStyle = _this.isDark(row, col) ? 'black' : 'white';
+          context.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+        }
+      }
+    }
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // qrcode.stringToBytes
+  //---------------------------------------------------------------------
+
+  qrcode.stringToBytesFuncs = {
+    'default' : function(s) {
+      var bytes = [];
+      for (var i = 0; i < s.length; i += 1) {
+        var c = s.charCodeAt(i);
+        bytes.push(c & 0xff);
+      }
+      return bytes;
+    }
+  };
+
+  qrcode.stringToBytes = qrcode.stringToBytesFuncs['default'];
+
+  //---------------------------------------------------------------------
+  // qrcode.createStringToBytes
+  //---------------------------------------------------------------------
+
+  /**
+   * @param unicodeData base64 string of byte array.
+   * [16bit Unicode],[16bit Bytes], ...
+   * @param numChars
+   */
+  qrcode.createStringToBytes = function(unicodeData, numChars) {
+
+    // create conversion map.
+
+    var unicodeMap = function() {
+
+      var bin = base64DecodeInputStream(unicodeData);
+      var read = function() {
+        var b = bin.read();
+        if (b == -1) throw 'eof';
+        return b;
+      };
+
+      var count = 0;
+      var unicodeMap = {};
+      while (true) {
+        var b0 = bin.read();
+        if (b0 == -1) break;
+        var b1 = read();
+        var b2 = read();
+        var b3 = read();
+        var k = String.fromCharCode( (b0 << 8) | b1);
+        var v = (b2 << 8) | b3;
+        unicodeMap[k] = v;
+        count += 1;
+      }
+      if (count != numChars) {
+        throw count + ' != ' + numChars;
+      }
+
+      return unicodeMap;
+    }();
+
+    var unknownChar = '?'.charCodeAt(0);
+
+    return function(s) {
+      var bytes = [];
+      for (var i = 0; i < s.length; i += 1) {
+        var c = s.charCodeAt(i);
+        if (c < 128) {
+          bytes.push(c);
+        } else {
+          var b = unicodeMap[s.charAt(i)];
+          if (typeof b == 'number') {
+            if ( (b & 0xff) == b) {
+              // 1byte
+              bytes.push(b);
+            } else {
+              // 2bytes
+              bytes.push(b >>> 8);
+              bytes.push(b & 0xff);
+            }
+          } else {
+            bytes.push(unknownChar);
+          }
+        }
+      }
+      return bytes;
+    };
+  };
+
+  //---------------------------------------------------------------------
+  // QRMode
+  //---------------------------------------------------------------------
+
+  var QRMode = {
+    MODE_NUMBER :    1 << 0,
+    MODE_ALPHA_NUM : 1 << 1,
+    MODE_8BIT_BYTE : 1 << 2,
+    MODE_KANJI :     1 << 3
+  };
+
+  //---------------------------------------------------------------------
+  // QRErrorCorrectionLevel
+  //---------------------------------------------------------------------
+
+  var QRErrorCorrectionLevel = {
+    L : 1,
+    M : 0,
+    Q : 3,
+    H : 2
+  };
+
+  //---------------------------------------------------------------------
+  // QRMaskPattern
+  //---------------------------------------------------------------------
+
+  var QRMaskPattern = {
+    PATTERN000 : 0,
+    PATTERN001 : 1,
+    PATTERN010 : 2,
+    PATTERN011 : 3,
+    PATTERN100 : 4,
+    PATTERN101 : 5,
+    PATTERN110 : 6,
+    PATTERN111 : 7
+  };
+
+  //---------------------------------------------------------------------
+  // QRUtil
+  //---------------------------------------------------------------------
+
+  var QRUtil = function() {
+
+    var PATTERN_POSITION_TABLE = [
+      [],
+      [6, 18],
+      [6, 22],
+      [6, 26],
+      [6, 30],
+      [6, 34],
+      [6, 22, 38],
+      [6, 24, 42],
+      [6, 26, 46],
+      [6, 28, 50],
+      [6, 30, 54],
+      [6, 32, 58],
+      [6, 34, 62],
+      [6, 26, 46, 66],
+      [6, 26, 48, 70],
+      [6, 26, 50, 74],
+      [6, 30, 54, 78],
+      [6, 30, 56, 82],
+      [6, 30, 58, 86],
+      [6, 34, 62, 90],
+      [6, 28, 50, 72, 94],
+      [6, 26, 50, 74, 98],
+      [6, 30, 54, 78, 102],
+      [6, 28, 54, 80, 106],
+      [6, 32, 58, 84, 110],
+      [6, 30, 58, 86, 114],
+      [6, 34, 62, 90, 118],
+      [6, 26, 50, 74, 98, 122],
+      [6, 30, 54, 78, 102, 126],
+      [6, 26, 52, 78, 104, 130],
+      [6, 30, 56, 82, 108, 134],
+      [6, 34, 60, 86, 112, 138],
+      [6, 30, 58, 86, 114, 142],
+      [6, 34, 62, 90, 118, 146],
+      [6, 30, 54, 78, 102, 126, 150],
+      [6, 24, 50, 76, 102, 128, 154],
+      [6, 28, 54, 80, 106, 132, 158],
+      [6, 32, 58, 84, 110, 136, 162],
+      [6, 26, 54, 82, 110, 138, 166],
+      [6, 30, 58, 86, 114, 142, 170]
+    ];
+    var G15 = (1 << 10) | (1 << 8) | (1 << 5) | (1 << 4) | (1 << 2) | (1 << 1) | (1 << 0);
+    var G18 = (1 << 12) | (1 << 11) | (1 << 10) | (1 << 9) | (1 << 8) | (1 << 5) | (1 << 2) | (1 << 0);
+    var G15_MASK = (1 << 14) | (1 << 12) | (1 << 10) | (1 << 4) | (1 << 1);
+
+    var _this = {};
+
+    var getBCHDigit = function(data) {
+      var digit = 0;
+      while (data != 0) {
+        digit += 1;
+        data >>>= 1;
+      }
+      return digit;
+    };
+
+    _this.getBCHTypeInfo = function(data) {
+      var d = data << 10;
+      while (getBCHDigit(d) - getBCHDigit(G15) >= 0) {
+        d ^= (G15 << (getBCHDigit(d) - getBCHDigit(G15) ) );
+      }
+      return ( (data << 10) | d) ^ G15_MASK;
+    };
+
+    _this.getBCHTypeNumber = function(data) {
+      var d = data << 12;
+      while (getBCHDigit(d) - getBCHDigit(G18) >= 0) {
+        d ^= (G18 << (getBCHDigit(d) - getBCHDigit(G18) ) );
+      }
+      return (data << 12) | d;
+    };
+
+    _this.getPatternPosition = function(typeNumber) {
+      return PATTERN_POSITION_TABLE[typeNumber - 1];
+    };
+
+    _this.getMaskFunction = function(maskPattern) {
+
+      switch (maskPattern) {
+
+      case QRMaskPattern.PATTERN000 :
+        return function(i, j) { return (i + j) % 2 == 0; };
+      case QRMaskPattern.PATTERN001 :
+        return function(i, j) { return i % 2 == 0; };
+      case QRMaskPattern.PATTERN010 :
+        return function(i, j) { return j % 3 == 0; };
+      case QRMaskPattern.PATTERN011 :
+        return function(i, j) { return (i + j) % 3 == 0; };
+      case QRMaskPattern.PATTERN100 :
+        return function(i, j) { return (Math.floor(i / 2) + Math.floor(j / 3) ) % 2 == 0; };
+      case QRMaskPattern.PATTERN101 :
+        return function(i, j) { return (i * j) % 2 + (i * j) % 3 == 0; };
+      case QRMaskPattern.PATTERN110 :
+        return function(i, j) { return ( (i * j) % 2 + (i * j) % 3) % 2 == 0; };
+      case QRMaskPattern.PATTERN111 :
+        return function(i, j) { return ( (i * j) % 3 + (i + j) % 2) % 2 == 0; };
+
+      default :
+        throw 'bad maskPattern:' + maskPattern;
+      }
+    };
+
+    _this.getErrorCorrectPolynomial = function(errorCorrectLength) {
+      var a = qrPolynomial([1], 0);
+      for (var i = 0; i < errorCorrectLength; i += 1) {
+        a = a.multiply(qrPolynomial([1, QRMath.gexp(i)], 0) );
+      }
+      return a;
+    };
+
+    _this.getLengthInBits = function(mode, type) {
+
+      if (1 <= type && type < 10) {
+
+        // 1 - 9
+
+        switch(mode) {
+        case QRMode.MODE_NUMBER    : return 10;
+        case QRMode.MODE_ALPHA_NUM : return 9;
+        case QRMode.MODE_8BIT_BYTE : return 8;
+        case QRMode.MODE_KANJI     : return 8;
+        default :
+          throw 'mode:' + mode;
+        }
+
+      } else if (type < 27) {
+
+        // 10 - 26
+
+        switch(mode) {
+        case QRMode.MODE_NUMBER    : return 12;
+        case QRMode.MODE_ALPHA_NUM : return 11;
+        case QRMode.MODE_8BIT_BYTE : return 16;
+        case QRMode.MODE_KANJI     : return 10;
+        default :
+          throw 'mode:' + mode;
+        }
+
+      } else if (type < 41) {
+
+        // 27 - 40
+
+        switch(mode) {
+        case QRMode.MODE_NUMBER    : return 14;
+        case QRMode.MODE_ALPHA_NUM : return 13;
+        case QRMode.MODE_8BIT_BYTE : return 16;
+        case QRMode.MODE_KANJI     : return 12;
+        default :
+          throw 'mode:' + mode;
+        }
+
+      } else {
+        throw 'type:' + type;
+      }
+    };
+
+    _this.getLostPoint = function(qrcode) {
+
+      var moduleCount = qrcode.getModuleCount();
+
+      var lostPoint = 0;
+
+      // LEVEL1
+
+      for (var row = 0; row < moduleCount; row += 1) {
+        for (var col = 0; col < moduleCount; col += 1) {
+
+          var sameCount = 0;
+          var dark = qrcode.isDark(row, col);
+
+          for (var r = -1; r <= 1; r += 1) {
+
+            if (row + r < 0 || moduleCount <= row + r) {
+              continue;
+            }
+
+            for (var c = -1; c <= 1; c += 1) {
+
+              if (col + c < 0 || moduleCount <= col + c) {
+                continue;
+              }
+
+              if (r == 0 && c == 0) {
+                continue;
+              }
+
+              if (dark == qrcode.isDark(row + r, col + c) ) {
+                sameCount += 1;
+              }
+            }
+          }
+
+          if (sameCount > 5) {
+            lostPoint += (3 + sameCount - 5);
+          }
+        }
+      };
+
+      // LEVEL2
+
+      for (var row = 0; row < moduleCount - 1; row += 1) {
+        for (var col = 0; col < moduleCount - 1; col += 1) {
+          var count = 0;
+          if (qrcode.isDark(row, col) ) count += 1;
+          if (qrcode.isDark(row + 1, col) ) count += 1;
+          if (qrcode.isDark(row, col + 1) ) count += 1;
+          if (qrcode.isDark(row + 1, col + 1) ) count += 1;
+          if (count == 0 || count == 4) {
+            lostPoint += 3;
+          }
+        }
+      }
+
+      // LEVEL3
+
+      for (var row = 0; row < moduleCount; row += 1) {
+        for (var col = 0; col < moduleCount - 6; col += 1) {
+          if (qrcode.isDark(row, col)
+              && !qrcode.isDark(row, col + 1)
+              &&  qrcode.isDark(row, col + 2)
+              &&  qrcode.isDark(row, col + 3)
+              &&  qrcode.isDark(row, col + 4)
+              && !qrcode.isDark(row, col + 5)
+              &&  qrcode.isDark(row, col + 6) ) {
+            lostPoint += 40;
+          }
+        }
+      }
+
+      for (var col = 0; col < moduleCount; col += 1) {
+        for (var row = 0; row < moduleCount - 6; row += 1) {
+          if (qrcode.isDark(row, col)
+              && !qrcode.isDark(row + 1, col)
+              &&  qrcode.isDark(row + 2, col)
+              &&  qrcode.isDark(row + 3, col)
+              &&  qrcode.isDark(row + 4, col)
+              && !qrcode.isDark(row + 5, col)
+              &&  qrcode.isDark(row + 6, col) ) {
+            lostPoint += 40;
+          }
+        }
+      }
+
+      // LEVEL4
+
+      var darkCount = 0;
+
+      for (var col = 0; col < moduleCount; col += 1) {
+        for (var row = 0; row < moduleCount; row += 1) {
+          if (qrcode.isDark(row, col) ) {
+            darkCount += 1;
+          }
+        }
+      }
+
+      var ratio = Math.abs(100 * darkCount / moduleCount / moduleCount - 50) / 5;
+      lostPoint += ratio * 10;
+
+      return lostPoint;
+    };
+
+    return _this;
+  }();
+
+  //---------------------------------------------------------------------
+  // QRMath
+  //---------------------------------------------------------------------
+
+  var QRMath = function() {
+
+    var EXP_TABLE = new Array(256);
+    var LOG_TABLE = new Array(256);
+
+    // initialize tables
+    for (var i = 0; i < 8; i += 1) {
+      EXP_TABLE[i] = 1 << i;
+    }
+    for (var i = 8; i < 256; i += 1) {
+      EXP_TABLE[i] = EXP_TABLE[i - 4]
+        ^ EXP_TABLE[i - 5]
+        ^ EXP_TABLE[i - 6]
+        ^ EXP_TABLE[i - 8];
+    }
+    for (var i = 0; i < 255; i += 1) {
+      LOG_TABLE[EXP_TABLE[i] ] = i;
+    }
+
+    var _this = {};
+
+    _this.glog = function(n) {
+
+      if (n < 1) {
+        throw 'glog(' + n + ')';
+      }
+
+      return LOG_TABLE[n];
+    };
+
+    _this.gexp = function(n) {
+
+      while (n < 0) {
+        n += 255;
+      }
+
+      while (n >= 256) {
+        n -= 255;
+      }
+
+      return EXP_TABLE[n];
+    };
+
+    return _this;
+  }();
+
+  //---------------------------------------------------------------------
+  // qrPolynomial
+  //---------------------------------------------------------------------
+
+  function qrPolynomial(num, shift) {
+
+    if (typeof num.length == 'undefined') {
+      throw num.length + '/' + shift;
+    }
+
+    var _num = function() {
+      var offset = 0;
+      while (offset < num.length && num[offset] == 0) {
+        offset += 1;
+      }
+      var _num = new Array(num.length - offset + shift);
+      for (var i = 0; i < num.length - offset; i += 1) {
+        _num[i] = num[i + offset];
+      }
+      return _num;
+    }();
+
+    var _this = {};
+
+    _this.getAt = function(index) {
+      return _num[index];
+    };
+
+    _this.getLength = function() {
+      return _num.length;
+    };
+
+    _this.multiply = function(e) {
+
+      var num = new Array(_this.getLength() + e.getLength() - 1);
+
+      for (var i = 0; i < _this.getLength(); i += 1) {
+        for (var j = 0; j < e.getLength(); j += 1) {
+          num[i + j] ^= QRMath.gexp(QRMath.glog(_this.getAt(i) ) + QRMath.glog(e.getAt(j) ) );
+        }
+      }
+
+      return qrPolynomial(num, 0);
+    };
+
+    _this.mod = function(e) {
+
+      if (_this.getLength() - e.getLength() < 0) {
+        return _this;
+      }
+
+      var ratio = QRMath.glog(_this.getAt(0) ) - QRMath.glog(e.getAt(0) );
+
+      var num = new Array(_this.getLength() );
+      for (var i = 0; i < _this.getLength(); i += 1) {
+        num[i] = _this.getAt(i);
+      }
+
+      for (var i = 0; i < e.getLength(); i += 1) {
+        num[i] ^= QRMath.gexp(QRMath.glog(e.getAt(i) ) + ratio);
+      }
+
+      // recursive call
+      return qrPolynomial(num, 0).mod(e);
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // QRRSBlock
+  //---------------------------------------------------------------------
+
+  var QRRSBlock = function() {
+
+    var RS_BLOCK_TABLE = [
+
+      // L
+      // M
+      // Q
+      // H
+
+      // 1
+      [1, 26, 19],
+      [1, 26, 16],
+      [1, 26, 13],
+      [1, 26, 9],
+
+      // 2
+      [1, 44, 34],
+      [1, 44, 28],
+      [1, 44, 22],
+      [1, 44, 16],
+
+      // 3
+      [1, 70, 55],
+      [1, 70, 44],
+      [2, 35, 17],
+      [2, 35, 13],
+
+      // 4
+      [1, 100, 80],
+      [2, 50, 32],
+      [2, 50, 24],
+      [4, 25, 9],
+
+      // 5
+      [1, 134, 108],
+      [2, 67, 43],
+      [2, 33, 15, 2, 34, 16],
+      [2, 33, 11, 2, 34, 12],
+
+      // 6
+      [2, 86, 68],
+      [4, 43, 27],
+      [4, 43, 19],
+      [4, 43, 15],
+
+      // 7
+      [2, 98, 78],
+      [4, 49, 31],
+      [2, 32, 14, 4, 33, 15],
+      [4, 39, 13, 1, 40, 14],
+
+      // 8
+      [2, 121, 97],
+      [2, 60, 38, 2, 61, 39],
+      [4, 40, 18, 2, 41, 19],
+      [4, 40, 14, 2, 41, 15],
+
+      // 9
+      [2, 146, 116],
+      [3, 58, 36, 2, 59, 37],
+      [4, 36, 16, 4, 37, 17],
+      [4, 36, 12, 4, 37, 13],
+
+      // 10
+      [2, 86, 68, 2, 87, 69],
+      [4, 69, 43, 1, 70, 44],
+      [6, 43, 19, 2, 44, 20],
+      [6, 43, 15, 2, 44, 16],
+
+      // 11
+      [4, 101, 81],
+      [1, 80, 50, 4, 81, 51],
+      [4, 50, 22, 4, 51, 23],
+      [3, 36, 12, 8, 37, 13],
+
+      // 12
+      [2, 116, 92, 2, 117, 93],
+      [6, 58, 36, 2, 59, 37],
+      [4, 46, 20, 6, 47, 21],
+      [7, 42, 14, 4, 43, 15],
+
+      // 13
+      [4, 133, 107],
+      [8, 59, 37, 1, 60, 38],
+      [8, 44, 20, 4, 45, 21],
+      [12, 33, 11, 4, 34, 12],
+
+      // 14
+      [3, 145, 115, 1, 146, 116],
+      [4, 64, 40, 5, 65, 41],
+      [11, 36, 16, 5, 37, 17],
+      [11, 36, 12, 5, 37, 13],
+
+      // 15
+      [5, 109, 87, 1, 110, 88],
+      [5, 65, 41, 5, 66, 42],
+      [5, 54, 24, 7, 55, 25],
+      [11, 36, 12, 7, 37, 13],
+
+      // 16
+      [5, 122, 98, 1, 123, 99],
+      [7, 73, 45, 3, 74, 46],
+      [15, 43, 19, 2, 44, 20],
+      [3, 45, 15, 13, 46, 16],
+
+      // 17
+      [1, 135, 107, 5, 136, 108],
+      [10, 74, 46, 1, 75, 47],
+      [1, 50, 22, 15, 51, 23],
+      [2, 42, 14, 17, 43, 15],
+
+      // 18
+      [5, 150, 120, 1, 151, 121],
+      [9, 69, 43, 4, 70, 44],
+      [17, 50, 22, 1, 51, 23],
+      [2, 42, 14, 19, 43, 15],
+
+      // 19
+      [3, 141, 113, 4, 142, 114],
+      [3, 70, 44, 11, 71, 45],
+      [17, 47, 21, 4, 48, 22],
+      [9, 39, 13, 16, 40, 14],
+
+      // 20
+      [3, 135, 107, 5, 136, 108],
+      [3, 67, 41, 13, 68, 42],
+      [15, 54, 24, 5, 55, 25],
+      [15, 43, 15, 10, 44, 16],
+
+      // 21
+      [4, 144, 116, 4, 145, 117],
+      [17, 68, 42],
+      [17, 50, 22, 6, 51, 23],
+      [19, 46, 16, 6, 47, 17],
+
+      // 22
+      [2, 139, 111, 7, 140, 112],
+      [17, 74, 46],
+      [7, 54, 24, 16, 55, 25],
+      [34, 37, 13],
+
+      // 23
+      [4, 151, 121, 5, 152, 122],
+      [4, 75, 47, 14, 76, 48],
+      [11, 54, 24, 14, 55, 25],
+      [16, 45, 15, 14, 46, 16],
+
+      // 24
+      [6, 147, 117, 4, 148, 118],
+      [6, 73, 45, 14, 74, 46],
+      [11, 54, 24, 16, 55, 25],
+      [30, 46, 16, 2, 47, 17],
+
+      // 25
+      [8, 132, 106, 4, 133, 107],
+      [8, 75, 47, 13, 76, 48],
+      [7, 54, 24, 22, 55, 25],
+      [22, 45, 15, 13, 46, 16],
+
+      // 26
+      [10, 142, 114, 2, 143, 115],
+      [19, 74, 46, 4, 75, 47],
+      [28, 50, 22, 6, 51, 23],
+      [33, 46, 16, 4, 47, 17],
+
+      // 27
+      [8, 152, 122, 4, 153, 123],
+      [22, 73, 45, 3, 74, 46],
+      [8, 53, 23, 26, 54, 24],
+      [12, 45, 15, 28, 46, 16],
+
+      // 28
+      [3, 147, 117, 10, 148, 118],
+      [3, 73, 45, 23, 74, 46],
+      [4, 54, 24, 31, 55, 25],
+      [11, 45, 15, 31, 46, 16],
+
+      // 29
+      [7, 146, 116, 7, 147, 117],
+      [21, 73, 45, 7, 74, 46],
+      [1, 53, 23, 37, 54, 24],
+      [19, 45, 15, 26, 46, 16],
+
+      // 30
+      [5, 145, 115, 10, 146, 116],
+      [19, 75, 47, 10, 76, 48],
+      [15, 54, 24, 25, 55, 25],
+      [23, 45, 15, 25, 46, 16],
+
+      // 31
+      [13, 145, 115, 3, 146, 116],
+      [2, 74, 46, 29, 75, 47],
+      [42, 54, 24, 1, 55, 25],
+      [23, 45, 15, 28, 46, 16],
+
+      // 32
+      [17, 145, 115],
+      [10, 74, 46, 23, 75, 47],
+      [10, 54, 24, 35, 55, 25],
+      [19, 45, 15, 35, 46, 16],
+
+      // 33
+      [17, 145, 115, 1, 146, 116],
+      [14, 74, 46, 21, 75, 47],
+      [29, 54, 24, 19, 55, 25],
+      [11, 45, 15, 46, 46, 16],
+
+      // 34
+      [13, 145, 115, 6, 146, 116],
+      [14, 74, 46, 23, 75, 47],
+      [44, 54, 24, 7, 55, 25],
+      [59, 46, 16, 1, 47, 17],
+
+      // 35
+      [12, 151, 121, 7, 152, 122],
+      [12, 75, 47, 26, 76, 48],
+      [39, 54, 24, 14, 55, 25],
+      [22, 45, 15, 41, 46, 16],
+
+      // 36
+      [6, 151, 121, 14, 152, 122],
+      [6, 75, 47, 34, 76, 48],
+      [46, 54, 24, 10, 55, 25],
+      [2, 45, 15, 64, 46, 16],
+
+      // 37
+      [17, 152, 122, 4, 153, 123],
+      [29, 74, 46, 14, 75, 47],
+      [49, 54, 24, 10, 55, 25],
+      [24, 45, 15, 46, 46, 16],
+
+      // 38
+      [4, 152, 122, 18, 153, 123],
+      [13, 74, 46, 32, 75, 47],
+      [48, 54, 24, 14, 55, 25],
+      [42, 45, 15, 32, 46, 16],
+
+      // 39
+      [20, 147, 117, 4, 148, 118],
+      [40, 75, 47, 7, 76, 48],
+      [43, 54, 24, 22, 55, 25],
+      [10, 45, 15, 67, 46, 16],
+
+      // 40
+      [19, 148, 118, 6, 149, 119],
+      [18, 75, 47, 31, 76, 48],
+      [34, 54, 24, 34, 55, 25],
+      [20, 45, 15, 61, 46, 16]
+    ];
+
+    var qrRSBlock = function(totalCount, dataCount) {
+      var _this = {};
+      _this.totalCount = totalCount;
+      _this.dataCount = dataCount;
+      return _this;
+    };
+
+    var _this = {};
+
+    var getRsBlockTable = function(typeNumber, errorCorrectionLevel) {
+
+      switch(errorCorrectionLevel) {
+      case QRErrorCorrectionLevel.L :
+        return RS_BLOCK_TABLE[(typeNumber - 1) * 4 + 0];
+      case QRErrorCorrectionLevel.M :
+        return RS_BLOCK_TABLE[(typeNumber - 1) * 4 + 1];
+      case QRErrorCorrectionLevel.Q :
+        return RS_BLOCK_TABLE[(typeNumber - 1) * 4 + 2];
+      case QRErrorCorrectionLevel.H :
+        return RS_BLOCK_TABLE[(typeNumber - 1) * 4 + 3];
+      default :
+        return undefined;
+      }
+    };
+
+    _this.getRSBlocks = function(typeNumber, errorCorrectionLevel) {
+
+      var rsBlock = getRsBlockTable(typeNumber, errorCorrectionLevel);
+
+      if (typeof rsBlock == 'undefined') {
+        throw 'bad rs block @ typeNumber:' + typeNumber +
+            '/errorCorrectionLevel:' + errorCorrectionLevel;
+      }
+
+      var length = rsBlock.length / 3;
+
+      var list = [];
+
+      for (var i = 0; i < length; i += 1) {
+
+        var count = rsBlock[i * 3 + 0];
+        var totalCount = rsBlock[i * 3 + 1];
+        var dataCount = rsBlock[i * 3 + 2];
+
+        for (var j = 0; j < count; j += 1) {
+          list.push(qrRSBlock(totalCount, dataCount) );
+        }
+      }
+
+      return list;
+    };
+
+    return _this;
+  }();
+
+  //---------------------------------------------------------------------
+  // qrBitBuffer
+  //---------------------------------------------------------------------
+
+  var qrBitBuffer = function() {
+
+    var _buffer = [];
+    var _length = 0;
+
+    var _this = {};
+
+    _this.getBuffer = function() {
+      return _buffer;
+    };
+
+    _this.getAt = function(index) {
+      var bufIndex = Math.floor(index / 8);
+      return ( (_buffer[bufIndex] >>> (7 - index % 8) ) & 1) == 1;
+    };
+
+    _this.put = function(num, length) {
+      for (var i = 0; i < length; i += 1) {
+        _this.putBit( ( (num >>> (length - i - 1) ) & 1) == 1);
+      }
+    };
+
+    _this.getLengthInBits = function() {
+      return _length;
+    };
+
+    _this.putBit = function(bit) {
+
+      var bufIndex = Math.floor(_length / 8);
+      if (_buffer.length <= bufIndex) {
+        _buffer.push(0);
+      }
+
+      if (bit) {
+        _buffer[bufIndex] |= (0x80 >>> (_length % 8) );
+      }
+
+      _length += 1;
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // qrNumber
+  //---------------------------------------------------------------------
+
+  var qrNumber = function(data) {
+
+    var _mode = QRMode.MODE_NUMBER;
+    var _data = data;
+
+    var _this = {};
+
+    _this.getMode = function() {
+      return _mode;
+    };
+
+    _this.getLength = function(buffer) {
+      return _data.length;
+    };
+
+    _this.write = function(buffer) {
+
+      var data = _data;
+
+      var i = 0;
+
+      while (i + 2 < data.length) {
+        buffer.put(strToNum(data.substring(i, i + 3) ), 10);
+        i += 3;
+      }
+
+      if (i < data.length) {
+        if (data.length - i == 1) {
+          buffer.put(strToNum(data.substring(i, i + 1) ), 4);
+        } else if (data.length - i == 2) {
+          buffer.put(strToNum(data.substring(i, i + 2) ), 7);
+        }
+      }
+    };
+
+    var strToNum = function(s) {
+      var num = 0;
+      for (var i = 0; i < s.length; i += 1) {
+        num = num * 10 + chatToNum(s.charAt(i) );
+      }
+      return num;
+    };
+
+    var chatToNum = function(c) {
+      if ('0' <= c && c <= '9') {
+        return c.charCodeAt(0) - '0'.charCodeAt(0);
+      }
+      throw 'illegal char :' + c;
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // qrAlphaNum
+  //---------------------------------------------------------------------
+
+  var qrAlphaNum = function(data) {
+
+    var _mode = QRMode.MODE_ALPHA_NUM;
+    var _data = data;
+
+    var _this = {};
+
+    _this.getMode = function() {
+      return _mode;
+    };
+
+    _this.getLength = function(buffer) {
+      return _data.length;
+    };
+
+    _this.write = function(buffer) {
+
+      var s = _data;
+
+      var i = 0;
+
+      while (i + 1 < s.length) {
+        buffer.put(
+          getCode(s.charAt(i) ) * 45 +
+          getCode(s.charAt(i + 1) ), 11);
+        i += 2;
+      }
+
+      if (i < s.length) {
+        buffer.put(getCode(s.charAt(i) ), 6);
+      }
+    };
+
+    var getCode = function(c) {
+
+      if ('0' <= c && c <= '9') {
+        return c.charCodeAt(0) - '0'.charCodeAt(0);
+      } else if ('A' <= c && c <= 'Z') {
+        return c.charCodeAt(0) - 'A'.charCodeAt(0) + 10;
+      } else {
+        switch (c) {
+        case ' ' : return 36;
+        case '$' : return 37;
+        case '%' : return 38;
+        case '*' : return 39;
+        case '+' : return 40;
+        case '-' : return 41;
+        case '.' : return 42;
+        case '/' : return 43;
+        case ':' : return 44;
+        default :
+          throw 'illegal char :' + c;
+        }
+      }
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // qr8BitByte
+  //---------------------------------------------------------------------
+
+  var qr8BitByte = function(data) {
+
+    var _mode = QRMode.MODE_8BIT_BYTE;
+    var _data = data;
+    var _bytes = qrcode.stringToBytes(data);
+
+    var _this = {};
+
+    _this.getMode = function() {
+      return _mode;
+    };
+
+    _this.getLength = function(buffer) {
+      return _bytes.length;
+    };
+
+    _this.write = function(buffer) {
+      for (var i = 0; i < _bytes.length; i += 1) {
+        buffer.put(_bytes[i], 8);
+      }
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // qrKanji
+  //---------------------------------------------------------------------
+
+  var qrKanji = function(data) {
+
+    var _mode = QRMode.MODE_KANJI;
+    var _data = data;
+
+    var stringToBytes = qrcode.stringToBytesFuncs['SJIS'];
+    if (!stringToBytes) {
+      throw 'sjis not supported.';
+    }
+    !function(c, code) {
+      // self test for sjis support.
+      var test = stringToBytes(c);
+      if (test.length != 2 || ( (test[0] << 8) | test[1]) != code) {
+        throw 'sjis not supported.';
+      }
+    }('\u53cb', 0x9746);
+
+    var _bytes = stringToBytes(data);
+
+    var _this = {};
+
+    _this.getMode = function() {
+      return _mode;
+    };
+
+    _this.getLength = function(buffer) {
+      return ~~(_bytes.length / 2);
+    };
+
+    _this.write = function(buffer) {
+
+      var data = _bytes;
+
+      var i = 0;
+
+      while (i + 1 < data.length) {
+
+        var c = ( (0xff & data[i]) << 8) | (0xff & data[i + 1]);
+
+        if (0x8140 <= c && c <= 0x9FFC) {
+          c -= 0x8140;
+        } else if (0xE040 <= c && c <= 0xEBBF) {
+          c -= 0xC140;
+        } else {
+          throw 'illegal char at ' + (i + 1) + '/' + c;
+        }
+
+        c = ( (c >>> 8) & 0xff) * 0xC0 + (c & 0xff);
+
+        buffer.put(c, 13);
+
+        i += 2;
+      }
+
+      if (i < data.length) {
+        throw 'illegal char at ' + (i + 1);
+      }
+    };
+
+    return _this;
+  };
+
+  //=====================================================================
+  // GIF Support etc.
+  //
+
+  //---------------------------------------------------------------------
+  // byteArrayOutputStream
+  //---------------------------------------------------------------------
+
+  var byteArrayOutputStream = function() {
+
+    var _bytes = [];
+
+    var _this = {};
+
+    _this.writeByte = function(b) {
+      _bytes.push(b & 0xff);
+    };
+
+    _this.writeShort = function(i) {
+      _this.writeByte(i);
+      _this.writeByte(i >>> 8);
+    };
+
+    _this.writeBytes = function(b, off, len) {
+      off = off || 0;
+      len = len || b.length;
+      for (var i = 0; i < len; i += 1) {
+        _this.writeByte(b[i + off]);
+      }
+    };
+
+    _this.writeString = function(s) {
+      for (var i = 0; i < s.length; i += 1) {
+        _this.writeByte(s.charCodeAt(i) );
+      }
+    };
+
+    _this.toByteArray = function() {
+      return _bytes;
+    };
+
+    _this.toString = function() {
+      var s = '';
+      s += '[';
+      for (var i = 0; i < _bytes.length; i += 1) {
+        if (i > 0) {
+          s += ',';
+        }
+        s += _bytes[i];
+      }
+      s += ']';
+      return s;
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // base64EncodeOutputStream
+  //---------------------------------------------------------------------
+
+  var base64EncodeOutputStream = function() {
+
+    var _buffer = 0;
+    var _buflen = 0;
+    var _length = 0;
+    var _base64 = '';
+
+    var _this = {};
+
+    var writeEncoded = function(b) {
+      _base64 += String.fromCharCode(encode(b & 0x3f) );
+    };
+
+    var encode = function(n) {
+      if (n < 0) {
+        // error.
+      } else if (n < 26) {
+        return 0x41 + n;
+      } else if (n < 52) {
+        return 0x61 + (n - 26);
+      } else if (n < 62) {
+        return 0x30 + (n - 52);
+      } else if (n == 62) {
+        return 0x2b;
+      } else if (n == 63) {
+        return 0x2f;
+      }
+      throw 'n:' + n;
+    };
+
+    _this.writeByte = function(n) {
+
+      _buffer = (_buffer << 8) | (n & 0xff);
+      _buflen += 8;
+      _length += 1;
+
+      while (_buflen >= 6) {
+        writeEncoded(_buffer >>> (_buflen - 6) );
+        _buflen -= 6;
+      }
+    };
+
+    _this.flush = function() {
+
+      if (_buflen > 0) {
+        writeEncoded(_buffer << (6 - _buflen) );
+        _buffer = 0;
+        _buflen = 0;
+      }
+
+      if (_length % 3 != 0) {
+        // padding
+        var padlen = 3 - _length % 3;
+        for (var i = 0; i < padlen; i += 1) {
+          _base64 += '=';
+        }
+      }
+    };
+
+    _this.toString = function() {
+      return _base64;
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // base64DecodeInputStream
+  //---------------------------------------------------------------------
+
+  var base64DecodeInputStream = function(str) {
+
+    var _str = str;
+    var _pos = 0;
+    var _buffer = 0;
+    var _buflen = 0;
+
+    var _this = {};
+
+    _this.read = function() {
+
+      while (_buflen < 8) {
+
+        if (_pos >= _str.length) {
+          if (_buflen == 0) {
+            return -1;
+          }
+          throw 'unexpected end of file./' + _buflen;
+        }
+
+        var c = _str.charAt(_pos);
+        _pos += 1;
+
+        if (c == '=') {
+          _buflen = 0;
+          return -1;
+        } else if (c.match(/^\s$/) ) {
+          // ignore if whitespace.
+          continue;
+        }
+
+        _buffer = (_buffer << 6) | decode(c.charCodeAt(0) );
+        _buflen += 6;
+      }
+
+      var n = (_buffer >>> (_buflen - 8) ) & 0xff;
+      _buflen -= 8;
+      return n;
+    };
+
+    var decode = function(c) {
+      if (0x41 <= c && c <= 0x5a) {
+        return c - 0x41;
+      } else if (0x61 <= c && c <= 0x7a) {
+        return c - 0x61 + 26;
+      } else if (0x30 <= c && c <= 0x39) {
+        return c - 0x30 + 52;
+      } else if (c == 0x2b) {
+        return 62;
+      } else if (c == 0x2f) {
+        return 63;
+      } else {
+        throw 'c:' + c;
+      }
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // gifImage (B/W)
+  //---------------------------------------------------------------------
+
+  var gifImage = function(width, height) {
+
+    var _width = width;
+    var _height = height;
+    var _data = new Array(width * height);
+
+    var _this = {};
+
+    _this.setPixel = function(x, y, pixel) {
+      _data[y * _width + x] = pixel;
+    };
+
+    _this.write = function(out) {
+
+      //---------------------------------
+      // GIF Signature
+
+      out.writeString('GIF87a');
+
+      //---------------------------------
+      // Screen Descriptor
+
+      out.writeShort(_width);
+      out.writeShort(_height);
+
+      out.writeByte(0x80); // 2bit
+      out.writeByte(0);
+      out.writeByte(0);
+
+      //---------------------------------
+      // Global Color Map
+
+      // black
+      out.writeByte(0x00);
+      out.writeByte(0x00);
+      out.writeByte(0x00);
+
+      // white
+      out.writeByte(0xff);
+      out.writeByte(0xff);
+      out.writeByte(0xff);
+
+      //---------------------------------
+      // Image Descriptor
+
+      out.writeString(',');
+      out.writeShort(0);
+      out.writeShort(0);
+      out.writeShort(_width);
+      out.writeShort(_height);
+      out.writeByte(0);
+
+      //---------------------------------
+      // Local Color Map
+
+      //---------------------------------
+      // Raster Data
+
+      var lzwMinCodeSize = 2;
+      var raster = getLZWRaster(lzwMinCodeSize);
+
+      out.writeByte(lzwMinCodeSize);
+
+      var offset = 0;
+
+      while (raster.length - offset > 255) {
+        out.writeByte(255);
+        out.writeBytes(raster, offset, 255);
+        offset += 255;
+      }
+
+      out.writeByte(raster.length - offset);
+      out.writeBytes(raster, offset, raster.length - offset);
+      out.writeByte(0x00);
+
+      //---------------------------------
+      // GIF Terminator
+      out.writeString(';');
+    };
+
+    var bitOutputStream = function(out) {
+
+      var _out = out;
+      var _bitLength = 0;
+      var _bitBuffer = 0;
+
+      var _this = {};
+
+      _this.write = function(data, length) {
+
+        if ( (data >>> length) != 0) {
+          throw 'length over';
+        }
+
+        while (_bitLength + length >= 8) {
+          _out.writeByte(0xff & ( (data << _bitLength) | _bitBuffer) );
+          length -= (8 - _bitLength);
+          data >>>= (8 - _bitLength);
+          _bitBuffer = 0;
+          _bitLength = 0;
+        }
+
+        _bitBuffer = (data << _bitLength) | _bitBuffer;
+        _bitLength = _bitLength + length;
+      };
+
+      _this.flush = function() {
+        if (_bitLength > 0) {
+          _out.writeByte(_bitBuffer);
+        }
+      };
+
+      return _this;
+    };
+
+    var getLZWRaster = function(lzwMinCodeSize) {
+
+      var clearCode = 1 << lzwMinCodeSize;
+      var endCode = (1 << lzwMinCodeSize) + 1;
+      var bitLength = lzwMinCodeSize + 1;
+
+      // Setup LZWTable
+      var table = lzwTable();
+
+      for (var i = 0; i < clearCode; i += 1) {
+        table.add(String.fromCharCode(i) );
+      }
+      table.add(String.fromCharCode(clearCode) );
+      table.add(String.fromCharCode(endCode) );
+
+      var byteOut = byteArrayOutputStream();
+      var bitOut = bitOutputStream(byteOut);
+
+      // clear code
+      bitOut.write(clearCode, bitLength);
+
+      var dataIndex = 0;
+
+      var s = String.fromCharCode(_data[dataIndex]);
+      dataIndex += 1;
+
+      while (dataIndex < _data.length) {
+
+        var c = String.fromCharCode(_data[dataIndex]);
+        dataIndex += 1;
+
+        if (table.contains(s + c) ) {
+
+          s = s + c;
+
+        } else {
+
+          bitOut.write(table.indexOf(s), bitLength);
+
+          if (table.size() < 0xfff) {
+
+            if (table.size() == (1 << bitLength) ) {
+              bitLength += 1;
+            }
+
+            table.add(s + c);
+          }
+
+          s = c;
+        }
+      }
+
+      bitOut.write(table.indexOf(s), bitLength);
+
+      // end code
+      bitOut.write(endCode, bitLength);
+
+      bitOut.flush();
+
+      return byteOut.toByteArray();
+    };
+
+    var lzwTable = function() {
+
+      var _map = {};
+      var _size = 0;
+
+      var _this = {};
+
+      _this.add = function(key) {
+        if (_this.contains(key) ) {
+          throw 'dup key:' + key;
+        }
+        _map[key] = _size;
+        _size += 1;
+      };
+
+      _this.size = function() {
+        return _size;
+      };
+
+      _this.indexOf = function(key) {
+        return _map[key];
+      };
+
+      _this.contains = function(key) {
+        return typeof _map[key] != 'undefined';
+      };
+
+      return _this;
+    };
+
+    return _this;
+  };
+
+  var createDataURL = function(width, height, getPixel) {
+    var gif = gifImage(width, height);
+    for (var y = 0; y < height; y += 1) {
+      for (var x = 0; x < width; x += 1) {
+        gif.setPixel(x, y, getPixel(x, y) );
+      }
+    }
+
+    var b = byteArrayOutputStream();
+    gif.write(b);
+
+    var base64 = base64EncodeOutputStream();
+    var bytes = b.toByteArray();
+    for (var i = 0; i < bytes.length; i += 1) {
+      base64.writeByte(bytes[i]);
+    }
+    base64.flush();
+
+    return 'data:image/gif;base64,' + base64;
+  };
+
+  //---------------------------------------------------------------------
+  // returns qrcode function.
+
+  return qrcode;
+}();
+
+// multibyte support
+!function() {
+
+  qrcode.stringToBytesFuncs['UTF-8'] = function(s) {
+    // http://stackoverflow.com/questions/18729405/how-to-convert-utf8-string-to-byte-array
+    function toUTF8Array(str) {
+      var utf8 = [];
+      for (var i=0; i < str.length; i++) {
+        var charcode = str.charCodeAt(i);
+        if (charcode < 0x80) utf8.push(charcode);
+        else if (charcode < 0x800) {
+          utf8.push(0xc0 | (charcode >> 6),
+              0x80 | (charcode & 0x3f));
+        }
+        else if (charcode < 0xd800 || charcode >= 0xe000) {
+          utf8.push(0xe0 | (charcode >> 12),
+              0x80 | ((charcode>>6) & 0x3f),
+              0x80 | (charcode & 0x3f));
+        }
+        // surrogate pair
+        else {
+          i++;
+          // UTF-16 encodes 0x10000-0x10FFFF by
+          // subtracting 0x10000 and splitting the
+          // 20 bits of 0x0-0xFFFFF into two halves
+          charcode = 0x10000 + (((charcode & 0x3ff)<<10)
+            | (str.charCodeAt(i) & 0x3ff));
+          utf8.push(0xf0 | (charcode >>18),
+              0x80 | ((charcode>>12) & 0x3f),
+              0x80 | ((charcode>>6) & 0x3f),
+              0x80 | (charcode & 0x3f));
+        }
+      }
+      return utf8;
+    }
+    return toUTF8Array(s);
+  };
+
+}();
+
+(function (factory) {
+  if (typeof define === 'function' && define.amd) {
+      define([], factory);
+  } else if (typeof exports === 'object') {
+      module.exports = factory();
+  }
+}(function () {
+    return qrcode;
+}));
+
+</script>
+<script id="lc-share-script">
+/* LINK CORE ページ共有（QRコード表示） */
+(function(){
+ var overlay=document.getElementById('lc-share-overlay');
+ var qrBox=document.getElementById('lc-share-qr');
+ var urlText=document.getElementById('lc-share-url');
+ var copyBtn=document.getElementById('lc-share-copy');
+ var status=document.getElementById('lc-share-status');
+ var closeBtn=document.getElementById('lc-share-close');
+ var triggers=[document.getElementById('toolbarShareBtn'),document.getElementById('sideShare')];
+ if(!overlay||!qrBox||!urlText||!copyBtn||!status||!closeBtn)return;
+ var lastTrigger=null;
+ function shareUrl(){return location.href.split('#')[0];}
+ function renderQr(){
+   var url=shareUrl();
+   urlText.textContent=url;
+   qrBox.innerHTML='';
+   if(typeof qrcode==='undefined'){status.textContent='QRコードを作れませんでした。URLをコピーして共有してください。';return;}
+   try{
+     qrcode.stringToBytes=qrcode.stringToBytesFuncs['UTF-8'];
+     var qr=qrcode(0,'M');
+     qr.addData(url);
+     qr.make();
+     qrBox.innerHTML=qr.createSvgTag(5,4);
+     var svg=qrBox.querySelector('svg');
+     if(svg){svg.setAttribute('role','img');svg.setAttribute('aria-label','このページのQRコード');}
+     status.textContent='';
+   }catch(e){qrBox.innerHTML='';status.textContent='QRコードを作れませんでした。URLをコピーして共有してください。';}
+ }
+ function open(trigger){
+   lastTrigger=trigger||null;
+   renderQr();
+   overlay.classList.add('is-open');
+   overlay.setAttribute('aria-hidden','false');
+   closeBtn.focus();
+ }
+ function shut(){
+   overlay.classList.remove('is-open');
+   overlay.setAttribute('aria-hidden','true');
+   if(lastTrigger&&lastTrigger.focus)lastTrigger.focus();
+ }
+ triggers.forEach(function(btn){if(btn)btn.addEventListener('click',function(){open(btn);});});
+ closeBtn.addEventListener('click',shut);
+ overlay.addEventListener('click',function(e){if(e.target===overlay)shut();});
+ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&overlay.classList.contains('is-open'))shut();});
+ copyBtn.addEventListener('click',function(){
+   var url=shareUrl();
+   function done(ok){status.textContent=ok?'URLをコピーしました。':'コピーできませんでした。URLを長押ししてコピーしてください。';}
+   function fallbackCopy(text){
+     try{
+       var ta=document.createElement('textarea');
+       ta.value=text;ta.setAttribute('readonly','');ta.style.position='fixed';ta.style.opacity='0';
+       document.body.appendChild(ta);ta.select();
+       var ok=document.execCommand('copy');
+       document.body.removeChild(ta);done(ok);
+     }catch(e){done(false);}
+   }
+   if(navigator.clipboard&&navigator.clipboard.writeText){
+     navigator.clipboard.writeText(url).then(function(){done(true);},function(){fallbackCopy(url);});
+   }else{fallbackCopy(url);}
+ });
+})();
+</script>
+
+<script id="lc-release-notes-script">
+(function(){
+ const trigger=document.getElementById('sideReleaseNotes');
+ const overlay=document.getElementById('lc-release-overlay');
+ const close=document.getElementById('lc-release-close');
+ if(!trigger||!overlay||!close||trigger.dataset.bound)return;
+ trigger.dataset.bound='1';
+ function open(){if(window.markLinkCoreSideTabAsRead)window.markLinkCoreSideTabAsRead('sideReleaseNotes');overlay.classList.add('is-open');overlay.setAttribute('aria-hidden','false');close.focus()}
+ function shut(){overlay.classList.remove('is-open');overlay.setAttribute('aria-hidden','true');trigger.focus()}
+ trigger.addEventListener('click',open);
+ close.addEventListener('click',shut);
+ overlay.addEventListener('click',e=>{if(e.target===overlay)shut()});
+ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&overlay.classList.contains('is-open'))shut()});
+})();
+</script>
+
+<script id="lc-viewport-recovery">
+(function(){function clampWindows(){document.querySelectorAll('.finder-window').forEach(el=>{if(el.classList.contains('hidden'))return;const fixed=el.classList.contains('lc-browser-window')||el.style.position==='fixed';if(!fixed)return;const r=el.getBoundingClientRect();if(r.width>innerWidth-16)el.style.width=Math.max(280,innerWidth-16)+'px';if(r.height>innerHeight-16)el.style.height=Math.max(220,innerHeight-16)+'px';const w=el.getBoundingClientRect();el.style.left=Math.max(8,Math.min(w.left,innerWidth-w.width-8))+'px';el.style.top=Math.max(8,Math.min(w.top,innerHeight-w.height-8))+'px';});}window.addEventListener('resize',clampWindows,{passive:true});})();
+</script>
+</body></html>

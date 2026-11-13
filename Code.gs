@@ -365,69 +365,6 @@ function clearAuthFailures_(state) {
   state.cache.remove(state.key);
 }
 
-/** 認証トークンの保存先。
- * 従来は CacheService（スクリプトキャッシュ）に置いていたが、キャッシュは
- * 保証のない一時置き場で、有効期限（6時間）より前に消えることがある。
- * 診断のように何度もサーバーを呼ぶ処理の途中で消えると、ログイン中なのに
- * 「管理者ログインが必要です」になってしまう。そのためトークンだけは
- * PropertiesService（スクリプトプロパティ＝永続、スクリプトの所有者・
- * 編集者以外には見えない）に移し、有効期限は保存したタイムスタンプで
- * 自前判定する。データ用キャッシュや認証の試行回数制限は、性能用の
- * 一時データなので CacheService のまま。
- */
-const AUTH_TOKEN_TTL_SECONDS = 21600; // 6時間
-const AUTH_TOKEN_KEY_PREFIX = 'LINK_CORE_TOKEN_';
-
-function authTokenKey_(scope, token) {
-  return AUTH_TOKEN_KEY_PREFIX + scope + '_' + token;
-}
-
-/** トークンをスクリプトプロパティに保存する。保存時に同スコープの
- * 期限切れトークンを掃除する。掃除に失敗してもログインは続行する。 */
-function storeAuthToken_(scope, token, ttlSeconds) {
-  const props = PropertiesService.getScriptProperties();
-  const exp = Date.now() + (ttlSeconds || AUTH_TOKEN_TTL_SECONDS) * 1000;
-  props.setProperty(authTokenKey_(scope, token), JSON.stringify({exp: exp}));
-  pruneExpiredAuthTokens_(scope, props);
-}
-
-function pruneExpiredAuthTokens_(scope, props) {
-  try {
-    props = props || PropertiesService.getScriptProperties();
-    const prefix = AUTH_TOKEN_KEY_PREFIX + scope + '_';
-    const all = props.getProperties();
-    const now = Date.now();
-    const expired = [];
-    for (const key in all) {
-      if (key.indexOf(prefix) !== 0) continue;
-      let exp = 0;
-      try { exp = Number((JSON.parse(all[key]) || {}).exp) || 0; } catch (_) { exp = 0; }
-      if (!exp || exp <= now) expired.push(key);
-    }
-    if (expired.length) props.deleteProperties(expired);
-  } catch (_) {
-    // 掃除に失敗してもログイン自体は続行する。
-  }
-}
-
-/** トークンが有効か（存在し、期限内か）を判定する。期限切れのものは
- * 見つけたときに削除する。壊れた保存値や空のトークンは無効とし、例外は投げない。 */
-function isValidAuthToken_(scope, token) {
-  if (typeof token !== 'string' || !token) return false;
-  const props = PropertiesService.getScriptProperties();
-  const key = authTokenKey_(scope, token);
-  let raw;
-  try { raw = props.getProperty(key); } catch (_) { return false; }
-  if (!raw) return false;
-  let exp = 0;
-  try { exp = Number((JSON.parse(raw) || {}).exp) || 0; } catch (_) { return false; }
-  if (!exp || exp <= Date.now()) {
-    try { props.deleteProperty(key); } catch (_) {}
-    return false;
-  }
-  return true;
-}
-
 /** 利用者ページの共有パスワードを検証して閲覧専用トークンを発行する。 */
 function authenticateVisitor(password) {
   const rateState = getAuthRateState_('VISITOR');
@@ -440,7 +377,7 @@ function authenticateVisitor(password) {
   }
   clearAuthFailures_(rateState);
   const token = Utilities.getUuid() + Utilities.getUuid();
-  storeAuthToken_('VISITOR', token, 21600);
+  CacheService.getScriptCache().put('LINK_CORE_VISITOR_' + token, 'yes', 21600);
   // 認証直後のリンク取得を同じ応答にまとめ、ブラウザーとの往復を1回減らす。
   const initialLinks = getLinksForToken_(token, false);
   return {
@@ -451,8 +388,8 @@ function authenticateVisitor(password) {
 
 function requireLinkViewer_(token) {
   if (typeof token === 'string' && token &&
-      (isValidAuthToken_('ADMIN', token) ||
-       isValidAuthToken_('VISITOR', token))) return;
+      (CacheService.getScriptCache().get('LINK_CORE_ADMIN_' + token) === 'yes' ||
+       CacheService.getScriptCache().get('LINK_CORE_VISITOR_' + token) === 'yes')) return;
   throw new Error('閲覧にはサイトのパスワード認証が必要です。');
 }
 
@@ -467,7 +404,7 @@ function authenticateAdmin(password, includeLinks) {
   }
   clearAuthFailures_(rateState);
   const token = Utilities.getUuid() + Utilities.getUuid();
-  storeAuthToken_('ADMIN', token, 21600);
+  CacheService.getScriptCache().put('LINK_CORE_ADMIN_' + token, 'yes', 21600);
 
   // 管理画面だけ、認証成功後に一覧を同じ応答で返す。メモ帳はトークンだけ受け取る。
   if (includeLinks === true) {
@@ -489,7 +426,7 @@ function authenticateAdmin(password, includeLinks) {
 /** 書き込み系関数は必ずサーバー側で管理者トークンを検証する。 */
 function requireAdmin_(token) {
   if (typeof token !== 'string' || !token ||
-      !isValidAuthToken_('ADMIN', token)) {
+      CacheService.getScriptCache().get('LINK_CORE_ADMIN_' + token) !== 'yes') {
     throw new Error('管理者ログインが必要です。ログインし直してください。');
   }
 }
@@ -498,9 +435,10 @@ function requireAdmin_(token) {
  * 画面表示用に全リンクを返す。
  */
 function getLinksForToken_(viewerToken, knownIsAdmin, performanceData) {
+  const cache = CacheService.getScriptCache();
   const isAdmin = typeof knownIsAdmin === 'boolean'
     ? knownIsAdmin
-    : isValidAuthToken_('ADMIN', viewerToken);
+    : cache.get('LINK_CORE_ADMIN_' + viewerToken) === 'yes';
 
   const cacheStartedAt = Date.now();
   let result = readChunkedJsonCache_('LINK_CORE_LINKS_ALL_V2');
@@ -537,12 +475,13 @@ function getLinksForToken_(viewerToken, knownIsAdmin, performanceData) {
 }
 function getLinks(viewerToken) {
   const startedAt = Date.now();
-  // トークン種別を一度だけ確認し、後続処理で同じトークン照会を繰り返さない。
+  // トークン種別を一度だけ確認し、後続処理で同じCacheService照会を繰り返さない。
   const authStartedAt = Date.now();
+  const cache = CacheService.getScriptCache();
   const isAdmin = typeof viewerToken === 'string' && viewerToken &&
-    isValidAuthToken_('ADMIN', viewerToken);
+    cache.get('LINK_CORE_ADMIN_' + viewerToken) === 'yes';
   const isVisitor = isAdmin || (typeof viewerToken === 'string' && viewerToken &&
-    isValidAuthToken_('VISITOR', viewerToken));
+    cache.get('LINK_CORE_VISITOR_' + viewerToken) === 'yes');
   const authMs = Date.now() - authStartedAt;
   if (!isVisitor) throw new Error('閲覧にはサイトのパスワード認証が必要です。');
 
@@ -1214,7 +1153,7 @@ function sendChatMessage(message, viewerToken) {
   if(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/.test(body))throw new Error('使用できない制御文字が含まれています。');
   const cache=CacheService.getScriptCache(), rateKey='LINK_CORE_CHAT_RATE_'+viewerToken;
   if(cache.get(rateKey))throw new Error('連続送信はできません。少し待ってから送信してください。');
-  const isAdmin=isValidAuthToken_('ADMIN',viewerToken);
+  const isAdmin=cache.get('LINK_CORE_ADMIN_'+viewerToken)==='yes';
   const lock=LockService.getScriptLock();lock.waitLock(10000);
   try{
     if(cache.get(rateKey))throw new Error('連続送信はできません。少し待ってから送信してください。');
@@ -1252,7 +1191,7 @@ function recordLinkClick(linkId, browserId, visitorToken) {
   let stage = '利用者認証';
   try {
     if (typeof visitorToken !== 'string' || !visitorToken ||
-        !isValidAuthToken_('VISITOR', visitorToken)) {
+        CacheService.getScriptCache().get('LINK_CORE_VISITOR_' + visitorToken) !== 'yes') {
       throw new Error('利用者ログインが必要です。ログインの有効期限が切れている可能性があります。');
     }
 
@@ -1357,7 +1296,7 @@ function ensureNoticeReadSheet_() {
 function getNoticeReadCount(noticeId, viewerToken) {
   // 管理者画面の serverCall() は認証トークンを引数の最後に追加する。
   if (typeof viewerToken !== 'string' || !viewerToken ||
-      !isValidAuthToken_('ADMIN', viewerToken)) {
+      CacheService.getScriptCache().get('LINK_CORE_ADMIN_' + viewerToken) !== 'yes') {
     throw new Error('既読件数の確認は管理者のみ利用できます。');
   }
   const id = cleanText_(noticeId,80);

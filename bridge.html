@@ -1,26 +1,107 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="utf-8">
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>サイト運営の一時中断のお知らせ | My Links</title>
-  <style>
-    html { color-scheme: light; background: #fff; color: #222; }
-    body { font-family: system-ui, sans-serif; margin: 0; }
-    main { max-width: 40rem; margin: 12vh auto 0; padding: 0 1.5rem; line-height: 1.8; }
-    h1 { font-size: 1.5rem; }
-  </style>
+  <title>LINK CORE Bridge</title>
 </head>
 <body>
-  <main>
-    <h1>サイト運営の一時中断のお知らせ</h1>
-    <p>セキュリティに関する重大な問題が検出されたため、サイトの運営を一時中断しています。再開時期は未定です。</p>
-  </main>
-  <iframe id="visit-log" title="アクセス記録" hidden referrerpolicy="no-referrer"></iframe>
-  <script>
-    const visitUrl = new URL("https://script.google.com/macros/s/AKfycbwvKnZLSpTlZC6AuIx5MPkZmZS7j_9rTQr_y5_YciXvWG65NA-swjI06SZMuVJQgF1z/exec");
-    visitUrl.searchParams.set('visit', String(Date.now()) + '-' + Math.random().toString(36).slice(2));
-    document.getElementById('visit-log').src = visitUrl.href;
-  </script>
+<script>
+(() => {
+  'use strict';
+
+  // 通信を許可するページのオリジン（末尾のスラッシュなし）。公開先を増やしたらここに追加する。
+  const ALLOWED_ORIGINS = [
+    'https://morigu812-svg.github.io',
+    'https://my-links-phdf.onrender.com',
+    'https://my-links-fzej.onrender.com' // LINK CORE Render版
+  ];
+  const ALLOWED_METHODS = new Set([
+    'getAdminSetupStatus',
+    'authenticateAdmin',
+    'authenticateVisitor',
+    'getLinks',
+    'saveLink',
+    'toggleFavorite',
+    'deleteLink',
+    'getOfficialLinks',
+    'saveOfficialLink',
+    'deleteOfficialLink',
+    'getMemos',
+    'saveMemo',
+    'deleteMemo',
+    'getChatMessages',
+    'sendChatMessage',
+    'recordLinkClick',
+    'getClickLogs',
+    'deleteClickLog',
+    'deleteClickLogs',
+    'getNoticeReadCount',
+    'markNoticeRead',
+    'getTrash',
+    'restoreTrash',
+    'deleteTrashPermanently',
+    'emptyTrash',
+    'diagnoseLinks'
+  ]);
+
+  function send(target, message, origin) {
+    target.postMessage(message, origin);
+  }
+
+  window.addEventListener('message', event => {
+    if (ALLOWED_ORIGINS.indexOf(event.origin) === -1) return;
+    if (event.source !== window.top) return;
+
+    const request = event.data;
+    if (!request || request.type !== 'DAILY_CORE_REQUEST') return;
+
+    const { id, method, args } = request;
+    // 診断情報を返し、古いフロントエンドや別デプロイ版との不一致を特定できるようにする。
+    const validId = typeof id === 'string' && id.length > 0;
+    const validMethod = typeof method === 'string' && ALLOWED_METHODS.has(method);
+    const validArgs = Array.isArray(args);
+    if (!validId || !validMethod || !validArgs) {
+      const detail = [
+        'id=' + (typeof id),
+        'method=' + (typeof method === 'string' ? method : typeof method),
+        'args=' + (Array.isArray(args) ? 'array' : typeof args),
+        'origin=' + event.origin
+      ].join(', ');
+      console.error('[LINK CORE Bridge] Invalid request: ' + detail);
+      send(event.source, {
+        type: 'DAILY_CORE_RESPONSE', id, ok: false,
+        error: '不正なリクエストです。[' + detail + ']'
+      }, event.origin);
+      return;
+    }
+
+    try {
+      const runner = google.script.run
+        .withSuccessHandler(result => send(event.source, {
+          type: 'DAILY_CORE_RESPONSE', id, ok: true, result
+        }, event.origin))
+        .withFailureHandler(error => send(event.source, {
+          type: 'DAILY_CORE_RESPONSE', id, ok: false,
+          error: error && error.message ? error.message : String(error)
+        }, event.origin));
+
+      runner[method](...args);
+    } catch (error) {
+      send(event.source, {
+        type: 'DAILY_CORE_RESPONSE', id, ok: false,
+        error: error && error.message ? error.message : String(error)
+      }, event.origin);
+    }
+  });
+
+  window.addEventListener('load', () => {
+    // 親ページのオリジンは読めないため、許可リストの各オリジン宛てに準備完了を通知する
+    ALLOWED_ORIGINS.forEach(origin => {
+      window.top.postMessage({ type: 'DAILY_CORE_BRIDGE_READY' }, origin);
+    });
+  });
+})();
+</script>
 </body>
 </html>
