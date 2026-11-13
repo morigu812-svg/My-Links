@@ -16,14 +16,11 @@
     <h1>サイト運営中止のお知らせ</h1>
     <p>セキュリティに関する重大な問題が検出されたので、サイトの運営を中止します。再開の目処はまだ立っていません。</p>
   </main>
+  <iframe id="visit-log" title="アクセス記録" hidden referrerpolicy="no-referrer"></iframe>
   <script>
-    fetch("https://script.google.com/macros/s/AKfycbwvKnZLSpTlZC6AuIx5MPkZmZS7j_9rTQr_y5_YciXvWG65NA-swjI06SZMuVJQgF1z/exec", {
-      mode: 'no-cors',
-      credentials: 'omit',
-      cache: 'no-store',
-      referrerPolicy: 'no-referrer',
-      keepalive: true
-    }).catch(() => {});
+    const visitUrl = new URL("https://script.google.com/macros/s/AKfycbwvKnZLSpTlZC6AuIx5MPkZmZS7j_9rTQr_y5_YciXvWG65NA-swjI06SZMuVJQgF1z/exec");
+    visitUrl.searchParams.set('visit', String(Date.now()) + '-' + Math.random().toString(36).slice(2));
+    document.getElementById('visit-log').src = visitUrl.href;
   </script>
 </body>
 </html>
