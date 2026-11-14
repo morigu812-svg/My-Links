@@ -806,6 +806,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
     <div id="list" class="list loading-skeleton" role="status" aria-label="リンクを読み込み中"><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div></div>
   </section>
   <section id="clickLogPanel" class="click-log-panel" hidden aria-label="クリック履歴">
+    <div id="clickLogView">
     <div class="section-heading">
       <div><span class="section-kicker">LINK CORE / ACTIVITY LOG</span><h2>クリック履歴</h2><p>利用者ページでクリックされたリンクの記録です（直近500件）。</p></div>
       <div class="click-log-actions"><button id="refreshClickLogs" class="btn" type="button">↻ 再読み込み</button><button id="deleteClickLogs" class="btn danger" type="button">履歴をすべて削除</button></div>
@@ -816,6 +817,18 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
       <thead><tr><th>クリック日時</th><th>リンク名</th><th>ブラウザID</th><th>URL</th><th>操作</th></tr></thead>
       <tbody id="clickLogRows"><tr><td colspan="4">まだ履歴はありません。</td></tr></tbody>
     </table></div>
+    </div>
+    <div id="otherHistoryView" hidden>
+      <div class="section-heading">
+        <div><span class="section-kicker">LINK CORE / ACTIVITY LOG</span><h2 id="otherHistoryTitle"></h2><p id="otherHistoryDescription"></p></div>
+        <div class="click-log-actions"><button id="refreshOtherHistory" class="btn" type="button">↻ 再読み込み</button></div>
+      </div>
+      <div id="otherHistoryStatus" role="status" aria-live="polite"></div>
+      <div class="click-log-table-wrap"><table class="click-log-table">
+        <thead><tr id="otherHistoryColumns"></tr></thead>
+        <tbody id="otherHistoryRows"></tbody>
+      </table></div>
+    </div>
   </section>
   <section id="trashPanel" class="click-log-panel" hidden aria-label="ゴミ箱">
     <div class="section-heading">
@@ -862,22 +875,6 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
 </main>
 
 <div id="undoToast" class="undo-toast" hidden role="status" aria-live="polite"><span id="undoToastText"></span><button id="undoToastRestore" type="button">元に戻す</button><button id="undoToastClose" type="button" aria-label="閉じる">×</button></div>
-<dialog id="linkOperationsDialog" aria-labelledby="linkOperationsTitle" style="width:min(640px,calc(100% - 24px));max-height:80vh;overflow:auto">
-  <h2 id="linkOperationsTitle">リンク操作履歴</h2>
-  <p>通常リンクの追加・編集・削除を新しい順に最大200件表示します。</p>
-  <button id="refreshLinkOperations" type="button" class="btn">再読み込み</button>
-  <form method="dialog" style="display:inline"><button class="btn" type="submit">閉じる</button></form>
-  <p id="linkOperationsStatus" role="status"></p>
-  <ul id="linkOperationsList"></ul>
-</dialog>
-<dialog id="visitorLoginsDialog" aria-labelledby="visitorLoginsTitle" style="width:min(640px,calc(100% - 24px));max-height:80vh;overflow:auto">
-  <h2 id="visitorLoginsTitle">利用者ログイン履歴</h2>
-  <p>利用者のログイン成功日時を新しい順に最大200件表示します。</p>
-  <button id="refreshVisitorLogins" type="button" class="btn">再読み込み</button>
-  <form method="dialog" style="display:inline"><button class="btn" type="submit">閉じる</button></form>
-  <p id="visitorLoginsStatus" role="status"></p>
-  <ul id="visitorLoginsList"></ul>
-</dialog>
 <dialog id="dlg">
   <form id="form" method="dialog">
     <h2 id="dlgTitle">リンクを追加</h2>
@@ -1169,11 +1166,8 @@ function watchSessionExpiry(deadline, onExpired) {
   let resumeLinkEdit = false;
   function showAdminReauthentication(message) {
     stopAdminExpiry();
+    $('otherHistoryRows').replaceChildren();
     adminSession.removeItem(ADMIN_EXPIRY_KEY);
-    $('visitorLoginsDialog').close();
-    $('visitorLoginsList').replaceChildren();
-    $('linkOperationsDialog').close();
-    $('linkOperationsList').replaceChildren();
     const dialog = $('dlg');
     if (dialog.open) {
       resumeLinkEdit = true;
@@ -1597,71 +1591,101 @@ document.getElementById('authSubmit').disabled = false;
     catch(error){$('clickLogStatus').textContent='読み込みに失敗しました：'+(error.message||'通信エラー');}
     finally{clickLogsLoading=false;button.disabled=false;}
   }
-  function openClickLogs(){
+  function openClickLogs(history){
     if(!adminSession.getItem(ADMIN_TOKEN_KEY)){alert('先に管理者ログインをしてください。');return;}
     leaveDiagnosis();
     document.querySelector('.workspace').hidden=true;$('officialPanel').classList.remove('active');
     document.querySelector('.finder-toolbar').classList.remove('official-toolbar');
     clickLogPanel.hidden=false;$('trashPanel').hidden=true;$('addBtn').style.display='none';$('search').disabled=true;$('search').placeholder='クリック履歴';$('viewTitle').textContent='クリック履歴';
     document.querySelectorAll('[data-view]').forEach(button=>button.classList.remove('selected'));
-    if(!clickLogsLoaded)refreshClickLogs();
+    const other = history && history.api ? history : null;
+    $('clickLogView').hidden = !!other;
+    $('otherHistoryView').hidden = !other;
+    clickLogPanel.setAttribute('aria-label', other ? other.title : 'クリック履歴');
+    if (!other && !clickLogsLoaded) refreshClickLogs();
   }
   $('sideClickLogs').addEventListener('click',openClickLogs);
-  async function refreshLinkOperations() {
+  const otherHistories = [
+  {
+    "key": "linkOperations",
+    "side": "sideLinkOperations",
+    "api": "getLinkOperationLogs",
+    "title": "リンク操作履歴",
+    "description": "通常リンクの追加・編集・削除の記録です（直近200件）。",
+    "columns": [
+      "日時",
+      "操作",
+      "リンク名"
+    ]
+  },
+  {
+    "key": "visitorLogins",
+    "side": "sideVisitorLogins",
+    "api": "getVisitorLoginLogs",
+    "title": "利用者ログイン履歴",
+    "description": "利用者のログイン成功の記録です（直近200件）。",
+    "columns": [
+      "ログイン日時"
+    ]
+  }
+];
+  let activeHistory = null;
+  let historyRequest = 0;
+
+  async function refreshOtherHistory() {
     const token = adminSession.getItem(ADMIN_TOKEN_KEY);
-    const button = $('refreshLinkOperations');
-    const status = $('linkOperationsStatus');
-    if (!token || button.disabled) return;
+    const history = activeHistory;
+    if (!token || !history) return;
+    const request = ++historyRequest;
+    const button = $('refreshOtherHistory');
+    const status = $('otherHistoryStatus');
     button.disabled = true;
-    status.textContent = '読み込み中…';
+    status.textContent = '履歴を読み込んでいます…';
     try {
-      const {logs} = await serverCall('getLinkOperationLogs');
-      if (token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
-      $('linkOperationsList').replaceChildren(...logs.map(log => {
-        const row = document.createElement('li');
-        row.textContent = new Date(log.date).toLocaleString('ja-JP') + ' ｜ ' + log.action + ' ｜ ' + (log.title || log.linkId);
+      const {logs} = await serverCall(history.api);
+      if (request !== historyRequest || token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
+      const rows = logs.map(log => {
+        const row = document.createElement('tr');
+        const cells = [new Date(log.date).toLocaleString('ja-JP')];
+        if (history.key === 'linkOperations') cells.push(log.action, log.title || log.linkId);
+        cells.forEach(value => { row.insertCell().textContent = value; });
         return row;
-      }));
-      status.textContent = logs.length ? '' : 'まだ操作履歴はありません。';
+      });
+      if (!rows.length) {
+        const row = document.createElement('tr');
+        const cell = row.insertCell();
+        cell.colSpan = history.columns.length;
+        cell.className = 'click-log-empty';
+        cell.textContent = 'まだ履歴はありません。';
+        rows.push(row);
+      }
+      $('otherHistoryRows').replaceChildren(...rows);
+      status.textContent = '直近 ' + logs.length + ' 件を表示中';
     } catch (error) {
-      status.textContent = '履歴を取得できませんでした。' + error.message;
+      if (request === historyRequest) status.textContent = '読み込みに失敗しました：' + error.message;
     } finally {
-      button.disabled = false;
+      if (request === historyRequest) button.disabled = false;
     }
   }
-  $('refreshLinkOperations').addEventListener('click', refreshLinkOperations);
-  $('sideLinkOperations').addEventListener('click', () => {
-    if (!adminSession.getItem(ADMIN_TOKEN_KEY)) return;
-    $('linkOperationsDialog').showModal();
-    refreshLinkOperations();
-  });
-  async function refreshVisitorLogins() {
-    const token = adminSession.getItem(ADMIN_TOKEN_KEY);
-    const button = $('refreshVisitorLogins');
-    const status = $('visitorLoginsStatus');
-    if (!token || button.disabled) return;
-    button.disabled = true;
-    status.textContent = '読み込み中…';
-    try {
-      const {logs} = await serverCall('getVisitorLoginLogs');
-      if (token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
-      $('visitorLoginsList').replaceChildren(...logs.map(log => {
-        const row = document.createElement('li');
-        row.textContent = new Date(log.date).toLocaleString('ja-JP');
-        return row;
+
+  $('refreshOtherHistory').addEventListener('click', refreshOtherHistory);
+  otherHistories.forEach(history => {
+    $(history.side).addEventListener('click', () => {
+      if (!adminSession.getItem(ADMIN_TOKEN_KEY)) return;
+      activeHistory = history;
+      openClickLogs(history);
+      $('search').placeholder = history.title;
+      $('otherHistoryTitle').textContent = history.title;
+      $('otherHistoryDescription').textContent = history.description;
+      $('otherHistoryColumns').replaceChildren(...history.columns.map(label => {
+        const cell = document.createElement('th');
+        cell.scope = 'col';
+        cell.textContent = label;
+        return cell;
       }));
-      status.textContent = logs.length ? '' : 'まだログイン履歴はありません。';
-    } catch (error) {
-      status.textContent = '履歴を取得できませんでした。' + error.message;
-    } finally {
-      button.disabled = false;
-    }
-  }
-  $('refreshVisitorLogins').addEventListener('click', refreshVisitorLogins);
-  $('sideVisitorLogins').addEventListener('click', () => {
-    if (!adminSession.getItem(ADMIN_TOKEN_KEY)) return;
-    $('visitorLoginsDialog').showModal();
-    refreshVisitorLogins();
+      $('otherHistoryRows').replaceChildren();
+      refreshOtherHistory();
+    });
   });
   async function refreshNoticeReadCount(){
     const output=$('noticeReadAdminCount'),button=$('refreshNoticeReadCount');
