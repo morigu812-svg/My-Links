@@ -768,6 +768,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
       <button class="side-item" type="button" data-view="official"><span>✦</span> 公式リンク</button>
       <button class="side-item" type="button" id="logoutAllBrowsers">全ブラウザをログアウト</button>
       <button class="side-item" type="button" id="sideMemos"><span>▤</span> メモ帳</button>
+      <button class="side-item" type="button" id="sideStaffChat"><span>✉</span> 管理者専用チャット</button>
       <button class="side-item" type="button" id="sideChat"><span>✉</span> 利用者チャット <span class="new-badge" id="chatUnreadBadge" hidden>NEW</span></button>
       <button class="side-item" type="button" id="sideClickLogs"><span>◷</span> クリック履歴</button>
       <button class="side-item" type="button" id="sideTrash"><span>🗑</span> ゴミ箱</button>
@@ -873,7 +874,19 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   </form>
 </dialog>
 
-<section id="chatOverlay" class="chat-overlay" aria-label="利用者との共通チャット"><div class="chat-head"><strong>LINK CORE / VISITOR CHAT</strong><div class="chat-head-actions"><button type="button" id="refreshChat"><span class="refresh-icon" aria-hidden="true">↻</span><span>再読み込み</span></button><button type="button" id="closeChat">閉じる</button></div></div><div class="chat-subtitle">利用者全員と共有するチャットです。返信は全利用者に表示されます。</div><div class="chat-messages" id="chatMessages" aria-live="polite"><div class="chat-status">チャットを開いています…</div></div><label class="chat-subtitle" for="chatRecipient">個別チャットID（空欄なら全員）<input id="chatRecipient" type="text" maxlength="67" autocomplete="off" spellcheck="false" style="display:block;width:100%"></label><form class="chat-compose" id="chatForm"><textarea id="chatInput" maxlength="1000" rows="2" placeholder="利用者への返信を入力…" required></textarea><button id="chatSend" type="submit">返信</button></form></section><section id="memoOverlay" class="memo-overlay" aria-label="統合メモ帳">
+<section id="chatOverlay" class="chat-overlay" aria-label="利用者との共通チャット"><div class="chat-head"><strong>LINK CORE / VISITOR CHAT</strong><div class="chat-head-actions"><button type="button" id="refreshChat"><span class="refresh-icon" aria-hidden="true">↻</span><span>再読み込み</span></button><button type="button" id="closeChat">閉じる</button></div></div><div class="chat-subtitle">利用者全員と共有するチャットです。返信は全利用者に表示されます。</div><div class="chat-messages" id="chatMessages" aria-live="polite"><div class="chat-status">チャットを開いています…</div></div><label class="chat-subtitle" for="chatRecipient">個別チャットID（空欄なら全員）<input id="chatRecipient" type="text" maxlength="67" autocomplete="off" spellcheck="false" style="display:block;width:100%"></label><form class="chat-compose" id="chatForm"><textarea id="chatInput" maxlength="1000" rows="2" placeholder="利用者への返信を入力…" required></textarea><button id="chatSend" type="submit">返信</button></form></section><section id="staffChatOverlay" class="chat-overlay" aria-label="管理者専用チャット">
+  <div class="chat-head"><strong>管理者専用チャット</strong><div class="chat-head-actions">
+    <button type="button" id="refreshStaffChat">再読み込み</button>
+    <button type="button" id="closeStaffChat">閉じる</button>
+  </div></div>
+  <div class="chat-messages" id="staffChatMessages" aria-label="管理者チャットの履歴"></div>
+  <div class="chat-subtitle" id="staffChatStatus" role="status"></div>
+  <form class="chat-compose" id="staffChatForm">
+    <textarea id="staffChatInput" aria-label="管理者へのメッセージ" maxlength="1000" rows="2" required></textarea>
+    <button type="submit" id="staffChatSend">送信</button>
+  </form>
+</section>
+<section id="memoOverlay" class="memo-overlay" aria-label="統合メモ帳">
   <div class="memo-overlay-head"><span class="memo-overlay-title">LINK CORE / メモ帳</span><button id="closeMemoOverlay" class="memo-overlay-close" type="button">← リンク管理に戻る</button></div>
   <iframe id="memoFrame" class="memo-overlay-frame" title="メモ帳" src="about:blank"></iframe>
 </section>
@@ -991,11 +1004,11 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   }
 
   function serverCall(method, ...args) {
-    const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'saveOfficialLink', 'deleteOfficialLink', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'sendChatMessage', 'sendPrivateChatMessage', 'getClickLogs', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers'];
+    const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'saveOfficialLink', 'deleteOfficialLink', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'sendChatMessage', 'getStaffChatMessages', 'sendStaffChatMessage', 'sendPrivateChatMessage', 'getClickLogs', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers'];
     if (protectedMethods.includes(method)) {
       const token = sessionStorage.getItem(ADMIN_TOKEN_KEY) || '';
       // 呼び出し元（埋め込みメモ帳など）が既にトークンを渡している場合は二重追加しない。
-      if (args[args.length - 1] !== token) args.push(token);
+      if (method === 'sendStaffChatMessage' || args[args.length - 1] !== token) args.push(token);
     }
     const request = waitForBridge().then(() => new Promise((resolve, reject) => {
       const id = (crypto.randomUUID && crypto.randomUUID()) || String(Date.now() + Math.random());
@@ -1068,6 +1081,9 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
     sessionStorage.removeItem(ADMIN_TOKEN_KEY);
     sessionStorage.removeItem(AUTH_KEY);
     chatOverlay.classList.remove('open');
+    $('staffChatOverlay').classList.remove('open');
+    $('staffChatMessages').replaceChildren();
+    $('staffChatInput').value = '';
     closeIntegratedMemos();
     memoFrame.src = 'about:blank';
     document.body.classList.add('auth-locked');
@@ -1805,6 +1821,79 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
       chatInput.value = '';
       await refreshAdminChat();
     }catch(error){const s=document.createElement('div');s.className='chat-status';s.textContent=error.message||'送信できませんでした。';chatMessages.appendChild(s);}finally{chatSend.disabled=false;chatInput.focus();}});
+
+  const staffChat = $('staffChatOverlay');
+  const staffMessages = $('staffChatMessages');
+  const staffStatus = $('staffChatStatus');
+  const staffInput = $('staffChatInput');
+  const refreshStaffButton = $('refreshStaffChat');
+  let lastStaffMessageId = null;
+
+  async function refreshStaffChat() {
+    const token = sessionStorage.getItem(ADMIN_TOKEN_KEY);
+    if (!token || refreshStaffButton.disabled || !staffChat.classList.contains('open')) return;
+    refreshStaffButton.disabled = true;
+    try {
+      const {messages} = await serverCall('getStaffChatMessages');
+      if (token !== sessionStorage.getItem(ADMIN_TOKEN_KEY)) return;
+      const latestId = messages.length ? messages[messages.length - 1].id : '';
+      if (latestId !== lastStaffMessageId) {
+        const cards = messages.map(item => {
+          const card = document.createElement('article');
+          card.className = 'chat-message admin';
+          const meta = document.createElement('div');
+          meta.className = 'chat-message-meta';
+          meta.textContent = '管理者 · ' + new Date(item.createdAt).toLocaleString('ja-JP');
+          const body = document.createElement('div');
+          body.className = 'chat-message-body';
+          body.textContent = item.message;
+          card.append(meta, body);
+          return card;
+        });
+        staffMessages.replaceChildren(...cards);
+        staffMessages.scrollTop = staffMessages.scrollHeight;
+        lastStaffMessageId = latestId;
+      }
+      staffStatus.textContent = messages.length ? '' : 'まだメッセージはありません。';
+    } catch (error) {
+      staffStatus.textContent = '読み込みに失敗しました。' + error.message;
+    } finally {
+      refreshStaffButton.disabled = false;
+    }
+  }
+
+  $('sideStaffChat').addEventListener('click', () => {
+    if (!sessionStorage.getItem(ADMIN_TOKEN_KEY)) return;
+    chatOverlay.classList.remove('open');
+    staffChat.classList.add('open');
+    lastStaffMessageId = null;
+    refreshStaffChat();
+    staffInput.focus();
+  });
+  $('sideChat').addEventListener('click', () => staffChat.classList.remove('open'));
+  $('closeStaffChat').addEventListener('click', () => staffChat.classList.remove('open'));
+  refreshStaffButton.addEventListener('click', refreshStaffChat);
+  setInterval(() => {
+    if (!document.hidden) refreshStaffChat();
+  }, 15000);
+
+  $('staffChatForm').addEventListener('submit', async event => {
+    event.preventDefault();
+    const button = $('staffChatSend');
+    const body = staffInput.value;
+    if (button.disabled || !body.trim()) return;
+    button.disabled = true;
+    try {
+      const result = await serverCall('sendStaffChatMessage', body);
+      if (!result || !result.ok) throw new Error('送信の完了を確認できませんでした。');
+      if (staffInput.value === body) staffInput.value = '';
+      await refreshStaffChat();
+    } catch (error) {
+      staffStatus.textContent = '送信に失敗しました。' + error.message;
+    } finally {
+      button.disabled = false;
+    }
+  });
 
   const memoOverlay = $('memoOverlay');
   const memoFrame = $('memoFrame');

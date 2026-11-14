@@ -1573,3 +1573,47 @@ function diagnoseLinks(offset, adminToken) {
     results: results
   };
 }
+
+function getStaffChatMessages(adminToken) {
+  requireAdmin_(adminToken);
+  const sheet = staffChatSheet_(false);
+  const last = sheet ? sheet.getLastRow() : 0;
+  if (last < 2) return {messages: []};
+
+  const first = Math.max(2, last - CHAT_MAX_MESSAGES + 1);
+  const messages = sheet.getRange(first, 1, last - first + 1, 3).getValues()
+    .filter(row => row[0])
+    .map(row => ({
+      id: String(row[0]),
+      author: '管理者',
+      message: String(row[1]),
+      createdAt: toIso_(row[2])
+    }));
+  return {messages};
+}
+
+function sendStaffChatMessage(message, adminToken) {
+  requireAdmin_(adminToken);
+  const body = cleanText_(message, CHAT_MAX_LENGTH);
+  if (!body) throw new Error('メッセージを入力してください。');
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    requireAdmin_(adminToken);
+    staffChatSheet_(true).appendRow([Utilities.getUuid(), safeCell_(body), new Date()]);
+    return {ok: true};
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function staffChatSheet_(create) {
+  const id = PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY);
+  if (!id) throw new Error('スプレッドシートIDが未設定です。');
+  const spreadsheet = SpreadsheetApp.openById(id);
+  let sheet = spreadsheet.getSheetByName('AdminChatMessages');
+  if (!sheet && create) sheet = spreadsheet.insertSheet('AdminChatMessages');
+  if (create && sheet.getLastRow() === 0) sheet.appendRow(['ID', 'メッセージ', '送信日時']);
+  return sheet;
+}
