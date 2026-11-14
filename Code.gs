@@ -1589,25 +1589,62 @@ function diagnoseLinks(offset, adminToken) {
   };
 }
 
-function getStaffChatMessages(adminToken) {
+function getStaffChatMessages(adminToken, browserId) {
   requireAdmin_(adminToken);
   const sheet = staffChatSheet_(false);
   const last = sheet ? sheet.getLastRow() : 0;
   if (last < 2) return {messages: []};
 
   const first = Math.max(2, last - CHAT_MAX_MESSAGES + 1);
-  const messages = sheet.getRange(first, 1, last - first + 1, 3).getValues()
+  const messages = sheet.getRange(first, 1, last - first + 1, 5).getValues()
     .filter(row => row[0])
-    .map(row => ({
-      id: String(row[0]),
-      author: '管理者',
-      message: String(row[1]),
-      createdAt: toIso_(row[2])
-    }));
+    .map(row => {
+      const readers = String(row[4] || '').split(',').filter(Boolean);
+      const own = !!browserId && row[3] === browserId;
+      return {
+        id: String(row[0]), author: '管理者', message: String(row[1]), createdAt: toIso_(row[2]),
+        own, readCount: readers.length, unread: !!browserId && !own && !readers.includes(browserId)
+      };
+    });
   return {messages};
 }
 
-function sendStaffChatMessage(message, adminToken) {
+function markStaffChatRead(ids, browserId, adminToken) {
+  requireAdmin_(adminToken);
+  if (!validStaffBrowserId_(browserId) || !Array.isArray(ids) || ids.length > CHAT_MAX_MESSAGES) {
+    throw new Error('既読にするメッセージを確認できません。');
+  }
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    requireAdmin_(adminToken);
+    const sheet = staffChatSheet_(false);
+    const last = sheet ? sheet.getLastRow() : 0;
+    if (last < 2) return {ok: true};
+    const first = Math.max(2, last - CHAT_MAX_MESSAGES + 1);
+    const rows = sheet.getRange(first, 1, last - first + 1, 5).getValues();
+    const wanted = new Set(ids);
+    let changed = false;
+    const reads = rows.map(row => {
+      const value = String(row[4] || '');
+      if (!wanted.has(String(row[0])) || row[3] === browserId) return [value];
+      const readers = value.split(',').filter(Boolean);
+      if (readers.includes(browserId) || value.length >= 45000) return [value];
+      changed = true;
+      return [readers.concat(browserId).join(',')];
+    });
+    if (changed) sheet.getRange(first, 5, reads.length, 1).setValues(reads);
+    return {ok: true};
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function validStaffBrowserId_(id) {
+  return typeof id === 'string' && /^staff-[0-9a-f]{32}$/.test(id);
+}
+
+function sendStaffChatMessage(message, adminToken, browserId) {
   requireAdmin_(adminToken);
   const body = cleanText_(message, CHAT_MAX_LENGTH);
   if (!body) throw new Error('メッセージを入力してください。');
@@ -1616,7 +1653,9 @@ function sendStaffChatMessage(message, adminToken) {
   lock.waitLock(10000);
   try {
     requireAdmin_(adminToken);
-    staffChatSheet_(true).appendRow([Utilities.getUuid(), safeCell_(body), new Date()]);
+    staffChatSheet_(true).appendRow([
+      Utilities.getUuid(), safeCell_(body), new Date(), validStaffBrowserId_(browserId) ? browserId : '', ''
+    ]);
     return {ok: true};
   } finally {
     lock.releaseLock();
@@ -1629,6 +1668,7 @@ function staffChatSheet_(create) {
   const spreadsheet = SpreadsheetApp.openById(id);
   let sheet = spreadsheet.getSheetByName('AdminChatMessages');
   if (!sheet && create) sheet = spreadsheet.insertSheet('AdminChatMessages');
-  if (create && sheet.getLastRow() === 0) sheet.appendRow(['ID', 'メッセージ', '送信日時']);
+  if (create && sheet.getLastRow() === 0) sheet.appendRow(['ID', 'メッセージ', '送信日時', '送信元ブラウザ', '既読ブラウザ']);
+  if (create && sheet.getLastColumn() === 3) sheet.getRange(1, 4, 1, 2).setValues([['送信元ブラウザ', '既読ブラウザ']]);
   return sheet;
 }
