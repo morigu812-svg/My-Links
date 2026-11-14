@@ -586,6 +586,7 @@ function saveLink(input, adminToken) {
       }
     }
 
+    const action = targetRow ? '編集' : '追加';
     if (!targetRow) targetRow = lastRow + 1;
 
     const valuesByHeader = {
@@ -608,6 +609,7 @@ function saveLink(input, adminToken) {
 
     // 1行分を一括で書き込む
     sheet.getRange(targetRow, 1, 1, width).setValues([rowValues]);
+    recordLinkOperation_(sheet, action, id, title);
 
     invalidateLinksCache_();
     return refreshLinksCacheFromSheet_(sheet);
@@ -683,6 +685,7 @@ function deleteLink(id, adminToken) {
           // Trash へ先に保存してから Links から削除する。
           moveRowToTrash_(rowValues, columns);
           sheet.deleteRow(targetRow);
+          recordLinkOperation_(sheet, '削除', linkId, rowValues[columns['タイトル'] - 1]);
           break;
         }
       }
@@ -1719,4 +1722,30 @@ function staffChatSheet_(create) {
   if (create && sheet.getLastRow() === 0) sheet.appendRow(['ID', 'メッセージ', '送信日時', '送信元ブラウザ', '既読ブラウザ']);
   if (create && sheet.getLastColumn() === 3) sheet.getRange(1, 4, 1, 2).setValues([['送信元ブラウザ', '既読ブラウザ']]);
   return sheet;
+}
+
+function recordLinkOperation_(linksSheet, action, id, title) {
+  try {
+    const spreadsheet = linksSheet.getParent();
+    const sheet = spreadsheet.getSheetByName('LinkOperationLogs') || spreadsheet.insertSheet('LinkOperationLogs');
+    if (!sheet.getLastRow()) sheet.appendRow(['日時', '操作', 'リンクID', 'リンク名']);
+    sheet.appendRow([new Date(), action, safeCell_(String(id)), safeCell_(String(title || ''))]);
+  } catch (error) {
+    console.error('リンク操作履歴を保存できませんでした。', error.message);
+  }
+}
+
+function getLinkOperationLogs(adminToken) {
+  requireAdmin_(adminToken);
+  const id = PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY);
+  if (!id) throw new Error('スプレッドシートIDが未設定です。');
+  const sheet = SpreadsheetApp.openById(id).getSheetByName('LinkOperationLogs');
+  const last = sheet ? sheet.getLastRow() : 0;
+  if (last < 2) return {logs: []};
+  const first = Math.max(2, last - 199);
+  const logs = sheet.getRange(first, 1, last - first + 1, 4).getValues().reverse()
+    .map(([date, action, linkId, title]) => ({
+      date: toIso_(date), action: String(action), linkId: String(linkId), title: String(title)
+    }));
+  return {logs};
 }
