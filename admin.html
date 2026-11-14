@@ -791,8 +791,13 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
       <button class="side-item" type="button" id="adminLogout">ログアウト</button>
       <button class="side-item" type="button" id="logoutAllBrowsers">全ブラウザをログアウト</button>
       <button class="side-item" type="button" id="sideMemos"><span>▤</span> メモ帳</button>
-      <button class="side-item" type="button" id="sideStaffChat"><span>✉</span> 管理者専用チャット <span id="staffUnreadCount" class="new-badge" hidden></span></button>
-      <button class="side-item" type="button" id="sideChat"><span>✉</span> 利用者チャット <span class="new-badge" id="chatUnreadBadge" hidden>NEW</span></button>
+      <details class="sidebar-log-folder" id="sidebarChatFolder">
+        <summary class="side-item"><span aria-hidden="true">📁</span> チャット <span class="log-folder-chevron" aria-hidden="true">›</span></summary>
+        <div class="sidebar-log-items">
+          <button class="side-item" type="button" id="sideStaffChat"><span>✉</span> 管理者専用チャット <span id="staffUnreadCount" class="new-badge" hidden></span></button>
+          <button class="side-item" type="button" id="sideChat"><span>✉</span> 利用者チャット <span class="new-badge" id="chatUnreadBadge" hidden>NEW</span></button>
+        </div>
+      </details>
       <details class="sidebar-log-folder">
         <summary class="side-item"><span aria-hidden="true">📁</span> ログ <span class="log-folder-chevron" aria-hidden="true">›</span></summary>
         <div class="sidebar-log-items">
