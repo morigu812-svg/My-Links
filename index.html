@@ -12,15 +12,9 @@
 <meta name="apple-mobile-web-app-title" content="LINK CORE">
 <meta name="theme-color" id="themeColorMeta" content="#050914">
 <link rel="manifest" href="./manifest.webmanifest">
-<script>
-/* LINK CORE テーマ初期化：描画前に適用してチラつきを防ぐ。既定はダーク。
-   保存済みの選択があればそれを優先し、なければダーク（OS の設定には従わない）。 */
-(function(){try{var s=null;try{s=localStorage.getItem('linkCoreViewerTheme');}catch(e){}
-var light=s==='light';
-if(light)document.documentElement.classList.add('light-mode');}catch(e){}})();
-</script>
+
 <style>
-:root{color-scheme:light;font-family:"Space Grotesk","Zen Kaku Gothic New",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#e9edf2;color:#27292d;font-synthesis:none;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;font-feature-settings:"palt"}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:#e9edf2;padding:28px 22px}button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus-visible{outline:2px solid #3478d4;outline-offset:2px}.hidden{display:none!important}.wrap{width:100%;max-width:1180px;margin:0 auto}.finder-window{position:relative;overflow:hidden;min-height:650px;border:1px solid #c9cbd0;border-radius:12px;background:#fff;box-shadow:0 18px 55px rgba(30,38,50,.17)}.finder-toolbar{height:58px;display:grid;grid-template-columns:120px minmax(0,1fr) 220px;align-items:center;gap:12px;padding:0 17px;background:linear-gradient(#fbfbfc,#f0f1f3);border-bottom:1px solid #d5d6da}.traffic-lights{display:flex;align-items:center;gap:8px}.traffic-lights span{display:block;width:12px;height:12px;border-radius:50%;box-shadow:inset 0 1px 1px rgba(255,255,255,.7),0 0 0 1px rgba(0,0,0,.08)}.traffic-lights span:nth-child(1){background:#ff5f57}.traffic-lights span:nth-child(2){background:#febc2e}.traffic-lights span:nth-child(3){background:#28c840}.finder-title{justify-self:center;color:#35373b;font-size:14px;font-weight:650;white-space:nowrap}.toolbar-search{display:flex;align-items:center;gap:7px;min-width:0;padding:6px 9px;border:1px solid #d3d5d9;border-radius:7px;background:#fff;color:#777b82}.toolbar-search span{font-size:14px}.toolbar-search input{width:100%;min-width:0;padding:0;border:0;outline:0;background:transparent;color:#292b30;font-size:12px}.toolbar-search input::placeholder{color:#999ca2}.finder-layout{display:grid;grid-template-columns:220px minmax(0,1fr);min-height:590px}.sidebar{padding:17px 10px 22px;background:#f4f5f7;border-right:1px solid #e0e1e4}.side-label{margin:17px 10px 7px;color:#85888f;font-size:10px;font-weight:750;letter-spacing:.04em}.side-item{display:flex;align-items:center;gap:9px;width:100%;padding:7px 10px;border:1px solid transparent;border-radius:6px;background:transparent;text-align:left;color:#36383d;font-size:12px}.side-item>span{display:inline-flex;justify-content:center;width:17px;color:#6e8fc5;font-size:15px}.side-item:hover{background:#e7e9ed}.side-item.selected{border-color:#d0dff6;background:#dce8fa;color:#174c96}.side-item.selected>span{color:#3478d4}.finder-content{min-width:0;padding:25px 27px;background:#fff}.content-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:17px;padding-bottom:13px;border-bottom:1px solid #ececef}.content-heading h1{margin:0;color:#26282d;font-size:25px;line-height:1.25;font-weight:700;letter-spacing:-.025em}
+:root{color-scheme:dark;font-family:"Space Grotesk","Zen Kaku Gothic New",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#e9edf2;color:#27292d;font-synthesis:none;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;font-feature-settings:"palt"}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:#e9edf2;padding:28px 22px}button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus-visible{outline:2px solid #3478d4;outline-offset:2px}.hidden{display:none!important}.wrap{width:100%;max-width:1180px;margin:0 auto}.finder-window{position:relative;overflow:hidden;min-height:650px;border:1px solid #c9cbd0;border-radius:12px;background:#fff;box-shadow:0 18px 55px rgba(30,38,50,.17)}.finder-toolbar{height:58px;display:grid;grid-template-columns:120px minmax(0,1fr) 220px;align-items:center;gap:12px;padding:0 17px;background:linear-gradient(#fbfbfc,#f0f1f3);border-bottom:1px solid #d5d6da}.traffic-lights{display:flex;align-items:center;gap:8px}.traffic-lights span{display:block;width:12px;height:12px;border-radius:50%;box-shadow:inset 0 1px 1px rgba(255,255,255,.7),0 0 0 1px rgba(0,0,0,.08)}.traffic-lights span:nth-child(1){background:#ff5f57}.traffic-lights span:nth-child(2){background:#febc2e}.traffic-lights span:nth-child(3){background:#28c840}.finder-title{justify-self:center;color:#35373b;font-size:14px;font-weight:650;white-space:nowrap}.toolbar-search{display:flex;align-items:center;gap:7px;min-width:0;padding:6px 9px;border:1px solid #d3d5d9;border-radius:7px;background:#fff;color:#777b82}.toolbar-search span{font-size:14px}.toolbar-search input{width:100%;min-width:0;padding:0;border:0;outline:0;background:transparent;color:#292b30;font-size:12px}.toolbar-search input::placeholder{color:#999ca2}.finder-layout{display:grid;grid-template-columns:220px minmax(0,1fr);min-height:590px}.sidebar{padding:17px 10px 22px;background:#f4f5f7;border-right:1px solid #e0e1e4}.side-label{margin:17px 10px 7px;color:#85888f;font-size:10px;font-weight:750;letter-spacing:.04em}.side-item{display:flex;align-items:center;gap:9px;width:100%;padding:7px 10px;border:1px solid transparent;border-radius:6px;background:transparent;text-align:left;color:#36383d;font-size:12px}.side-item>span{display:inline-flex;justify-content:center;width:17px;color:#6e8fc5;font-size:15px}.side-item:hover{background:#e7e9ed}.side-item.selected{border-color:#d0dff6;background:#dce8fa;color:#174c96}.side-item.selected>span{color:#3478d4}.finder-content{min-width:0;padding:25px 27px;background:#fff}.content-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:17px;padding-bottom:13px;border-bottom:1px solid #ececef}.content-heading h1{margin:0;color:#26282d;font-size:25px;line-height:1.25;font-weight:700;letter-spacing:-.025em}
 .brand{font-family:"Space Grotesk","Zen Kaku Gothic New",sans-serif;font-size:10px;font-weight:700;letter-spacing:.2em;color:#4388bd;text-transform:uppercase}
 .finder-title{font-family:"Space Grotesk","Zen Kaku Gothic New",sans-serif;font-weight:600;letter-spacing:.025em}
 .content-heading h1{font-weight:800;letter-spacing:-.035em}
@@ -287,8 +281,7 @@ button.primary,.btn.primary,.login-row button,button[type=submit]{background:lin
 .empty{background:#09172a!important;border-color:#27617c!important;color:#a8bfd4!important}
 .status,.notice{background:#081c30!important;border-color:#236b8c!important;color:#a8eaff!important}
 a.admin{color:#68ddff!important}
-/* 旧 body.night-mode 用の3行は削除：クラスを付けるボタンもJSも存在せず到達不能だったため。
-   閲覧画面のテーマ切替は html.light-mode（下の「ライトモード」節）で行う。 */
+
 
 
 .notice-read-card{margin:0 0 16px;padding:14px 16px;border:1px solid #3b819d;border-radius:11px;background:linear-gradient(120deg,rgba(12,38,59,.96),rgba(10,22,42,.96));box-shadow:0 0 16px #00cfff12;color:#e8f5ff}.notice-read-card[hidden]{display:none!important}.notice-read-title{margin-bottom:7px;color:#73eaff;font-size:12px;font-weight:850;letter-spacing:.08em}.notice-read-body{font-size:12px;line-height:1.9;color:#d8e9f5}.notice-read-actions{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:10px}.notice-read-actions button{padding:7px 12px;border:1px solid #35d9ff;border-radius:7px;border-radius:7px;background:linear-gradient(135deg,#087fa9,#273f9b);color:#fff;font-size:11px;font-weight:750}.notice-read-actions button:disabled{opacity:.55;cursor:default}#noticeReadCount{color:#ffe58a;font-size:11px;font-weight:800}#noticeReadStatus{color:#8edfff;font-size:11px}/* Loading shimmer: a soft, flowing highlight while links are being fetched. */
@@ -330,113 +323,112 @@ body.window-resizing,body.window-resizing *{user-select:none!important}
 
 /* === テーマ切替ボタン === */
 .toolbar-tools{display:flex;align-items:center;justify-content:flex-end;gap:8px}
-.theme-toggle-btn{display:grid;place-items:center;width:29px;height:25px;padding:0;border-radius:5px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.06);color:#bfeeff;font:inherit;font-size:15px;line-height:1;cursor:pointer;box-shadow:none}
 .theme-toggle-btn:hover{background:rgba(255,255,255,.13);border-color:rgba(255,255,255,.12)}
 .theme-toggle-btn:focus-visible{outline:2px solid #35d9ff;outline-offset:2px}
 .side-item .theme-toggle-label{width:auto!important;color:inherit!important;font-size:12px!important}
 
 /* === ライトモード：既定のダーク（サイバーパンク）を、元のFinder風ライトに戻す ===
    上のダーク上書きは !important 付きが多いため、こちらも !important で打ち消す。
-   html.light-mode を付けることで、ダーク側より詳細度が高くなり、後勝ちする。 */
-html.light-mode{color-scheme:light!important;background:#e9edf2!important;color:#27292d!important}
-html.light-mode body{background:#e9edf2!important;color:#27292d!important}
-html.light-mode body::before{opacity:0!important;background-image:none!important}
-html.light-mode .finder-window,html.light-mode #loginPanel,html.light-mode #linksPanel{background:#fff!important;border:1px solid #c9cbd0!important;border-radius:12px!important;box-shadow:0 18px 55px rgba(30,38,50,.17)!important;color:#27292d!important}
-html.light-mode .finder-toolbar,html.light-mode #loginPanel .finder-toolbar,html.light-mode #linksPanel .finder-toolbar{background:linear-gradient(#fbfbfc,#f0f1f3)!important;border-bottom:1px solid #d5d6da!important}
-html.light-mode .finder-title,html.light-mode #loginPanel .finder-title,html.light-mode #linksPanel .finder-title{color:#35373b!important;text-shadow:none!important;letter-spacing:.025em!important;text-transform:none!important}
-html.light-mode .toolbar-search,html.light-mode #linksPanel .toolbar-search{background:#fff!important;border:1px solid #d3d5d9!important;color:#777b82!important}
-html.light-mode .toolbar-search input,html.light-mode #linksPanel .toolbar-search input{background:transparent!important;color:#292b30!important}
-html.light-mode .toolbar-search input::placeholder,html.light-mode #linksPanel .toolbar-search input::placeholder{color:#999ca2!important}
-html.light-mode .theme-toggle-btn{background:#fff!important;border:1px solid #d3d5d9!important;color:#36383d!important}
-html.light-mode .theme-toggle-btn:hover{background:#f4f5f7!important;border-color:#b8cbe7!important}
-html.light-mode .theme-toggle-btn:focus-visible{outline-color:#3478d4!important}
-html.light-mode .traffic-lights span{box-shadow:inset 0 1px 1px rgba(255,255,255,.7),0 0 0 1px rgba(0,0,0,.08)!important}
-html.light-mode .sidebar,html.light-mode #linksPanel .sidebar{background:#f4f5f7!important;border-right:1px solid #e0e1e4!important}
-html.light-mode .side-label,html.light-mode #linksPanel .side-label{color:#85888f!important;letter-spacing:.04em!important;text-transform:none!important}
-html.light-mode .side-item,html.light-mode #linksPanel .side-item{color:#36383d!important;background:transparent!important;border:1px solid transparent!important;box-shadow:none!important}
-html.light-mode .side-item>span,html.light-mode #linksPanel .side-item>span{color:#6e8fc5!important}
-html.light-mode .side-item:hover,html.light-mode #linksPanel .side-item:hover{background:#e7e9ed!important;border-color:transparent!important;box-shadow:none!important}
-html.light-mode .side-item.selected,html.light-mode #linksPanel .side-item.selected{background:#dce8fa!important;border-color:#d0dff6!important;color:#174c96!important;box-shadow:none!important}
-html.light-mode .side-item.selected>span,html.light-mode #linksPanel .side-item.selected>span{color:#3478d4!important}
-html.light-mode .finder-content,html.light-mode #linksPanel .finder-content,html.light-mode .finder-layout,html.light-mode #linksPanel .finder-layout{background:#fff!important;color:#27292d!important}
-html.light-mode .hero,html.light-mode .stat-card,html.light-mode .workspace,html.light-mode .panel,html.light-mode .section,html.light-mode .form-card,html.light-mode .section-card,html.light-mode .workspace-inner,html.light-mode .login-window{background:#fff!important;border-color:#e0e2e6!important;color:#27292d!important;box-shadow:none!important}
-html.light-mode .content-heading,html.light-mode #linksPanel .content-heading,html.light-mode .list-heading,html.light-mode #linksPanel .list-heading,html.light-mode .section-heading,html.light-mode .bar{border-color:#ececef!important}
-html.light-mode h1,html.light-mode h2,html.light-mode h3,html.light-mode .content-heading h1,html.light-mode #linksPanel .content-heading h1,html.light-mode .section-heading h2,html.light-mode .stat-card strong{color:#26282d!important;text-shadow:none!important}
-html.light-mode p,html.light-mode .content-heading p,html.light-mode #linksPanel .content-heading p,html.light-mode .count,html.light-mode #linksPanel .count{color:#898c92!important}
-html.light-mode .list-heading,html.light-mode #linksPanel .list-heading,html.light-mode .count{color:#858990!important}
-html.light-mode .section-kicker,html.light-mode .section-note,html.light-mode .eyebrow{color:#4388bd!important}
-html.light-mode .item,html.light-mode #linksPanel .item,html.light-mode .link-card,html.light-mode .memo-card,html.light-mode .official-card{background:#fff!important;border:1px solid #e0e2e6!important;border-radius:9px!important;color:#26282d!important;box-shadow:0 1px 2px rgba(0,0,0,.035)!important;transform:none!important}
-html.light-mode .item::before{opacity:0!important}
-html.light-mode .item:hover,html.light-mode #linksPanel .item:hover,html.light-mode .link-card:hover,html.light-mode .memo-card:hover,html.light-mode .official-card:hover{background:#fbfcff!important;border-color:#b8cbe7!important;box-shadow:0 1px 2px rgba(0,0,0,.035)!important;transform:none!important}
-html.light-mode .item a,html.light-mode #linksPanel .item a,html.light-mode a{color:#26282d!important;text-shadow:none!important}
-html.light-mode .item a:hover,html.light-mode #linksPanel .item a:hover,html.light-mode a:hover{color:#1769c2!important;text-shadow:none!important}
-html.light-mode .url,html.light-mode #linksPanel .item .url{color:#858990!important}
-html.light-mode .memo,html.light-mode #linksPanel .item .memo{color:#656970!important}
-html.light-mode .category,html.light-mode #linksPanel .item .category,html.light-mode .tag,html.light-mode .badge,html.light-mode .live-pill{background:#f4f5f7!important;border:1px solid #e1e4e9!important;color:#62666d!important}
-html.light-mode .item-arrow,html.light-mode #linksPanel .item-arrow{color:#a0a3a9!important}
-html.light-mode .empty,html.light-mode #linksPanel .empty{background:transparent!important;border:1px dashed #d7d9de!important;color:#858990!important}
-html.light-mode .status,html.light-mode .notice{background:#fff!important;border-color:#e0e2e6!important;color:#656970!important}
-html.light-mode .status:not(:empty),html.light-mode #linksPanel .status:not(:empty){background:#f4f5f7!important;border:1px solid #e0e2e6!important;border-left:3px solid #3478d4!important;color:#656970!important;box-shadow:none!important}
-html.light-mode .status.error,html.light-mode .error{color:#c0392b!important}
-html.light-mode .login-body,html.light-mode #loginPanel .login-body{background:#fff!important}
-html.light-mode .login-body h1,html.light-mode #loginPanel .login-body h1{color:#26282d!important;text-shadow:none!important}
-html.light-mode .login-body p,html.light-mode .login-body label,html.light-mode #loginPanel .login-body p,html.light-mode #loginPanel .login-body label{color:#656970!important}
-html.light-mode .login-row input,html.light-mode #loginPanel .login-row input{background:#fff!important;border:1px solid #d3d5d9!important;color:#292b30!important}
-html.light-mode .login-row input::placeholder,html.light-mode #loginPanel .login-row input::placeholder{color:#999ca2!important}
-html.light-mode .login-row input:focus,html.light-mode #loginPanel .login-row input:focus{border-color:#3478d4!important;box-shadow:0 0 0 3px rgba(52,120,212,.15)!important}
-html.light-mode .login-row button,html.light-mode #loginPanel .login-row button{background:#3478d4!important;border:1px solid #3478d4!important;color:#fff!important;box-shadow:none!important}
-html.light-mode .login-row button:hover,html.light-mode #loginPanel .login-row button:hover{background:#2b6ac2!important;border-color:#2b6ac2!important;box-shadow:none!important}
-html.light-mode input,html.light-mode textarea,html.light-mode select,html.light-mode .search-wrap{background:#fff!important;border-color:#d3d5d9!important;color:#292b30!important}
-html.light-mode input::placeholder,html.light-mode textarea::placeholder{color:#999ca2!important}
-html.light-mode input:focus,html.light-mode textarea:focus,html.light-mode select:focus{border-color:#3478d4!important;box-shadow:0 0 0 3px rgba(52,120,212,.15)!important}
-html.light-mode button,html.light-mode .btn{background:#fff!important;border-color:#d3d5d9!important;color:#26282d!important;box-shadow:none!important}
-html.light-mode button:hover,html.light-mode .btn:hover{background:#f4f5f7!important;border-color:#b8cbe7!important;box-shadow:none!important}
-html.light-mode button.primary,html.light-mode .btn.primary,html.light-mode button[type=submit]{background:#3478d4!important;border-color:#3478d4!important;color:#fff!important}
-html.light-mode .star-icon,html.light-mode .stat-icon,html.light-mode .official-icon{background:transparent!important;border-color:transparent!important;color:#e5a100!important}
-html.light-mode .folder-icon{background:transparent!important;border-color:transparent!important;color:#e5b84f!important;filter:drop-shadow(0 3px 7px rgba(0,0,0,.15))!important}
-html.light-mode .folder-card{background:#fff!important;border:1px solid #e0e2e6!important;color:#26282d!important;box-shadow:0 1px 2px rgba(0,0,0,.035)!important}
-html.light-mode .folder-card:hover{border-color:#b8cbe7!important;box-shadow:0 1px 2px rgba(0,0,0,.035)!important;transform:none!important}
-html.light-mode .folder-card-name{color:#26282d!important}
-html.light-mode .folder-card-count{color:#858990!important}
-html.light-mode .folder-toolbar button{background:#fff!important;border:1px solid #e0e2e6!important;color:#26282d!important}
-html.light-mode .notice-read-card{background:#eef7fc!important;border:1px solid #bcd9e8!important;color:#26282d!important;box-shadow:none!important}
-html.light-mode .notice-read-title{color:#1769c2!important}
-html.light-mode .notice-read-body{color:#4a5560!important}
-html.light-mode .notice-read-actions button{background:#3478d4!important;border:1px solid #3478d4!important;color:#fff!important}
-html.light-mode #noticeReadCount{color:#b7791f!important}
-html.light-mode #noticeReadStatus{color:#3478d4!important}
-html.light-mode .loading-card{border:1px solid #e0e2e6!important;background:linear-gradient(110deg,#f4f5f7 25%,#e7e9ed 38%,#f4f5f7 52%)!important}
-html.light-mode .loading-line{background:rgba(0,0,0,.08)!important}
-html.light-mode .chat-overlay{background:#fff!important;border:1px solid #c9cbd0!important;color:#26282d!important;box-shadow:0 18px 55px rgba(30,38,50,.17)!important}
-html.light-mode .chat-head{background:linear-gradient(#fbfbfc,#f0f1f3)!important;border-bottom:1px solid #d5d6da!important}
-html.light-mode .chat-head button{background:#fff!important;border:1px solid #d3d5d9!important;color:#26282d!important}
-html.light-mode .chat-subtitle{color:#656970!important;border-bottom:1px solid #e0e1e4!important}
-html.light-mode .chat-messages{background:#fff!important}
-html.light-mode .chat-message{background:#f4f5f7!important;border:1px solid #e0e2e6!important}
-html.light-mode .chat-message.admin{background:#dce8fa!important;border-color:#d0dff6!important}
-html.light-mode .chat-message-meta{color:#3478d4!important}
-html.light-mode .chat-message-body{color:#26282d!important}
-html.light-mode .chat-empty,html.light-mode .chat-status{color:#858990!important}
-html.light-mode .chat-compose{background:#f4f5f7!important;border-top:1px solid #e0e1e4!important}
-html.light-mode .chat-compose textarea{background:#fff!important;border:1px solid #d3d5d9!important;color:#292b30!important}
-html.light-mode .chat-compose button{background:#3478d4!important;border:1px solid #3478d4!important;color:#fff!important}
-html.light-mode #lc-page-guide-overlay{background:rgba(30,38,50,.45)!important}
-html.light-mode #lc-page-guide-dialog{background:#fff!important;border:1px solid #c9cbd0!important;color:#26282d!important;box-shadow:0 18px 55px rgba(30,38,50,.25)!important}
-html.light-mode #lc-page-guide-head{background:linear-gradient(#fbfbfc,#f0f1f3)!important;border-bottom:1px solid #d5d6da!important}
-html.light-mode #lc-page-guide-head small{color:#3478d4!important}
-html.light-mode #lc-page-guide-head h2{color:#26282d!important}
-html.light-mode #lc-page-guide-close{background:#fff!important;border:1px solid #d3d5d9!important;color:#26282d!important}
-html.light-mode .lc-page-guide-entry{background:#f4f5f7!important;border:1px solid #e0e2e6!important}
-html.light-mode .lc-page-guide-meta{color:#858990!important}
-html.light-mode .lc-page-guide-version{background:#dce8fa!important;border:1px solid #d0dff6!important;color:#174c96!important}
-html.light-mode .lc-page-guide-entry h3{color:#26282d!important}
-html.light-mode .lc-page-guide-entry p{color:#4a5560!important}
-html.light-mode .click-log-notice{background:#fff!important;border:1px solid #d3d5d9!important;color:#26282d!important;box-shadow:0 12px 38px rgba(30,38,50,.2)!important}
-html.light-mode .click-log-notice.error{background:#fdf0f0!important;border-color:#e0b4b4!important;color:#c0392b!important}
-html.light-mode footer{color:#85888f!important}
-html.light-mode a.admin{color:#1769c2!important}
-html.light-mode a.admin:hover{color:#1769c2!important;text-shadow:none!important}
-html.light-mode ::selection{background:rgba(52,120,212,.25)!important;color:#26282d!important}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 </style>
 <meta name="robots" content="noindex, nofollow, noarchive">
@@ -446,13 +438,13 @@ html.light-mode ::selection{background:rgba(52,120,212,.25)!important;color:#262
 <main class="wrap">
 <div class="click-log-notice" id="clickLogNotice" role="status" aria-live="polite"></div>
 <section class="finder-window login-window" id="loginPanel">
-  <div class="finder-toolbar"><div class="traffic-lights" aria-label="ウィンドウ操作"><span class="traffic-red" aria-hidden="true"></span><span class="traffic-yellow" aria-hidden="true"></span><span class="traffic-green" aria-hidden="true"></span></div><div class="finder-title">My Desktop</div><div class="toolbar-tools"><button class="theme-toggle-btn" type="button" aria-pressed="false" aria-label="ライトモードに切り替える" title="ライトモードに切り替える">◐</button></div></div>
+  <div class="finder-toolbar"><div class="traffic-lights" aria-label="ウィンドウ操作"><span class="traffic-red" aria-hidden="true"></span><span class="traffic-yellow" aria-hidden="true"></span><span class="traffic-green" aria-hidden="true"></span></div><div class="finder-title">My Desktop</div><div class="toolbar-tools"></div></div>
   <div class="login-body"><div class="brand">LINK CORE / SHARED DESKTOP</div><h1>リンク一覧</h1><p>サイトのパスワードを入力すると、共有リンクを閲覧できます。</p>
     <form id="loginForm" onsubmit="return false"><label for="sitePassword">サイトのパスワード</label><div class="login-row"><input id="sitePassword" type="password" autocomplete="current-password" required autofocus><button id="loginButton" type="submit" disabled>ログイン</button></div><div class="error" id="loginError" role="alert">ログイン画面を準備しています。表示が変わらない場合はページを再読み込みしてください。</div><button class="retry-button hidden" id="loginRetry" type="button"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:5px"><path d="M20 7v5h-5"/><path d="M20 12a8 8 0 1 1-2.3-5.7L20 9"/></svg>再試行</button></form>
   </div>
 </section>
 <section class="finder-window hidden" id="linksPanel">
-  <div class="finder-toolbar"><div class="traffic-lights" aria-label="ウィンドウ操作"><span class="traffic-red" aria-hidden="true"></span><span class="traffic-yellow" aria-hidden="true"></span><span class="traffic-green" aria-hidden="true"></span></div><div class="finder-title"><span class="folder-glyph">▰</span> My Desktop <span class="toolbar-chevron">›</span></div><div class="toolbar-tools"><span>▤</span><span>☷</span><button class="theme-toggle-btn" type="button" aria-pressed="false" aria-label="ライトモードに切り替える" title="ライトモードに切り替える">◐</button><button class="share-btn" type="button" id="toolbarShareBtn" aria-label="このページを共有する" title="このページを共有する">⤴</button></div><label class="toolbar-search"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="検索" aria-label="リンクを検索"></label></div>
+  <div class="finder-toolbar"><div class="traffic-lights" aria-label="ウィンドウ操作"><span class="traffic-red" aria-hidden="true"></span><span class="traffic-yellow" aria-hidden="true"></span><span class="traffic-green" aria-hidden="true"></span></div><div class="finder-title"><span class="folder-glyph">▰</span> My Desktop <span class="toolbar-chevron">›</span></div><div class="toolbar-tools"><span>▤</span><span>☷</span><button class="share-btn" type="button" id="toolbarShareBtn" aria-label="このページを共有する" title="このページを共有する">⤴</button></div><label class="toolbar-search"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="検索" aria-label="リンクを検索"></label></div>
   <div class="finder-layout"><aside class="sidebar" aria-label="サイドバー">
 <button class="side-item" type="button" data-view="desktop"><span>▣</span> My Desktop</button>
 <div class="side-label">よく使う項目</div>
@@ -464,7 +456,7 @@ html.light-mode ::selection{background:rgba(52,120,212,.25)!important;color:#262
 <button class="side-item chat-launch" type="button" id="openChat"><span>✉</span> 管理者チャット <span class="new-badge">NEW</span></button>
 <button class="side-item" type="button" id="sidePageGuide"><span aria-hidden="true">ⓘ</span> このページの仕組み</button>
 <button class="side-item" type="button" id="sideShare"><span>⤴</span> このページを共有</button>
-<button class="side-item theme-toggle-btn" type="button" aria-pressed="false" aria-label="ライトモードに切り替える" title="ライトモードに切り替える"><span>◐</span> <span class="theme-toggle-label">ライトモードに切替</span></button>
+
 <div class="side-label">カテゴリ</div><div id="sideCats" class="side-cats"></div>
 </aside><section class="finder-content"><div class="workspace">
 <div class="section-heading"><div><span class="section-kicker">MY DESKTOP / LINK LIBRARY</span><h2 id="viewTitle">お気に入り</h2></div><span class="section-note">ICON VIEW</span></div>
@@ -476,33 +468,7 @@ html.light-mode ::selection{background:rgba(52,120,212,.25)!important;color:#262
 <section class="chat-overlay" id="chatOverlay" aria-label="管理者との共通チャット"><div class="chat-head"><strong>LINK CORE / CHAT</strong><div class="chat-head-actions"><button type="button" id="refreshChat"><span class="refresh-icon" aria-hidden="true">↻</span><span>再読み込み</span></button><button type="button" id="closeChat">閉じる</button></div></div><div class="chat-subtitle">利用者と管理者が参加する共通チャットです。サイトの不具合報告などにもご利用ください。</div><div class="chat-messages" id="chatMessages" aria-live="polite"><div class="chat-status">チャットを開いています…</div></div><label class="chat-subtitle" for="privateChatId">個別チャットID（管理者に共有）<input id="privateChatId" type="text" readonly style="display:block;width:100%"></label><form class="chat-compose" id="chatForm"><textarea id="chatInput" maxlength="1000" rows="2" placeholder="メッセージを入力…" required></textarea><button id="chatSend" type="submit">送信</button></form></section><footer><a class="admin" href="admin.html">管理者画面</a></footer>
 </main>
 <iframe id="gasBridge" title="通信" hidden></iframe>
-<script id="lc-theme-script">
-/* テーマ切替（閲覧画面）：既定はダーク。localStorage に保存し、未保存時は OS の設定に従う。 */
-(function(){
-  'use strict';
-  var KEY='linkCoreViewerTheme', META_DARK='#050914', META_LIGHT='#e9edf2';
-  function isLight(){return document.documentElement.classList.contains('light-mode');}
-  function apply(light,persist){
-    document.documentElement.classList.toggle('light-mode',light);
-    var meta=document.getElementById('themeColorMeta');
-    if(meta)meta.setAttribute('content',light?META_LIGHT:META_DARK);
-    var label=light?'ダークモードに切り替える':'ライトモードに切り替える';
-    document.querySelectorAll('.theme-toggle-btn').forEach(function(btn){
-      btn.setAttribute('aria-pressed',String(light));
-      btn.setAttribute('aria-label',label);btn.setAttribute('title',label);
-    });
-    document.querySelectorAll('.theme-toggle-label').forEach(function(el){
-      el.textContent=light?'ダークモードに切替':'ライトモードに切替';
-    });
-    if(persist){try{localStorage.setItem(KEY,light?'light':'dark');}catch(e){}}
-  }
-  document.querySelectorAll('.theme-toggle-btn').forEach(function(btn){
-    btn.addEventListener('click',function(){apply(!isLight(),true);});
-  });
-  /* OS の設定変更には追従しない。既定はダークで、切替は ◐ ボタンの保存済み選択だけが決める。 */
-  apply(isLight(),false);
-})();
-</script>
+
 <script id="lc-pwa-script">
 /* PWA：Service Worker を登録する。失敗しても閲覧自体は止めない。 */
 (function(){
@@ -1191,19 +1157,19 @@ main.wrap{width:100%;max-width:none!important;margin:0;padding:22px 24px}
 #lc-share-copy{padding:9px 18px;border:1px solid #315064;border-radius:9px;background:#0a1724;color:#bfeeff;font-size:14px;cursor:pointer}
 #lc-share-copy:hover{border-color:#00f0ff}
 #lc-share-status{min-height:20px;margin:10px 0 0;color:#8fb8c9;font-size:12px}
-html.light-mode .share-btn{background:#fff!important;border:1px solid #d3d5d9!important;color:#36383d!important}
-html.light-mode .share-btn:hover{background:#f4f5f7!important;border-color:#b8cbe7!important}
-html.light-mode .share-btn:focus-visible{outline-color:#3478d4!important}
-html.light-mode #lc-share-overlay{background:rgba(30,38,50,.45)!important}
-html.light-mode #lc-share-dialog{background:#fff!important;border:1px solid #c9cbd0!important;color:#26282d!important;box-shadow:0 18px 55px rgba(30,38,50,.25)!important}
-html.light-mode #lc-share-head small{color:#3478d4!important}
-html.light-mode #lc-share-head h2{color:#26282d!important}
-html.light-mode #lc-share-close{background:#fff!important;border:1px solid #d3d5d9!important;color:#26282d!important}
-html.light-mode .lc-share-desc{color:#656970!important}
-html.light-mode .lc-share-url{color:#656970!important}
-html.light-mode #lc-share-copy{background:#fff!important;border:1px solid #d3d5d9!important;color:#26282d!important}
-html.light-mode #lc-share-copy:hover{border-color:#3478d4!important}
-html.light-mode #lc-share-status{color:#656970!important}
+
+
+
+
+
+
+
+
+
+
+
+
+
 </style>
 <div id="lc-share-overlay" aria-hidden="true">
  <section id="lc-share-dialog" role="dialog" aria-modal="true" aria-labelledby="lc-share-title">
@@ -3621,16 +3587,16 @@ var qrcode = function() {
 </style>
 <style id="visitor-admin-appearance">
 .traffic-lights .traffic-green { display:inline-block; width:12px; height:12px; border-radius:50%; background:#28c840; }
-html:not(.light-mode) #linksPanel .sidebar { background:rgba(7,17,32,.98)!important; }
-html:not(.light-mode) #linksPanel .side-item { background:rgba(8,20,36,.7)!important; border:1px solid #19475c!important; color:#b9d5e6!important; }
-html:not(.light-mode) #linksPanel .side-item:is(:hover,.selected) { background:linear-gradient(100deg,#10344a,#171c3a)!important; border-color:#00d9ff!important; color:#eaffff!important; }
+#linksPanel .sidebar { background:rgba(7,17,32,.98)!important; }
+#linksPanel .side-item { background:rgba(8,20,36,.7)!important; border:1px solid #19475c!important; color:#b9d5e6!important; }
+#linksPanel .side-item:is(:hover,.selected) { background:linear-gradient(100deg,#10344a,#171c3a)!important; border-color:#00d9ff!important; color:#eaffff!important; }
 
 
 
 
 #linksPanel #list .lc-link-card { flex-direction:column!important; }
 #refreshLinks { margin-inline-start:auto; border:1px solid #286b8c; border-radius:8px; background:#10283b; color:#9beaff; padding:6px 12px; cursor:pointer; }
-html.light-mode #refreshLinks { background:#fff; border-color:#c8d5e4; color:#174c96; }
+
 @media (min-width:761px) {
   #linksPanel .finder-toolbar { height:58px; grid-template-columns:120px minmax(0,1fr) minmax(160px,220px) auto; grid-template-rows:1fr; gap:12px; padding:0 17px; }
   #linksPanel .finder-title { grid-column:2; grid-row:1; }
@@ -3638,8 +3604,8 @@ html.light-mode #refreshLinks { background:#fff; border-color:#c8d5e4; color:#17
   #linksPanel .toolbar-tools { grid-column:4; grid-row:1; }
 }
 
-html:not(.light-mode) #linksPanel #list .lc-link-card{display:flex;flex-direction:column;overflow:hidden;min-width:0;padding:0!important;border:1px solid #28485c!important;border-radius:14px!important;background:linear-gradient(145deg,#101c2c,#0b1422)!important;box-shadow:0 4px 16px rgba(0,0,0,.18)!important;transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
-html:not(.light-mode) #linksPanel .finder-content {
+#linksPanel #list .lc-link-card{display:flex;flex-direction:column;overflow:hidden;min-width:0;padding:0!important;border:1px solid #28485c!important;border-radius:14px!important;background:linear-gradient(145deg,#101c2c,#0b1422)!important;box-shadow:0 4px 16px rgba(0,0,0,.18)!important;transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+#linksPanel .finder-content {
   background: linear-gradient(145deg, #080f1e, #0a0d1f) !important;
 }
 #linksPanel #list .lc-link-card::before { content: none; }
@@ -3664,8 +3630,8 @@ html:not(.light-mode) #linksPanel .finder-content {
   #linksPanel #list .lc-link-card { min-height: 128px; }
 }
 @media (min-width: 761px) and (hover: hover) and (pointer: fine) {
-  html:not(.light-mode) #linksPanel #list .lc-link-card { box-shadow: none !important; transition: border-color .15s ease; }
-  html:not(.light-mode) #linksPanel #list .lc-link-card:hover { transform: none; box-shadow: none !important; }
+  #linksPanel #list .lc-link-card { box-shadow: none !important; transition: border-color .15s ease; }
+  #linksPanel #list .lc-link-card:hover { transform: none; box-shadow: none !important; }
 }
 </style>
 </body></html>
