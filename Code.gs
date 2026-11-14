@@ -1589,11 +1589,32 @@ function diagnoseLinks(offset, adminToken) {
   };
 }
 
+function countOnlineStaffBrowsers_(browserId) {
+  if (!validStaffBrowserId_(browserId)) return null;
+  const cache = CacheService.getScriptCache();
+  const key = 'LINK_CORE_STAFF_ONLINE_' + sessionGeneration_();
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(300)) return null;
+  try {
+    const now = Date.now();
+    const online = JSON.parse(cache.get(key) || '{}');
+    Object.keys(online).forEach(id => {
+      if (online[id] <= now) delete online[id];
+    });
+    online[browserId] = now + 45000;
+    cache.put(key, JSON.stringify(online), 45);
+    return Object.keys(online).length;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 function getStaffChatMessages(adminToken, browserId) {
   requireAdmin_(adminToken);
+  const onlineCount = countOnlineStaffBrowsers_(browserId);
   const sheet = staffChatSheet_(false);
   const last = sheet ? sheet.getLastRow() : 0;
-  if (last < 2) return {messages: []};
+  if (last < 2) return {messages: [], onlineCount};
 
   const first = Math.max(2, last - CHAT_MAX_MESSAGES + 1);
   const messages = sheet.getRange(first, 1, last - first + 1, 5).getValues()
@@ -1606,7 +1627,7 @@ function getStaffChatMessages(adminToken, browserId) {
         own, readCount: readers.length, unread: !!browserId && !own && !readers.includes(browserId)
       };
     });
-  return {messages};
+  return {messages, onlineCount};
 }
 
 function markStaffChatRead(ids, browserId, adminToken) {

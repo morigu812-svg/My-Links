@@ -885,6 +885,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
     <button type="button" id="refreshStaffChat">再読み込み</button>
     <button type="button" id="closeStaffChat">閉じる</button>
   </div></div>
+  <div class="chat-subtitle" id="staffOnlineCount">オンライン人数を確認中…</div>
   <div class="chat-messages" id="staffChatMessages" aria-label="管理者チャットの履歴"></div>
   <div class="chat-subtitle" id="staffChatStatus" role="status"></div>
   <form class="chat-compose" id="staffChatForm">
@@ -1908,8 +1909,8 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
   const refreshStaffButton = $('refreshStaffChat');
   let staffBrowserId = '';
   let staffRenderKey = '';
+  try { staffBrowserId = localStorage.getItem('linkCoreStaffChatBrowser') || ''; } catch (_) {}
   try {
-    staffBrowserId = localStorage.getItem('linkCoreStaffChatBrowser') || '';
     if (!/^staff-[0-9a-f]{32}$/.test(staffBrowserId)) {
       staffBrowserId = 'staff-' + Array.from(crypto.getRandomValues(new Uint8Array(16)),
         byte => byte.toString(16).padStart(2, '0')).join('');
@@ -1930,8 +1931,11 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
     if (!token || refreshStaffButton.disabled || document.hidden) return;
     refreshStaffButton.disabled = true;
     try {
-      const {messages} = await serverCall('getStaffChatMessages', token, staffBrowserId);
+      const {messages, onlineCount} = await serverCall('getStaffChatMessages', token, staffBrowserId);
       if (token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
+      const online = $('staffOnlineCount');
+      const label = Number.isInteger(onlineCount) ? onlineCount + '人の管理者がオンラインです' : 'オンライン人数を取得できません';
+      if (online.textContent !== label) online.textContent = label;
       const open = staffChat.classList.contains('open');
       const unread = messages.filter(item => item.unread);
       updateStaffUnread(unread.length, open);
@@ -1960,6 +1964,7 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
         if (result?.ok && token === adminSession.getItem(ADMIN_TOKEN_KEY)) updateStaffUnread(0, true);
       }
     } catch (error) {
+      $('staffOnlineCount').textContent = 'オンライン人数を取得できません';
       staffStatus.textContent = '読み込みに失敗しました。' + error.message;
     } finally {
       refreshStaffButton.disabled = false;
