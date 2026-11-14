@@ -11,7 +11,7 @@
  */
 'use strict';
 
-var CACHE_VERSION = 'link-core-v5';
+var CACHE_VERSION = 'link-core-v6';
 var STATIC_CACHE = 'link-core-static-' + CACHE_VERSION;
 var DATA_CACHE = 'link-core-data-' + CACHE_VERSION;
 
@@ -92,6 +92,15 @@ self.addEventListener('fetch', function (event) {
         return caches.match(request);
       })
     );
+    return;
+  }
+
+  // ログイン画面は、オンライン時に最新の HTML を使う。
+  if (request.mode === 'navigate' && url.origin === self.location.origin &&
+      url.href.startsWith(self.registration.scope)) {
+    event.respondWith(fetch(request, { cache: 'reload' }).catch(function () {
+      return caches.match(request, { ignoreSearch: true });
+    }));
     return;
   }
 
