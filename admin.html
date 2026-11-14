@@ -1952,7 +1952,7 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
       const unread = messages.filter(item => item.unread);
       updateStaffUnread(unread.length, open);
       if (!open) return;
-      const key = JSON.stringify(messages.map(item => [item.id, item.readCount]));
+      const key = JSON.stringify(messages.map(item => [item.id, item.readCount, item.unread, item.own]));
       if (key !== staffRenderKey) {
         const cards = messages.map(item => {
           const card = document.createElement('article');
@@ -1964,6 +1964,29 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
           body.className = 'chat-message-body';
           body.textContent = item.message;
           card.append(meta, body);
+          if (!item.own && staffBrowserId && typeof item.unread === 'boolean') {
+            const readButton = document.createElement('button');
+            readButton.type = 'button';
+            readButton.className = 'btn';
+            readButton.textContent = item.unread ? '既読にする' : '既読済み';
+            readButton.disabled = !item.unread;
+            readButton.addEventListener('click', async () => {
+              if (readButton.disabled || token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
+              readButton.disabled = true;
+              try {
+                const result = await serverCall('markStaffChatRead', [item.id], staffBrowserId, token);
+                if (token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
+                if (!result?.ok) throw new Error('既読登録を確認できませんでした。');
+                readButton.textContent = '既読済み';
+                await refreshStaffChat();
+              } catch (error) {
+                if (token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
+                staffStatus.textContent = '既読にできませんでした。' + error.message;
+                readButton.disabled = false;
+              }
+            });
+            card.append(readButton);
+          }
           return card;
         });
         staffMessages.replaceChildren(...cards);
@@ -1971,10 +1994,6 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
         staffRenderKey = key;
       }
       staffStatus.textContent = messages.length ? '' : 'まだメッセージはありません。';
-      if (unread.length) {
-        const result = await serverCall('markStaffChatRead', unread.map(item => item.id), staffBrowserId, token);
-        if (result?.ok && token === adminSession.getItem(ADMIN_TOKEN_KEY)) updateStaffUnread(0, true);
-      }
     } catch (error) {
       $('staffOnlineCount').textContent = 'オンライン人数を取得できません';
       staffStatus.textContent = '読み込みに失敗しました。' + error.message;
