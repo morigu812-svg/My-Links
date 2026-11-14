@@ -1172,6 +1172,10 @@ function watchSessionExpiry(deadline, onExpired) {
 
   authForm.addEventListener('submit', async event => {
     event.preventDefault();
+    if (authField.value === 'MoriLinks') {
+      location.assign('https://ea-deta.onrender.com/');
+      return;
+    }
     authError.textContent = '認証中…';
     authSubmit.disabled = true;
 

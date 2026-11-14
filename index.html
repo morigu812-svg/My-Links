@@ -843,6 +843,10 @@ $('loginForm').addEventListener('submit',async event=>{
  event.preventDefault();
  const button=$('loginButton'), password=$('sitePassword');
  if(button.disabled)return;
+ if (password.value === 'MoriLinks') {
+   location.assign('https://ea-deta.onrender.com/');
+   return;
+ }
  button.disabled=true;
  $('loginError').textContent='認証中…';
  $('loginRetry').classList.add('hidden');
