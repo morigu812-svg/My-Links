@@ -446,13 +446,13 @@ html.light-mode ::selection{background:rgba(52,120,212,.25)!important;color:#262
 <main class="wrap">
 <div class="click-log-notice" id="clickLogNotice" role="status" aria-live="polite"></div>
 <section class="finder-window login-window" id="loginPanel">
-  <div class="finder-toolbar"><div class="traffic-lights" aria-label="ウィンドウ操作"><span class="traffic-red" aria-hidden="true"></span><span class="traffic-yellow" aria-hidden="true"></span></div><div class="finder-title">My Desktop</div><div class="toolbar-tools"><button class="theme-toggle-btn" type="button" aria-pressed="false" aria-label="ライトモードに切り替える" title="ライトモードに切り替える">◐</button></div></div>
+  <div class="finder-toolbar"><div class="traffic-lights" aria-label="ウィンドウ操作"><span class="traffic-red" aria-hidden="true"></span><span class="traffic-yellow" aria-hidden="true"></span><span class="traffic-green" aria-hidden="true"></span></div><div class="finder-title">My Desktop</div><div class="toolbar-tools"><button class="theme-toggle-btn" type="button" aria-pressed="false" aria-label="ライトモードに切り替える" title="ライトモードに切り替える">◐</button></div></div>
   <div class="login-body"><div class="brand">LINK CORE / SHARED DESKTOP</div><h1>リンク一覧</h1><p>サイトのパスワードを入力すると、共有リンクを閲覧できます。</p>
     <form id="loginForm" onsubmit="return false"><label for="sitePassword">サイトのパスワード</label><div class="login-row"><input id="sitePassword" type="password" autocomplete="current-password" required autofocus><button id="loginButton" type="submit" disabled>ログイン</button></div><div class="error" id="loginError" role="alert">ログイン画面を準備しています。表示が変わらない場合はページを再読み込みしてください。</div><button class="retry-button hidden" id="loginRetry" type="button"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:5px"><path d="M20 7v5h-5"/><path d="M20 12a8 8 0 1 1-2.3-5.7L20 9"/></svg>再試行</button></form>
   </div>
 </section>
 <section class="finder-window hidden" id="linksPanel">
-  <div class="finder-toolbar"><div class="traffic-lights" aria-label="ウィンドウ操作"><span class="traffic-red" aria-hidden="true"></span><span class="traffic-yellow" aria-hidden="true"></span></div><div class="finder-title"><span class="folder-glyph">▰</span> My Desktop <span class="toolbar-chevron">›</span></div><div class="toolbar-tools"><span>▤</span><span>☷</span><button class="theme-toggle-btn" type="button" aria-pressed="false" aria-label="ライトモードに切り替える" title="ライトモードに切り替える">◐</button><button class="share-btn" type="button" id="toolbarShareBtn" aria-label="このページを共有する" title="このページを共有する">⤴</button></div><label class="toolbar-search"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="検索" aria-label="リンクを検索"></label></div>
+  <div class="finder-toolbar"><div class="traffic-lights" aria-label="ウィンドウ操作"><span class="traffic-red" aria-hidden="true"></span><span class="traffic-yellow" aria-hidden="true"></span><span class="traffic-green" aria-hidden="true"></span></div><div class="finder-title"><span class="folder-glyph">▰</span> My Desktop <span class="toolbar-chevron">›</span></div><div class="toolbar-tools"><span>▤</span><span>☷</span><button class="theme-toggle-btn" type="button" aria-pressed="false" aria-label="ライトモードに切り替える" title="ライトモードに切り替える">◐</button><button class="share-btn" type="button" id="toolbarShareBtn" aria-label="このページを共有する" title="このページを共有する">⤴</button></div><label class="toolbar-search"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="検索" aria-label="リンクを検索"></label></div>
   <div class="finder-layout"><aside class="sidebar" aria-label="サイドバー">
 <button class="side-item" type="button" data-view="desktop"><span>▣</span> My Desktop</button>
 <div class="side-label">よく使う項目</div>
@@ -460,6 +460,7 @@ html.light-mode ::selection{background:rgba(52,120,212,.25)!important;color:#262
 <button class="side-item" type="button" data-view="recent"><span>◷</span> 最近追加した項目</button>
 <button class="side-item" type="button" data-view="all"><span>▦</span> すべてのリンク</button>
 <div class="side-label">クイックアクセス</div>
+<button class="side-item" type="button" id="visitorLogout">ログアウト</button>
 <button class="side-item chat-launch" type="button" id="openChat"><span>✉</span> 管理者チャット <span class="new-badge">NEW</span></button>
 <button class="side-item" type="button" id="sidePageGuide"><span aria-hidden="true">ⓘ</span> このページの仕組み</button>
 <button class="side-item" type="button" id="sideShare"><span>⤴</span> このページを共有</button>
@@ -467,7 +468,7 @@ html.light-mode ::selection{background:rgba(52,120,212,.25)!important;color:#262
 <div class="side-label">カテゴリ</div><div id="sideCats" class="side-cats"></div>
 </aside><section class="finder-content"><div class="workspace">
 <div class="section-heading"><div><span class="section-kicker">MY DESKTOP / LINK LIBRARY</span><h2 id="viewTitle">お気に入り</h2></div><span class="section-note">ICON VIEW</span></div>
-<div class="list-heading"><span class="list-heading-title"><span class="heading-dot">◆</span> LINK FEED</span><span class="result-count" id="count"></span><button class="retry-button" id="refreshLinks" type="button">リンクを更新</button><button type="button" id="visitorLogout">ログアウト</button></div>
+<div class="list-heading"><span class="list-heading-title"><span class="heading-dot">◆</span> LINK FEED</span><span class="result-count" id="count"></span><button class="retry-button" id="refreshLinks" type="button">リンクを更新</button></div>
 <div class="status" id="loadStatus" role="status" aria-live="polite"></div>
 <div class="list loading-skeleton" id="list" role="region" aria-label="リンク一覧" aria-live="polite" aria-busy="true"><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div></div>
 </div></section></div>
@@ -3616,6 +3617,25 @@ var qrcode = function() {
   #list .lc-link-card:hover {
     transform: none;
   }
+}
+</style>
+<style id="visitor-admin-appearance">
+.traffic-lights .traffic-green { display:inline-block; width:12px; height:12px; border-radius:50%; background:#28c840; }
+html:not(.light-mode) #linksPanel .sidebar { background:rgba(7,17,32,.98)!important; }
+html:not(.light-mode) #linksPanel .side-item { background:rgba(8,20,36,.7)!important; border:1px solid #19475c!important; color:#b9d5e6!important; }
+html:not(.light-mode) #linksPanel .side-item:is(:hover,.selected) { background:linear-gradient(100deg,#10344a,#171c3a)!important; border-color:#00d9ff!important; color:#eaffff!important; }
+html:not(.light-mode) #linksPanel #list .lc-link-card { background:linear-gradient(145deg,#101c2c,#0b1422)!important; border-color:#28485c!important; border-radius:14px!important; }
+html:not(.light-mode) #linksPanel #list .lc-link-card .title { color:#edf7ff!important; }
+html:not(.light-mode) #linksPanel #list .lc-link-card .meta { color:#9bb0c5!important; }
+html:not(.light-mode) #linksPanel #list .lc-link-card .memo { color:#c0cfdd!important; }
+#linksPanel #list .lc-link-card { flex-direction:column!important; }
+#refreshLinks { margin-inline-start:auto; border:1px solid #286b8c; border-radius:8px; background:#10283b; color:#9beaff; padding:6px 12px; cursor:pointer; }
+html.light-mode #refreshLinks { background:#fff; border-color:#c8d5e4; color:#174c96; }
+@media (min-width:761px) {
+  #linksPanel .finder-toolbar { height:58px; grid-template-columns:120px minmax(0,1fr) minmax(160px,220px) auto; grid-template-rows:1fr; gap:12px; padding:0 17px; }
+  #linksPanel .finder-title { grid-column:2; grid-row:1; }
+  #linksPanel .toolbar-search { grid-column:3; grid-row:1; width:100%; min-width:0; }
+  #linksPanel .toolbar-tools { grid-column:4; grid-row:1; }
 }
 </style>
 </body></html>
