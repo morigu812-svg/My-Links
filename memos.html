@@ -56,7 +56,7 @@ a{color:#68eaff}a:hover{color:#fff;text-shadow:0 0 10px #00d9ff55}
 <div class="brand">LINK CORE / PRIVATE MEMOS</div>
 <section class="panel" id="loginPanel">
 <h1>メモ帳</h1><p>管理者ログイン後、独立したメモを追加・編集・削除できます。</p>
-<form id="loginForm"><label for="password">管理者パスワード</label><input id="password" type="password" autocomplete="current-password" required autofocus><div class="actions"><button id="loginButton" type="submit">ログイン</button><button class="secondary" type="button" onclick="location.href='./'">リンク一覧へ戻る</button></div><div class="error" id="loginError" role="alert"></div></form>
+<form id="loginForm"><label for="password">管理者パスワード</label><input id="password" type="password" autocomplete="current-password" required autofocus><div class="actions"><label for="memoPassword">メモ帳パスワード</label><input id="memoPassword" type="password" autocomplete="current-password" required><button id="loginButton" type="submit">ログイン</button><button class="secondary" type="button" onclick="location.href='./'">リンク一覧へ戻る</button></div><div class="error" id="loginError" role="alert"></div></form>
 </section>
 <section class="panel hidden" id="appPanel">
 <div class="brand">MEMO WORKSPACE</div><h1>メモ帳</h1><p>メモはリンク一覧とは別の「Memos」シートに保存されます。</p>
@@ -71,7 +71,7 @@ a{color:#68eaff}a:hover{color:#fff;text-shadow:0 0 10px #00d9ff55}
 (() => {
 'use strict';
 const GAS_URL='https://script.google.com/macros/s/AKfycbwr6gUhjgC_zcazwXqDKOqHqiWt1t-NOjrz3IiOjP-NVaXvAJpKOKQ8Ez6It1qKvkxzFw/exec';
-const pending=new Map();let bridgeWindow=null,bridgeOrigin='',adminToken='',memos=[]; let requestSeq=0;
+const pending=new Map();let bridgeWindow=null,bridgeOrigin='',adminToken='',memoToken='',memos=[]; let requestSeq=0;
 let readyResolve;const bridgeReady=new Promise(resolve=>readyResolve=resolve);const frame=document.getElementById('gasBridge');
 const embedded=new URLSearchParams(location.search).get('embedded')==='1';
 function isGasOrigin(origin){if(origin==='https://script.google.com'||origin==='https://script.googleusercontent.com')return true;try{const h=new URL(origin).hostname;return origin.startsWith('https://')&&(h==='googleusercontent.com'||h.endsWith('.googleusercontent.com'))}catch(_){return false}}
@@ -133,7 +133,7 @@ function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;',
 function dateLabel(v){if(!v)return '';const d=new Date(v);return Number.isNaN(d.getTime())?String(v):d.toLocaleString('ja-JP',{dateStyle:'medium',timeStyle:'short'})}
 function showMemoError(message){$('memoList').setAttribute('aria-busy','false');$('memoList').innerHTML='<div class="empty">メモの読み込みに失敗しました：'+esc(message||'通信エラー')+'<div class="actions" style="justify-content:center"><button class="secondary" id="retryMemosButton" type="button"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:5px"><path d="M20 7v5h-5"/><path d="M20 12a8 8 0 1 1-2.3-5.7L20 9"/></svg>再試行</button></div></div>';const b=$('retryMemosButton');if(b)b.addEventListener('click',async()=>{b.disabled=true;try{await loadMemos()}catch(err){showMemoError(err.message)}})}
 function showMemoSkeleton(){ $('memoList').setAttribute('aria-busy','true'); $('memoList').innerHTML=Array.from({length:3},()=>'<div class="skeleton-card" aria-hidden="true"><div class="skeleton-line title"></div><div class="skeleton-line long"></div><div class="skeleton-line medium"></div><div class="skeleton-line short"></div></div>').join('') }
-async function loadMemos(){showMemoSkeleton();try{const data=await call('getMemos',adminToken);memos=Array.isArray(data.memos)?data.memos:[];render()}finally{$('memoList').setAttribute('aria-busy','false')}}
+async function loadMemos(){showMemoSkeleton();try{const data=await call('getMemos',memoToken,adminToken);memos=Array.isArray(data.memos)?data.memos:[];render()}finally{$('memoList').setAttribute('aria-busy','false')}}
 if(embedded){
  window.addEventListener('message', event => {
   if(event.origin!==location.origin||event.source!==window.parent)return;
@@ -142,13 +142,15 @@ if(embedded){
   const item=pending.get(data.id);pending.delete(data.id);
   data.ok?item.resolve(data.result):item.reject(new Error(data.error||'通信に失敗しました。'));
  });
- $('loginPanel').classList.add('hidden');
- $('appPanel').classList.remove('hidden');
- $('memoList').innerHTML='<div class="empty">管理者認証を確認中…</div>';
+ $('password').closest('label')?.classList.add('hidden');
+ $('password').hidden = true;
+ $('password').required = false;
+ document.querySelector('label[for="password"]')?.classList.add('hidden');
+ $('loginButton').disabled = true;
  window.addEventListener('message',async event=>{
   if(event.origin!==location.origin||event.source!==window.parent||!event.data||event.data.type!=='LINK_CORE_ADMIN_TOKEN'||typeof event.data.token!=='string'||!event.data.token)return;
   adminToken=event.data.token;
-  try{await loadMemos()}catch(err){showMemoError(err.message||'通信エラー')}
+  $('loginButton').disabled = false;
  });
 } else {
  window.addEventListener('load',()=>{if(window.parent!==window)window.parent.postMessage({type:'MEMO_EMBED_READY'},location.origin)});
@@ -159,18 +161,26 @@ function closeEditor(){$('editor').classList.add('hidden');$('memoForm').reset()
 $('loginForm').addEventListener('submit',async e=>{
  e.preventDefault(); $('loginButton').disabled=true; $('loginError').textContent='ログイン中…';
  try {
-  const loginStartedAt = Date.now();
-  const result=await call('authenticateAdmin',$('password').value);
-  if(!result || !result.token) throw new Error('認証トークンを取得できませんでした。');
-  adminToken=result.token;
-  stopMemoExpiry = watchSessionExpiry(loginStartedAt + Math.min(result.expiresIn || 1800, 1800) * 1000, () => location.reload());
+  if (!embedded) {
+   const loginStartedAt = Date.now();
+   const result = await call('authenticateAdmin', $('password').value);
+   if (!result?.token) throw new Error('管理者認証を確認できませんでした。');
+   adminToken = result.token;
+   stopMemoExpiry();
+   stopMemoExpiry = watchSessionExpiry(loginStartedAt + Math.min(result.expiresIn || 1800, 1800) * 1000, () => location.reload());
+  }
+  const memoAuth = await call('authenticateMemo', $('memoPassword').value, adminToken);
+  if (!memoAuth?.token) throw new Error('メモ帳の認証を確認できませんでした。');
+  memoToken = memoAuth.token;
+  $('memoPassword').value = '';
+  $('password').value = '';
   $('loginPanel').classList.add('hidden'); $('appPanel').classList.remove('hidden'); $('loginError').textContent='';
   try{await loadMemos()}catch(loadErr){showMemoError(loadErr.message||'通信エラー');return}
  } catch(err) { $('loginError').textContent=err.message||'ログインできませんでした。'; }
  finally { $('loginButton').disabled=false; }
 });
-let memoSaveInFlight=false; $('memoForm').addEventListener('submit',async e=>{e.preventDefault();if(memoSaveInFlight)return;memoSaveInFlight=true;$('saveButton').disabled=true;$('saveStatus').textContent='保存中…';try{let id=$('memoId').value;if(!id){id=(crypto.randomUUID&&crypto.randomUUID())||('memo-'+Date.now()+'-'+Math.random().toString(36).slice(2));$('memoId').value=id}const data=await call('saveMemo',{id,title:$('memoTitle').value,body:$('memoBody').value},adminToken);memos=Array.isArray(data.memos)?data.memos:[];render();closeEditor()}catch(err){$('saveStatus').textContent=err.message||'保存に失敗しました。'}finally{memoSaveInFlight=false;$('saveButton').disabled=false}});
-$('memoList').addEventListener('click',async e=>{const edit=e.target.closest('[data-edit]');const del=e.target.closest('[data-delete]');if(edit){const memo=memos.find(m=>m.id===edit.dataset.edit);if(memo)openEditor(memo)}if(del){const memo=memos.find(m=>m.id===del.dataset.delete);if(!memo||!confirm('「'+memo.title+'」を削除しますか？'))return;del.disabled=true;try{const data=await call('deleteMemo',memo.id,adminToken);memos=Array.isArray(data.memos)?data.memos:[];render()}catch(err){alert(err.message||'削除に失敗しました。');del.disabled=false}}});
+let memoSaveInFlight=false; $('memoForm').addEventListener('submit',async e=>{e.preventDefault();if(memoSaveInFlight)return;memoSaveInFlight=true;$('saveButton').disabled=true;$('saveStatus').textContent='保存中…';try{let id=$('memoId').value;if(!id){id=(crypto.randomUUID&&crypto.randomUUID())||('memo-'+Date.now()+'-'+Math.random().toString(36).slice(2));$('memoId').value=id}const data=await call('saveMemo',{id,title:$('memoTitle').value,body:$('memoBody').value},memoToken,adminToken);memos=Array.isArray(data.memos)?data.memos:[];render();closeEditor()}catch(err){$('saveStatus').textContent=err.message||'保存に失敗しました。'}finally{memoSaveInFlight=false;$('saveButton').disabled=false}});
+$('memoList').addEventListener('click',async e=>{const edit=e.target.closest('[data-edit]');const del=e.target.closest('[data-delete]');if(edit){const memo=memos.find(m=>m.id===edit.dataset.edit);if(memo)openEditor(memo)}if(del){const memo=memos.find(m=>m.id===del.dataset.delete);if(!memo||!confirm('「'+memo.title+'」を削除しますか？'))return;del.disabled=true;try{const data=await call('deleteMemo',memo.id,memoToken,adminToken);memos=Array.isArray(data.memos)?data.memos:[];render()}catch(err){alert(err.message||'削除に失敗しました。');del.disabled=false}}});
 $('newButton').addEventListener('click',()=>openEditor(null));$('cancelButton').addEventListener('click',closeEditor);$('search').addEventListener('input',render);
 function watchSessionExpiry(deadline, onExpired) {
   function checkExpiry() {
@@ -197,9 +207,12 @@ $('logoutButton').addEventListener('click', async event => {
   adminToken = '';
   $('appPanel').classList.add('hidden');
   closeEditor();
-  try { if (token) await call('logoutCurrentSession', token); }
+  try { if (token && !embedded) await call('logoutCurrentSession', token); }
   catch (_) {}
-  finally { location.reload(); }
+  finally {
+    if (embedded) window.parent.postMessage({type:'LINK_CORE_MEMO_CLOSE'},location.origin);
+    else location.reload();
+  }
 });
 })();
 </script></body></html>

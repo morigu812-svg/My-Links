@@ -1042,8 +1042,35 @@ const MEMOS_CACHE_TTL_SECONDS = 60;
 function invalidateMemosCache_() {
   CacheService.getScriptCache().remove('LINK_CORE_MEMOS_V1');
 }
-function getMemos(adminToken) {
+function authenticateMemo(password, adminToken) {
   requireAdmin_(adminToken);
+  const state = getAuthRateState_('MEMO');
+  checkAuthRateLimit_(state);
+  const properties = PropertiesService.getScriptProperties();
+  const expected = properties.getProperty('LINK_CORE_MEMO_PASSWORD');
+  if (!expected || expected === properties.getProperty('LINK_CORE_ADMIN_PASSWORD')) {
+    throw new Error('GASで管理者用とは別のメモ帳パスワードを設定してください。');
+  }
+  if (typeof password !== 'string' || password !== expected) {
+    recordAuthFailure_(state);
+    throw new Error('メモ帳のパスワードが違います。');
+  }
+  clearAuthFailures_(state);
+  const token = Utilities.getUuid() + Utilities.getUuid();
+  CacheService.getScriptCache().put('LINK_CORE_MEMO_' + token, adminToken, SESSION_TTL_SECONDS);
+  return {token};
+}
+
+function requireMemo_(memoToken, adminToken) {
+  requireAdmin_(adminToken);
+  if (typeof memoToken !== 'string' || !/^[0-9a-f-]{72}$/i.test(memoToken) ||
+      CacheService.getScriptCache().get('LINK_CORE_MEMO_' + memoToken) !== adminToken) {
+    throw new Error('メモ帳の認証が必要です。メモ帳を開き直してください。');
+  }
+}
+
+function getMemos(memoToken, adminToken) {
+  requireMemo_(memoToken, adminToken);
   const cached = readJsonCache_('LINK_CORE_MEMOS_V1');
   if (cached) return cached;
   const sheet = ensureMemosSheet_();
@@ -1072,8 +1099,8 @@ function getMemos(adminToken) {
   return result;
 }
 
-function saveMemo(input, adminToken) {
-  requireAdmin_(adminToken);
+function saveMemo(input, memoToken, adminToken) {
+  requireMemo_(memoToken, adminToken);
   if (!input || typeof input !== 'object') throw new Error('メモの入力内容がありません。');
   const title = cleanText_(input.title, 200);
   const body = cleanText_(input.body, 20000);
@@ -1114,14 +1141,14 @@ function saveMemo(input, adminToken) {
     values[col['更新日時']] = now;
     sheet.getRange(targetRow, 1, 1, width).setValues([values]);
     invalidateMemosCache_();
-    return getMemos(adminToken);
+    return getMemos(memoToken, adminToken);
   } finally {
     lock.releaseLock();
   }
 }
 
-function deleteMemo(id, adminToken) {
-  requireAdmin_(adminToken);
+function deleteMemo(id, memoToken, adminToken) {
+  requireMemo_(memoToken, adminToken);
   const memoId = cleanText_(id, 200);
   if (!memoId) throw new Error('削除するメモIDがありません。');
   const lock = LockService.getScriptLock();
@@ -1142,7 +1169,7 @@ function deleteMemo(id, adminToken) {
       }
     }
     invalidateMemosCache_();
-    return getMemos(adminToken);
+    return getMemos(memoToken, adminToken);
   } finally {
     lock.releaseLock();
   }

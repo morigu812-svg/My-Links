@@ -1034,7 +1034,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   }
 
   function serverCall(method, ...args) {
-    const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'saveOfficialLink', 'deleteOfficialLink', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'sendChatMessage', 'getStaffChatMessages', 'sendStaffChatMessage', 'markStaffChatRead', 'sendPrivateChatMessage', 'getClickLogs', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
+    const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'sendChatMessage', 'getStaffChatMessages', 'sendStaffChatMessage', 'markStaffChatRead', 'sendPrivateChatMessage', 'getClickLogs', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
     if (protectedMethods.includes(method)) {
       const token = adminSession.getItem(ADMIN_TOKEN_KEY) || '';
       // 呼び出し元（埋め込みメモ帳など）が既にトークンを渡している場合は二重追加しない。
@@ -2059,9 +2059,15 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
   window.addEventListener('message', async event => {
     if (event.origin !== location.origin || event.source !== memoFrame.contentWindow) return;
     const data = event.data;
-    if (!data || data.type !== 'LINK_CORE_MEMO_REQUEST' || typeof data.id !== 'string') return;
+    if (data?.type === 'LINK_CORE_MEMO_CLOSE') {
+      closeIntegratedMemos();
+      return;
+    }
+    const memoArgCounts = {authenticateMemo: 1, getMemos: 1, saveMemo: 2, deleteMemo: 2};
+    if (!data || data.type !== 'LINK_CORE_MEMO_REQUEST' || typeof data.id !== 'string' ||
+        !Object.prototype.hasOwnProperty.call(memoArgCounts, data.method) || !Array.isArray(data.args)) return;
     try {
-      const result = await serverCall(data.method, ...(Array.isArray(data.args) ? data.args : []));
+      const result = await serverCall(data.method, ...data.args.slice(0, memoArgCounts[data.method]));
       memoFrame.contentWindow.postMessage({type:'LINK_CORE_MEMO_RESPONSE', id:data.id, ok:true, result}, location.origin);
     } catch (error) {
       memoFrame.contentWindow.postMessage({type:'LINK_CORE_MEMO_RESPONSE', id:data.id, ok:false, error:error && error.message ? error.message : String(error)}, location.origin);
@@ -2069,6 +2075,8 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
   });
   function closeIntegratedMemos() {
     memoOverlay.classList.remove('open');
+    memoFrame.onload = null;
+    memoFrame.src = 'about:blank';
     document.body.style.overflow = '';
   }
   const sideMemosButton = $('sideMemos');
