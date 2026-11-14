@@ -3624,10 +3624,10 @@ var qrcode = function() {
 html:not(.light-mode) #linksPanel .sidebar { background:rgba(7,17,32,.98)!important; }
 html:not(.light-mode) #linksPanel .side-item { background:rgba(8,20,36,.7)!important; border:1px solid #19475c!important; color:#b9d5e6!important; }
 html:not(.light-mode) #linksPanel .side-item:is(:hover,.selected) { background:linear-gradient(100deg,#10344a,#171c3a)!important; border-color:#00d9ff!important; color:#eaffff!important; }
-html:not(.light-mode) #linksPanel #list .lc-link-card { background:linear-gradient(145deg,#101c2c,#0b1422)!important; border-color:#28485c!important; border-radius:14px!important; }
-html:not(.light-mode) #linksPanel #list .lc-link-card .title { color:#edf7ff!important; }
-html:not(.light-mode) #linksPanel #list .lc-link-card .meta { color:#9bb0c5!important; }
-html:not(.light-mode) #linksPanel #list .lc-link-card .memo { color:#c0cfdd!important; }
+
+
+
+
 #linksPanel #list .lc-link-card { flex-direction:column!important; }
 #refreshLinks { margin-inline-start:auto; border:1px solid #286b8c; border-radius:8px; background:#10283b; color:#9beaff; padding:6px 12px; cursor:pointer; }
 html.light-mode #refreshLinks { background:#fff; border-color:#c8d5e4; color:#174c96; }
@@ -3636,6 +3636,36 @@ html.light-mode #refreshLinks { background:#fff; border-color:#c8d5e4; color:#17
   #linksPanel .finder-title { grid-column:2; grid-row:1; }
   #linksPanel .toolbar-search { grid-column:3; grid-row:1; width:100%; min-width:0; }
   #linksPanel .toolbar-tools { grid-column:4; grid-row:1; }
+}
+
+html:not(.light-mode) #linksPanel #list .lc-link-card{display:flex;flex-direction:column;overflow:hidden;min-width:0;padding:0!important;border:1px solid #28485c!important;border-radius:14px!important;background:linear-gradient(145deg,#101c2c,#0b1422)!important;box-shadow:0 4px 16px rgba(0,0,0,.18)!important;transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+html:not(.light-mode) #linksPanel .finder-content {
+  background: linear-gradient(145deg, #080f1e, #0a0d1f) !important;
+}
+#linksPanel #list .lc-link-card::before { content: none; }
+#linksPanel #list .lc-link-card .memo {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+#linksPanel .finder-title { text-transform: none; letter-spacing: normal; font-size: 14px; font-weight: 650; }
+#linksPanel .toolbar-tools > span { display: none; }
+#linksPanel .section-heading { align-items: center; margin-bottom: 19px; }
+#linksPanel .section-heading h2 { font-size: 23px; font-weight: 650; letter-spacing: 0; }
+#linksPanel .list-heading { justify-content: space-between; }
+#linksPanel #refreshLinks { margin-inline-start: 0; }
+@media (min-width: 761px) {
+  #linksPanel .finder-layout { min-height: 650px; }
+  #linksPanel .finder-content { padding: 25px 27px; }
+  #linksPanel .sidebar { padding: 18px 11px 22px; }
+  #linksPanel .sidebar .side-item { padding-block: 7px; gap: 9px; font-size: 12px; }
+  #linksPanel #list:has(.lc-link-card) { align-items: stretch; }
+  #linksPanel #list .lc-link-card { min-height: 128px; }
+}
+@media (min-width: 761px) and (hover: hover) and (pointer: fine) {
+  html:not(.light-mode) #linksPanel #list .lc-link-card { box-shadow: none !important; transition: border-color .15s ease; }
+  html:not(.light-mode) #linksPanel #list .lc-link-card:hover { transform: none; box-shadow: none !important; }
 }
 </style>
 </body></html>
