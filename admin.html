@@ -1168,11 +1168,12 @@ function watchSessionExpiry(deadline, onExpired) {
     authSubmit.disabled = true;
 
     const loginStartedAt = performance.now();
+    const loginStartedAtEpoch = Date.now();
     let authResult;
     try {
       authResult = await serverCall('authenticateAdmin', authField.value, true);
       if (!authResult || !authResult.token) throw new Error('認証トークンを受け取れませんでした。');
-      const expiry = loginStartedAt + Math.min(authResult.expiresIn || 1800, 1800) * 1000;
+      const expiry = loginStartedAtEpoch + Math.min(authResult.expiresIn || 1800, 1800) * 1000;
       adminSession.setItem(ADMIN_EXPIRY_KEY, String(expiry));
       adminSession.setItem(ADMIN_TOKEN_KEY, authResult.token);
       stopAdminExpiry();
