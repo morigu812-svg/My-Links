@@ -3603,4 +3603,19 @@ var qrcode = function() {
 <script id="lc-viewport-recovery">
 (function(){function clampWindows(){document.querySelectorAll('.finder-window').forEach(el=>{if(el.classList.contains('hidden'))return;const fixed=el.classList.contains('lc-browser-window')||el.style.position==='fixed';if(!fixed)return;const r=el.getBoundingClientRect();if(r.width>innerWidth-16)el.style.width=Math.max(280,innerWidth-16)+'px';if(r.height>innerHeight-16)el.style.height=Math.max(220,innerHeight-16)+'px';const w=el.getBoundingClientRect();el.style.left=Math.max(8,Math.min(w.left,innerWidth-w.width-8))+'px';el.style.top=Math.max(8,Math.min(w.top,innerHeight-w.height-8))+'px';});}window.addEventListener('resize',clampWindows,{passive:true});})();
 </script>
+<style id="desktop-rendering">
+@media (min-width: 761px) and (hover: hover) and (pointer: fine) {
+  .finder-window, .finder-content, .sidebar, #list .item, #list .star {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  #list .lc-link-card {
+    box-shadow: none !important;
+    transition: border-color .15s ease;
+  }
+  #list .lc-link-card:hover {
+    transform: none;
+  }
+}
+</style>
 </body></html>

@@ -11,7 +11,7 @@
  */
 'use strict';
 
-var CACHE_VERSION = 'link-core-v12';
+var CACHE_VERSION = 'link-core-v13';
 var STATIC_CACHE = 'link-core-static-' + CACHE_VERSION;
 var DATA_CACHE = 'link-core-data-' + CACHE_VERSION;
 

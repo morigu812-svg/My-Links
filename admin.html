@@ -4911,5 +4911,20 @@ var qrcode = function() {
   });
 })();
 </script>
+<style id="desktop-rendering">
+@media (min-width: 761px) and (hover: hover) and (pointer: fine) {
+  .finder-window, .finder-content, .sidebar, #list .item, #list .star {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  #list .lc-link-card {
+    box-shadow: none !important;
+    transition: border-color .15s ease;
+  }
+  #list .lc-link-card:hover {
+    transform: none;
+  }
+}
+</style>
 </body>
 </html>
