@@ -467,7 +467,7 @@ html.light-mode ::selection{background:rgba(52,120,212,.25)!important;color:#262
 <div class="side-label">カテゴリ</div><div id="sideCats" class="side-cats"></div>
 </aside><section class="finder-content"><div class="workspace">
 <div class="section-heading"><div><span class="section-kicker">MY DESKTOP / LINK LIBRARY</span><h2 id="viewTitle">お気に入り</h2></div><span class="section-note">ICON VIEW</span></div>
-<div id="noticeReadCard" class="notice-read-card" hidden><div class="notice-read-title">お知らせ・リンク修正</div><div class="notice-read-body">ごめんなさい！YouTubeの項目にある「みんとtube+」のリンクを間違えていました！<br>新リンク：YouTube ＞ みんとtube+<br>新リンク：ブログ ＞ 制限回避リンク集</div><div class="notice-read-actions"><button type="button" id="markNoticeRead">確認して既読にする</button><span id="noticeReadStatus" role="status"></span></div></div><div class="list-heading"><span class="list-heading-title"><span class="heading-dot">◆</span> LINK FEED</span><span class="result-count" id="count"></span><button class="retry-button" id="refreshLinks" type="button">リンクを更新</button></div>
+<div class="list-heading"><span class="list-heading-title"><span class="heading-dot">◆</span> LINK FEED</span><span class="result-count" id="count"></span><button class="retry-button" id="refreshLinks" type="button">リンクを更新</button><button type="button" id="visitorLogout">ログアウト</button></div>
 <div class="status" id="loadStatus" role="status" aria-live="polite"></div>
 <div class="list loading-skeleton" id="list" role="region" aria-label="リンク一覧" aria-live="polite" aria-busy="true"><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div></div>
 </div></section></div>
@@ -715,14 +715,42 @@ async function checkActiveViewerSession() {
 document.addEventListener('visibilitychange', checkActiveViewerSession);
 setInterval(checkActiveViewerSession, 30000);
 
+function watchSessionExpiry(deadline, onExpired) {
+  function checkExpiry() {
+    if (Date.now() < deadline) return;
+    stopWatching();
+    onExpired();
+  }
+  function stopWatching() {
+    clearTimeout(timer);
+    document.removeEventListener('visibilitychange', checkExpiry);
+    window.removeEventListener('pageshow', checkExpiry);
+  }
+  const timer = setTimeout(checkExpiry, Math.max(0, deadline - Date.now()));
+  document.addEventListener('visibilitychange', checkExpiry);
+  window.addEventListener('pageshow', checkExpiry);
+  return stopWatching;
+}
+
+let stopViewerExpiry = () => {};
+$('visitorLogout').addEventListener('click', async event => {
+  event.currentTarget.disabled = true;
+  const token = visitorToken;
+  showVisitorLogin('ログアウトしました。');
+  try { if (token) await call('logoutCurrentSession', token); }
+  catch (_) {}
+  finally { location.reload(); }
+});
+
 function showVisitorLogin(message){
+  stopViewerExpiry();
+  $('visitorLogout').disabled = false;
   visitorToken='';
   links=[];
   categories=[];
   $('list').replaceChildren();
   $('sideCats').replaceChildren();
   chatMessages.replaceChildren();
-  $('noticeReadCard').hidden=true;
   chatLoaded=false;
   chatOverlay.classList.remove('open');
   $('linksPanel').classList.add('hidden');
@@ -791,9 +819,8 @@ $('list').addEventListener('click',event=>{
   .finally(()=>clickLogPending.delete(String(link.id)));
 });
 
-const NOTICE_ID='link-fix-20261104';
 const NOTICE_BROWSER_KEY='linkCoreNoticeBrowserIdV1';
-let noticeBrowserId='', noticeRead=false;
+let noticeBrowserId='';
 function readNoticeStorage(key){
  try{return localStorage.getItem(key)}catch(_){return null}
 }
@@ -807,30 +834,6 @@ function getNoticeBrowserId(){
  }
  return noticeBrowserId;
 }
-function isNoticeRead(){
- return noticeRead||readNoticeStorage('linkCoreNoticeRead:'+NOTICE_ID)==='1';
-}
-function loadNoticeReadState(){
- if(!visitorToken)return;
- const card=$('noticeReadCard'),button=$('markNoticeRead');
- card.hidden=false;
- const already=isNoticeRead();
- button.disabled=already;button.textContent=already?'既読済み':'確認して既読にする';
-}
-$('markNoticeRead').addEventListener('click',async()=>{
- if(!visitorToken)return;
- const button=$('markNoticeRead');
- if(isNoticeRead()){button.disabled=true;return;}
- button.disabled=true;$('noticeReadStatus').textContent='登録中…';
- try{
-  const result=await call('markNoticeRead',visitorToken,NOTICE_ID,getNoticeBrowserId());
-  noticeRead=true;
-  writeNoticeStorage('linkCoreNoticeRead:'+NOTICE_ID,'1');
-  button.textContent='既読済み';
-  $('noticeReadStatus').textContent=result.added?'既読にしました。':'このブラウザでは既読済みです。';
- }catch(error){$('noticeReadStatus').textContent=error.message||'既読登録に失敗しました。';button.disabled=false;}
-});
-
 function applyVisitorLinks(data){
  if(!data||!Array.isArray(data.links))throw new Error('リンク一覧を取得できませんでした。');
  links=publicLinks(data.links);
@@ -844,10 +847,15 @@ $('loginForm').addEventListener('submit',async event=>{
  $('loginError').textContent='認証中…';
  $('loginRetry').classList.add('hidden');
  try{
+  const loginStartedAt = Date.now();
   const auth=await call('authenticateVisitor',password.value);
   if(!auth||!auth.token)throw new Error('閲覧用トークンを取得できませんでした。');
   applyVisitorLinks(Array.isArray(auth.links)?auth:await call('getLinks',auth.token));
   visitorToken=auth.token;
+  stopViewerExpiry = watchSessionExpiry(loginStartedAt + Math.min(auth.expiresIn || 1800, 1800) * 1000, () => {
+    showVisitorLogin();
+    location.reload();
+  });
   view=links.some(link=>link.favorite)?'favorites':'all';
   selectedCategory='';
   $('search').value='';
@@ -856,7 +864,6 @@ $('loginForm').addEventListener('submit',async event=>{
   password.value='';
   $('loginError').textContent='';
   render();
-  loadNoticeReadState();
  }catch(error){
   visitorToken='';
   $('linksPanel').classList.add('hidden');

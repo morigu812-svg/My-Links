@@ -378,15 +378,16 @@ function authenticateVisitor(password) {
   }
   clearAuthFailures_(rateState);
   const token = Utilities.getUuid() + Utilities.getUuid();
-  CacheService.getScriptCache().put('LINK_CORE_VISITOR_' + token, generation, 21600);
+  storeSession_('VISITOR', token, generation);
   // 認証直後のリンク取得を同じ応答にまとめ、ブラウザーとの往復を1回減らす。
   const initialLinks = getLinksForToken_(token, false);
   return {
-    ok: true, token: token, expiresIn: 21600,
+    ok: true, token: token, expiresIn: SESSION_TTL_SECONDS,
     links: initialLinks.links, categories: initialLinks.categories
   };
 }
 
+const SESSION_TTL_SECONDS = 30 * 60;
 const SESSION_GENERATION_PROPERTY = 'LINK_CORE_SESSION_GENERATION';
 
 function sessionGeneration_() {
@@ -396,7 +397,21 @@ function sessionGeneration_() {
 function isSessionValid_(role, token) {
   if (typeof token !== 'string' || !token) return false;
   const savedGeneration = CacheService.getScriptCache().get('LINK_CORE_' + role + '_' + token);
-  return savedGeneration === sessionGeneration_();
+  if (!savedGeneration) return false;
+  const [generation, expiresAt] = savedGeneration.split(':');
+  return Number(expiresAt) > Date.now() && generation === sessionGeneration_();
+}
+
+function storeSession_(role, token, generation) {
+  const expiresAt = Date.now() + SESSION_TTL_SECONDS * 1000;
+  CacheService.getScriptCache().put('LINK_CORE_' + role + '_' + token,
+    generation + ':' + expiresAt, SESSION_TTL_SECONDS);
+}
+
+function logoutCurrentSession(token) {
+  requireLinkViewer_(token);
+  CacheService.getScriptCache().removeAll(['LINK_CORE_ADMIN_' + token, 'LINK_CORE_VISITOR_' + token]);
+  return { ok: true };
 }
 
 function checkViewerSession(token) {
@@ -435,13 +450,13 @@ function authenticateAdmin(password, includeLinks) {
   }
   clearAuthFailures_(rateState);
   const token = Utilities.getUuid() + Utilities.getUuid();
-  CacheService.getScriptCache().put('LINK_CORE_ADMIN_' + token, generation, 21600);
+  storeSession_('ADMIN', token, generation);
 
   // 管理画面だけ、認証成功後に一覧を同じ応答で返す。メモ帳はトークンだけ受け取る。
   if (includeLinks === true) {
     try {
       const { links, categories } = getLinksForToken_(token, true);
-      return { ok: true, token: token, expiresIn: 21600, links: links, categories: categories };
+      return { ok: true, token: token, expiresIn: SESSION_TTL_SECONDS, links: links, categories: categories };
     } catch (error) {
       console.warn('LINK CORE initial admin links failed:', error);
       // 一覧の一時エラーで認証成功を取り消さない。管理画面から再取得できる。
@@ -450,7 +465,7 @@ function authenticateAdmin(password, includeLinks) {
   return {
     ok: true,
     token: token,
-    expiresIn: 21600
+    expiresIn: SESSION_TTL_SECONDS
   };
 }
 

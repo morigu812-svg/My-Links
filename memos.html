@@ -159,9 +159,11 @@ function closeEditor(){$('editor').classList.add('hidden');$('memoForm').reset()
 $('loginForm').addEventListener('submit',async e=>{
  e.preventDefault(); $('loginButton').disabled=true; $('loginError').textContent='ログイン中…';
  try {
+  const loginStartedAt = Date.now();
   const result=await call('authenticateAdmin',$('password').value);
   if(!result || !result.token) throw new Error('認証トークンを取得できませんでした。');
   adminToken=result.token;
+  stopMemoExpiry = watchSessionExpiry(loginStartedAt + Math.min(result.expiresIn || 1800, 1800) * 1000, () => location.reload());
   $('loginPanel').classList.add('hidden'); $('appPanel').classList.remove('hidden'); $('loginError').textContent='';
   try{await loadMemos()}catch(loadErr){showMemoError(loadErr.message||'通信エラー');return}
  } catch(err) { $('loginError').textContent=err.message||'ログインできませんでした。'; }
@@ -170,6 +172,34 @@ $('loginForm').addEventListener('submit',async e=>{
 let memoSaveInFlight=false; $('memoForm').addEventListener('submit',async e=>{e.preventDefault();if(memoSaveInFlight)return;memoSaveInFlight=true;$('saveButton').disabled=true;$('saveStatus').textContent='保存中…';try{let id=$('memoId').value;if(!id){id=(crypto.randomUUID&&crypto.randomUUID())||('memo-'+Date.now()+'-'+Math.random().toString(36).slice(2));$('memoId').value=id}const data=await call('saveMemo',{id,title:$('memoTitle').value,body:$('memoBody').value},adminToken);memos=Array.isArray(data.memos)?data.memos:[];render();closeEditor()}catch(err){$('saveStatus').textContent=err.message||'保存に失敗しました。'}finally{memoSaveInFlight=false;$('saveButton').disabled=false}});
 $('memoList').addEventListener('click',async e=>{const edit=e.target.closest('[data-edit]');const del=e.target.closest('[data-delete]');if(edit){const memo=memos.find(m=>m.id===edit.dataset.edit);if(memo)openEditor(memo)}if(del){const memo=memos.find(m=>m.id===del.dataset.delete);if(!memo||!confirm('「'+memo.title+'」を削除しますか？'))return;del.disabled=true;try{const data=await call('deleteMemo',memo.id,adminToken);memos=Array.isArray(data.memos)?data.memos:[];render()}catch(err){alert(err.message||'削除に失敗しました。');del.disabled=false}}});
 $('newButton').addEventListener('click',()=>openEditor(null));$('cancelButton').addEventListener('click',closeEditor);$('search').addEventListener('input',render);
-$('logoutButton').addEventListener('click',()=>{adminToken='';memos=[];$('password').value='';$('appPanel').classList.add('hidden');$('loginPanel').classList.remove('hidden');closeEditor()});
+function watchSessionExpiry(deadline, onExpired) {
+  function checkExpiry() {
+    if (Date.now() < deadline) return;
+    stopWatching();
+    onExpired();
+  }
+  function stopWatching() {
+    clearTimeout(timer);
+    document.removeEventListener('visibilitychange', checkExpiry);
+    window.removeEventListener('pageshow', checkExpiry);
+  }
+  const timer = setTimeout(checkExpiry, Math.max(0, deadline - Date.now()));
+  document.addEventListener('visibilitychange', checkExpiry);
+  window.addEventListener('pageshow', checkExpiry);
+  return stopWatching;
+}
+
+let stopMemoExpiry = () => {};
+$('logoutButton').addEventListener('click', async event => {
+  event.currentTarget.disabled = true;
+  stopMemoExpiry();
+  const token = adminToken;
+  adminToken = '';
+  $('appPanel').classList.add('hidden');
+  closeEditor();
+  try { if (token) await call('logoutCurrentSession', token); }
+  catch (_) {}
+  finally { location.reload(); }
+});
 })();
 </script></body></html>

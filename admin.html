@@ -766,6 +766,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
       <button class="side-item selected" type="button" data-view="all"><span>▦</span> すべてのリンク</button>
       <div class="side-label">クイックアクセス</div>
       <button class="side-item" type="button" data-view="official"><span>✦</span> 公式リンク</button>
+      <button class="side-item" type="button" id="adminLogout">ログアウト</button>
       <button class="side-item" type="button" id="logoutAllBrowsers">全ブラウザをログアウト</button>
       <button class="side-item" type="button" id="sideMemos"><span>▤</span> メモ帳</button>
       <button class="side-item" type="button" id="sideStaffChat"><span>✉</span> 管理者専用チャット</button>
@@ -1004,7 +1005,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   }
 
   function serverCall(method, ...args) {
-    const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'saveOfficialLink', 'deleteOfficialLink', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'sendChatMessage', 'getStaffChatMessages', 'sendStaffChatMessage', 'sendPrivateChatMessage', 'getClickLogs', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers'];
+    const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'saveOfficialLink', 'deleteOfficialLink', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'sendChatMessage', 'getStaffChatMessages', 'sendStaffChatMessage', 'sendPrivateChatMessage', 'getClickLogs', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
     if (protectedMethods.includes(method)) {
       const token = sessionStorage.getItem(ADMIN_TOKEN_KEY) || '';
       // 呼び出し元（埋め込みメモ帳など）が既にトークンを渡している場合は二重追加しない。
@@ -1049,7 +1050,52 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   const authDescription = $('authDescription');
   const authSubmit = $('authSubmit');
 
+function watchSessionExpiry(deadline, onExpired) {
+  function checkExpiry() {
+    if (Date.now() < deadline) return;
+    stopWatching();
+    onExpired();
+  }
+  function stopWatching() {
+    clearTimeout(timer);
+    document.removeEventListener('visibilitychange', checkExpiry);
+    window.removeEventListener('pageshow', checkExpiry);
+  }
+  const timer = setTimeout(checkExpiry, Math.max(0, deadline - Date.now()));
+  document.addEventListener('visibilitychange', checkExpiry);
+  window.addEventListener('pageshow', checkExpiry);
+  return stopWatching;
+}
+
+  const ADMIN_EXPIRY_KEY = 'linkCoreAdminExpiresAt';
+  let stopAdminExpiry = () => {};
+
+  function reloadAfterAdminLogout() {
+    sessionStorage.removeItem(ADMIN_EXPIRY_KEY);
+    sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+    sessionStorage.removeItem(AUTH_KEY);
+    location.reload();
+  }
+
+  $('adminLogout').addEventListener('click', async event => {
+    event.currentTarget.disabled = true;
+    document.body.classList.add('auth-locked');
+    chatOverlay.classList.remove('open');
+    $('staffChatOverlay').classList.remove('open');
+    closeIntegratedMemos();
+    try { await serverCall('logoutCurrentSession'); }
+    catch (_) {}
+    finally { reloadAfterAdminLogout(); }
+  });
+
+  const savedExpiry = Number(sessionStorage.getItem(ADMIN_EXPIRY_KEY));
+  if (sessionStorage.getItem(ADMIN_TOKEN_KEY) && savedExpiry <= Date.now()) {
+    sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+    sessionStorage.removeItem(AUTH_KEY);
+    sessionStorage.removeItem(ADMIN_EXPIRY_KEY);
+  }
   if (sessionStorage.getItem(AUTH_KEY) === 'yes' && sessionStorage.getItem(ADMIN_TOKEN_KEY)) {
+    stopAdminExpiry = watchSessionExpiry(savedExpiry, reloadAfterAdminLogout);
     document.body.classList.remove('auth-locked');
     if (authGate) authGate.classList.add('is-hidden');
   }
@@ -1073,6 +1119,8 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
 
   let resumeLinkEdit = false;
   function showAdminReauthentication(message) {
+    stopAdminExpiry();
+    sessionStorage.removeItem(ADMIN_EXPIRY_KEY);
     const dialog = $('dlg');
     if (dialog.open) {
       resumeLinkEdit = true;
@@ -1107,7 +1155,11 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
     try {
       authResult = await serverCall('authenticateAdmin', authField.value, true);
       if (!authResult || !authResult.token) throw new Error('認証トークンを受け取れませんでした。');
+      const expiry = loginStartedAt + Math.min(authResult.expiresIn || 1800, 1800) * 1000;
+      sessionStorage.setItem(ADMIN_EXPIRY_KEY, String(expiry));
       sessionStorage.setItem(ADMIN_TOKEN_KEY, authResult.token);
+      stopAdminExpiry();
+      stopAdminExpiry = watchSessionExpiry(expiry, reloadAfterAdminLogout);
       sessionStorage.setItem(AUTH_KEY, 'yes');
     } catch (error) {
       sessionStorage.removeItem(ADMIN_TOKEN_KEY);
