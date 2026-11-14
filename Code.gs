@@ -1153,7 +1153,65 @@ function ensureChatSheet_() {
   }
   return sheet;
 }
-function getChatMessages(viewerToken) {
+function getChatMessages(viewerToken, browserSecret) {
+  requireLinkViewer_(viewerToken);
+  const publicMessages = getPublicChatMessages_(viewerToken).messages;
+  const isAdmin = isSessionValid_('ADMIN', viewerToken);
+  const recipient = privateChatBrowserId_(browserSecret);
+  if (!isAdmin && !recipient) return {messages: publicMessages};
+
+  const sheet = privateChatSheet_(false);
+  if (!sheet || sheet.getLastRow() < 2) return {messages: publicMessages};
+  const rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, 4).getValues();
+  const directMessages = rows
+    .filter(row => row[0] && (isAdmin || row[1] === recipient))
+    .slice(-CHAT_MAX_MESSAGES)
+    .map(row => ({
+      id: String(row[0]), author: '管理者', message: String(row[2]),
+      createdAt: toIso_(row[3]), private: true, recipient: isAdmin ? String(row[1]) : ''
+    }));
+  return {messages: publicMessages.concat(directMessages)
+    .sort((first, second) => first.createdAt.localeCompare(second.createdAt))
+    .slice(-CHAT_MAX_MESSAGES)};
+}
+
+function privateChatBrowserId_(secret) {
+  if (typeof secret !== 'string' || !/^[0-9a-f]{64}$/.test(secret)) return '';
+  return 'dm_' + Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, secret)
+    .map(byte => ('0' + (byte & 255).toString(16)).slice(-2)).join('');
+}
+
+function privateChatSheet_(create) {
+  const id = PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY);
+  if (!id) throw new Error('スプレッドシートIDが未設定です。');
+  const spreadsheet = SpreadsheetApp.openById(id);
+  let sheet = spreadsheet.getSheetByName('PrivateChatMessages');
+  if (!sheet && create) {
+    sheet = spreadsheet.insertSheet('PrivateChatMessages');
+    sheet.appendRow(['ID', '宛先ID', 'メッセージ', '送信日時']);
+  }
+  return sheet;
+}
+
+function sendPrivateChatMessage(message, recipient, adminToken) {
+  requireAdmin_(adminToken);
+  const body = cleanText_(message, CHAT_MAX_LENGTH);
+  if (!body) throw new Error('メッセージを入力してください。');
+  if (typeof recipient !== 'string' || !/^dm_[0-9a-f]{64}$/.test(recipient)) {
+    throw new Error('利用者チャットに表示された個別チャットIDを入力してください。');
+  }
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    requireAdmin_(adminToken);
+    privateChatSheet_(true).appendRow([Utilities.getUuid(), recipient, safeCell_(body), new Date()]);
+    return {ok: true};
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function getPublicChatMessages_(viewerToken) {
   requireLinkViewer_(viewerToken);
   const cached = readJsonCache_('LINK_CORE_CHAT_MESSAGES_V1');
   if (cached) return cached;
@@ -1195,7 +1253,7 @@ function sendChatMessage(message, viewerToken) {
     invalidateChatCache_();
     cache.put(rateKey,'1',3);
   }finally{lock.releaseLock();}
-  return getChatMessages(viewerToken);
+  return getPublicChatMessages_(viewerToken);
 }
 
 
