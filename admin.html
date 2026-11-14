@@ -1625,7 +1625,8 @@ document.getElementById('authSubmit').disabled = false;
     "title": "利用者ログイン履歴",
     "description": "利用者のログイン成功の記録です（直近200件）。",
     "columns": [
-      "ログイン日時"
+      "ログイン日時",
+      "ブラウザID"
     ]
   }
 ];
@@ -1648,6 +1649,7 @@ document.getElementById('authSubmit').disabled = false;
         const row = document.createElement('tr');
         const cells = [new Date(log.date).toLocaleString('ja-JP')];
         if (history.key === 'linkOperations') cells.push(log.action, log.title || log.linkId);
+        else cells.push(log.browserId || '未記録');
         cells.forEach(value => { row.insertCell().textContent = value; });
         return row;
       });

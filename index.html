@@ -853,7 +853,7 @@ $('loginForm').addEventListener('submit',async event=>{
  $('loginRetry').classList.add('hidden');
  try{
   const loginStartedAt = Date.now();
-  const auth=await call('authenticateVisitor',password.value);
+  const auth=await call('authenticateVisitor',password.value,getNoticeBrowserId());
   if(!auth||!auth.token)throw new Error('閲覧用トークンを取得できませんでした。');
   applyVisitorLinks(Array.isArray(auth.links)?auth:await call('getLinks',auth.token));
   visitorToken=auth.token;

@@ -366,7 +366,7 @@ function clearAuthFailures_(state) {
 }
 
 /** 利用者ページの共有パスワードを検証して閲覧専用トークンを発行する。 */
-function authenticateVisitor(password) {
+function authenticateVisitor(password, browserId) {
   const generation = sessionGeneration_();
   const rateState = getAuthRateState_('VISITOR');
   checkAuthRateLimit_(rateState);
@@ -381,7 +381,7 @@ function authenticateVisitor(password) {
   storeSession_('VISITOR', token, generation);
   // 認証直後のリンク取得を同じ応答にまとめ、ブラウザーとの往復を1回減らす。
   const initialLinks = getLinksForToken_(token, false);
-  recordVisitorLogin_();
+  recordVisitorLogin_(browserId);
   return {
     ok: true, token: token, expiresIn: SESSION_TTL_SECONDS,
     links: initialLinks.links, categories: initialLinks.categories
@@ -1751,7 +1751,8 @@ function getLinkOperationLogs(adminToken) {
   return {logs};
 }
 
-function recordVisitorLogin_() {
+function recordVisitorLogin_(browserId) {
+  const idForLog = typeof browserId === 'string' && /^[A-Za-z0-9_-]{8,100}$/.test(browserId) ? browserId : '';
   const lock = LockService.getScriptLock();
   let locked = false;
   try {
@@ -1760,8 +1761,9 @@ function recordVisitorLogin_() {
     const id = PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY);
     const spreadsheet = SpreadsheetApp.openById(id);
     const sheet = spreadsheet.getSheetByName('VisitorLoginLogs') || spreadsheet.insertSheet('VisitorLoginLogs');
-    if (!sheet.getLastRow()) sheet.appendRow(['ログイン日時']);
-    sheet.appendRow([new Date()]);
+    if (!sheet.getLastRow()) sheet.appendRow(['ログイン日時', 'ブラウザID']);
+    else if (sheet.getLastColumn() === 1) sheet.getRange(1, 2).setValue('ブラウザID');
+    sheet.appendRow([new Date(), safeCell_(idForLog)]);
   } catch (error) {
     console.error('利用者ログイン履歴の保存に失敗しました。', error.message);
   } finally {
@@ -1776,6 +1778,6 @@ function getVisitorLoginLogs(adminToken) {
   const last = sheet ? sheet.getLastRow() : 0;
   if (last < 2) return {logs: []};
   const first = Math.max(2, last - 199);
-  return {logs: sheet.getRange(first, 1, last - first + 1, 1).getValues().reverse()
-    .map(([date]) => ({date: toIso_(date)}))};
+  return {logs: sheet.getRange(first, 1, last - first + 1, 2).getValues().reverse()
+    .map(([date, browserId]) => ({date: toIso_(date), browserId: String(browserId || '')}))};
 }
