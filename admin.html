@@ -821,7 +821,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
     <div id="otherHistoryView" hidden>
       <div class="section-heading">
         <div><span class="section-kicker">LINK CORE / ACTIVITY LOG</span><h2 id="otherHistoryTitle"></h2><p id="otherHistoryDescription"></p></div>
-        <div class="click-log-actions"><button id="refreshOtherHistory" class="btn" type="button">↻ 再読み込み</button></div>
+        <div class="click-log-actions"><button id="refreshOtherHistory" class="btn" type="button">↻ 再読み込み</button><button id="deleteVisitorLoginLogs" class="btn danger" type="button" hidden>履歴をすべて削除</button></div>
       </div>
       <div id="otherHistoryStatus" role="status" aria-live="polite"></div>
       <div class="click-log-table-wrap"><table class="click-log-table">
@@ -1051,7 +1051,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   }
 
   function serverCall(method, ...args) {
-    const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'sendChatMessage', 'getStaffChatMessages', 'sendStaffChatMessage', 'markStaffChatRead', 'sendPrivateChatMessage', 'getClickLogs', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
+    const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'sendChatMessage', 'getStaffChatMessages', 'sendStaffChatMessage', 'markStaffChatRead', 'sendPrivateChatMessage', 'getClickLogs', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
     if (protectedMethods.includes(method)) {
       const token = adminSession.getItem(ADMIN_TOKEN_KEY) || '';
       // 呼び出し元（埋め込みメモ帳など）が既にトークンを渡している場合は二重追加しない。
@@ -1601,6 +1601,7 @@ document.getElementById('authSubmit').disabled = false;
     const other = history && history.api ? history : null;
     $('clickLogView').hidden = !!other;
     $('otherHistoryView').hidden = !other;
+    $('deleteVisitorLoginLogs').hidden = other?.key !== 'visitorLogins';
     clickLogPanel.setAttribute('aria-label', other ? other.title : 'クリック履歴');
     if (!other && !clickLogsLoaded) refreshClickLogs();
   }
@@ -1626,7 +1627,8 @@ document.getElementById('authSubmit').disabled = false;
     "description": "利用者のログイン成功の記録です（直近200件）。",
     "columns": [
       "ログイン日時",
-      "ブラウザID"
+      "ブラウザID",
+      "操作"
     ]
   }
 ];
@@ -1651,6 +1653,17 @@ document.getElementById('authSubmit').disabled = false;
         if (history.key === 'linkOperations') cells.push(log.action, log.title || log.linkId);
         else cells.push(log.browserId || '未記録');
         cells.forEach(value => { row.insertCell().textContent = value; });
+        if (history.key === 'visitorLogins') {
+          const remove = document.createElement('button');
+          remove.type = 'button';
+          remove.className = 'btn danger';
+          remove.textContent = '削除';
+          remove.disabled = !log.id;
+          remove.addEventListener('click', () => removeVisitorLogins(remove, log.id));
+          const cell = row.insertCell();
+          cell.className = 'click-log-action';
+          cell.appendChild(remove);
+        }
         return row;
       });
       if (!rows.length) {
@@ -1670,6 +1683,29 @@ document.getElementById('authSubmit').disabled = false;
     }
   }
 
+  async function removeVisitorLogins(button, id) {
+    const token = adminSession.getItem(ADMIN_TOKEN_KEY);
+    if (!token || button.disabled || activeHistory?.key !== 'visitorLogins' || $('otherHistoryView').hidden || clickLogPanel.hidden) return;
+    const prompt = id ? 'このログイン履歴を削除しますか？' : '利用者ログイン履歴をすべて削除しますか？ この操作は取り消せません。';
+    if (!confirm(prompt)) return;
+    button.disabled = true;
+    const request = historyRequest;
+    const status = $('otherHistoryStatus');
+    status.textContent = '履歴を削除しています…';
+    try {
+      const result = id ? await serverCall('deleteVisitorLoginLog', id) : await serverCall('deleteVisitorLoginLogs');
+      if (!result?.ok) throw new Error('削除完了の応答がありません。');
+      if (token === adminSession.getItem(ADMIN_TOKEN_KEY) && activeHistory?.key === 'visitorLogins' && !$('otherHistoryView').hidden && !clickLogPanel.hidden) await refreshOtherHistory();
+    } catch (error) {
+      if (request === historyRequest && token === adminSession.getItem(ADMIN_TOKEN_KEY)) {
+        status.textContent = '削除に失敗しました：' + error.message;
+      }
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  $('deleteVisitorLoginLogs').addEventListener('click', event => removeVisitorLogins(event.currentTarget));
   $('refreshOtherHistory').addEventListener('click', refreshOtherHistory);
   otherHistories.forEach(history => {
     $(history.side).addEventListener('click', () => {

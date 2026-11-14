@@ -1761,9 +1761,9 @@ function recordVisitorLogin_(browserId) {
     const id = PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY);
     const spreadsheet = SpreadsheetApp.openById(id);
     const sheet = spreadsheet.getSheetByName('VisitorLoginLogs') || spreadsheet.insertSheet('VisitorLoginLogs');
-    if (!sheet.getLastRow()) sheet.appendRow(['ログイン日時', 'ブラウザID']);
+    if (!sheet.getLastRow()) sheet.appendRow(['ログイン日時', 'ブラウザID', '履歴ID']);
     else if (sheet.getLastColumn() === 1) sheet.getRange(1, 2).setValue('ブラウザID');
-    sheet.appendRow([new Date(), safeCell_(idForLog)]);
+    sheet.appendRow([new Date(), safeCell_(idForLog), Utilities.getUuid()]);
   } catch (error) {
     console.error('利用者ログイン履歴の保存に失敗しました。', error.message);
   } finally {
@@ -1773,11 +1773,62 @@ function recordVisitorLogin_(browserId) {
 
 function getVisitorLoginLogs(adminToken) {
   requireAdmin_(adminToken);
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const sheet = visitorLoginLogSheet_();
+    const last = sheet ? sheet.getLastRow() : 0;
+    if (last < 2) return {logs: []};
+    const first = Math.max(2, last - 199);
+    const rows = sheet.getRange(first, 1, last - first + 1, 3).getValues();
+    if (rows.some(row => row[0] && !row[2])) {
+      rows.forEach(row => { if (row[0] && !row[2]) row[2] = Utilities.getUuid(); });
+      sheet.getRange(first, 3, rows.length, 1).setValues(rows.map(row => [row[2]]));
+    }
+    if (!sheet.getRange(1, 3).getValue()) sheet.getRange(1, 3).setValue('履歴ID');
+    return {logs: rows.reverse().filter(row => row[0]).map(([date, browserId, id]) => ({
+      date: toIso_(date), browserId: String(browserId || ''), id: String(id)
+    }))};
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function visitorLoginLogSheet_() {
   const id = PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY);
-  const sheet = SpreadsheetApp.openById(id).getSheetByName('VisitorLoginLogs');
-  const last = sheet ? sheet.getLastRow() : 0;
-  if (last < 2) return {logs: []};
-  const first = Math.max(2, last - 199);
-  return {logs: sheet.getRange(first, 1, last - first + 1, 2).getValues().reverse()
-    .map(([date, browserId]) => ({date: toIso_(date), browserId: String(browserId || '')}))};
+  return SpreadsheetApp.openById(id).getSheetByName('VisitorLoginLogs');
+}
+
+function deleteVisitorLoginLog(id, adminToken) {
+  requireAdmin_(adminToken);
+  if (typeof id !== 'string' || !/^[0-9a-f-]{36}$/i.test(id)) throw new Error('履歴IDが不正です。');
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    requireAdmin_(adminToken);
+    const sheet = visitorLoginLogSheet_();
+    const last = sheet ? sheet.getLastRow() : 0;
+    if (last > 1) {
+      const row = sheet.getRange(2, 3, last - 1, 1).getValues().findIndex(value => value[0] === id);
+      if (row >= 0) sheet.deleteRow(row + 2);
+    }
+    return {ok: true};
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function deleteVisitorLoginLogs(adminToken) {
+  requireAdmin_(adminToken);
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    requireAdmin_(adminToken);
+    const sheet = visitorLoginLogSheet_();
+    const last = sheet ? sheet.getLastRow() : 0;
+    if (last > 1) sheet.deleteRows(2, last - 1);
+    return {ok: true};
+  } finally {
+    lock.releaseLock();
+  }
 }
