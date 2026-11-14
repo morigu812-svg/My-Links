@@ -736,6 +736,9 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   #staffOnlineCount { margin-inline-start: 0; font-size: 10px; line-height: 1.2; }
 }
 </style>
+<style>
+#dlg #form label.check { color:#e5edf5 !important; }
+</style>
 </head>
 <body>
 <section id="authGate" class="auth-gate" aria-labelledby="authTitle">
@@ -778,7 +781,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
       <button class="side-item" type="button" id="sideMemos"><span>▤</span> メモ帳</button>
       <button class="side-item" type="button" id="sideStaffChat"><span>✉</span> 管理者専用チャット <span id="staffUnreadCount" class="new-badge" hidden></span></button>
       <button class="side-item" type="button" id="sideChat"><span>✉</span> 利用者チャット <span class="new-badge" id="chatUnreadBadge" hidden>NEW</span></button>
-      <button class="side-item" type="button" id="sideLinkOperations"><span>◷</span> リンク操作履歴</button>
+      <button class="side-item" type="button" id="sideLinkOperations"><span>◷</span> リンク操作履歴</button>      <button class="side-item" type="button" id="sideVisitorLogins"><span>◷</span> 利用者ログイン履歴</button>
       <button class="side-item" type="button" id="sideClickLogs"><span>◷</span> クリック履歴</button>
       <button class="side-item" type="button" id="sideTrash"><span>🗑</span> ゴミ箱</button>
       <button class="side-item" type="button" id="sideDiagnosis"><span>🩺</span> リンク診断</button>
@@ -866,6 +869,14 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   <form method="dialog" style="display:inline"><button class="btn" type="submit">閉じる</button></form>
   <p id="linkOperationsStatus" role="status"></p>
   <ul id="linkOperationsList"></ul>
+</dialog>
+<dialog id="visitorLoginsDialog" aria-labelledby="visitorLoginsTitle" style="width:min(640px,calc(100% - 24px));max-height:80vh;overflow:auto">
+  <h2 id="visitorLoginsTitle">利用者ログイン履歴</h2>
+  <p>利用者のログイン成功日時を新しい順に最大200件表示します。</p>
+  <button id="refreshVisitorLogins" type="button" class="btn">再読み込み</button>
+  <form method="dialog" style="display:inline"><button class="btn" type="submit">閉じる</button></form>
+  <p id="visitorLoginsStatus" role="status"></p>
+  <ul id="visitorLoginsList"></ul>
 </dialog>
 <dialog id="dlg">
   <form id="form" method="dialog">
@@ -1043,7 +1054,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   }
 
   function serverCall(method, ...args) {
-    const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'getLinkOperationLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'sendChatMessage', 'getStaffChatMessages', 'sendStaffChatMessage', 'markStaffChatRead', 'sendPrivateChatMessage', 'getClickLogs', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
+    const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'sendChatMessage', 'getStaffChatMessages', 'sendStaffChatMessage', 'markStaffChatRead', 'sendPrivateChatMessage', 'getClickLogs', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
     if (protectedMethods.includes(method)) {
       const token = adminSession.getItem(ADMIN_TOKEN_KEY) || '';
       // 呼び出し元（埋め込みメモ帳など）が既にトークンを渡している場合は二重追加しない。
@@ -1159,6 +1170,8 @@ function watchSessionExpiry(deadline, onExpired) {
   function showAdminReauthentication(message) {
     stopAdminExpiry();
     adminSession.removeItem(ADMIN_EXPIRY_KEY);
+    $('visitorLoginsDialog').close();
+    $('visitorLoginsList').replaceChildren();
     $('linkOperationsDialog').close();
     $('linkOperationsList').replaceChildren();
     const dialog = $('dlg');
@@ -1621,6 +1634,34 @@ document.getElementById('authSubmit').disabled = false;
     if (!adminSession.getItem(ADMIN_TOKEN_KEY)) return;
     $('linkOperationsDialog').showModal();
     refreshLinkOperations();
+  });
+  async function refreshVisitorLogins() {
+    const token = adminSession.getItem(ADMIN_TOKEN_KEY);
+    const button = $('refreshVisitorLogins');
+    const status = $('visitorLoginsStatus');
+    if (!token || button.disabled) return;
+    button.disabled = true;
+    status.textContent = '読み込み中…';
+    try {
+      const {logs} = await serverCall('getVisitorLoginLogs');
+      if (token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
+      $('visitorLoginsList').replaceChildren(...logs.map(log => {
+        const row = document.createElement('li');
+        row.textContent = new Date(log.date).toLocaleString('ja-JP');
+        return row;
+      }));
+      status.textContent = logs.length ? '' : 'まだログイン履歴はありません。';
+    } catch (error) {
+      status.textContent = '履歴を取得できませんでした。' + error.message;
+    } finally {
+      button.disabled = false;
+    }
+  }
+  $('refreshVisitorLogins').addEventListener('click', refreshVisitorLogins);
+  $('sideVisitorLogins').addEventListener('click', () => {
+    if (!adminSession.getItem(ADMIN_TOKEN_KEY)) return;
+    $('visitorLoginsDialog').showModal();
+    refreshVisitorLogins();
   });
   async function refreshNoticeReadCount(){
     const output=$('noticeReadAdminCount'),button=$('refreshNoticeReadCount');

@@ -381,6 +381,7 @@ function authenticateVisitor(password) {
   storeSession_('VISITOR', token, generation);
   // 認証直後のリンク取得を同じ応答にまとめ、ブラウザーとの往復を1回減らす。
   const initialLinks = getLinksForToken_(token, false);
+  recordVisitorLogin_();
   return {
     ok: true, token: token, expiresIn: SESSION_TTL_SECONDS,
     links: initialLinks.links, categories: initialLinks.categories
@@ -1748,4 +1749,33 @@ function getLinkOperationLogs(adminToken) {
       date: toIso_(date), action: String(action), linkId: String(linkId), title: String(title)
     }));
   return {logs};
+}
+
+function recordVisitorLogin_() {
+  const lock = LockService.getScriptLock();
+  let locked = false;
+  try {
+    lock.waitLock(5000);
+    locked = true;
+    const id = PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY);
+    const spreadsheet = SpreadsheetApp.openById(id);
+    const sheet = spreadsheet.getSheetByName('VisitorLoginLogs') || spreadsheet.insertSheet('VisitorLoginLogs');
+    if (!sheet.getLastRow()) sheet.appendRow(['ログイン日時']);
+    sheet.appendRow([new Date()]);
+  } catch (error) {
+    console.error('利用者ログイン履歴の保存に失敗しました。', error.message);
+  } finally {
+    if (locked) lock.releaseLock();
+  }
+}
+
+function getVisitorLoginLogs(adminToken) {
+  requireAdmin_(adminToken);
+  const id = PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY);
+  const sheet = SpreadsheetApp.openById(id).getSheetByName('VisitorLoginLogs');
+  const last = sheet ? sheet.getLastRow() : 0;
+  if (last < 2) return {logs: []};
+  const first = Math.max(2, last - 199);
+  return {logs: sheet.getRange(first, 1, last - first + 1, 1).getValues().reverse()
+    .map(([date]) => ({date: toIso_(date)}))};
 }
