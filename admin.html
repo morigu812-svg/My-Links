@@ -934,6 +934,23 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   const AUTH_KEY = 'myLinksUnlocked';
   const ADMIN_TOKEN_KEY = 'linkCoreAdminToken';
 
+  // ストレージが制限されている場合も、開いているページ内で認証を使えるようにする。
+  const adminPageSession = new Map();
+  const adminSession = {
+    getItem(key) {
+      if (adminPageSession.has(key)) return adminPageSession.get(key);
+      try { return sessionStorage.getItem(key); } catch (_) { return null; }
+    },
+    setItem(key, value) {
+      adminPageSession.set(key, value);
+      try { sessionStorage.setItem(key, value); } catch (_) {}
+    },
+    removeItem(key) {
+      adminPageSession.set(key, null);
+      try { sessionStorage.removeItem(key); } catch (_) {}
+    }
+  };
+
   function isGasOrigin(origin) {
     if (origin === 'https://script.google.com' ||
         origin === 'https://script.googleusercontent.com') return true;
@@ -1007,7 +1024,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   function serverCall(method, ...args) {
     const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'saveOfficialLink', 'deleteOfficialLink', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'sendChatMessage', 'getStaffChatMessages', 'sendStaffChatMessage', 'sendPrivateChatMessage', 'getClickLogs', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
     if (protectedMethods.includes(method)) {
-      const token = sessionStorage.getItem(ADMIN_TOKEN_KEY) || '';
+      const token = adminSession.getItem(ADMIN_TOKEN_KEY) || '';
       // 呼び出し元（埋め込みメモ帳など）が既にトークンを渡している場合は二重追加しない。
       if (method === 'sendStaffChatMessage' || args[args.length - 1] !== token) args.push(token);
     }
@@ -1071,9 +1088,9 @@ function watchSessionExpiry(deadline, onExpired) {
   let stopAdminExpiry = () => {};
 
   function reloadAfterAdminLogout() {
-    sessionStorage.removeItem(ADMIN_EXPIRY_KEY);
-    sessionStorage.removeItem(ADMIN_TOKEN_KEY);
-    sessionStorage.removeItem(AUTH_KEY);
+    adminSession.removeItem(ADMIN_EXPIRY_KEY);
+    adminSession.removeItem(ADMIN_TOKEN_KEY);
+    adminSession.removeItem(AUTH_KEY);
     location.reload();
   }
 
@@ -1088,13 +1105,13 @@ function watchSessionExpiry(deadline, onExpired) {
     finally { reloadAfterAdminLogout(); }
   });
 
-  const savedExpiry = Number(sessionStorage.getItem(ADMIN_EXPIRY_KEY));
-  if (sessionStorage.getItem(ADMIN_TOKEN_KEY) && savedExpiry <= Date.now()) {
-    sessionStorage.removeItem(ADMIN_TOKEN_KEY);
-    sessionStorage.removeItem(AUTH_KEY);
-    sessionStorage.removeItem(ADMIN_EXPIRY_KEY);
+  const savedExpiry = Number(adminSession.getItem(ADMIN_EXPIRY_KEY));
+  if (adminSession.getItem(ADMIN_TOKEN_KEY) && savedExpiry <= Date.now()) {
+    adminSession.removeItem(ADMIN_TOKEN_KEY);
+    adminSession.removeItem(AUTH_KEY);
+    adminSession.removeItem(ADMIN_EXPIRY_KEY);
   }
-  if (sessionStorage.getItem(AUTH_KEY) === 'yes' && sessionStorage.getItem(ADMIN_TOKEN_KEY)) {
+  if (adminSession.getItem(AUTH_KEY) === 'yes' && adminSession.getItem(ADMIN_TOKEN_KEY)) {
     stopAdminExpiry = watchSessionExpiry(savedExpiry, reloadAfterAdminLogout);
     document.body.classList.remove('auth-locked');
     if (authGate) authGate.classList.add('is-hidden');
@@ -1107,8 +1124,8 @@ function watchSessionExpiry(deadline, onExpired) {
     try {
       const result = await serverCall('logoutAllBrowsers');
       if (!result || result.ok !== true) throw new Error('完了を確認できませんでした。');
-      sessionStorage.removeItem(ADMIN_TOKEN_KEY);
-      sessionStorage.removeItem(AUTH_KEY);
+      adminSession.removeItem(ADMIN_TOKEN_KEY);
+      adminSession.removeItem(AUTH_KEY);
       location.reload();
     } catch (error) {
       alert('一括ログアウトの結果を確認できませんでした。' + error.message);
@@ -1120,14 +1137,14 @@ function watchSessionExpiry(deadline, onExpired) {
   let resumeLinkEdit = false;
   function showAdminReauthentication(message) {
     stopAdminExpiry();
-    sessionStorage.removeItem(ADMIN_EXPIRY_KEY);
+    adminSession.removeItem(ADMIN_EXPIRY_KEY);
     const dialog = $('dlg');
     if (dialog.open) {
       resumeLinkEdit = true;
       dialog.close();
     }
-    sessionStorage.removeItem(ADMIN_TOKEN_KEY);
-    sessionStorage.removeItem(AUTH_KEY);
+    adminSession.removeItem(ADMIN_TOKEN_KEY);
+    adminSession.removeItem(AUTH_KEY);
     chatOverlay.classList.remove('open');
     $('staffChatOverlay').classList.remove('open');
     $('staffChatMessages').replaceChildren();
@@ -1156,14 +1173,14 @@ function watchSessionExpiry(deadline, onExpired) {
       authResult = await serverCall('authenticateAdmin', authField.value, true);
       if (!authResult || !authResult.token) throw new Error('認証トークンを受け取れませんでした。');
       const expiry = loginStartedAt + Math.min(authResult.expiresIn || 1800, 1800) * 1000;
-      sessionStorage.setItem(ADMIN_EXPIRY_KEY, String(expiry));
-      sessionStorage.setItem(ADMIN_TOKEN_KEY, authResult.token);
+      adminSession.setItem(ADMIN_EXPIRY_KEY, String(expiry));
+      adminSession.setItem(ADMIN_TOKEN_KEY, authResult.token);
       stopAdminExpiry();
       stopAdminExpiry = watchSessionExpiry(expiry, reloadAfterAdminLogout);
-      sessionStorage.setItem(AUTH_KEY, 'yes');
+      adminSession.setItem(AUTH_KEY, 'yes');
     } catch (error) {
-      sessionStorage.removeItem(ADMIN_TOKEN_KEY);
-      sessionStorage.removeItem(AUTH_KEY);
+      adminSession.removeItem(ADMIN_TOKEN_KEY);
+      adminSession.removeItem(AUTH_KEY);
       authError.textContent = error.message || 'ログインに失敗しました。';
       authField.select();
       authSubmit.disabled = false;
@@ -1208,7 +1225,7 @@ function watchSessionExpiry(deadline, onExpired) {
       console.error('[LINK CORE] 認証後のリンク読み込みに失敗しました', error);
     } finally {
       setBusy(false);
-      if (resumeLinkEdit && sessionStorage.getItem(ADMIN_TOKEN_KEY)) {
+      if (resumeLinkEdit && adminSession.getItem(ADMIN_TOKEN_KEY)) {
         resumeLinkEdit = false;
         $('dlg').showModal();
       }
@@ -1506,8 +1523,8 @@ document.getElementById('authSubmit').disabled = false;
   let chatLoading=false,chatLoaded=false,lastAdminChatId='',adminUnreadCount=0;
   function renderChatMessages(messages){chatMessages.replaceChildren();if(!messages.length){const e=document.createElement('div');e.className='chat-empty';e.textContent='まだメッセージはありません。利用者からの投稿を待っています。';chatMessages.appendChild(e);return;}messages.forEach(item=>{const bubble=document.createElement('article');bubble.className='chat-message'+(item.author==='管理者'?' admin':'');const meta=document.createElement('div');meta.className='chat-message-meta';const author=document.createElement('strong');author.textContent=item.private?'管理者 → '+item.recipient:(item.author==='管理者'?'管理者':'利用者');const time=document.createElement('time');const date=new Date(item.createdAt);time.textContent=isNaN(date.getTime())?'':date.toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});const body=document.createElement('div');body.className='chat-message-body';body.textContent=item.message;meta.append(author,time);bubble.append(meta,body);chatMessages.appendChild(bubble);});chatMessages.scrollTop=chatMessages.scrollHeight;}
   function updateAdminChatBadge(){const badge=$('chatUnreadBadge');if(!badge)return;badge.hidden=adminUnreadCount<1;badge.textContent=adminUnreadCount>99?'99+':String(adminUnreadCount);badge.setAttribute('aria-label',adminUnreadCount+'件の未読メッセージ');}
-  async function refreshAdminChat(){if(chatLoading||!sessionStorage.getItem(ADMIN_TOKEN_KEY))return;const button=$('refreshChat');chatLoading=true;if(button){button.disabled=true;button.classList.add('is-refreshing');button.setAttribute('aria-busy','true');}try{const r=await serverCall('getChatMessages');const messages=Array.isArray(r.messages)?r.messages:[];const latest=messages.length?messages[messages.length-1].id:'';if(chatLoaded&&latest&&lastAdminChatId&&latest!==lastAdminChatId&&!chatOverlay.classList.contains('open')){const previousIndex=messages.findIndex(item=>item.id===lastAdminChatId);adminUnreadCount+=previousIndex>=0?messages.length-previousIndex-1:1;updateAdminChatBadge();}if(latest)lastAdminChatId=latest;renderChatMessages(messages);chatLoaded=true;}catch(e){if(chatOverlay.classList.contains('open'))chatMessages.textContent='読み込みに失敗しました：'+(e.message||'通信エラー');}finally{chatLoading=false;if(button){button.disabled=false;button.classList.remove('is-refreshing');button.removeAttribute('aria-busy');}}}
-  function openAdminChat(){if(!sessionStorage.getItem(ADMIN_TOKEN_KEY)){alert('先に管理者ログインをしてください。');return;}leaveClickLogs();leaveTrash();leaveDiagnosis();adminUnreadCount=0;updateAdminChatBadge();chatOverlay.classList.add('open');refreshAdminChat();}
+  async function refreshAdminChat(){if(chatLoading||!adminSession.getItem(ADMIN_TOKEN_KEY))return;const button=$('refreshChat');chatLoading=true;if(button){button.disabled=true;button.classList.add('is-refreshing');button.setAttribute('aria-busy','true');}try{const r=await serverCall('getChatMessages');const messages=Array.isArray(r.messages)?r.messages:[];const latest=messages.length?messages[messages.length-1].id:'';if(chatLoaded&&latest&&lastAdminChatId&&latest!==lastAdminChatId&&!chatOverlay.classList.contains('open')){const previousIndex=messages.findIndex(item=>item.id===lastAdminChatId);adminUnreadCount+=previousIndex>=0?messages.length-previousIndex-1:1;updateAdminChatBadge();}if(latest)lastAdminChatId=latest;renderChatMessages(messages);chatLoaded=true;}catch(e){if(chatOverlay.classList.contains('open'))chatMessages.textContent='読み込みに失敗しました：'+(e.message||'通信エラー');}finally{chatLoading=false;if(button){button.disabled=false;button.classList.remove('is-refreshing');button.removeAttribute('aria-busy');}}}
+  function openAdminChat(){if(!adminSession.getItem(ADMIN_TOKEN_KEY)){alert('先に管理者ログインをしてください。');return;}leaveClickLogs();leaveTrash();leaveDiagnosis();adminUnreadCount=0;updateAdminChatBadge();chatOverlay.classList.add('open');refreshAdminChat();}
   $('sideChat').addEventListener('click',openAdminChat);
   const clickLogPanel=$('clickLogPanel');
   let clickLogsLoaded=false,clickLogsLoading=false;
@@ -1538,7 +1555,7 @@ document.getElementById('authSubmit').disabled = false;
     finally{clickLogsLoading=false;button.disabled=false;}
   }
   function openClickLogs(){
-    if(!sessionStorage.getItem(ADMIN_TOKEN_KEY)){alert('先に管理者ログインをしてください。');return;}
+    if(!adminSession.getItem(ADMIN_TOKEN_KEY)){alert('先に管理者ログインをしてください。');return;}
     leaveDiagnosis();
     document.querySelector('.workspace').hidden=true;$('officialPanel').classList.remove('active');
     document.querySelector('.finder-toolbar').classList.remove('official-toolbar');
@@ -1557,7 +1574,7 @@ document.getElementById('authSubmit').disabled = false;
   $('refreshNoticeReadCount').addEventListener('click',refreshNoticeReadCount);
   $('refreshClickLogs').addEventListener('click',refreshClickLogs);
   $('deleteClickLogs').addEventListener('click',async()=>{
-    if(!sessionStorage.getItem(ADMIN_TOKEN_KEY)){alert('先に管理者ログインをしてください。');return;}
+    if(!adminSession.getItem(ADMIN_TOKEN_KEY)){alert('先に管理者ログインをしてください。');return;}
     if(!confirm('クリック履歴をすべて削除します。\nこの操作は取り消せません。よろしいですか？'))return;
     const button=$('deleteClickLogs');button.disabled=true;$('clickLogStatus').textContent='履歴を削除しています…';
     try{const result=await serverCall('deleteClickLogs');if(!result||!result.ok)throw new Error('削除完了の応答がありません。');renderClickLogs([]);clickLogsLoaded=true;$('clickLogStatus').textContent='クリック履歴をすべて削除しました。';}
@@ -1672,7 +1689,7 @@ document.getElementById('authSubmit').disabled = false;
     }finally{trashLoading=false;if(button)button.disabled=false;}
   }
   function openTrash(){
-    if(!sessionStorage.getItem(ADMIN_TOKEN_KEY)){alert('先に管理者ログインをしてください。');return;}
+    if(!adminSession.getItem(ADMIN_TOKEN_KEY)){alert('先に管理者ログインをしてください。');return;}
     leaveClickLogs();leaveDiagnosis();
     document.querySelector('.workspace').hidden=true;$('officialPanel').classList.remove('active');
     document.querySelector('.finder-toolbar').classList.remove('official-toolbar');
@@ -1814,7 +1831,7 @@ document.getElementById('authSubmit').disabled = false;
   }
   async function runDiagnosis(){
     if(diagnosisRunning)return;
-    if(!sessionStorage.getItem(ADMIN_TOKEN_KEY)){alert('先に管理者ログインをしてください。');return;}
+    if(!adminSession.getItem(ADMIN_TOKEN_KEY)){alert('先に管理者ログインをしてください。');return;}
     diagnosisRunning=true;
     const button=$('runDiagnosis');if(button)button.disabled=true;
     diagnosisResults=[];diagnosisDuplicates=[];diagnosisTotalUrls=0;
@@ -1847,7 +1864,7 @@ document.getElementById('authSubmit').disabled = false;
     else if(diagnosisResults.length)$('diagnosisStatus').textContent='診断が途中で止まりました：'+failMessage+'（ここまでの結果を表示中。「診断する」で最初からやり直せます）';
   }
   function openDiagnosis(){
-    if(!sessionStorage.getItem(ADMIN_TOKEN_KEY)){alert('先に管理者ログインをしてください。');return;}
+    if(!adminSession.getItem(ADMIN_TOKEN_KEY)){alert('先に管理者ログインをしてください。');return;}
     leaveClickLogs();leaveTrash();
     document.querySelector('.workspace').hidden=true;$('officialPanel').classList.remove('active');
     document.querySelector('.finder-toolbar').classList.remove('official-toolbar');
@@ -1866,8 +1883,8 @@ document.getElementById('authSubmit').disabled = false;
 
 
 $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEventListener('click',()=>{chatOverlay.classList.remove('open');});
-  setInterval(()=>{if(document.visibilityState==='visible'&&sessionStorage.getItem(ADMIN_TOKEN_KEY))refreshAdminChat();},30000);
-  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&sessionStorage.getItem(ADMIN_TOKEN_KEY))refreshAdminChat();});
+  setInterval(()=>{if(document.visibilityState==='visible'&&adminSession.getItem(ADMIN_TOKEN_KEY))refreshAdminChat();},30000);
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&adminSession.getItem(ADMIN_TOKEN_KEY))refreshAdminChat();});
   chatForm.addEventListener('submit',async e=>{e.preventDefault();const message=chatInput.value.trim();if(!message)return;chatSend.disabled=true;try {
       const recipient = $('chatRecipient').value.trim();
       if (recipient) await serverCall('sendPrivateChatMessage', message, recipient);
@@ -1884,12 +1901,12 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
   let lastStaffMessageId = null;
 
   async function refreshStaffChat() {
-    const token = sessionStorage.getItem(ADMIN_TOKEN_KEY);
+    const token = adminSession.getItem(ADMIN_TOKEN_KEY);
     if (!token || refreshStaffButton.disabled || !staffChat.classList.contains('open')) return;
     refreshStaffButton.disabled = true;
     try {
       const {messages} = await serverCall('getStaffChatMessages');
-      if (token !== sessionStorage.getItem(ADMIN_TOKEN_KEY)) return;
+      if (token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
       const latestId = messages.length ? messages[messages.length - 1].id : '';
       if (latestId !== lastStaffMessageId) {
         const cards = messages.map(item => {
@@ -1917,7 +1934,7 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
   }
 
   $('sideStaffChat').addEventListener('click', () => {
-    if (!sessionStorage.getItem(ADMIN_TOKEN_KEY)) return;
+    if (!adminSession.getItem(ADMIN_TOKEN_KEY)) return;
     chatOverlay.classList.remove('open');
     staffChat.classList.add('open');
     lastStaffMessageId = null;
@@ -1953,7 +1970,7 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
   const memoFrame = $('memoFrame');
   function openIntegratedMemos() {
     leaveClickLogs();leaveTrash();leaveDiagnosis();
-    const token = sessionStorage.getItem(ADMIN_TOKEN_KEY);
+    const token = adminSession.getItem(ADMIN_TOKEN_KEY);
     if (!token) { alert('先に管理者ログインをしてください。'); return; }
     memoOverlay.classList.add('open');
     document.body.style.overflow = 'hidden';
@@ -2161,7 +2178,7 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
   // 初期読み込みを独立した手順にし、各段階の状態を表示する。
   (async function initializeAdminPage() {
     // 未ログイン状態では保護されたAPIを呼ばず、認証画面をそのまま表示する。
-    if (sessionStorage.getItem(AUTH_KEY) !== 'yes' || !sessionStorage.getItem(ADMIN_TOKEN_KEY)) {
+    if (adminSession.getItem(AUTH_KEY) !== 'yes' || !adminSession.getItem(ADMIN_TOKEN_KEY)) {
       setBusy(false);
       return;
     }
