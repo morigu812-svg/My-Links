@@ -781,7 +781,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
       <button class="side-item" type="button" id="sideClickLogs"><span>◷</span> クリック履歴</button>
       <button class="side-item" type="button" id="sideTrash"><span>🗑</span> ゴミ箱</button>
       <button class="side-item" type="button" id="sideDiagnosis"><span>🩺</span> リンク診断</button>
-      <button class="side-item" type="button" id="sideReleaseNotes"><span>▤</span> リリースノート <span class="new-badge">NEW</span></button>
+      <button class="side-item" type="button" id="sidePageGuide"><span aria-hidden="true">ⓘ</span> このページの仕組み</button>
       <button class="side-item" type="button" id="sideShare"><span>⤴</span> このページを共有</button>
       <div class="side-label">カテゴリ</div>
       <div id="sideCats" class="side-cats"></div>
@@ -2358,25 +2358,25 @@ body,.finder-window,.finder-toolbar,.finder-layout,.finder-content,.sidebar,
 
 
 
-<style id="lc-release-notes-style">
-#lc-release-overlay{position:fixed;inset:0;z-index:120000;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(1,6,14,.76);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
-#lc-release-overlay.is-open{display:flex}
-#lc-release-dialog{width:min(680px,100%);max-height:min(82vh,820px);overflow:hidden;border:1px solid #24566d;border-radius:18px;background:linear-gradient(145deg,#0c1725,#090e19 70%);box-shadow:0 24px 90px #000b,0 0 35px #00d9ff18;color:#e8f7ff}
-#lc-release-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:20px 22px;border-bottom:1px solid #1d3c50;background:linear-gradient(110deg,#10283a,#101326)}
-#lc-release-head small{display:block;color:#54cfe9;font-size:10px;font-weight:800;letter-spacing:.18em}
-#lc-release-head h2{margin:4px 0 0;font-size:22px;color:#eafaff}
-#lc-release-close{width:34px;height:34px;border:1px solid #315064;border-radius:9px;background:#0a1724;color:#bfeeff;font-size:20px;cursor:pointer}
-#lc-release-content{padding:18px 22px 24px;overflow:auto;max-height:calc(min(82vh,820px) - 88px)}
-.lc-release-entry{position:relative;margin:0 0 15px;padding:16px 17px;border:1px solid #1d4054;border-radius:12px;background:rgba(12,29,44,.72)}
-.lc-release-entry:last-child{margin-bottom:0}
-.lc-release-meta{display:flex;align-items:center;gap:9px;flex-wrap:wrap;color:#8ba9ba;font-size:11px}
-.lc-release-version{padding:3px 8px;border:1px solid #23627b;border-radius:6px;background:#0c2b3b;color:#79e7ff;font-weight:750}
-.lc-release-entry h3{margin:10px 0 8px;font-size:16px;color:#e8faff}
-.lc-release-entry ul{margin:0;padding-left:19px;color:#b4c9d5;font-size:13px;line-height:1.85}
-#lc-release-notes-button{position:relative}
-@media(max-width:520px){#lc-release-overlay{padding:10px}#lc-release-dialog{max-height:90vh;border-radius:14px}#lc-release-content{max-height:calc(90vh - 82px);padding:14px}#lc-release-head{padding:16px}#lc-release-head h2{font-size:19px}}
+<style id="lc-page-guide-notes-style">
+#lc-page-guide-overlay{position:fixed;inset:0;z-index:120000;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(1,6,14,.76);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+#lc-page-guide-overlay.is-open{display:flex}
+#lc-page-guide-dialog{width:min(680px,100%);max-height:min(82vh,820px);overflow:hidden;border:1px solid #24566d;border-radius:18px;background:linear-gradient(145deg,#0c1725,#090e19 70%);box-shadow:0 24px 90px #000b,0 0 35px #00d9ff18;color:#e8f7ff}
+#lc-page-guide-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:20px 22px;border-bottom:1px solid #1d3c50;background:linear-gradient(110deg,#10283a,#101326)}
+#lc-page-guide-head small{display:block;color:#54cfe9;font-size:10px;font-weight:800;letter-spacing:.18em}
+#lc-page-guide-head h2{margin:4px 0 0;font-size:22px;color:#eafaff}
+#lc-page-guide-close{width:34px;height:34px;border:1px solid #315064;border-radius:9px;background:#0a1724;color:#bfeeff;font-size:20px;cursor:pointer}
+#lc-page-guide-content{padding:18px 22px 24px;overflow:auto;max-height:calc(min(82vh,820px) - 88px)}
+.lc-page-guide-entry{position:relative;margin:0 0 15px;padding:16px 17px;border:1px solid #1d4054;border-radius:12px;background:rgba(12,29,44,.72)}
+.lc-page-guide-entry:last-child{margin-bottom:0}
+.lc-page-guide-meta{display:flex;align-items:center;gap:9px;flex-wrap:wrap;color:#8ba9ba;font-size:11px}
+.lc-page-guide-version{padding:3px 8px;border:1px solid #23627b;border-radius:6px;background:#0c2b3b;color:#79e7ff;font-weight:750}
+.lc-page-guide-entry h3{margin:10px 0 8px;font-size:16px;color:#e8faff}
+.lc-page-guide-entry p{margin:0;padding-left:19px;color:#b4c9d5;font-size:13px;line-height:1.85}
+#lc-page-guide-notes-button{position:relative}
+@media(max-width:520px){#lc-page-guide-overlay{padding:10px}#lc-page-guide-dialog{max-height:90vh;border-radius:14px}#lc-page-guide-content{max-height:calc(90vh - 82px);padding:14px}#lc-page-guide-head{padding:16px}#lc-page-guide-head h2{font-size:19px}}
 
-.lc-release-new-badge,.side-item>.new-badge{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;width:auto!important;min-width:0;margin-left:auto;padding:2px 6px;border:1px solid #ffe45c;border-radius:5px;background:rgba(255,228,92,.10);color:#fff29a!important;font-size:9px!important;font-weight:900;letter-spacing:.08em;line-height:1.3;white-space:nowrap;text-shadow:0 0 5px rgba(255,226,75,.95),0 0 10px rgba(255,210,40,.7);box-shadow:0 0 6px rgba(255,220,70,.45),inset 0 0 4px rgba(255,220,70,.12)}
+.side-item>.new-badge{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;width:auto!important;min-width:0;margin-left:auto;padding:2px 6px;border:1px solid #ffe45c;border-radius:5px;background:rgba(255,228,92,.10);color:#fff29a!important;font-size:9px!important;font-weight:900;letter-spacing:.08em;line-height:1.3;white-space:nowrap;text-shadow:0 0 5px rgba(255,226,75,.95),0 0 10px rgba(255,210,40,.7);box-shadow:0 0 6px rgba(255,220,70,.45),inset 0 0 4px rgba(255,220,70,.12)}
 
 /* Review fixes: mobile layout, touch dragging, and viewport recovery */
 .finder-window{touch-action:pan-x pan-y}
@@ -2455,7 +2455,7 @@ body,.finder-window,.finder-toolbar,.finder-layout,.finder-content,.sidebar,
 <style id="lc-share-style">
 /* LINK CORE 閲覧ページ共有（QRコード表示）。閲覧画面の共有スタイルと同じ構成。
    管理画面には html.light-mode が無いため、ライト用ルールは省いてある。
-   ダイアログはリリースノートと同じダーク配色で、夜間モードでもそのまま使える。 */
+   ダイアログはこのページの仕組みと同じダーク配色で、夜間モードでもそのまま使える。 */
 .share-btn{display:grid;place-items:center;width:29px;height:25px;padding:0;border-radius:5px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.06);color:#bfeeff;font:inherit;font-size:15px;line-height:1;cursor:pointer;box-shadow:none}
 .share-btn:hover{background:rgba(255,255,255,.13);border-color:rgba(255,255,255,.12)}
 .share-btn:focus-visible{outline:2px solid #35d9ff;outline-offset:2px}
@@ -2478,23 +2478,14 @@ body,.finder-window,.finder-toolbar,.finder-layout,.finder-content,.sidebar,
 #lc-share-status{min-height:20px;margin:10px 0 0;color:#8fb8c9;font-size:12px}
 @media(max-width:520px){#lc-share-overlay{padding:10px}#lc-share-dialog{max-height:90vh;border-radius:14px}}
 </style>
-<div id="lc-release-overlay" aria-hidden="true">
- <section id="lc-release-dialog" role="dialog" aria-modal="true" aria-labelledby="lc-release-title">
-  <header id="lc-release-head"><div><small>LINK CORE / CHANGELOG</small><h2 id="lc-release-title">リリースノート</h2></div><button id="lc-release-close" type="button" aria-label="閉じる">×</button></header>
-  <div id="lc-release-content"><article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v2.2.2</span><time datetime="2026-11-10">2026年11月10日</time></div><h3>管理者のリンク保存とフォルダー表示を改善</h3><ul><li>保存に失敗した場合は入力内容を保持し、同じ画面から再試行できます。</li><li>新規リンクは、公開にチェックしたときに利用者画面へ表示されます。</li><li>編集中のフォルダーが空になった場合は、残っている親フォルダーへ戻ります。</li></ul></article><article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v2.2.0</span><time datetime="2026-11-05">2026年11月5日</time></div><h3>フォルダーの階層化に対応</h3><ul><li>フォルダーの中にサブフォルダーを作れるようになりました。</li><li>フォルダー名を「親フォルダー/子フォルダー」の形式で指定すると、階層として表示されます。</li><li>親フォルダー内では、その直下のサブフォルダーとリンクを表示します。</li><li>階層をたどるパンくず表示と、親フォルダーへ戻る操作に対応しました。</li><li>既存のカテゴリ名・リンク情報・スプレッドシートの列構成は変更していません。</li></ul></article>
-   <article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v2.1.0</span><time datetime="2026-11-04">2026年11月4日</time></div><h3>ブラウザー識別・通知管理・ホーム画面アイコンを改善</h3><ul><li>リンクのクリック履歴にブラウザーIDを記録し、どのブラウザー環境から操作されたか確認できるようにしました。</li><li>お知らせの既読状態をブラウザーごとに管理し、管理者画面から既読件数を確認できるようにしました。</li><li>ホーム画面に追加したときのLINK COREアイコンを、専用のアイコン画像に更新しました。</li><li>利用者画面・管理者画面から、内部ブラウザーやウィンドウの移動・サイズ変更などの機能を整理し、リンクをシンプルに開けるようにしました。</li></ul></article>
-   
-   <article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v2.0.0</span><time datetime="2026-11-03">2026年11月3日</time></div><h3>カテゴリーをフォルダ形式に変更</h3><ul><li>利用者画面・管理者画面のMy Desktopに、既存カテゴリーをフォルダアイコンで表示するようにしました。</li><li>フォルダを開くと、そのカテゴリーに登録されたリンクだけを表示します。</li><li>フォルダ内から一覧へ戻る操作と、サイドバーから直接フォルダを開く操作に対応しました。</li><li>カテゴリーが未設定のリンクは「未分類」フォルダにまとめて表示します。</li><li>既存のリンク情報やスプレッドシートの保存形式は変更していません。</li></ul></article>
-   <article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v1.9.0</span><time datetime="2026-11-03">2026年11月3日</time></div><h3>NEW表示とログイン時の読み込みを改善</h3><ul><li>利用者画面でNEW付きのリンクを開くと、そのブラウザーではNEW表示が消えるようになりました。</li><li>管理者チャット・ブラウザ・リリースノートのサイドバーにあるNEW表示も、各タブを開くとブラウザーごとに既読として保存されます。</li><li>ページを再読み込みしても既読状態を維持し、別のブラウザーでは未読状態を個別に管理します。</li><li>ログイン画面を表示している間にGASとの接続・リンク一覧のキャッシュ準備を進め、ログイン後の待ち時間を減らすよう改善しました。</li></ul></article>
-   <article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v1.8.0</span><time datetime="2026-11-03">2026年11月3日</time></div><h3>読み込み速度と通信負荷を改善</h3><ul><li>リンク一覧を短時間キャッシュし、繰り返しログインした際の取得を高速化しました。</li><li>チャットの取得結果も短時間キャッシュし、スプレッドシートへの読み込み回数を削減しました。</li><li>クリック履歴の保存処理から不要な強制書き込みを取り除きました。</li></ul></article>
-   <article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v1.7.0</span><time datetime="2026-11-03">2026年11月3日</time></div><h3>利用者画面を管理者画面と統一</h3><ul><li>Finder風のツールバー、サイドバー、コンテンツ領域の構成と配色を管理者画面に合わせました。</li><li>リンクカードのレイアウト、枠線、発光エフェクト、文字の見た目を統一しました。</li><li>サイドバーにMy Desktopを追加し、画面切り替え操作を改善しました。</li></ul></article>
-   <article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v1.6.0</span><time datetime="2026-11-03">2026年11月3日</time></div><h3>利用者画面の使いやすさを改善</h3><ul><li>お気に入りが0件の場合は、自動で「すべてのリンク」を表示するようにしました。</li><li>チャットを開いている間、メッセージを自動更新するようにしました。</li><li>スマートフォンではサイドバーを横スクロール式に変更しました。</li><li>埋め込み表示できないWebサイトは、自動で別タブに開くようにしました。</li><li>ウィンドウの移動・リサイズ後に画面外へ出にくいよう調整しました。</li></ul></article>
-   <article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v1.5.0</span><time datetime="2026-11-03">2026年11月3日</time></div><h3>セキュリティと安定性を強化</h3><ul><li>公開設定が空欄のリンクは、利用者画面に表示されないよう変更しました。</li><li>利用者向けのエラー表示を分かりやすくし、内部情報が表示されないよう改善しました。</li><li>iPhone Safariでの全画面表示に関する不具合を修正しました。</li></ul></article>
-<article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v1.4.0</span><time datetime="2026-11-03">2026年11月3日</time></div><h3>表示・デザインを改善</h3><ul><li>NEWラベルを黄色のネオンカラーに変更し、発光エフェクトを追加しました。</li><li>リンクタイトルとNEWラベルの間隔を調整し、見やすくしました。</li><li>利用者画面にログインしたとき、最初に「お気に入り」が表示されるようにしました。</li></ul></article>
-   <article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v1.3.0</span><time datetime="2026-11-03">2026年11月3日</time></div><h3>カード設定・クリック履歴を強化</h3><ul><li>カードの詳細設定から、リンクごとにNEWラベルを表示できるようになりました。</li><li>NEWラベルの設定は保存され、管理者画面・利用者画面の両方に反映されます。</li><li>クリック履歴をすべて削除する機能と、履歴を1件ずつ削除する機能を追加しました。</li></ul></article>
-   <article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v1.2.0</span><time datetime="2026-11-03">2026年11月3日</time></div><h3>フローティングブラウザを追加</h3><ul><li>利用者画面・管理者画面の両方から、サイトをウィンドウ内で開けるようになりました。</li><li>ウィンドウの移動・8方向リサイズに対応しました。</li><li>画面下のタスクバーから、開いているウィンドウの切り替えや復元ができます。</li><li>赤・黄・緑のウィンドウ操作ボタンを追加しました。</li></ul></article>
-   <article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v1.1.0</span><time datetime="2026-11-02">2026年11月2日</time></div><h3>ウィンドウ操作を改善</h3><ul><li>利用者画面・管理者画面のウィンドウをドラッグで移動できるようにしました。</li><li>ウィンドウの端や角をつかんでサイズを変更できるようにしました。</li><li>操作ボタン付近を誤ってドラッグしないよう、移動できる範囲を調整しました。</li></ul></article>
-   <article class="lc-release-entry"><div class="lc-release-meta"><span class="lc-release-version">v1.0.0</span><time datetime="2026-11-02">2026年11月2日</time></div><h3>LINK CORE デスクトップを更新</h3><ul><li>Finder風の画面構成と、リンクを探しやすいサイドバーを整えました。</li></ul></article>
+<div id="lc-page-guide-overlay" aria-hidden="true">
+ <section id="lc-page-guide-dialog" role="dialog" aria-modal="true" aria-labelledby="lc-page-guide-title">
+  <header id="lc-page-guide-head"><div><small>LINK CORE</small><h2 id="lc-page-guide-title">このページの仕組み</h2></div><button id="lc-page-guide-close" type="button" aria-label="閉じる">×</button></header>
+  <div id="lc-page-guide-content">
+    <article class="lc-page-guide-entry"><h3>リンクの整理と公開</h3><p>リンクを登録するときにフォルダーを指定できます。「利用者ページに公開する」を選んだリンクは、利用者画面に表示されます。</p></article>
+    <article class="lc-page-guide-entry"><h3>チャットの使い分け</h3><p>「利用者チャット」は利用者との連絡に、「管理者専用チャット」は管理者同士の連絡に使います。管理者専用チャットでは、メッセージの「既読にする」を押すと既読数が更新されます。</p></article>
+    <article class="lc-page-guide-entry"><h3>ログインとメモ帳</h3><p>管理者ログインの有効時間は30分です。メモ帳を開くには、管理者ログインに加えて、専用のメモ帳パスワードが必要です。</p></article>
+    <article class="lc-page-guide-entry"><h3>データの保存と権限</h3><p>リンク・メモ・チャットは Google スプレッドシートに保存されます。Google Apps Script が読み取りや保存のリクエストを受け取り、操作に必要な権限を確認します。</p></article>
   </div>
  </section>
 </div>
@@ -4816,11 +4807,11 @@ var qrcode = function() {
 }));
 
 </script>
-<script id="lc-release-notes-script">
+<script id="lc-page-guide-notes-script">
 (function(){
- const trigger=document.getElementById('sideReleaseNotes');
- const overlay=document.getElementById('lc-release-overlay');
- const close=document.getElementById('lc-release-close');
+ const trigger=document.getElementById('sidePageGuide');
+ const overlay=document.getElementById('lc-page-guide-overlay');
+ const close=document.getElementById('lc-page-guide-close');
  if(!trigger||!overlay||!close||trigger.dataset.bound)return;
  trigger.dataset.bound='1';
  function open(){overlay.classList.add('is-open');overlay.setAttribute('aria-hidden','false');close.focus()}
