@@ -2482,10 +2482,12 @@ body,.finder-window,.finder-toolbar,.finder-layout,.finder-content,.sidebar,
  <section id="lc-page-guide-dialog" role="dialog" aria-modal="true" aria-labelledby="lc-page-guide-title">
   <header id="lc-page-guide-head"><div><small>LINK CORE</small><h2 id="lc-page-guide-title">このページの仕組み</h2></div><button id="lc-page-guide-close" type="button" aria-label="閉じる">×</button></header>
   <div id="lc-page-guide-content">
-    <article class="lc-page-guide-entry"><h3>リンクの整理と公開</h3><p>リンクを登録するときにフォルダーを指定できます。「利用者ページに公開する」を選んだリンクは、利用者画面に表示されます。</p></article>
-    <article class="lc-page-guide-entry"><h3>チャットの使い分け</h3><p>「利用者チャット」は利用者との連絡に、「管理者専用チャット」は管理者同士の連絡に使います。管理者専用チャットでは、メッセージの「既読にする」を押すと既読数が更新されます。</p></article>
-    <article class="lc-page-guide-entry"><h3>ログインとメモ帳</h3><p>管理者ログインの有効時間は30分です。メモ帳を開くには、管理者ログインに加えて、専用のメモ帳パスワードが必要です。</p></article>
-    <article class="lc-page-guide-entry"><h3>データの保存と権限</h3><p>リンク・メモ・チャットは Google スプレッドシートに保存されます。Google Apps Script が読み取りや保存のリクエストを受け取り、操作に必要な権限を確認します。</p></article>
+    <p>画面の配信は GitHub Pages、ログインやデータの処理は Google Apps Script、保存先は Google スプレッドシートです。「リンクを更新」を押すと、次の順で処理が進みます。</p>
+    <article class="lc-page-guide-entry"><h3>1. GitHub Pages が画面を配信する</h3><p>GitHub Pages は <code>index.html</code>（利用者画面）、<code>admin.html</code>（管理者画面）、<code>memos.html</code>（メモ帳）を配信します。見た目やボタンの操作は、ブラウザ上で HTML・CSS・JavaScript が担当します。</p></article>
+    <article class="lc-page-guide-entry"><h3>2. bridge.html が通信を中継する</h3><p>画面を開くと、Apps Script が提供する <code>bridge.html</code> が非表示の <code>iframe</code> に読み込まれます。画面と中継ページは <code>postMessage</code> で依頼と結果をやり取りし、中継ページは <code>google.script.run</code> で GAS の関数を呼び出します。</p></article>
+    <article class="lc-page-guide-entry"><h3>3. Google Apps Script が処理する</h3><p><code>Code.gs</code> がパスワードやセッション、操作権限を確認し、リンクの取得や保存を処理します。<code>CacheService</code> は一覧などを一時保存し、同じデータを繰り返し読み取るときの負荷を減らします。</p></article>
+    <article class="lc-page-guide-entry"><h3>4. Google スプレッドシートに保存する</h3><p>GAS は <code>SpreadsheetApp</code> を使って、リンク・メモ・チャットなどを読み書きします。これらのデータはスプレッドシートに残るので、画面を閉じても保存内容を次回読み込めます。</p></article>
+    <p>読み取った結果は GAS から中継ページに戻り、<code>postMessage</code> で画面へ届きます。画面の配信は静的で、データの読み書きは操作に応じて動的に行います。</p>
   </div>
  </section>
 </div>
