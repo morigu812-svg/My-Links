@@ -729,6 +729,13 @@ body:not(.night-mode) .folder-card .folder-card-count{
 body:not(.night-mode) .side-folder-mini .folder-icon{color:#58baff!important}
 body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
 </style>
+<style>
+#finderWindow .finder-title { min-width: 0; }
+#staffOnlineCount { margin-inline-start: 8px; color: #9fe7cf; font-size: 12px; font-weight: 500; }
+@media (max-width: 520px) {
+  #staffOnlineCount { margin-inline-start: 0; font-size: 10px; line-height: 1.2; }
+}
+</style>
 </head>
 <body>
 <section id="authGate" class="auth-gate" aria-labelledby="authTitle">
@@ -753,7 +760,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
 <div class="finder-window" id="finderWindow">
   <header class="finder-toolbar">
     <div class="traffic-lights" aria-label="ウィンドウ操作"><span></span><span></span><span></span></div>
-    <div class="finder-title"><span class="folder-glyph">▰</span> My Desktop <span class="toolbar-chevron">›</span></div>
+    <div class="finder-title"><span class="folder-glyph">▰</span> My Desktop <span class="toolbar-chevron">›</span><span id="staffOnlineCount" role="status">オンライン人数を確認中…</span></div>
     <div class="toolbar-tools"><span>▤</span><span>☷</span><button id="nightModeBtn" type="button" aria-pressed="false" aria-label="暗所モードをオンにする" title="暗所モード">◐</button><button class="share-btn" type="button" id="toolbarShareBtn" aria-label="閲覧ページを共有する" title="閲覧ページを共有する">⤴</button></div>
     <label class="toolbar-search" for="search"><span>⌕</span><input id="search" type="search" placeholder="検索" aria-label="検索"></label>
   </header>
@@ -885,7 +892,6 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
     <button type="button" id="refreshStaffChat">再読み込み</button>
     <button type="button" id="closeStaffChat">閉じる</button>
   </div></div>
-  <div class="chat-subtitle" id="staffOnlineCount">オンライン人数を確認中…</div>
   <div class="chat-messages" id="staffChatMessages" aria-label="管理者チャットの履歴"></div>
   <div class="chat-subtitle" id="staffChatStatus" role="status"></div>
   <form class="chat-compose" id="staffChatForm">
@@ -1938,7 +1944,9 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
       const {messages, onlineCount} = await serverCall('getStaffChatMessages', token, staffBrowserId);
       if (token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
       const online = $('staffOnlineCount');
-      const label = Number.isInteger(onlineCount) ? onlineCount + '人の管理者がオンラインです' : 'オンライン人数を取得できません';
+      const label = onlineCount === 1 ? '自分だけがオンラインです'
+        : Number.isInteger(onlineCount) ? onlineCount + '人の管理者がオンラインです'
+        : 'オンライン人数を取得できません';
       if (online.textContent !== label) online.textContent = label;
       const open = staffChat.classList.contains('open');
       const unread = messages.filter(item => item.unread);
