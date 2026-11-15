@@ -1221,7 +1221,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   }
 
   function serverCall(method, ...args) {
-    const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'sendChatMessage', 'getStaffChatMessages', 'getStaffChatAttachment', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendStaffChatAttachment', 'deleteStaffChatMessage', 'sendPrivateChatMessage', 'getClickLogs', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
+    const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'getChatScreenshot', 'sendChatMessage', 'getStaffChatMessages', 'getStaffChatAttachment', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendStaffChatAttachment', 'deleteStaffChatMessage', 'sendPrivateChatMessage', 'getClickLogs', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
     if (protectedMethods.includes(method)) {
       const token = adminSession.getItem(ADMIN_TOKEN_KEY) || '';
       // 呼び出し元（埋め込みメモ帳など）が既にトークンを渡している場合は二重追加しない。
@@ -1751,6 +1751,28 @@ document.getElementById('authSubmit').disabled = false;
     const message = row.insertCell();
     message.className = 'chat-text-cell';
     message.textContent = item.message;
+    if (item.hasScreenshot) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = '画像を開く';
+      button.onclick = async () => {
+        button.disabled = true;
+        try {
+          const result = await serverCall('getChatScreenshot', item.id);
+          if (!message.isConnected) return;
+          const image = document.createElement('img');
+          image.src = result.image;
+          image.alt = '共有されたスクリーンショット';
+          image.style.cssText = 'display:block;max-width:min(100%,40rem);height:auto';
+          button.replaceWith(image);
+        } catch (_) {
+          button.textContent = '画像を再読み込み';
+        } finally {
+          button.disabled = false;
+        }
+      };
+      message.append(document.createElement('br'), button);
+    }
     return row;
   }
 

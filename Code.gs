@@ -1185,6 +1185,9 @@ const CHAT_SHEET_NAME = 'ChatMessages';
 const CHAT_HEADERS = ['ID', '投稿者', 'メッセージ', '送信日時'];
 const CHAT_MAX_MESSAGES = 200;
 const CHAT_MAX_LENGTH = 1000;
+const CHAT_IMAGE_HEADERS = ['画像データ1', '画像データ2', '画像データ3'];
+const CHAT_IMAGE_CHUNK_LENGTH = 45000;
+const CHAT_IMAGE_MAX_LENGTH = 130000;
 function ensureChatSheet_() {
   const id = PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY);
   if (!id) throw new Error('スプレッドシートIDが未設定です。');
@@ -1201,13 +1204,14 @@ function ensureChatSheet_() {
 }
 function getChatMessages(viewerToken, browserSecret) {
   requireLinkViewer_(viewerToken);
-  const publicMessages = getPublicChatMessages_(viewerToken).messages;
+  const publicResult = getPublicChatMessages_(viewerToken);
+  const publicMessages = publicResult.messages;
   const isAdmin = isSessionValid_('ADMIN', viewerToken);
   const recipient = privateChatBrowserId_(browserSecret);
-  if (!isAdmin && !recipient) return {messages: publicMessages};
+  if (!isAdmin && !recipient) return {messages: publicMessages,screenshotsEnabled:true};
 
   const sheet = privateChatSheet_(false);
-  if (!sheet || sheet.getLastRow() < 2) return {messages: publicMessages};
+  if (!sheet || sheet.getLastRow() < 2) return {messages: publicMessages,screenshotsEnabled:true};
   const rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, 4).getValues();
   const directMessages = rows
     .filter(row => row[0] && (isAdmin || row[1] === recipient))
@@ -1218,7 +1222,7 @@ function getChatMessages(viewerToken, browserSecret) {
     }));
   return {messages: publicMessages.concat(directMessages)
     .sort((first, second) => first.createdAt.localeCompare(second.createdAt))
-    .slice(-CHAT_MAX_MESSAGES)};
+    .slice(-CHAT_MAX_MESSAGES),screenshotsEnabled:true};
 }
 
 function privateChatBrowserId_(secret) {
@@ -1263,7 +1267,7 @@ function getPublicChatMessages_(viewerToken) {
   if (cached) return cached;
   const sheet = ensureChatSheet_(), last = sheet.getLastRow();
   if (last < 2) {
-    const empty = {messages:[]};
+    const empty = {messages:[],screenshotsEnabled:true};
     writeJsonCache_('LINK_CORE_CHAT_MESSAGES_V1', empty, CHAT_CACHE_TTL_SECONDS);
     return empty;
   }
@@ -1271,15 +1275,54 @@ function getPublicChatMessages_(viewerToken) {
   headers.forEach((h,i)=>{if(h)col[h]=i;});
   CHAT_HEADERS.forEach(h=>{if(col[h]===undefined)throw new Error('チャットシートに必要な列がありません: '+h);});
   const first = Math.max(2,last-CHAT_MAX_MESSAGES+1);
-  const rows = sheet.getRange(first,1,last-first+1,sheet.getLastColumn()).getValues();
-  const result = {messages:rows.filter(r=>r[col['ID']]!=='').map(r=>({
+  const screenshotColumn = col[CHAT_IMAGE_HEADERS[0]];
+    const dataWidth = Math.max(...CHAT_HEADERS.map(header=>col[header]))+1;
+  const rows = sheet.getRange(first,1,last-first+1,dataWidth).getValues();
+  const screenshotIds = screenshotColumn === undefined ? new Set() :
+    new Set(sheet.getRange(first,screenshotColumn+1,last-first+1,1)
+      .createTextFinder('data:image/jpeg;base64,').findAll().map(cell=>cell.getRow()));
+  const result = {messages:rows.map((r,i)=>r[col['ID']]===''?null:({
     id:String(r[col['ID']]||''),author:String(r[col['投稿者']]||'利用者'),
-    message:String(r[col['メッセージ']]||''),createdAt:toIso_(r[col['送信日時']])
-  }))};
+    message:String(r[col['メッセージ']]||''),createdAt:toIso_(r[col['送信日時']]),
+    hasScreenshot:screenshotIds.has(first+i)
+  })).filter(Boolean),screenshotsEnabled:true};
   writeJsonCache_('LINK_CORE_CHAT_MESSAGES_V1', result, CHAT_CACHE_TTL_SECONDS);
   return result;
 }
 function sendChatMessage(message, viewerToken) {
+  return postPublicChat_(message, viewerToken, '');
+}
+
+function sendChatScreenshot(image, viewerToken) {
+  requireLinkViewer_(viewerToken);
+  if (typeof image !== 'string' || image.length > CHAT_IMAGE_MAX_LENGTH ||
+      !/^data:image\/jpeg;base64,\/9j\/[A-Za-z0-9+/]+={0,2}$/.test(image)) {
+    throw new Error('スクリーンショットは JPEG 画像で送信してください。');
+  }
+  return postPublicChat_('スクリーンショット', viewerToken, image);
+}
+
+function getChatScreenshot(messageId, viewerToken) {
+  requireLinkViewer_(viewerToken);
+  if (typeof messageId !== 'string' || !/^[0-9a-f-]{36}$/.test(messageId)) {
+    throw new Error('メッセージIDが不正です。');
+  }
+  const sheet = ensureChatSheet_();
+  const headers = sheet.getRange(1,1,1,sheet.getLastColumn()).getDisplayValues()[0];
+  const imageColumns = CHAT_IMAGE_HEADERS.map(header=>headers.indexOf(header)+1);
+  const last = sheet.getLastRow();
+  if (last < 2 || imageColumns.some(column=>!column)) throw new Error('画像が見つかりません。');
+  const first = Math.max(2,last-CHAT_MAX_MESSAGES+1);
+  const match = sheet.getRange(first,headers.indexOf('ID')+1,last-first+1,1)
+    .createTextFinder(messageId).matchEntireCell(true).findNext();
+  if (!match) throw new Error('画像が見つかりません。');
+  const row = sheet.getRange(match.getRow(),1,1,headers.length).getDisplayValues()[0];
+  const image = imageColumns.map((column,i)=>i===0?row[column-1]:row[column-1].slice(4)).join('');
+  if (!image) throw new Error('画像が見つかりません。');
+  return {image};
+}
+
+function postPublicChat_(message, viewerToken, image) {
   requireLinkViewer_(viewerToken);
   const body = cleanText_(message,CHAT_MAX_LENGTH);
   if(!body)throw new Error('メッセージを入力してください。');
@@ -1290,11 +1333,28 @@ function sendChatMessage(message, viewerToken) {
   const lock=LockService.getScriptLock();lock.waitLock(10000);
   try{
     if(cache.get(rateKey))throw new Error('連続送信はできません。少し待ってから送信してください。');
-    const sheet=ensureChatSheet_(),headers=sheet.getRange(1,1,1,sheet.getLastColumn()).getDisplayValues()[0],col={};
+    const sheet=ensureChatSheet_();
+    const headers=sheet.getRange(1,1,1,sheet.getLastColumn()).getDisplayValues()[0];
+    if (image) {
+      const missing = CHAT_IMAGE_HEADERS.filter(header=>!headers.includes(header));
+      if (missing.length) {
+        const lastColumn = sheet.getLastColumn();
+        if (lastColumn + missing.length > sheet.getMaxColumns()) {
+          sheet.insertColumnsAfter(sheet.getMaxColumns(),missing.length);
+        }
+        sheet.getRange(1,lastColumn+1,1,missing.length).setValues([missing]);
+        headers.push(...missing);
+      }
+    }
+    const col={};
     headers.forEach((h,i)=>{if(h)col[h]=i;});
     const row=new Array(headers.length).fill('');
     row[col['ID']]=Utilities.getUuid();row[col['投稿者']]=isAdmin?'管理者':'利用者';
     row[col['メッセージ']]=safeCell_(body);row[col['送信日時']]=new Date();
+    if (image) CHAT_IMAGE_HEADERS.forEach((header,i)=>{
+      const chunk = image.slice(i*CHAT_IMAGE_CHUNK_LENGTH,(i+1)*CHAT_IMAGE_CHUNK_LENGTH);
+      row[col[header]]=i===0?chunk:'b64:'+chunk;
+    });
     sheet.getRange(sheet.getLastRow()+1,1,1,row.length).setValues([row]);
     invalidateChatCache_();
     cache.put(rateKey,'1',3);
