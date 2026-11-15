@@ -1640,6 +1640,47 @@ function countOnlineStaffBrowsers_(browserId) {
   }
 }
 
+/* 個人宛ての公開用コード（サブブラウザ連携IDそのものは公開しない）。 */
+const STAFF_CHAT_MEMBER_PREFIX = 'LINK_CORE_STAFF_MAILBOX_';
+function staffChatMailboxId_(browserId) {
+  if (!validStaffBrowserId_(browserId)) return '';
+  const bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, browserId, Utilities.Charset.UTF_8);
+  return 'mbx-' + bytes.map(byte => (byte & 255).toString(16).padStart(2, '0')).join('');
+}
+function staffChatMemberDirectory_(browserId, nickname, properties) {
+  const self = staffChatMailboxId_(browserId);
+  if (self && properties.getProperty(STAFF_CHAT_MEMBER_PREFIX + self) === null) {
+    properties.setProperty(STAFF_CHAT_MEMBER_PREFIX + self, nickname || '管理者');
+  }
+  const values = properties.getProperties();
+  const members = Object.keys(values)
+    .filter(key => key.indexOf(STAFF_CHAT_MEMBER_PREFIX) === 0)
+    .map(key => ({
+      mailboxId: key.slice(STAFF_CHAT_MEMBER_PREFIX.length),
+      name: String(values[key] || '管理者').slice(0, 24)
+    }))
+    .filter(member => /^mbx-[0-9a-f]{64}$/.test(member.mailboxId) && member.mailboxId !== self);
+  members.sort((a, b) => a.name.localeCompare(b.name, 'ja') || a.mailboxId.localeCompare(b.mailboxId));
+  return {self, members: members.slice(0, 200)};
+}
+function staffChatPrivateRecipient_(recipientId, browserId) {
+  const recipient = typeof recipientId === 'string' ? recipientId.trim().toLowerCase() : '';
+  if (!recipient) return '';
+  if (!/^mbx-[0-9a-f]{64}$/.test(recipient)) throw new Error('個人宛ての宛先コードを確認してください。');
+  const self = staffChatMailboxId_(browserId);
+  if (!self) throw new Error('送信元の連携IDが正しくありません。');
+  if (recipient === self) throw new Error('自分自身を個人宛てに指定できません。');
+  if (PropertiesService.getScriptProperties().getProperty(STAFF_CHAT_MEMBER_PREFIX + recipient) === null) {
+    throw new Error('宛先の管理者が見つかりません。相手に一度管理者チャットを開いてもらってください。');
+  }
+  return recipient;
+}
+function staffChatCanView_(row, browserId) {
+  const recipient = String(row[10] || '');
+  return !recipient || (!!validStaffBrowserId_(browserId) &&
+    (row[3] === browserId || recipient === staffChatMailboxId_(browserId)));
+}
+
 function getStaffChatMessages(adminToken, browserId) {
   requireAdmin_(adminToken);
   const onlineCount = countOnlineStaffBrowsers_(browserId);
@@ -1651,23 +1692,27 @@ function getStaffChatMessages(adminToken, browserId) {
     return names.get(id);
   }
   const nickname = nicknameFor(browserId);
+  const directory = staffChatMemberDirectory_(browserId, nickname, properties);
   const sheet = staffChatSheet_(false);
   const last = sheet ? sheet.getLastRow() : 0;
-  if (last < 2) return {messages: [], onlineCount, nickname};
+  if (last < 2) return {messages: [], onlineCount, nickname, mailboxId: directory.self, members: directory.members};
 
   const first = Math.max(2, last - CHAT_MAX_MESSAGES + 1);
-  const messages = sheet.getRange(first, 1, last - first + 1, 9).getValues()
-    .filter(row => row[0])
+  // 個人宛て投稿は投稿者・受信者以外には本文も添付情報も返さない。
+  const messages = sheet.getRange(first, 1, last - first + 1, Math.min(11, sheet.getMaxColumns())).getValues()
+    .filter(row => row[0] && staffChatCanView_(row, browserId))
     .map(row => {
       const readers = String(row[4] || '').split(',').filter(Boolean);
       const own = !!browserId && row[3] === browserId;
+      const recipient = String(row[10] || '');
       return {
         id: String(row[0]), author: nicknameFor(row[3]) || '管理者', message: String(row[1]), createdAt: toIso_(row[2]),
         own, readCount: readers.length, unread: !!browserId && !own && !readers.includes(browserId),
+        private: !!recipient, recipientName: recipient ? (properties.getProperty(STAFF_CHAT_MEMBER_PREFIX + recipient) || '管理者') : '',
         attachment: row[5] ? {name: String(row[6] || 'attachment'), mime: String(row[7] || ''), size: Number(row[8] || 0)} : null
       };
     });
-  return {messages, onlineCount, nickname};
+  return {messages, onlineCount, nickname, mailboxId: directory.self, members: directory.members};
 }
 
 function markStaffChatRead(ids, browserId, adminToken) {
@@ -1683,12 +1728,12 @@ function markStaffChatRead(ids, browserId, adminToken) {
     const last = sheet ? sheet.getLastRow() : 0;
     if (last < 2) return {ok: true};
     const first = Math.max(2, last - CHAT_MAX_MESSAGES + 1);
-    const rows = sheet.getRange(first, 1, last - first + 1, 5).getValues();
+    const rows = sheet.getRange(first, 1, last - first + 1, Math.min(11, sheet.getMaxColumns())).getValues();
     const wanted = new Set(ids);
     let changed = false;
     const reads = rows.map(row => {
       const value = String(row[4] || '');
-      if (!wanted.has(String(row[0])) || row[3] === browserId) return [value];
+      if (!wanted.has(String(row[0])) || row[3] === browserId || !staffChatCanView_(row, browserId)) return [value];
       const readers = value.split(',').filter(Boolean);
       if (readers.includes(browserId) || value.length >= 45000) return [value];
       changed = true;
@@ -1705,17 +1750,18 @@ function validStaffBrowserId_(id) {
   return typeof id === 'string' && /^staff-[0-9a-f]{32}$/.test(id);
 }
 
-function sendStaffChatMessage(message, adminToken, browserId) {
+function sendStaffChatMessage(message, adminToken, browserId, recipientId) {
   requireAdmin_(adminToken);
   const body = cleanText_(message, CHAT_MAX_LENGTH);
   if (!body) throw new Error('メッセージを入力してください。');
-
+  const recipient = staffChatPrivateRecipient_(recipientId, browserId);
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
     requireAdmin_(adminToken);
     staffChatSheet_(true).appendRow([
-      Utilities.getUuid(), safeCell_(body), new Date(), validStaffBrowserId_(browserId) ? browserId : '', ''
+      Utilities.getUuid(), safeCell_(body), new Date(), validStaffBrowserId_(browserId) ? browserId : '', '',
+      '', '', '', '', '', recipient
     ]);
     return {ok: true};
   } finally {
@@ -1783,11 +1829,14 @@ function validateStaffAttachment_(payload) {
 }
 
 /** 投稿とファイルを1回の呼び出しで作成。requestIdでタイムアウト後の再送を冪等化。 */
-function sendStaffChatAttachment(message, payload, requestId, browserId, adminToken) {
+function sendStaffChatAttachment(message, payload, requestId, browserId, recipientOrToken, adminToken) {
+  // 古い画面からの5引数呼び出しは全員宛てとして扱う。
+  if (adminToken === undefined) { adminToken = recipientOrToken; recipientOrToken = ''; }
   requireAdmin_(adminToken);
   if (!validStaffBrowserId_(browserId)) throw new Error('送信元ブラウザを確認できません。');
   if (typeof requestId !== 'string' || !/^[0-9a-f-]{36}$/i.test(requestId)) throw new Error('送信IDが不正です。');
   const body = cleanText_(message, CHAT_MAX_LENGTH);
+  const recipient = staffChatPrivateRecipient_(recipientOrToken, browserId);
   const attachment = validateStaffAttachment_(payload);
   const lock = LockService.getScriptLock();
   lock.waitLock(15000);
@@ -1805,7 +1854,7 @@ function sendStaffChatAttachment(message, payload, requestId, browserId, adminTo
     uploaded = folder.createFile(blob);
     sheet.appendRow([
       Utilities.getUuid(), safeCell_(body), new Date(), browserId, '',
-      uploaded.getId(), safeCell_(attachment.filename), attachment.mime, attachment.size, requestId
+      uploaded.getId(), safeCell_(attachment.filename), attachment.mime, attachment.size, requestId, recipient
     ]);
     return {ok: true};
   } catch (error) {
@@ -1819,15 +1868,18 @@ function sendStaffChatAttachment(message, payload, requestId, browserId, adminTo
 }
 
 /** Drive共有URLは渡さず、認証済み管理者に該当投稿のデータのみ返す。 */
-function getStaffChatAttachment(messageId, adminToken) {
+function getStaffChatAttachment(messageId, browserOrToken, adminToken) {
+  // 古い画面は全員宛て添付だけ利用可。個人宛て添付はブラウザIDの照合必須。
+  const browserId = adminToken === undefined ? '' : browserOrToken;
+  if (adminToken === undefined) adminToken = browserOrToken;
   requireAdmin_(adminToken);
   if (typeof messageId !== 'string' || !/^[0-9a-f-]{36}$/i.test(messageId)) throw new Error('投稿IDが不正です。');
   const sheet = staffChatSheet_(false);
   const last = sheet ? sheet.getLastRow() : 0;
   if (last < 2) throw new Error('添付ファイルは見つかりませんでした。');
-  const rows = sheet.getRange(2, 1, last - 1, 9).getValues();
+  const rows = sheet.getRange(2, 1, last - 1, Math.min(11, sheet.getMaxColumns())).getValues();
   const row = rows.find(item => String(item[0]) === messageId);
-  if (!row || !row[5]) throw new Error('この投稿には添付ファイルがありません。');
+  if (!row || !row[5] || !staffChatCanView_(row, browserId)) throw new Error('添付ファイルは見つかりませんでした。');
   const file = DriveApp.getFileById(String(row[5]));
   if (!staffAttachmentFileIsInFolder_(file) || file.isTrashed()) throw new Error('添付ファイルを取得できません。');
   if (file.getSize() > STAFF_ATTACHMENT_MAX_BYTES) throw new Error('添付ファイルが容量上限を超えています。');
@@ -1881,6 +1933,10 @@ function staffChatSheet_(create) {
   if (create && sheet.getLastColumn() === 3) sheet.getRange(1, 4, 1, 2).setValues([['送信元ブラウザ', '既読ブラウザ']]);
   if (create && sheet.getLastColumn() < 10) {
     sheet.getRange(1, 6, 1, 5).setValues([['添付DriveID', '添付ファイル名', '添付MIME', '添付サイズ', '添付送信ID']]);
+  }
+  if (create && sheet.getLastColumn() < 11) {
+    if (sheet.getMaxColumns() < 11) sheet.insertColumnsAfter(sheet.getMaxColumns(), 11 - sheet.getMaxColumns());
+    sheet.getRange(1, 11).setValue('個人宛先メールボックス');
   }
   return sheet;
 }
@@ -1998,6 +2054,8 @@ function setStaffNickname(browserId, nickname, adminToken) {
   if (!validStaffBrowserId_(browserId)) throw new Error('連携IDが不正です。');
   const name = typeof nickname === 'string' ? nickname.trim() : '';
   if (!name || name.length > 24 || /[\x00-\x1F\x7F]/.test(name)) throw new Error('ニックネームは1〜24文字で入力してください。');
-  PropertiesService.getScriptProperties().setProperty('LINK_CORE_STAFF_NAME_' + browserId, name);
+  const props = PropertiesService.getScriptProperties();
+  props.setProperty('LINK_CORE_STAFF_NAME_' + browserId, name);
+  props.setProperty(STAFF_CHAT_MEMBER_PREFIX + staffChatMailboxId_(browserId), name);
   return {nickname: name};
 }

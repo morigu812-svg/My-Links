@@ -765,6 +765,15 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
 </style>
 <style id="staff-attachment-styles">
 #staffChatForm { flex-wrap:wrap; align-items:center; }
+#staffChatOverlay .staff-recipient-bar { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; gap:10px; margin:13px 0 4px; }
+#staffChatOverlay .staff-recipient-bar label { display:grid; gap:5px; font-size:12px; color:var(--sub); font-weight:650; min-width:0; }
+#staffChatOverlay #staffChatRecipient, #staffChatOverlay #staffChatRecipientCode { width:100%; min-width:0; padding:9px 10px; border:1px solid #2b6786; border-radius:8px; color:var(--ink); background:#0b1d30; font-size:14px; }
+#staffChatOverlay #staffMailboxCopy { min-height:39px; padding:7px 11px; border:1px solid #286b8c; border-radius:8px; background:#122b3f; color:#9ee8fc; font-size:12px; }
+#staffChatOverlay #staffRecipientCodeWrap { display:grid; gap:5px; margin-top:7px; color:var(--sub); font-size:12px; }
+#staffChatOverlay #staffRecipientCodeWrap[hidden] { display:none!important; }
+#staffChatOverlay #staffRecipientHint { margin:5px 0 0; color:var(--muted); font-size:11px; overflow-wrap:anywhere; }
+#staffChatOverlay .staff-private-tag { margin:0 0 6px; color:#b5a4ff; font-size:11px; font-weight:750; }
+@media(max-width:560px){#staffChatOverlay .staff-recipient-bar{grid-template-columns:minmax(0,1fr)}#staffChatOverlay #staffMailboxCopy{justify-self:start}}
 #staffChatForm .staff-file-button { flex:0 0 auto; white-space:nowrap; }
 #staffAttachmentInfo { flex:1 1 100%; min-width:0; font-size:12px; color:var(--sub); overflow-wrap:anywhere; }
 #staffAttachmentClear { flex:0 0 auto; }
@@ -884,6 +893,19 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
       <tbody id="staffChatMessages"></tbody>
     </table></div>
   <div class="chat-subtitle" id="staffChatStatus" role="status"></div>
+  <div class="staff-recipient-bar">
+    <label for="staffChatRecipient">送信先
+      <select id="staffChatRecipient">
+        <option value="">全員宛て（共有チャット）</option>
+        <option value="manual">宛先コードを入力…</option>
+      </select>
+    </label>
+    <button id="staffMailboxCopy" type="button">自分の宛先コードをコピー</button>
+  </div>
+  <label id="staffRecipientCodeWrap" for="staffChatRecipientCode" hidden>送信先の宛先コード
+    <input id="staffChatRecipientCode" type="text" placeholder="mbx-から始まる宛先コード" maxlength="68" autocomplete="off" spellcheck="false">
+  </label>
+  <p id="staffRecipientHint">個人宛ては選択した管理者だけに表示します。相手が一覧にいない場合、相手の宛先コードを指定できます。</p>
   <form class="chat-compose" id="staffChatForm">
     <textarea id="staffChatInput" aria-label="管理者へのメッセージ" maxlength="1000" rows="2" placeholder="管理者へのメッセージ（ファイルのみでも送信可）"></textarea>
     <input id="staffAttachmentInput" type="file" accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.txt,.csv,.docx,.xlsx,.pptx" hidden aria-label="添付ファイルを選択">
@@ -2263,6 +2285,46 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
   const staffStatus = $('staffChatStatus');
   const staffInput = $('staffChatInput');
   const refreshStaffButton = $('refreshStaffChat');
+  const staffRecipientSelect = $('staffChatRecipient');
+  const staffRecipientCode = $('staffChatRecipientCode');
+  let staffOwnMailbox = '';
+  const staffMailboxPattern = /^mbx-[0-9a-f]{64}$/;
+  function updateStaffRecipientControls(members, ownMailbox) {
+    staffOwnMailbox = staffMailboxPattern.test(ownMailbox) ? ownMailbox : '';
+    const selected = staffRecipientSelect.value;
+    const choices = [new Option('全員宛て（共有チャット）', '')];
+    (Array.isArray(members) ? members : []).forEach(member => {
+      if (!staffMailboxPattern.test(member.mailboxId) || member.mailboxId === staffOwnMailbox) return;
+      choices.push(new Option((member.name || '管理者') + ' (' + member.mailboxId.slice(4, 10) + ')', member.mailboxId));
+    });
+    choices.push(new Option('宛先コードを入力…', 'manual'));
+    staffRecipientSelect.replaceChildren(...choices);
+    if (choices.some(option => option.value === selected)) staffRecipientSelect.value = selected;
+    else if (selected) {
+      staffRecipientSelect.value = 'manual';
+      staffRecipientCode.value = selected;
+    }
+    $('staffRecipientCodeWrap').hidden = staffRecipientSelect.value !== 'manual';
+    $('staffMailboxCopy').disabled = !staffOwnMailbox;
+  }
+  staffRecipientSelect.addEventListener('change', () => {
+    $('staffRecipientCodeWrap').hidden = staffRecipientSelect.value !== 'manual';
+    staffPendingAttachmentRequestId = '';
+  });
+  staffRecipientCode.addEventListener('input', () => { staffPendingAttachmentRequestId = ''; });
+  $('staffMailboxCopy').addEventListener('click', async () => {
+    if (!staffOwnMailbox) {
+      staffStatus.textContent = '宛先コードを取得できていません。チャットを再読み込みしてください。';
+      return;
+    }
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('clipboard unsupported');
+      await navigator.clipboard.writeText(staffOwnMailbox);
+      staffStatus.textContent = '宛先コードをコピーしました。個人宛てで連絡したい管理者に共有してください。';
+    } catch (_) {
+      window.prompt('この宛先コードをコピーしてください。', staffOwnMailbox);
+    }
+  });
   const staffBrowserKey = 'linkCoreStaffChatBrowser';
   const staffBrowserLinkKey = 'linkCoreStaffChatLinkedBrowser';
   const staffBrowserPattern = /^staff-[0-9a-f]{32}$/;
@@ -2378,9 +2440,10 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
     if (!token || refreshStaffButton.disabled || document.hidden) return;
     refreshStaffButton.disabled = true;
     try {
-      const {messages, onlineCount, nickname} = await serverCall('getStaffChatMessages', token, staffBrowserId);
+      const {messages, onlineCount, nickname, members, mailboxId} = await serverCall('getStaffChatMessages', token, staffBrowserId);
       if (token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
       updateStaffNickname(nickname);
+      updateStaffRecipientControls(members, mailboxId);
       const online = $('staffOnlineCount');
       const label = onlineCount === 1 ? '自分だけがオンラインです'
         : Number.isInteger(onlineCount) ? onlineCount + '人の管理者がオンラインです'
@@ -2390,10 +2453,16 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
       const unread = messages.filter(item => item.unread);
       updateStaffUnread(unread.length, open);
       if (!open) return;
-      const key = JSON.stringify(messages.map(item => [item.id, item.readCount, item.unread, item.own, item.author, item.attachment?.name]));
+      const key = JSON.stringify(messages.map(item => [item.id, item.readCount, item.unread, item.own, item.author, item.private, item.recipientName, item.attachment?.name]));
       if (key !== staffRenderKey) {
         const cards = messages.map(item => {
           const card = chatRow(item, item.author || '管理者');
+          if (item.private) {
+            const tag = document.createElement('div');
+            tag.className = 'staff-private-tag';
+            tag.textContent = item.own ? '🔒 個人宛 → ' + (item.recipientName || '管理者') : '🔒 あなた宛の個人メッセージ';
+            card.cells[2].prepend(tag);
+          }
           if (item.attachment) {
             const cell = card.cells[2];
             const fileCard = document.createElement('div');
@@ -2418,7 +2487,7 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
               download.textContent = '取得中…';
               try {
                 const token = adminSession.getItem(ADMIN_TOKEN_KEY);
-                const result = await serverCall('getStaffChatAttachment', item.id);
+                const result = await serverCall('getStaffChatAttachment', item.id, ...(staffOwnMailbox ? [staffBrowserId] : []));
                 if (token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
                 if (!result?.base64) throw new Error('ファイルを取得できませんでした。');
                 const binary = atob(result.base64);
@@ -2569,6 +2638,25 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
     if (button.disabled || (!body.trim() && !file)) return;
     const token = adminSession.getItem(ADMIN_TOKEN_KEY);
     if (!token) return;
+    const destination = staffRecipientSelect.value;
+    const recipientId = (destination === 'manual' ? staffRecipientCode.value : destination).trim().toLowerCase();
+    if (destination === 'manual' && !recipientId) {
+      staffStatus.textContent = '個人宛ての宛先コードを入力してください。';
+      return;
+    }
+    if (recipientId && !staffMailboxPattern.test(recipientId)) {
+      staffStatus.textContent = '宛先コードの形式が正しくありません。';
+      return;
+    }
+    if (recipientId && recipientId === staffOwnMailbox) {
+      staffStatus.textContent = '自分自身には送信できません。';
+      return;
+    }
+    // GitHub Pagesだけ先に更新されても、旧GASが個人宛てを全員へ送信しないよう拒否。
+    if (recipientId && !staffOwnMailbox) {
+      staffStatus.textContent = '個人宛て機能を使うにはGASのコードとデプロイを更新してください。';
+      return;
+    }
     if (file) {
       const extension = file.name.split('.').pop().toLowerCase();
       if (!staffAllowedExtensions.has(extension)) {
@@ -2584,7 +2672,9 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
     $('staffAttachmentChoose').disabled = true;
     staffAttachmentClear.disabled = true;
     staffAttachmentInput.disabled = true;
-    staffStatus.textContent = file ? 'ファイルを送信しています…' : '送信しています…';
+    staffRecipientSelect.disabled = true;
+    staffRecipientCode.disabled = true;
+    staffStatus.textContent = recipientId ? '個人宛てに送信しています…' : (file ? 'ファイルを送信しています…' : '送信しています…');
     try {
       let result;
       if (file) {
@@ -2594,9 +2684,9 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
         }
         result = await serverCall('sendStaffChatAttachment', body, {
           name: file.name, mime: file.type || '', size: file.size, base64
-        }, staffPendingAttachmentRequestId, staffBrowserId);
+        }, staffPendingAttachmentRequestId, staffBrowserId, ...(staffOwnMailbox ? [recipientId] : []));
       } else {
-        result = await serverCall('sendStaffChatMessage', body, token, staffBrowserId);
+        result = await serverCall('sendStaffChatMessage', body, token, staffBrowserId, recipientId);
       }
       if (!result || !result.ok) throw new Error('送信の完了を確認できませんでした。');
       if (token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
@@ -2604,7 +2694,7 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
       if (staffAttachmentInput.files[0] === file) staffAttachmentInput.value = '';
       staffPendingAttachmentRequestId = '';
       refreshStaffFileSelection();
-      staffStatus.textContent = '送信しました。';
+      staffStatus.textContent = recipientId ? '個人宛てに送信しました。' : '送信しました。';
       await refreshStaffChat();
     } catch (error) {
       staffStatus.textContent = '送信に失敗しました。' + (error.message || '通信エラー');
@@ -2613,6 +2703,8 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
       $('staffAttachmentChoose').disabled = false;
       staffAttachmentClear.disabled = false;
       staffAttachmentInput.disabled = false;
+      staffRecipientSelect.disabled = false;
+      staffRecipientCode.disabled = false;
     }
   });
 
