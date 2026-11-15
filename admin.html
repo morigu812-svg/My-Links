@@ -781,7 +781,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
 <div class="finder-window" id="finderWindow">
   <header class="finder-toolbar">
     <div class="traffic-lights" aria-label="ウィンドウ操作"><span></span><span></span><span></span></div>
-    <div class="finder-title"><button id="staffNicknameBadge" type="button" aria-haspopup="dialog" aria-label="ニックネームを設定">ニックネーム未設定</button><span class="folder-glyph">▰</span> My Desktop <span class="toolbar-chevron">›</span><span id="staffOnlineCount" role="status">オンライン人数を確認中…</span></div>
+    <div class="finder-title"><button id="staffNicknameBadge" type="button" aria-haspopup="dialog" aria-label="ニックネームを設定">名前を取得中…</button><span class="folder-glyph">▰</span> My Desktop <span class="toolbar-chevron">›</span><span id="staffOnlineCount" role="status">オンライン人数を確認中…</span></div>
     <div class="toolbar-tools"><span>▤</span><span>☷</span><button id="nightModeBtn" type="button" aria-pressed="false" aria-label="暗所モードをオンにする" title="暗所モード">◐</button><button class="share-btn" type="button" id="toolbarShareBtn" aria-label="閲覧ページを共有する" title="閲覧ページを共有する">⤴</button></div>
     <label class="toolbar-search" for="search"><span>⌕</span><input id="search" type="search" placeholder="検索" aria-label="検索"></label>
   </header>
@@ -1260,7 +1260,8 @@ function watchSessionExpiry(deadline, onExpired) {
     $('adminHelp').close();
     $('staffBrowserDialog').close();
     $('staffNicknameDialog').close();
-    $('staffNicknameBadge').textContent = 'ニックネーム未設定';
+    $('staffNicknameBadge').textContent = '名前を取得中…';
+    $('staffNicknameBadge').removeAttribute('title');
     $('staffBrowserCode').value = '';
     $('staffNickname').value = '';
     $('staffBrowserLink').value = '';
