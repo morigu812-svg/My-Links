@@ -929,6 +929,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
 <button id="staffChatNotice" type="button" hidden><strong>管理者専用チャット</strong><span id="staffChatNoticeText"></span></button>
 <section id="staffChatOverlay" class="chat-overlay" aria-label="管理者専用チャット">
   <div class="chat-head"><strong>管理者専用チャット</strong><div class="chat-head-actions">
+    <button type="button" id="staffBrowserSettings">ブラウザ連携</button>
     <button type="button" id="refreshStaffChat">再読み込み</button>
     <button type="button" id="closeStaffChat">閉じる</button>
   </div></div>
@@ -939,6 +940,22 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
     <button type="submit" id="staffChatSend">送信</button>
   </form>
 </section>
+<dialog id="staffBrowserDialog" aria-labelledby="staffBrowserTitle">
+  <form id="staffBrowserForm">
+    <h2 id="staffBrowserTitle">ブラウザ連携</h2>
+    <p>メインブラウザのコードをコピーし、サブブラウザの登録欄に貼り付けてください。</p>
+    <label for="staffBrowserCode">このブラウザの連携コード</label>
+    <input id="staffBrowserCode" type="text" readonly autocomplete="off">
+    <label for="staffBrowserLink">メインブラウザのコード</label>
+    <input id="staffBrowserLink" type="text" required pattern="staff-[0-9a-f]{32}" maxlength="38" autocomplete="off" spellcheck="false">
+    <p id="staffBrowserStatus" role="status"></p>
+    <div class="foot">
+      <button type="button" class="btn" id="staffBrowserClose">閉じる</button>
+      <button type="button" class="btn" id="staffBrowserUnlink">連携を解除</button>
+      <button type="submit" class="btn primary">サブとして登録</button>
+    </div>
+  </form>
+</dialog>
 <section id="memoOverlay" class="memo-overlay" aria-label="統合メモ帳">
   <div class="memo-overlay-head"><span class="memo-overlay-title">LINK CORE / メモ帳</span><button id="closeMemoOverlay" class="memo-overlay-close" type="button">← リンク管理に戻る</button></div>
   <iframe id="memoFrame" class="memo-overlay-frame" title="メモ帳" src="about:blank"></iframe>
@@ -1188,6 +1205,9 @@ function watchSessionExpiry(deadline, onExpired) {
 
   let resumeLinkEdit = false;
   function showAdminReauthentication(message) {
+    $('staffBrowserDialog').close();
+    $('staffBrowserCode').value = '';
+    $('staffBrowserLink').value = '';
     stopAdminExpiry();
     $('otherHistoryRows').replaceChildren();
     adminSession.removeItem(ADMIN_EXPIRY_KEY);
@@ -2092,6 +2112,51 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
       localStorage.setItem('linkCoreStaffChatBrowser', staffBrowserId);
     }
   } catch (_) { /* ストレージに制限がある場合はページ内で使う。 */ }
+
+  const staffBrowserLinkKey = 'linkCoreStaffChatLinkedBrowser';
+  const staffBrowserPattern = /^staff-[0-9a-f]{32}$/;
+  const originalStaffBrowserId = staffBrowserId;
+  let linkedStaffBrowserId = '';
+  try {
+    const savedId = localStorage.getItem(staffBrowserLinkKey);
+    if (staffBrowserPattern.test(savedId)) linkedStaffBrowserId = savedId;
+  } catch (_) {}
+  staffBrowserId = linkedStaffBrowserId || originalStaffBrowserId;
+
+  const staffBrowserDialog = $('staffBrowserDialog');
+  $('staffBrowserSettings').addEventListener('click', () => {
+    if (!adminSession.getItem(ADMIN_TOKEN_KEY)) return;
+    $('staffBrowserCode').value = staffBrowserId;
+    $('staffBrowserLink').value = '';
+    $('staffBrowserStatus').textContent = linkedStaffBrowserId ? 'サブブラウザとして連携中です。' : '';
+    $('staffBrowserUnlink').disabled = !linkedStaffBrowserId;
+    staffBrowserDialog.showModal();
+  });
+  $('staffBrowserCode').addEventListener('focus', event => event.currentTarget.select());
+  $('staffBrowserClose').addEventListener('click', () => staffBrowserDialog.close());
+
+  function saveStaffBrowserLink(code) {
+    if (!adminSession.getItem(ADMIN_TOKEN_KEY)) return;
+    try {
+      if (code) localStorage.setItem(staffBrowserLinkKey, code);
+      else localStorage.removeItem(staffBrowserLinkKey);
+      location.reload();
+    } catch (_) {
+      $('staffBrowserStatus').textContent = 'ブラウザの設定により、連携を保存できませんでした。';
+    }
+  }
+
+  $('staffBrowserForm').addEventListener('submit', event => {
+    event.preventDefault();
+    const code = $('staffBrowserLink').value.trim();
+    if (!staffBrowserPattern.test(code)) return;
+    if (code === originalStaffBrowserId) {
+      $('staffBrowserStatus').textContent = 'このブラウザ自身のコードです。';
+      return;
+    }
+    saveStaffBrowserLink(code);
+  });
+  $('staffBrowserUnlink').addEventListener('click', () => saveStaffBrowserLink(''));
 
   function updateStaffUnread(count, open) {
     const badge = $('staffUnreadCount');
