@@ -980,6 +980,12 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
       <button type="submit" class="btn primary">サブとして登録</button>
     </div>
   </form>
+  <form id="staffNicknameForm">
+    <label for="staffNickname">ニックネームを設定</label>
+    <input id="staffNickname" type="text" maxlength="24" required autocomplete="off">
+    <button type="submit" class="btn" id="saveStaffNickname">ニックネームを保存</button>
+    <p id="staffNicknameStatus" role="status"></p>
+  </form>
 </dialog>
 <section id="memoOverlay" class="memo-overlay" aria-label="統合メモ帳">
   <div class="memo-overlay-head"><span class="memo-overlay-title">LINK CORE / メモ帳</span><button id="closeMemoOverlay" class="memo-overlay-close" type="button">← リンク管理に戻る</button></div>
@@ -1116,7 +1122,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   }
 
   function serverCall(method, ...args) {
-    const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'sendChatMessage', 'getStaffChatMessages', 'sendStaffChatMessage', 'markStaffChatRead', 'sendPrivateChatMessage', 'getClickLogs', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
+    const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'sendChatMessage', 'getStaffChatMessages', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendPrivateChatMessage', 'getClickLogs', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
     if (protectedMethods.includes(method)) {
       const token = adminSession.getItem(ADMIN_TOKEN_KEY) || '';
       // 呼び出し元（埋め込みメモ帳など）が既にトークンを渡している場合は二重追加しない。
@@ -1236,6 +1242,7 @@ function watchSessionExpiry(deadline, onExpired) {
     $('adminHelp').close();
     $('staffBrowserDialog').close();
     $('staffBrowserCode').value = '';
+    $('staffNickname').value = '';
     $('staffBrowserLink').value = '';
     stopAdminExpiry();
     $('otherHistoryRows').replaceChildren();
@@ -2131,31 +2138,43 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
   const staffStatus = $('staffChatStatus');
   const staffInput = $('staffChatInput');
   const refreshStaffButton = $('refreshStaffChat');
-  let staffBrowserId = '';
-  let staffRenderKey = '';
-  try { staffBrowserId = localStorage.getItem('linkCoreStaffChatBrowser') || ''; } catch (_) {}
-  try {
-    if (!/^staff-[0-9a-f]{32}$/.test(staffBrowserId)) {
-      staffBrowserId = 'staff-' + Array.from(crypto.getRandomValues(new Uint8Array(16)),
-        byte => byte.toString(16).padStart(2, '0')).join('');
-      localStorage.setItem('linkCoreStaffChatBrowser', staffBrowserId);
-    }
-  } catch (_) { /* ストレージに制限がある場合はページ内で使う。 */ }
-
+  const staffBrowserKey = 'linkCoreStaffChatBrowser';
   const staffBrowserLinkKey = 'linkCoreStaffChatLinkedBrowser';
   const staffBrowserPattern = /^staff-[0-9a-f]{32}$/;
-  const originalStaffBrowserId = staffBrowserId;
-  let linkedStaffBrowserId = '';
-  try {
-    const savedId = localStorage.getItem(staffBrowserLinkKey);
-    if (staffBrowserPattern.test(savedId)) linkedStaffBrowserId = savedId;
-  } catch (_) {}
-  staffBrowserId = linkedStaffBrowserId || originalStaffBrowserId;
+  let staffRenderKey = '';
+
+  function readStaffBrowserId(key) {
+    for (const getStorage of [() => localStorage, () => sessionStorage]) {
+      try {
+        const id = getStorage().getItem(key);
+        if (staffBrowserPattern.test(id)) return id;
+      } catch (_) {}
+    }
+    return '';
+  }
+
+  let originalStaffBrowserId = readStaffBrowserId(staffBrowserKey);
+  if (!originalStaffBrowserId) {
+    try {
+      originalStaffBrowserId = 'staff-' + Array.from(crypto.getRandomValues(new Uint8Array(16)),
+        byte => byte.toString(16).padStart(2, '0')).join('');
+    } catch (_) {}
+  }
+  if (originalStaffBrowserId) {
+    try { localStorage.setItem(staffBrowserKey, originalStaffBrowserId); } catch (_) {}
+    try { sessionStorage.setItem(staffBrowserKey, originalStaffBrowserId); } catch (_) {}
+  }
+  const linkedStaffBrowserId = readStaffBrowserId(staffBrowserLinkKey);
+  const staffBrowserId = linkedStaffBrowserId || originalStaffBrowserId;
+  let staffNickname = '';
 
   const staffBrowserDialog = $('staffBrowserDialog');
   $('staffBrowserSettings').addEventListener('click', () => {
     if (!adminSession.getItem(ADMIN_TOKEN_KEY)) return;
     $('staffBrowserCode').value = staffBrowserId;
+    $('staffNickname').value = staffNickname;
+    $('staffNicknameStatus').textContent = '';
+    $('saveStaffNickname').disabled = !staffBrowserId;
     $('staffBrowserLink').value = '';
     $('staffBrowserStatus').textContent = linkedStaffBrowserId ? 'サブブラウザとして連携中です。' : '';
     $('staffBrowserUnlink').disabled = !linkedStaffBrowserId;
@@ -2163,6 +2182,26 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
   });
   $('staffBrowserCode').addEventListener('focus', event => event.currentTarget.select());
   $('staffBrowserClose').addEventListener('click', () => staffBrowserDialog.close());
+
+  $('staffNicknameForm').addEventListener('submit', async event => {
+    event.preventDefault();
+    const token = adminSession.getItem(ADMIN_TOKEN_KEY);
+    if (!token || !staffBrowserId) return;
+    const button = $('saveStaffNickname');
+    const status = $('staffNicknameStatus');
+    button.disabled = true;
+    try {
+      const result = await serverCall('setStaffNickname', staffBrowserId, $('staffNickname').value.trim());
+      if (token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
+      staffNickname = result.nickname;
+      status.textContent = '保存しました。';
+      await refreshStaffChat();
+    } catch (error) {
+      status.textContent = '保存に失敗しました。' + error.message;
+    } finally {
+      button.disabled = false;
+    }
+  });
 
   function saveStaffBrowserLink(code) {
     if (!adminSession.getItem(ADMIN_TOKEN_KEY)) return;
@@ -2200,8 +2239,9 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
     if (!token || refreshStaffButton.disabled || document.hidden) return;
     refreshStaffButton.disabled = true;
     try {
-      const {messages, onlineCount} = await serverCall('getStaffChatMessages', token, staffBrowserId);
+      const {messages, onlineCount, nickname} = await serverCall('getStaffChatMessages', token, staffBrowserId);
       if (token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
+      staffNickname = nickname || '';
       const online = $('staffOnlineCount');
       const label = onlineCount === 1 ? '自分だけがオンラインです'
         : Number.isInteger(onlineCount) ? onlineCount + '人の管理者がオンラインです'
@@ -2211,14 +2251,14 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
       const unread = messages.filter(item => item.unread);
       updateStaffUnread(unread.length, open);
       if (!open) return;
-      const key = JSON.stringify(messages.map(item => [item.id, item.readCount, item.unread, item.own]));
+      const key = JSON.stringify(messages.map(item => [item.id, item.readCount, item.unread, item.own, item.author]));
       if (key !== staffRenderKey) {
         const cards = messages.map(item => {
           const card = document.createElement('article');
           card.className = 'chat-message admin';
           const meta = document.createElement('div');
           meta.className = 'chat-message-meta';
-          meta.textContent = '管理者 · ' + new Date(item.createdAt).toLocaleString('ja-JP') + ' · 既読 ' + (item.readCount || 0) + ' 件';
+          meta.textContent = (item.author || '管理者') + ' · ' + new Date(item.createdAt).toLocaleString('ja-JP') + ' · 既読 ' + (item.readCount || 0) + ' 件';
           const body = document.createElement('div');
           body.className = 'chat-message-body';
           body.textContent = item.message;

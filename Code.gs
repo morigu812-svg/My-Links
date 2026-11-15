@@ -1643,9 +1643,17 @@ function countOnlineStaffBrowsers_(browserId) {
 function getStaffChatMessages(adminToken, browserId) {
   requireAdmin_(adminToken);
   const onlineCount = countOnlineStaffBrowsers_(browserId);
+  const properties = PropertiesService.getScriptProperties();
+  const names = new Map();
+  function nicknameFor(id) {
+    if (!validStaffBrowserId_(id)) return '';
+    if (!names.has(id)) names.set(id, properties.getProperty('LINK_CORE_STAFF_NAME_' + id) || '');
+    return names.get(id);
+  }
+  const nickname = nicknameFor(browserId);
   const sheet = staffChatSheet_(false);
   const last = sheet ? sheet.getLastRow() : 0;
-  if (last < 2) return {messages: [], onlineCount};
+  if (last < 2) return {messages: [], onlineCount, nickname};
 
   const first = Math.max(2, last - CHAT_MAX_MESSAGES + 1);
   const messages = sheet.getRange(first, 1, last - first + 1, 5).getValues()
@@ -1654,11 +1662,11 @@ function getStaffChatMessages(adminToken, browserId) {
       const readers = String(row[4] || '').split(',').filter(Boolean);
       const own = !!browserId && row[3] === browserId;
       return {
-        id: String(row[0]), author: '管理者', message: String(row[1]), createdAt: toIso_(row[2]),
+        id: String(row[0]), author: nicknameFor(row[3]) || '管理者', message: String(row[1]), createdAt: toIso_(row[2]),
         own, readCount: readers.length, unread: !!browserId && !own && !readers.includes(browserId)
       };
     });
-  return {messages, onlineCount};
+  return {messages, onlineCount, nickname};
 }
 
 function markStaffChatRead(ids, browserId, adminToken) {
@@ -1831,4 +1839,13 @@ function deleteVisitorLoginLogs(adminToken) {
   } finally {
     lock.releaseLock();
   }
+}
+
+function setStaffNickname(browserId, nickname, adminToken) {
+  requireAdmin_(adminToken);
+  if (!validStaffBrowserId_(browserId)) throw new Error('連携IDが不正です。');
+  const name = typeof nickname === 'string' ? nickname.trim() : '';
+  if (!name || name.length > 24 || /[\x00-\x1F\x7F]/.test(name)) throw new Error('ニックネームは1〜24文字で入力してください。');
+  PropertiesService.getScriptProperties().setProperty('LINK_CORE_STAFF_NAME_' + browserId, name);
+  return {nickname: name};
 }
