@@ -764,7 +764,65 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
 #finderWindow .chat-main-panel .chat-text-cell { white-space:pre-wrap; overflow-wrap:anywhere; }
 </style>
 <style id="staff-attachment-styles">
-#staffChatForm { flex-wrap:wrap; align-items:center; }
+/* 入力欄を全幅で確保し、操作ボタンを必ず次の行に置く。 */
+#staffChatOverlay #staffChatForm {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 9px;
+  min-width: 0;
+  width: 100%;
+}
+#staffChatOverlay #staffChatForm > textarea {
+  display: block;
+  flex: 0 0 auto;
+  width: 100%;
+  min-width: 0;
+  min-height: 100px;
+  max-height: 240px;
+  box-sizing: border-box;
+  resize: vertical;
+}
+#staffChatOverlay #staffChatForm .staff-compose-actions {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+#staffChatOverlay #staffChatForm .staff-compose-actions > button {
+  flex: 0 0 auto;
+  align-self: auto;
+  min-height: 42px;
+  white-space: nowrap;
+}
+#staffChatOverlay #staffChatForm #staffChatSend {
+  margin-left: auto;
+  min-width: 76px;
+}
+#staffChatOverlay #staffChatForm #staffScreenshotHint {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  padding: 2px 0 0;
+  border: 0;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+#staffChatOverlay #staffChatForm #staffAttachmentInfo {
+  width: 100%;
+  min-width: 0;
+}
+#staffChatOverlay #staffChatForm #staffAttachmentClear {
+  align-self: flex-start;
+}
+@media (max-width: 540px) {
+  #staffChatOverlay #staffChatForm { padding: 10px; }
+  #staffChatOverlay #staffChatForm .staff-compose-actions > button { font-size: 12px; padding: 9px 10px; }
+}
+
 #staffChatOverlay .staff-recipient-bar { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; gap:10px; margin:13px 0 4px; }
 #staffChatOverlay .staff-recipient-bar label { display:grid; gap:5px; font-size:12px; color:var(--sub); font-weight:650; min-width:0; }
 #staffChatOverlay #staffChatRecipient, #staffChatOverlay #staffChatRecipientCode { width:100%; min-width:0; padding:9px 10px; border:1px solid #2b6786; border-radius:8px; color:var(--ink); background:#0b1d30; font-size:14px; }
@@ -909,12 +967,14 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   </label>
   <p id="staffRecipientHint">個人宛ては選択した管理者だけに表示します。相手が一覧にいない場合、相手の宛先コードを指定できます。</p>
   <form class="chat-compose" id="staffChatForm">
-    <textarea id="staffChatInput" aria-label="管理者へのメッセージ" maxlength="1000" rows="2" placeholder="管理者へのメッセージ（ファイルのみでも送信可）"></textarea>
-    <input id="staffAttachmentInput" type="file" accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.txt,.csv,.docx,.xlsx,.pptx" hidden aria-label="添付ファイルを選択">
-    <button type="button" id="staffAttachmentChoose" class="staff-file-button" aria-label="ファイルを添付">📎 添付</button>
-    <input id="staffScreenshotInput" type="file" accept="image/*" hidden aria-label="共有するスクリーンショットを選択">
-    <button type="button" id="staffScreenshotChoose" class="staff-file-button" aria-describedby="staffScreenshotHint">スクリーンショットを共有</button>
-    <button type="submit" id="staffChatSend">送信</button>
+    <textarea id="staffChatInput" aria-label="管理者へのメッセージ" maxlength="1000" rows="4" placeholder="管理者へのメッセージ（ファイルのみでも送信可）"></textarea>
+    <div class="staff-compose-actions">
+      <input id="staffAttachmentInput" type="file" accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.txt,.csv,.docx,.xlsx,.pptx" hidden aria-label="添付ファイルを選択">
+      <button type="button" id="staffAttachmentChoose" class="staff-file-button" aria-label="ファイルを添付">📎 添付</button>
+      <input id="staffScreenshotInput" type="file" accept="image/*" hidden aria-label="共有するスクリーンショットを選択">
+      <button type="button" id="staffScreenshotChoose" class="staff-file-button" aria-describedby="staffScreenshotHint">スクリーンショットを共有</button>
+      <button type="submit" id="staffChatSend">送信</button>
+    </div>
     <span id="staffScreenshotHint" class="chat-subtitle">端末で撮影した画像を選ぶと、上の送信先にすぐ送信されます。</span>
     <span id="staffAttachmentInfo" role="status" aria-live="polite" hidden></span>
     <button type="button" id="staffAttachmentClear" hidden>添付を解除</button>
