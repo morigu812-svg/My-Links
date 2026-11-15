@@ -751,6 +751,11 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   .sidebar-log-folder[open] > .sidebar-log-items { display: flex; gap: 5px; padding-inline-start: 0; }
 }
 </style>
+<style>
+#staffNicknameBadge { flex: 0 1 auto; min-width: 0; max-width: 220px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; padding: 4px 8px; font-size: 11px; text-transform: none; letter-spacing: normal; }
+#finderWindow .finder-title > .folder-glyph, #finderWindow .finder-title > .toolbar-chevron { flex-shrink: 0; }
+@media (max-width: 700px) { #staffNicknameBadge { max-width: 38vw; } }
+</style>
 </head>
 <body>
 <section id="authGate" class="auth-gate" aria-labelledby="authTitle">
@@ -775,7 +780,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
 <div class="finder-window" id="finderWindow">
   <header class="finder-toolbar">
     <div class="traffic-lights" aria-label="ウィンドウ操作"><span></span><span></span><span></span></div>
-    <div class="finder-title"><span class="folder-glyph">▰</span> My Desktop <span class="toolbar-chevron">›</span><span id="staffOnlineCount" role="status">オンライン人数を確認中…</span></div>
+    <div class="finder-title"><button id="staffNicknameBadge" type="button" class="btn" aria-haspopup="dialog" aria-label="ニックネームを設定">ニックネーム未設定</button><span class="folder-glyph">▰</span> My Desktop <span class="toolbar-chevron">›</span><span id="staffOnlineCount" role="status">オンライン人数を確認中…</span></div>
     <div class="toolbar-tools"><span>▤</span><span>☷</span><button id="nightModeBtn" type="button" aria-pressed="false" aria-label="暗所モードをオンにする" title="暗所モード">◐</button><button class="share-btn" type="button" id="toolbarShareBtn" aria-label="閲覧ページを共有する" title="閲覧ページを共有する">⤴</button></div>
     <label class="toolbar-search" for="search"><span>⌕</span><input id="search" type="search" placeholder="検索" aria-label="検索"></label>
   </header>
@@ -980,11 +985,15 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
       <button type="submit" class="btn primary">サブとして登録</button>
     </div>
   </form>
+</dialog>
+<dialog id="staffNicknameDialog" aria-labelledby="staffNicknameTitle">
+  <h2 id="staffNicknameTitle">ニックネームを設定</h2>
   <form id="staffNicknameForm">
     <label for="staffNickname">ニックネームを設定</label>
     <input id="staffNickname" type="text" maxlength="24" required autocomplete="off">
     <button type="submit" class="btn" id="saveStaffNickname">ニックネームを保存</button>
     <p id="staffNicknameStatus" role="status"></p>
+    <button type="button" class="btn" id="closeStaffNickname">閉じる</button>
   </form>
 </dialog>
 <section id="memoOverlay" class="memo-overlay" aria-label="統合メモ帳">
@@ -1241,6 +1250,8 @@ function watchSessionExpiry(deadline, onExpired) {
   function showAdminReauthentication(message) {
     $('adminHelp').close();
     $('staffBrowserDialog').close();
+    $('staffNicknameDialog').close();
+    $('staffNicknameBadge').textContent = 'ニックネーム未設定';
     $('staffBrowserCode').value = '';
     $('staffNickname').value = '';
     $('staffBrowserLink').value = '';
@@ -1307,6 +1318,7 @@ function watchSessionExpiry(deadline, onExpired) {
     document.body.classList.remove('auth-locked');
     if (authGate) authGate.classList.add('is-hidden');
     authField.value = '';
+    refreshStaffChat();
     setBusy(true);
     setStatus('認証完了。リンクを読み込んでいます…', '');
 
@@ -2168,13 +2180,26 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
   const staffBrowserId = linkedStaffBrowserId || originalStaffBrowserId;
   let staffNickname = '';
 
+  const staffNicknameDialog = $('staffNicknameDialog');
+  function updateStaffNickname(name) {
+    staffNickname = name || '';
+    const badge = $('staffNicknameBadge');
+    badge.textContent = staffNickname ? staffNickname + 'としてログイン中' : 'ニックネーム未設定';
+    badge.title = badge.textContent;
+  }
+  $('staffNicknameBadge').addEventListener('click', () => {
+    if (!adminSession.getItem(ADMIN_TOKEN_KEY)) return;
+    $('staffNickname').value = staffNickname;
+    $('staffNicknameStatus').textContent = '';
+    $('saveStaffNickname').disabled = !staffBrowserId;
+    staffNicknameDialog.showModal();
+  });
+  $('closeStaffNickname').addEventListener('click', () => staffNicknameDialog.close());
+
   const staffBrowserDialog = $('staffBrowserDialog');
   $('staffBrowserSettings').addEventListener('click', () => {
     if (!adminSession.getItem(ADMIN_TOKEN_KEY)) return;
     $('staffBrowserCode').value = staffBrowserId;
-    $('staffNickname').value = staffNickname;
-    $('staffNicknameStatus').textContent = '';
-    $('saveStaffNickname').disabled = !staffBrowserId;
     $('staffBrowserLink').value = '';
     $('staffBrowserStatus').textContent = linkedStaffBrowserId ? 'サブブラウザとして連携中です。' : '';
     $('staffBrowserUnlink').disabled = !linkedStaffBrowserId;
@@ -2193,7 +2218,7 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
     try {
       const result = await serverCall('setStaffNickname', staffBrowserId, $('staffNickname').value.trim());
       if (token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
-      staffNickname = result.nickname;
+      updateStaffNickname(result.nickname);
       status.textContent = '保存しました。';
       await refreshStaffChat();
     } catch (error) {
@@ -2241,7 +2266,7 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
     try {
       const {messages, onlineCount, nickname} = await serverCall('getStaffChatMessages', token, staffBrowserId);
       if (token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
-      staffNickname = nickname || '';
+      updateStaffNickname(nickname);
       const online = $('staffOnlineCount');
       const label = onlineCount === 1 ? '自分だけがオンラインです'
         : Number.isInteger(onlineCount) ? onlineCount + '人の管理者がオンラインです'
