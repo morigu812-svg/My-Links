@@ -813,6 +813,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
       </details>
       <button class="side-item" type="button" id="sideTrash"><span>🗑</span> ゴミ箱</button>
       <button class="side-item" type="button" id="sideDiagnosis"><span>🩺</span> リンク診断</button>
+      <button class="side-item" type="button" id="staffBrowserSettings" aria-haspopup="dialog"><span aria-hidden="true">▣</span> サブブラウザを設定</button>
       <button class="side-item" type="button" id="openAdminHelp" aria-haspopup="dialog"><span aria-hidden="true">?</span> 管理者機能の使い方</button>
       <button class="side-item" type="button" id="sidePageGuide"><span aria-hidden="true">ⓘ</span> このページの仕組み</button>
       <button class="side-item" type="button" id="sideShare"><span>⤴</span> このページを共有</button>
@@ -914,7 +915,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   <details><summary>リンク診断</summary><p>「リンク診断」を開いて「診断する」を押します。開けない可能性があるURLや、重複して登録されたURLを確認できます。</p></details>
   <details><summary>管理者専用チャット</summary><p>「チャット」→「管理者専用チャット」を開き、メッセージを送信します。読んだ投稿は「既読にする」を押します。右上の未読通知からもチャットを開けます。</p></details>
   <details><summary>利用者チャット</summary><p>「チャット」→「利用者チャット」を開きます。宛先欄を空にして送ると全員に表示されます。特定の利用者に送るときは、その利用者から受け取った個別チャットIDを宛先欄に貼り付けます。</p></details>
-  <details><summary>ブラウザ連携</summary><p>メインの管理者専用チャットで「ブラウザ連携」を開いてコードをコピーします。サブブラウザで同じ画面を開き、貼り付けて「サブとして登録」を押します。連携後は、サブからの新規投稿も自分の投稿として扱われます。</p></details>
+  <details><summary>サブブラウザを設定</summary><p>メインブラウザで左メニューの「サブブラウザを設定」を開いてコードをコピーします。サブブラウザで同じ画面を開き、貼り付けて「サブとして登録」を押します。連携後は、サブからの新規投稿も自分の投稿として扱われます。</p></details>
   <details><summary>メモ帳</summary><p>左メニューの「メモ帳」を開き、専用パスワードを入力します。メモは新規作成でき、一覧から開いて編集・削除できます。</p></details>
   <details><summary>リンク操作履歴</summary><p>「ログ」→「リンク操作履歴」で、通常リンクの追加・編集・削除の日時とリンク名を確認できます。最新の記録を見るには「再読み込み」を押します。</p></details>
   <details><summary>利用者ログイン履歴</summary><p>「ログ」→「利用者ログイン履歴」で、ログイン成功日時とブラウザIDを確認できます。各行の「削除」で1件ずつ、表の上のボタンですべて削除できます。</p></details>
@@ -959,7 +960,6 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
 <button id="staffChatNotice" type="button" hidden><strong>管理者専用チャット</strong><span id="staffChatNoticeText"></span></button>
 <section id="staffChatOverlay" class="chat-overlay" aria-label="管理者専用チャット">
   <div class="chat-head"><strong>管理者専用チャット</strong><div class="chat-head-actions">
-    <button type="button" id="staffBrowserSettings">ブラウザ連携</button>
     <button type="button" id="refreshStaffChat">再読み込み</button>
     <button type="button" id="closeStaffChat">閉じる</button>
   </div></div>
@@ -972,8 +972,16 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
 </section>
 <dialog id="staffBrowserDialog" aria-labelledby="staffBrowserTitle">
   <form id="staffBrowserForm">
-    <h2 id="staffBrowserTitle">ブラウザ連携</h2>
-    <p>メインブラウザのコードをコピーし、サブブラウザの登録欄に貼り付けてください。</p>
+    <h2 id="staffBrowserTitle">サブブラウザを設定</h2>
+    <details id="staffBrowserInstructions">
+      <summary style="cursor:pointer"><span aria-hidden="true">ⓘ</span> 使い方</summary>
+      <ol>
+        <li>メインブラウザで「サブブラウザを設定」を開き、「このブラウザの連携コード」をコピーします。</li>
+        <li>サブブラウザでも管理者としてログインし、同じ設定画面を開きます。</li>
+        <li>「メインブラウザのコード」に貼り付けて、「サブとして登録」を押します。</li>
+      </ol>
+      <p>連携すると、管理者専用チャットでニックネーム・既読・オンライン状態を共有します。元に戻すには、サブブラウザで「連携を解除」を押してください。</p>
+    </details>
     <label for="staffBrowserCode">このブラウザの連携コード</label>
     <input id="staffBrowserCode" type="text" readonly autocomplete="off">
     <label for="staffBrowserLink">メインブラウザのコード</label>
@@ -2203,6 +2211,7 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
     $('staffBrowserLink').value = '';
     $('staffBrowserStatus').textContent = linkedStaffBrowserId ? 'サブブラウザとして連携中です。' : '';
     $('staffBrowserUnlink').disabled = !linkedStaffBrowserId;
+    $('staffBrowserInstructions').open = false;
     staffBrowserDialog.showModal();
   });
   $('staffBrowserCode').addEventListener('focus', event => event.currentTarget.select());
