@@ -1722,6 +1722,30 @@ function sendStaffChatMessage(message, adminToken, browserId) {
   }
 }
 
+function deleteStaffChatMessage(id, browserId, adminToken) {
+  requireAdmin_(adminToken);
+  if (typeof id !== 'string' || !/^[0-9a-f-]{36}$/i.test(id) || !validStaffBrowserId_(browserId)) {
+    throw new Error('投稿を確認できません。');
+  }
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    requireAdmin_(adminToken);
+    const sheet = staffChatSheet_(false);
+    const last = sheet ? sheet.getLastRow() : 0;
+    if (last < 2) return {ok: true};
+    const first = Math.max(2, last - CHAT_MAX_MESSAGES + 1);
+    const rows = sheet.getRange(first, 1, last - first + 1, 4).getValues();
+    const index = rows.findIndex(row => row[0] === id);
+    if (index < 0) return {ok: true};
+    if (rows[index][3] !== browserId) throw new Error('自分の投稿のみ削除できます。');
+    sheet.deleteRow(first + index);
+    return {ok: true};
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 function staffChatSheet_(create) {
   const id = PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY);
   if (!id) throw new Error('スプレッドシートIDが未設定です。');

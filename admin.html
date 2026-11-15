@@ -1160,7 +1160,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   }
 
   function serverCall(method, ...args) {
-    const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'sendChatMessage', 'getStaffChatMessages', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendPrivateChatMessage', 'getClickLogs', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
+    const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'sendChatMessage', 'getStaffChatMessages', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'deleteStaffChatMessage', 'sendPrivateChatMessage', 'getClickLogs', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
     if (protectedMethods.includes(method)) {
       const token = adminSession.getItem(ADMIN_TOKEN_KEY) || '';
       // 呼び出し元（埋め込みメモ帳など）が既にトークンを渡している場合は二重追加しない。
@@ -2369,6 +2369,30 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
           const card = chatRow(item, item.author || '管理者');
           card.insertCell().textContent = (item.readCount || 0) + ' 件';
           const action = card.insertCell();
+          if (item.own && staffBrowserId) {
+            const remove = document.createElement('button');
+            remove.type = 'button';
+            remove.className = 'btn danger';
+            remove.textContent = '削除';
+            remove.addEventListener('click', async () => {
+              if (remove.disabled || token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
+              if (!confirm('この投稿を削除しますか？')) return;
+              remove.disabled = true;
+              try {
+                const result = await serverCall('deleteStaffChatMessage', item.id, staffBrowserId);
+                if (token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
+                if (!result?.ok) throw new Error('削除完了を確認できませんでした。');
+                card.remove();
+                staffRenderKey = '';
+                await refreshStaffChat();
+              } catch (error) {
+                if (token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
+                staffStatus.textContent = '削除に失敗しました。' + error.message;
+                remove.disabled = false;
+              }
+            });
+            action.append(remove);
+          }
           if (!item.own && staffBrowserId && typeof item.unread === 'boolean') {
             const readButton = document.createElement('button');
             readButton.type = 'button';
