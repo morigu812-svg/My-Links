@@ -758,14 +758,10 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
 @media (max-width: 700px) { #staffNicknameBadge { max-width: 38vw; } }
 </style>
 <style>
-#finderWindow .chat-main-panel {
-  position: static; width: auto; max-width: none; margin: 25px 27px;
-  height: clamp(370px, 70vh, 850px); z-index: auto; box-shadow: none;
-}
-#finderWindow .chat-main-panel .chat-head { flex-wrap: wrap; }
-@media (max-width: 700px) {
-  #finderWindow .chat-main-panel { margin: 18px 12px; height: clamp(330px, 65vh, 650px); }
-}
+#finderWindow .chat-main-panel:not(.open) { display:none; }
+#finderWindow .chat-table-wrap { max-height: min(60vh, 720px); overflow:auto; }
+#finderWindow .chat-main-panel .chat-compose { margin-top:12px; border:1px solid #286b8c; border-radius:8px; }
+#finderWindow .chat-main-panel .chat-text-cell { white-space:pre-wrap; overflow-wrap:anywhere; }
 </style>
 </head>
 <body>
@@ -846,13 +842,25 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
     <div id="status" role="status" aria-live="polite"></div><button id="retryLoadButton" type="button" style="display:none;margin:8px 0;padding:9px 13px;border:1px solid #286b8c;border-radius:8px;background:#10283b;color:#9beaff;cursor:pointer"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:5px"><path d="M20 7v5h-5"/><path d="M20 12a8 8 0 1 1-2.3-5.7L20 9"/></svg>再試行</button>
     <div id="list" class="list loading-skeleton" role="status" aria-label="リンクを読み込み中"><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div></div>
   </section>
-  <section id="chatOverlay" class="chat-overlay chat-main-panel" aria-label="利用者との共通チャット"><div class="chat-head"><strong>LINK CORE / VISITOR CHAT</strong><div class="chat-head-actions"><button type="button" id="refreshChat"><span class="refresh-icon" aria-hidden="true">↻</span><span>再読み込み</span></button><button type="button" id="closeChat">リンク一覧に戻る</button></div></div><div class="chat-subtitle">利用者全員と共有するチャットです。返信は全利用者に表示されます。</div><div class="chat-messages" id="chatMessages" aria-live="polite"><div class="chat-status">チャットを開いています…</div></div><label class="chat-subtitle" for="chatRecipient">個別チャットID（空欄なら全員）<input id="chatRecipient" type="text" maxlength="67" autocomplete="off" spellcheck="false" style="display:block;width:100%"></label><form class="chat-compose" id="chatForm"><textarea id="chatInput" maxlength="1000" rows="2" placeholder="利用者への返信を入力…" required></textarea><button id="chatSend" type="submit">返信</button></form></section>
-  <section id="staffChatOverlay" class="chat-overlay chat-main-panel" aria-label="管理者専用チャット">
-  <div class="chat-head"><strong>管理者専用チャット</strong><div class="chat-head-actions">
-    <button type="button" id="refreshStaffChat">再読み込み</button>
-    <button type="button" id="closeStaffChat">リンク一覧に戻る</button>
-  </div></div>
-  <div class="chat-messages" id="staffChatMessages" aria-label="管理者チャットの履歴"></div>
+  <section id="chatOverlay" class="click-log-panel chat-main-panel" aria-label="利用者との共通チャット">
+    <div class="section-heading">
+      <div><span class="section-kicker">LINK CORE / CHAT</span><h2>利用者チャット</h2><p>利用者とのメッセージを表示します。</p></div>
+      <div class="click-log-actions"><button id="refreshChat" class="btn" type="button">↻ 再読み込み</button><button id="closeChat" class="btn" type="button">リンク一覧に戻る</button></div>
+    </div>
+    <div class="click-log-table-wrap chat-table-wrap"><table class="click-log-table">
+      <thead><tr><th scope="col">日時</th><th scope="col">投稿者</th><th scope="col">メッセージ</th></tr></thead>
+      <tbody id="chatMessages"></tbody>
+    </table></div>
+<label class="chat-subtitle" for="chatRecipient">個別チャットID（空欄なら全員）<input id="chatRecipient" type="text" maxlength="67" autocomplete="off" spellcheck="false" style="display:block;width:100%"></label><form class="chat-compose" id="chatForm"><textarea id="chatInput" maxlength="1000" rows="2" placeholder="利用者への返信を入力…" required></textarea><button id="chatSend" type="submit">返信</button></form></section>
+  <section id="staffChatOverlay" class="click-log-panel chat-main-panel" aria-label="管理者専用チャット">
+    <div class="section-heading">
+      <div><span class="section-kicker">LINK CORE / CHAT</span><h2>管理者専用チャット</h2><p>管理者同士のメッセージを表示します。</p></div>
+      <div class="click-log-actions"><button id="refreshStaffChat" class="btn" type="button">↻ 再読み込み</button><button id="closeStaffChat" class="btn" type="button">リンク一覧に戻る</button></div>
+    </div>
+    <div class="click-log-table-wrap chat-table-wrap"><table class="click-log-table">
+      <thead><tr><th scope="col">日時</th><th scope="col">投稿者</th><th scope="col">メッセージ</th><th scope="col">既読</th><th scope="col">操作</th></tr></thead>
+      <tbody id="staffChatMessages"></tbody>
+    </table></div>
   <div class="chat-subtitle" id="staffChatStatus" role="status"></div>
   <form class="chat-compose" id="staffChatForm">
     <textarea id="staffChatInput" aria-label="管理者へのメッセージ" maxlength="1000" rows="2" required></textarea>
@@ -1673,9 +1681,38 @@ document.getElementById('authSubmit').disabled = false;
   // Shared visitor chat; the server determines the author from the authenticated token.
   const chatOverlay=$('chatOverlay'),chatMessages=$('chatMessages'),chatForm=$('chatForm'),chatInput=$('chatInput'),chatSend=$('chatSend');
   let chatLoading=false,chatLoaded=false,lastAdminChatId='',adminUnreadCount=0;
-  function renderChatMessages(messages){chatMessages.replaceChildren();if(!messages.length){const e=document.createElement('div');e.className='chat-empty';e.textContent='まだメッセージはありません。利用者からの投稿を待っています。';chatMessages.appendChild(e);return;}messages.forEach(item=>{const bubble=document.createElement('article');bubble.className='chat-message'+(item.author==='管理者'?' admin':'');const meta=document.createElement('div');meta.className='chat-message-meta';const author=document.createElement('strong');author.textContent=item.private?'管理者 → '+item.recipient:(item.author==='管理者'?'管理者':'利用者');const time=document.createElement('time');const date=new Date(item.createdAt);time.textContent=isNaN(date.getTime())?'':date.toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});const body=document.createElement('div');body.className='chat-message-body';body.textContent=item.message;meta.append(author,time);bubble.append(meta,body);chatMessages.appendChild(bubble);});chatMessages.scrollTop=chatMessages.scrollHeight;}
+  function chatRow(item, author) {
+    const row = document.createElement('tr');
+    const date = new Date(item.createdAt);
+    row.insertCell().textContent = Number.isNaN(date.getTime()) ? '日時不明' : date.toLocaleString('ja-JP');
+    row.insertCell().textContent = author;
+    const message = row.insertCell();
+    message.className = 'chat-text-cell';
+    message.textContent = item.message;
+    return row;
+  }
+
+  function chatTableNotice(body, columns, message) {
+    const row = document.createElement('tr');
+    const cell = row.insertCell();
+    cell.colSpan = columns;
+    cell.className = 'click-log-empty';
+    cell.textContent = message;
+    body.replaceChildren(row);
+  }
+
+  function renderChatMessages(messages) {
+    if (!messages.length) {
+      chatTableNotice(chatMessages, 3, 'まだメッセージはありません。');
+      return;
+    }
+    chatMessages.replaceChildren(...messages.map(item =>
+      chatRow(item, item.private ? '管理者 → ' + item.recipient : item.author)));
+    const scrollArea = chatMessages.closest('.chat-table-wrap');
+    scrollArea.scrollTop = scrollArea.scrollHeight;
+  }
   function updateAdminChatBadge(){const badge=$('chatUnreadBadge');if(!badge)return;badge.hidden=adminUnreadCount<1;badge.textContent=adminUnreadCount>99?'99+':String(adminUnreadCount);badge.setAttribute('aria-label',adminUnreadCount+'件の未読メッセージ');}
-  async function refreshAdminChat(){if(chatLoading||!adminSession.getItem(ADMIN_TOKEN_KEY))return;const button=$('refreshChat');chatLoading=true;if(button){button.disabled=true;button.classList.add('is-refreshing');button.setAttribute('aria-busy','true');}try{const r=await serverCall('getChatMessages');const messages=Array.isArray(r.messages)?r.messages:[];const latest=messages.length?messages[messages.length-1].id:'';if(chatLoaded&&latest&&lastAdminChatId&&latest!==lastAdminChatId&&!chatOverlay.classList.contains('open')){const previousIndex=messages.findIndex(item=>item.id===lastAdminChatId);adminUnreadCount+=previousIndex>=0?messages.length-previousIndex-1:1;updateAdminChatBadge();}if(latest)lastAdminChatId=latest;renderChatMessages(messages);chatLoaded=true;}catch(e){if(chatOverlay.classList.contains('open'))chatMessages.textContent='読み込みに失敗しました：'+(e.message||'通信エラー');}finally{chatLoading=false;if(button){button.disabled=false;button.classList.remove('is-refreshing');button.removeAttribute('aria-busy');}}}
+  async function refreshAdminChat(){if(chatLoading||!adminSession.getItem(ADMIN_TOKEN_KEY))return;const button=$('refreshChat');chatLoading=true;if(button){button.disabled=true;button.classList.add('is-refreshing');button.setAttribute('aria-busy','true');}try{const r=await serverCall('getChatMessages');const messages=Array.isArray(r.messages)?r.messages:[];const latest=messages.length?messages[messages.length-1].id:'';if(chatLoaded&&latest&&lastAdminChatId&&latest!==lastAdminChatId&&!chatOverlay.classList.contains('open')){const previousIndex=messages.findIndex(item=>item.id===lastAdminChatId);adminUnreadCount+=previousIndex>=0?messages.length-previousIndex-1:1;updateAdminChatBadge();}if(latest)lastAdminChatId=latest;renderChatMessages(messages);chatLoaded=true;}catch(e){if(chatOverlay.classList.contains('open'))chatTableNotice(chatMessages, 3, '読み込みに失敗しました：'+(e.message||'通信エラー'));}finally{chatLoading=false;if(button){button.disabled=false;button.classList.remove('is-refreshing');button.removeAttribute('aria-busy');}}}
   function hideMainChats() {
     $('chatOverlay').classList.remove('open');
     $('staffChatOverlay').classList.remove('open');
@@ -2192,7 +2229,7 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
       else await serverCall('sendChatMessage', message);
       chatInput.value = '';
       await refreshAdminChat();
-    }catch(error){const s=document.createElement('div');s.className='chat-status';s.textContent=error.message||'送信できませんでした。';chatMessages.appendChild(s);}finally{chatSend.disabled=false;chatInput.focus();}});
+    }catch(error){chatTableNotice(chatMessages, 3, error.message||'送信できませんでした。');}finally{chatSend.disabled=false;chatInput.focus();}});
 
   const staffChat = $('staffChatOverlay');
   const staffMessages = $('staffChatMessages');
@@ -2329,15 +2366,9 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
       const key = JSON.stringify(messages.map(item => [item.id, item.readCount, item.unread, item.own, item.author]));
       if (key !== staffRenderKey) {
         const cards = messages.map(item => {
-          const card = document.createElement('article');
-          card.className = 'chat-message admin';
-          const meta = document.createElement('div');
-          meta.className = 'chat-message-meta';
-          meta.textContent = (item.author || '管理者') + ' · ' + new Date(item.createdAt).toLocaleString('ja-JP') + ' · 既読 ' + (item.readCount || 0) + ' 件';
-          const body = document.createElement('div');
-          body.className = 'chat-message-body';
-          body.textContent = item.message;
-          card.append(meta, body);
+          const card = chatRow(item, item.author || '管理者');
+          card.insertCell().textContent = (item.readCount || 0) + ' 件';
+          const action = card.insertCell();
           if (!item.own && staffBrowserId && typeof item.unread === 'boolean') {
             const readButton = document.createElement('button');
             readButton.type = 'button';
@@ -2359,12 +2390,14 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
                 readButton.disabled = false;
               }
             });
-            card.append(readButton);
+            action.append(readButton);
           }
           return card;
         });
-        staffMessages.replaceChildren(...cards);
-        staffMessages.scrollTop = staffMessages.scrollHeight;
+        if (cards.length) staffMessages.replaceChildren(...cards);
+        else chatTableNotice(staffMessages, 5, 'まだメッセージはありません。');
+        const scrollArea = staffMessages.closest('.chat-table-wrap');
+        scrollArea.scrollTop = scrollArea.scrollHeight;
         staffRenderKey = key;
       }
       staffStatus.textContent = messages.length ? '' : 'まだメッセージはありません。';
