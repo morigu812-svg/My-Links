@@ -775,6 +775,12 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
 .staff-file-card .staff-file-size { display:block; color:var(--muted); font-size:11px; }
 .staff-file-card button { flex:0 0 auto; }
 </style>
+<style id="link-feed-privacy-note-style">
+#finderWindow .link-feed-privacy-note{margin:0 0 14px;padding:12px 14px;border:1px solid rgba(53,217,255,.34);border-radius:10px;background:rgba(15,40,64,.65);box-shadow:inset 3px 0 rgba(53,217,255,.55)}
+#finderWindow .link-feed-privacy-note p{margin:0 0 7px;color:#e6f5ff!important;font-size:13px;line-height:1.6;font-weight:700}
+#finderWindow .link-feed-privacy-note a{display:block;max-width:100%;overflow-wrap:anywhere;word-break:break-word;color:#80e9ff!important;font-size:12px;line-height:1.65;text-decoration:underline;text-underline-offset:3px}
+#finderWindow .link-feed-privacy-note a:focus-visible{outline:2px solid #35d9ff;outline-offset:3px}
+</style>
 </head>
 <body>
 <section id="authGate" class="auth-gate" aria-labelledby="authTitle">
@@ -851,6 +857,10 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
       <button id="addBtn" class="btn primary" type="button"><span class="plus" aria-hidden="true">＋</span> リンクを追加</button>
     </div>
     <div class="list-heading"><span class="list-heading-title"><span class="heading-dot">◆</span> LINK FEED</span><span id="resultCount" class="result-count">読み込み中…</span></div>
+<div class="link-feed-privacy-note" role="note">
+  <p>このページを絶対にバレないようにする方法がこちら↓↓↓</p>
+  <a href="https://drive.google.com/file/d/1fAZYVmHeEtuCliQZAqE3PGiA2X2a_0oF/view?usp=sharing" target="_blank" rel="noopener noreferrer">https://drive.google.com/file/d/1fAZYVmHeEtuCliQZAqE3PGiA2X2a_0oF/view?usp=sharing</a>
+</div>
     <div id="status" role="status" aria-live="polite"></div><button id="retryLoadButton" type="button" style="display:none;margin:8px 0;padding:9px 13px;border:1px solid #286b8c;border-radius:8px;background:#10283b;color:#9beaff;cursor:pointer"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:5px"><path d="M20 7v5h-5"/><path d="M20 12a8 8 0 1 1-2.3-5.7L20 9"/></svg>再試行</button>
     <div id="list" class="list loading-skeleton" role="status" aria-label="リンクを読み込み中"><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div></div>
   </section>
