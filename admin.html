@@ -921,13 +921,15 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   </section>
   <section id="diagnosisPanel" class="click-log-panel" hidden aria-label="リンク診断">
     <div class="section-heading">
-      <div><span class="section-kicker">LINK CORE / LINK HEALTH</span><h2>リンク診断</h2><p>重複したURLと、開けなくなったリンクを調べます。リンクの削除や変更はしません。</p></div>
-      <div class="click-log-actions"><button id="runDiagnosis" class="btn primary" type="button">▶ 診断する</button></div>
+      <div><span class="section-kicker">LINK CORE / LINK HEALTH</span><h2>リンク診断</h2><p>リンク切れ・重複に加えて、この端末でアクセス制限の可能性があるサイトも確認できます。</p></div>
+      <div class="click-log-actions"><button id="runDiagnosis" class="btn primary" type="button">▶ 診断する</button><button id="runLocalDiagnosis" class="btn" type="button" disabled>この端末でも確認</button></div>
     </div>
     <div id="diagnosisStatus" role="status" aria-live="polite"></div>
+    <p style="font-size:12px;color:var(--muted)">端末確認はボタンを押したときだけ行います。通信エラーだけでは保護者によるフィルターとは断定できません。アクセス制限画面を実際に見た場合のみ、各行で手動記録できます。</p>
+    <div id="diagnosisDeviceStatus" role="status" aria-live="polite" style="font-size:12px;margin:7px 0"></div>
     <div class="click-log-table-wrap"><table class="click-log-table">
-      <thead><tr><th>状態</th><th>タイトル</th><th>URL</th><th>問題</th><th>操作</th></tr></thead>
-      <tbody id="diagnosisRows"><tr><td colspan="5">まだ診断していません。「診断する」を押してください。</td></tr></tbody>
+      <thead><tr><th>サーバー</th><th>タイトル</th><th>URL</th><th>問題</th><th>この端末</th><th>操作</th></tr></thead>
+      <tbody id="diagnosisRows"><tr><td colspan="6">まだ診断していません。「診断する」を押してください。</td></tr></tbody>
     </table></div>
   </section>
     <section id="officialPanel" class="official-panel" aria-label="公式リンク">
@@ -960,7 +962,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   <details><summary>公開・お気に入り・NEW</summary><p>「利用者ページに公開する」にチェックを入れて保存すると、利用者画面に表示されます。カードの星でお気に入りを切り替え、「NEWラベルを表示する」で新着の目印を付けられます。</p></details>
   <details><summary>公式リンク</summary><p>左メニューの「公式リンク」を開き、フォームに名前とURLを入力して追加します。登録済みの公式リンクは一覧から削除できます。</p></details>
   <details><summary>削除とゴミ箱</summary><p>通常リンクのカードで「削除」を押すとゴミ箱に移ります。直後は「元に戻す」、後からは「ゴミ箱」の「復元」を使います。「完全に削除」や「ゴミ箱を空にする」を実行すると復元できません。</p></details>
-  <details><summary>リンク診断</summary><p>「リンク診断」を開いて「診断する」を押します。開けない可能性があるURLや、重複して登録されたURLを確認できます。</p></details>
+  <details><summary>リンク診断</summary><p>「診断する」でGoogleのサーバーからリンク切れと重複を調べます。その後「この端末でも確認」で、今操作しているブラウザからの通信を調べられます。接続失敗だけで保護者のフィルターと断定はできません。実際にアクセス制限画面が表示された場合は、該当行の「制限画面を記録」で手動記録できます。結果はブラウザを閉じると消えます。</p></details>
   <details><summary>管理者専用チャット</summary><p>「チャット」→「管理者専用チャット」を開き、メッセージを送信します。読んだ投稿は「既読にする」を押します。右上の未読通知からもチャットを開けます。</p></details>
   <details><summary>利用者チャット</summary><p>「チャット」→「利用者チャット」を開きます。宛先欄を空にして送ると全員に表示されます。特定の利用者に送るときは、その利用者から受け取った個別チャットIDを宛先欄に貼り付けます。</p></details>
   <details><summary>サブブラウザを設定</summary><p>メインブラウザで左メニューの「サブブラウザを設定」を開いてコードをコピーします。サブブラウザで同じ画面を開き、貼り付けて「サブとして登録」を押します。連携後は、サブからの新規投稿も自分の投稿として扱われます。</p></details>
@@ -2082,6 +2084,85 @@ document.getElementById('authSubmit').disabled = false;
   let diagnosisResults=[];
   let diagnosisDuplicates=[];
   let diagnosisTotalUrls=0;
+  // ブラウザ内だけの一時的な検査結果。シートやブラウザストレージには保存しない。
+  const diagnosisDeviceResults = new Map();
+  let diagnosisDeviceRunning=false;
+  function diagnosisDeviceLabel(entry){
+    if(!entry)return '未確認';
+    if(entry.status==='checking')return '確認中…';
+    if(entry.status==='responded')return '通信に応答（画面表示は未確認）';
+    if(entry.status==='suspected')return 'この端末では接続失敗（制限の可能性）';
+    if(entry.status==='failed')return 'この端末でも接続失敗（原因未確定）';
+    if(entry.status==='timeout')return '時間切れ（原因未確定）';
+    if(entry.status==='unsupported')return 'HTTPのため自動確認対象外';
+    if(entry.status==='manual')return 'アクセス制限画面を確認（手動記録）';
+    return '確認不可';
+  }
+  // GASからの検査と異なり、検査ボタンを押した端末のブラウザからだけ通信する。
+  // no-cors の応答はopaqueなので、表示内容やブロック画面は読めない。
+  async function checkDiagnosisFromThisDevice(url, serverStatus){
+    let parsed;
+    try{parsed=new URL(url);}catch(_){return {status:'unsupported'};}
+    if(parsed.protocol!=='https:')return {status:'unsupported'};
+    const controller=new AbortController();
+    const timeout=setTimeout(()=>controller.abort(),6500);
+    try{
+      await fetch(parsed.href,{
+        method:'GET',mode:'no-cors',credentials:'omit',redirect:'follow',
+        cache:'no-store',referrerPolicy:'no-referrer',signal:controller.signal
+      });
+      // フィルタの警告ページが返った場合も応答成功となるため、サイト表示成功とは言わない。
+      return {status:'responded'};
+    }catch(_){
+      if(controller.signal.aborted)return {status:'timeout'};
+      // CORS以外にもCSP・拡張機能・ネットワーク等の原因があるので断定しない。
+      return {status:serverStatus==='ok'?'suspected':'failed'};
+    }finally{clearTimeout(timeout);}
+  }
+  async function inspectDiagnosisItem(item){
+    if(diagnosisDeviceRunning||diagnosisRunning)return;
+    const current=diagnosisDeviceResults.get(item.url);
+    if(current&&current.status==='checking')return;
+    diagnosisDeviceResults.set(item.url,{status:'checking'});
+    renderDiagnosis();
+    const result=await checkDiagnosisFromThisDevice(item.url,item.status);
+    if(diagnosisDeviceResults.get(item.url)?.status!=='manual')diagnosisDeviceResults.set(item.url,result);
+    renderDiagnosis();
+    updateDiagnosisSummary();
+  }
+  async function runDiagnosisOnThisDevice(){
+    if(diagnosisRunning||diagnosisDeviceRunning||!diagnosisResults.length)return;
+    // 同じURLを複数回問い合わせない。
+    const targets=new Map();
+    diagnosisResults.forEach(item=>{if(!targets.has(item.url))targets.set(item.url,item.status);});
+    const list=Array.from(targets);
+    diagnosisDeviceRunning=true;
+    const button=$('runLocalDiagnosis');
+    button.disabled=true;
+    let cursor=0,finished=0;
+    $('diagnosisDeviceStatus').textContent='この端末の通信を確認しています… 0/'+list.length+'件';
+    try{
+      // 多数のリンクを同時に開かないよう最大3件ずつ。
+      await Promise.all(Array.from({length:Math.min(3,list.length)},async()=>{
+        while(cursor<list.length){
+          const [url,serverStatus]=list[cursor++];
+          if(diagnosisDeviceResults.get(url)?.status==='manual'){
+            finished++;
+            continue;
+          }
+          diagnosisDeviceResults.set(url,{status:'checking'});
+          const result=await checkDiagnosisFromThisDevice(url,serverStatus);
+          if(diagnosisDeviceResults.get(url)?.status!=='manual')diagnosisDeviceResults.set(url,result);
+          finished++;
+          $('diagnosisDeviceStatus').textContent='この端末の通信を確認しています… '+finished+'/'+list.length+'件';
+          renderDiagnosis();
+        }
+      }));
+      $('diagnosisDeviceStatus').textContent='端末確認が完了しました。通信エラーは保護者フィルター以外でも起こります。';
+      updateDiagnosisSummary();
+    }finally{diagnosisDeviceRunning=false;button.disabled=false;}
+  }
+  $('runLocalDiagnosis').addEventListener('click',runDiagnosisOnThisDevice);
   function diagnosisStatusLabel(status){
     return status==='ok'?'OK':status==='dead'?'切れている':status==='unknown'?'要確認':'未判定';
   }
@@ -2133,13 +2214,15 @@ document.getElementById('authSubmit').disabled = false;
     const unknown=diagnosisResults.filter(function(x){return x.status==='unknown';}).length;
     const dupLinks=diagnosisResults.filter(function(x){return x.duplicateCount>1;}).length;
     const ok=total-dead-unknown;
-    $('diagnosisStatus').textContent='診断完了：'+total+'件中 OK '+ok+'件／切れている '+dead+'件／要確認 '+unknown+'件／重複 '+diagnosisDuplicates.length+'組（'+dupLinks+'件のリンク）';
+    const manual=diagnosisResults.filter(x=>diagnosisDeviceResults.get(x.url)?.status==='manual').length;
+    const suspected=diagnosisResults.filter(x=>diagnosisDeviceResults.get(x.url)?.status==='suspected').length;
+    $('diagnosisStatus').textContent='診断完了：'+total+'件中 OK '+ok+'件／切れている '+dead+'件／要確認 '+unknown+'件／重複 '+diagnosisDuplicates.length+'組（'+dupLinks+'件）／端末接続失敗（制限の可能性）'+suspected+'件／制限画面の手動確認 '+manual+'件';
   }
   function renderDiagnosis(){
     const body=$('diagnosisRows');body.replaceChildren();
     if(!diagnosisResults.length){
       const tr=document.createElement('tr');const td=document.createElement('td');
-      td.colSpan=5;td.className='click-log-empty';td.textContent='問題のあるリンクはありませんでした。';
+      td.colSpan=6;td.className='click-log-empty';td.textContent='診断結果がありません。';
       tr.appendChild(td);body.appendChild(tr);return;
     }
     // 問題のあるリンクを先に並べる：切れている → 要確認 → 重複 → OK。
@@ -2161,6 +2244,29 @@ document.getElementById('authSubmit').disabled = false;
       if(item.status==='unknown')issues.push('要確認（'+(item.reason||'判定できませんでした')+'）');
       if(item.duplicateCount>1)issues.push('重複：同じURLが'+item.duplicateCount+'件');
       issue.textContent=issues.length?issues.join('／'):'問題なし';
+      const localCell=document.createElement('td');
+      localCell.style.minWidth='200px';
+      const result=diagnosisDeviceResults.get(item.url);
+      const deviceLabel=document.createElement('div');
+      deviceLabel.textContent=diagnosisDeviceLabel(result);
+      deviceLabel.style.fontSize='12px';
+      localCell.appendChild(deviceLabel);
+      const checkButton=document.createElement('button');
+      checkButton.type='button';checkButton.className='btn';
+      checkButton.textContent='端末確認';
+      checkButton.disabled=diagnosisRunning||diagnosisDeviceRunning||result?.status==='checking';
+      checkButton.addEventListener('click',()=>inspectDiagnosisItem(item));
+      const markButton=document.createElement('button');
+      markButton.type='button';markButton.className='btn';
+      markButton.style.marginLeft='5px';
+      markButton.textContent=result?.status==='manual'?'記録解除':'制限画面を記録';
+      markButton.title='実際にアクセス制限画面を見た場合だけ記録してください';
+      markButton.addEventListener('click',()=>{
+        if(diagnosisDeviceResults.get(item.url)?.status==='manual')diagnosisDeviceResults.delete(item.url);
+        else diagnosisDeviceResults.set(item.url,{status:'manual'});
+        renderDiagnosis();updateDiagnosisSummary();
+      });
+      localCell.append(checkButton,markButton);
       const actionCell=document.createElement('td');actionCell.className='trash-actions';
       const open=document.createElement('a');open.className='btn';open.href=item.url;open.target='_blank';open.rel='noopener noreferrer';open.textContent='開く';
       const remove=document.createElement('button');remove.type='button';remove.className='btn danger';remove.textContent='削除';
@@ -2173,20 +2279,23 @@ document.getElementById('authSubmit').disabled = false;
         renderDiagnosis();updateDiagnosisSummary();
       });
       actionCell.append(open,remove);
-      tr.append(statusCell,title,urlCell,issue,actionCell);body.appendChild(tr);
+      tr.append(statusCell,title,urlCell,issue,localCell,actionCell);body.appendChild(tr);
     });
   }
   function renderDiagnosisError(message){
     const body=$('diagnosisRows');body.replaceChildren();
     const tr=document.createElement('tr');const td=document.createElement('td');
-    td.colSpan=5;td.className='click-log-empty';td.textContent='診断に失敗しました。時間をおいて「診断する」を押してください。';
+    td.colSpan=6;td.className='click-log-empty';td.textContent='診断に失敗しました。時間をおいて「診断する」を押してください。';
     tr.appendChild(td);body.appendChild(tr);
     $('diagnosisStatus').textContent='診断に失敗しました：'+message;
   }
   async function runDiagnosis(){
-    if(diagnosisRunning)return;
+    if(diagnosisRunning||diagnosisDeviceRunning)return;
     if(!adminSession.getItem(ADMIN_TOKEN_KEY)){alert('先に管理者ログインをしてください。');return;}
     diagnosisRunning=true;
+    diagnosisDeviceResults.clear();
+    $('runLocalDiagnosis').disabled=true;
+    $('diagnosisDeviceStatus').textContent='';
     const button=$('runDiagnosis');if(button)button.disabled=true;
     diagnosisResults=[];diagnosisDuplicates=[];diagnosisTotalUrls=0;
     const diagBody=$('diagnosisRows');diagBody.replaceChildren();
@@ -2213,7 +2322,7 @@ document.getElementById('authSubmit').disabled = false;
       // 空の表示と誤読されないよう、エラー行に置き換える（ゴミ箱と同じ方針）。
       failed=true;failMessage=error.message||'通信エラー';
       if(!diagnosisResults.length)renderDiagnosisError(failMessage);
-    }finally{diagnosisRunning=false;if(button)button.disabled=false;}
+    }finally{diagnosisRunning=false;if(button)button.disabled=false;$('runLocalDiagnosis').disabled=!diagnosisResults.length;}
     if(!failed)updateDiagnosisSummary();
     else if(diagnosisResults.length)$('diagnosisStatus').textContent='診断が途中で止まりました：'+failMessage+'（ここまでの結果を表示中。「診断する」で最初からやり直せます）';
   }
