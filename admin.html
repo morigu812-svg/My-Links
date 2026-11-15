@@ -763,6 +763,18 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
 #finderWindow .chat-main-panel .chat-compose { margin-top:12px; border:1px solid #286b8c; border-radius:8px; }
 #finderWindow .chat-main-panel .chat-text-cell { white-space:pre-wrap; overflow-wrap:anywhere; }
 </style>
+<style id="staff-attachment-styles">
+#staffChatForm { flex-wrap:wrap; align-items:center; }
+#staffChatForm .staff-file-button { flex:0 0 auto; white-space:nowrap; }
+#staffAttachmentInfo { flex:1 1 100%; min-width:0; font-size:12px; color:var(--sub); overflow-wrap:anywhere; }
+#staffAttachmentClear { flex:0 0 auto; }
+#staffAttachmentInfo[hidden], #staffAttachmentClear[hidden] { display:none!important; }
+.staff-file-card { display:flex; align-items:center; gap:10px; margin-top:7px; padding:9px 11px; max-width:100%; border:1px solid #28546c; border-radius:9px; background:rgba(13,44,62,.4); }
+.staff-file-card .staff-file-detail { flex:1; min-width:0; }
+.staff-file-card .staff-file-name { display:block; font-weight:700; overflow-wrap:anywhere; }
+.staff-file-card .staff-file-size { display:block; color:var(--muted); font-size:11px; }
+.staff-file-card button { flex:0 0 auto; }
+</style>
 </head>
 <body>
 <section id="authGate" class="auth-gate" aria-labelledby="authTitle">
@@ -863,8 +875,12 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
     </table></div>
   <div class="chat-subtitle" id="staffChatStatus" role="status"></div>
   <form class="chat-compose" id="staffChatForm">
-    <textarea id="staffChatInput" aria-label="管理者へのメッセージ" maxlength="1000" rows="2" required></textarea>
+    <textarea id="staffChatInput" aria-label="管理者へのメッセージ" maxlength="1000" rows="2" placeholder="管理者へのメッセージ（ファイルのみでも送信可）"></textarea>
+    <input id="staffAttachmentInput" type="file" accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.txt,.csv,.docx,.xlsx,.pptx" hidden aria-label="添付ファイルを選択">
+    <button type="button" id="staffAttachmentChoose" class="staff-file-button" aria-label="ファイルを添付">📎 添付</button>
     <button type="submit" id="staffChatSend">送信</button>
+    <span id="staffAttachmentInfo" role="status" aria-live="polite" hidden></span>
+    <button type="button" id="staffAttachmentClear" hidden>添付を解除</button>
   </form>
 </section>
   <section id="clickLogPanel" class="click-log-panel" hidden aria-label="クリック履歴">
@@ -1160,7 +1176,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   }
 
   function serverCall(method, ...args) {
-    const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'sendChatMessage', 'getStaffChatMessages', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'deleteStaffChatMessage', 'sendPrivateChatMessage', 'getClickLogs', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
+    const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'sendChatMessage', 'getStaffChatMessages', 'getStaffChatAttachment', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendStaffChatAttachment', 'deleteStaffChatMessage', 'sendPrivateChatMessage', 'getClickLogs', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
     if (protectedMethods.includes(method)) {
       const token = adminSession.getItem(ADMIN_TOKEN_KEY) || '';
       // 呼び出し元（埋め込みメモ帳など）が既にトークンを渡している場合は二重追加しない。
@@ -1168,10 +1184,11 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
     }
     const request = waitForBridge().then(() => new Promise((resolve, reject) => {
       const id = (crypto.randomUUID && crypto.randomUUID()) || String(Date.now() + Math.random());
+      const maxWait = ['sendStaffChatAttachment', 'getStaffChatAttachment'].includes(method) ? 60000 : REQUEST_TIMEOUT_MS;
       const timer = setTimeout(() => {
         pending.delete(id);
-        reject(new Error('GASから15秒以内に応答がありませんでした。GASの実行ログとデプロイ版を確認してください。'));
-      }, REQUEST_TIMEOUT_MS);
+        reject(new Error('GASから' + (maxWait / 1000) + '秒以内に応答がありませんでした。GASの実行ログとデプロイ版を確認してください。'));
+      }, maxWait);
 
       pending.set(id, {
         resolve: value => { clearTimeout(timer); resolve(value); },
@@ -2363,10 +2380,59 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
       const unread = messages.filter(item => item.unread);
       updateStaffUnread(unread.length, open);
       if (!open) return;
-      const key = JSON.stringify(messages.map(item => [item.id, item.readCount, item.unread, item.own, item.author]));
+      const key = JSON.stringify(messages.map(item => [item.id, item.readCount, item.unread, item.own, item.author, item.attachment?.name]));
       if (key !== staffRenderKey) {
         const cards = messages.map(item => {
           const card = chatRow(item, item.author || '管理者');
+          if (item.attachment) {
+            const cell = card.cells[2];
+            const fileCard = document.createElement('div');
+            fileCard.className = 'staff-file-card';
+            const detail = document.createElement('div');
+            detail.className = 'staff-file-detail';
+            const name = document.createElement('span');
+            name.className = 'staff-file-name';
+            name.textContent = '📎 ' + item.attachment.name;
+            const size = document.createElement('span');
+            size.className = 'staff-file-size';
+            size.textContent = (item.attachment.size / 1024).toFixed(0) + ' KB';
+            detail.append(name, size);
+            const download = document.createElement('button');
+            download.type = 'button';
+            download.className = 'btn';
+            download.textContent = 'ダウンロード';
+            download.addEventListener('click', async () => {
+              if (download.disabled || !adminSession.getItem(ADMIN_TOKEN_KEY)) return;
+              download.disabled = true;
+              const before = download.textContent;
+              download.textContent = '取得中…';
+              try {
+                const token = adminSession.getItem(ADMIN_TOKEN_KEY);
+                const result = await serverCall('getStaffChatAttachment', item.id);
+                if (token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
+                if (!result?.base64) throw new Error('ファイルを取得できませんでした。');
+                const binary = atob(result.base64);
+                const bytes = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                const blob = new Blob([bytes], {type: 'application/octet-stream'});
+                const href = URL.createObjectURL(blob);
+                const anchor = document.createElement('a');
+                anchor.href = href;
+                anchor.download = result.name || 'attachment';
+                document.body.appendChild(anchor);
+                anchor.click();
+                anchor.remove();
+                setTimeout(() => URL.revokeObjectURL(href), 30000);
+              } catch (error) {
+                staffStatus.textContent = '添付ファイルの取得に失敗しました：' + (error.message || '通信エラー');
+              } finally {
+                download.disabled = false;
+                download.textContent = before;
+              }
+            });
+            fileCard.append(detail, download);
+            cell.append(fileCard);
+          }
           card.insertCell().textContent = (item.readCount || 0) + ' 件';
           const action = card.insertCell();
           if (item.own && staffBrowserId) {
@@ -2449,21 +2515,94 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
     if (!document.hidden) refreshStaffChat();
   }, 15000);
 
+  const staffAttachmentInput = $('staffAttachmentInput');
+  const staffAttachmentInfo = $('staffAttachmentInfo');
+  const staffAttachmentClear = $('staffAttachmentClear');
+  const STAFF_MAX_FILE_BYTES = 2 * 1024 * 1024;
+  const staffAllowedExtensions = new Set(['png','jpg','jpeg','gif','webp','pdf','txt','csv','docx','xlsx','pptx']);
+  let staffPendingAttachmentRequestId = '';
+  function refreshStaffFileSelection() {
+    const file = staffAttachmentInput.files[0];
+    staffAttachmentInfo.hidden = !file;
+    staffAttachmentClear.hidden = !file;
+    staffAttachmentInfo.textContent = file ? `📎 ${file.name} (${(file.size / 1024).toFixed(0)} KB / 上限2 MB)` : '';
+  }
+  $('staffAttachmentChoose').addEventListener('click', () => staffAttachmentInput.click());
+  staffAttachmentInput.addEventListener('change', () => {
+    staffPendingAttachmentRequestId = '';
+    refreshStaffFileSelection();
+  });
+  staffInput.addEventListener('input', () => { staffPendingAttachmentRequestId = ''; });
+  staffAttachmentClear.addEventListener('click', () => {
+    staffAttachmentInput.value = '';
+    staffPendingAttachmentRequestId = '';
+    refreshStaffFileSelection();
+  });
+  function staffFileAsBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('ファイルを読み込めませんでした。'));
+      reader.onload = () => {
+        const raw = String(reader.result || '');
+        const comma = raw.indexOf(',');
+        if (comma < 0) reject(new Error('ファイルの形式が不正です。'));
+        else resolve(raw.slice(comma + 1));
+      };
+      reader.readAsDataURL(file);
+    });
+  }
   $('staffChatForm').addEventListener('submit', async event => {
     event.preventDefault();
     const button = $('staffChatSend');
     const body = staffInput.value;
-    if (button.disabled || !body.trim()) return;
+    const file = staffAttachmentInput.files[0] || null;
+    if (button.disabled || (!body.trim() && !file)) return;
+    const token = adminSession.getItem(ADMIN_TOKEN_KEY);
+    if (!token) return;
+    if (file) {
+      const extension = file.name.split('.').pop().toLowerCase();
+      if (!staffAllowedExtensions.has(extension)) {
+        staffStatus.textContent = 'この形式のファイルは添付できません。';
+        return;
+      }
+      if (file.size < 1 || file.size > STAFF_MAX_FILE_BYTES) {
+        staffStatus.textContent = '添付ファイルの容量は1バイト〜2 MBにしてください。';
+        return;
+      }
+    }
     button.disabled = true;
+    $('staffAttachmentChoose').disabled = true;
+    staffAttachmentClear.disabled = true;
+    staffAttachmentInput.disabled = true;
+    staffStatus.textContent = file ? 'ファイルを送信しています…' : '送信しています…';
     try {
-      const result = await serverCall('sendStaffChatMessage', body, adminSession.getItem(ADMIN_TOKEN_KEY), staffBrowserId);
+      let result;
+      if (file) {
+        const base64 = await staffFileAsBase64(file);
+        if (!staffPendingAttachmentRequestId) {
+          staffPendingAttachmentRequestId = crypto.randomUUID();
+        }
+        result = await serverCall('sendStaffChatAttachment', body, {
+          name: file.name, mime: file.type || '', size: file.size, base64
+        }, staffPendingAttachmentRequestId, staffBrowserId);
+      } else {
+        result = await serverCall('sendStaffChatMessage', body, token, staffBrowserId);
+      }
       if (!result || !result.ok) throw new Error('送信の完了を確認できませんでした。');
+      if (token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
       if (staffInput.value === body) staffInput.value = '';
+      if (staffAttachmentInput.files[0] === file) staffAttachmentInput.value = '';
+      staffPendingAttachmentRequestId = '';
+      refreshStaffFileSelection();
+      staffStatus.textContent = '送信しました。';
       await refreshStaffChat();
     } catch (error) {
-      staffStatus.textContent = '送信に失敗しました。' + error.message;
+      staffStatus.textContent = '送信に失敗しました。' + (error.message || '通信エラー');
     } finally {
       button.disabled = false;
+      $('staffAttachmentChoose').disabled = false;
+      staffAttachmentClear.disabled = false;
+      staffAttachmentInput.disabled = false;
     }
   });
 

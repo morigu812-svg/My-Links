@@ -1656,14 +1656,15 @@ function getStaffChatMessages(adminToken, browserId) {
   if (last < 2) return {messages: [], onlineCount, nickname};
 
   const first = Math.max(2, last - CHAT_MAX_MESSAGES + 1);
-  const messages = sheet.getRange(first, 1, last - first + 1, 5).getValues()
+  const messages = sheet.getRange(first, 1, last - first + 1, 9).getValues()
     .filter(row => row[0])
     .map(row => {
       const readers = String(row[4] || '').split(',').filter(Boolean);
       const own = !!browserId && row[3] === browserId;
       return {
         id: String(row[0]), author: nicknameFor(row[3]) || '管理者', message: String(row[1]), createdAt: toIso_(row[2]),
-        own, readCount: readers.length, unread: !!browserId && !own && !readers.includes(browserId)
+        own, readCount: readers.length, unread: !!browserId && !own && !readers.includes(browserId),
+        attachment: row[5] ? {name: String(row[6] || 'attachment'), mime: String(row[7] || ''), size: Number(row[8] || 0)} : null
       };
     });
   return {messages, onlineCount, nickname};
@@ -1722,6 +1723,123 @@ function sendStaffChatMessage(message, adminToken, browserId) {
   }
 }
 
+/* ===== 管理者専用チャット：非公開Drive添付 ===== */
+const STAFF_ATTACHMENT_MAX_BYTES = 2 * 1024 * 1024;
+const STAFF_ATTACHMENT_FOLDER_PROPERTY = 'LINK_CORE_STAFF_ATTACHMENTS_FOLDER_ID';
+const STAFF_ATTACHMENT_MIME = Object.freeze({
+  png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif',
+  webp: 'image/webp', pdf: 'application/pdf', txt: 'text/plain', csv: 'text/csv',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+});
+
+function staffAttachmentFolder_() {
+  const props = PropertiesService.getScriptProperties();
+  const savedId = props.getProperty(STAFF_ATTACHMENT_FOLDER_PROPERTY);
+  if (savedId) return DriveApp.getFolderById(savedId);
+  const folder = DriveApp.createFolder('LINK CORE - Private Staff Chat Attachments');
+  props.setProperty(STAFF_ATTACHMENT_FOLDER_PROPERTY, folder.getId());
+  return folder;
+}
+
+function staffAttachmentFileIsInFolder_(file) {
+  const id = PropertiesService.getScriptProperties().getProperty(STAFF_ATTACHMENT_FOLDER_PROPERTY);
+  if (!id) return false;
+  const parents = file.getParents();
+  while (parents.hasNext()) if (parents.next().getId() === id) return true;
+  return false;
+}
+
+function validateStaffAttachment_(payload) {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) throw new Error('添付データが不正です。');
+  const filename = String(payload.name || '').replace(/[\\/]/g, '_').replace(/[\x00-\x1f\x7f]/g, '').trim();
+  if (!filename || filename.length > 150 || filename.charAt(0) === '.') throw new Error('ファイル名を確認してください（150文字以内）。');
+  const ext = filename.includes('.') ? filename.split('.').pop().toLowerCase() : '';
+  const mime = STAFF_ATTACHMENT_MIME[ext];
+  if (!mime) throw new Error('このファイル形式は添付できません。');
+  const incomingMime = String(payload.mime || '').toLowerCase();
+  if (incomingMime && incomingMime !== mime && !(ext === 'csv' && incomingMime === 'application/vnd.ms-excel')) {
+    throw new Error('ファイルの拡張子と形式が一致しません。');
+  }
+  const expectedSize = Number(payload.size);
+  if (!Number.isSafeInteger(expectedSize) || expectedSize < 1 || expectedSize > STAFF_ATTACHMENT_MAX_BYTES) {
+    throw new Error('添付ファイルの容量は2MB以内にしてください。');
+  }
+  const encoded = payload.base64;
+  if (typeof encoded !== 'string' || encoded.length > Math.ceil(STAFF_ATTACHMENT_MAX_BYTES / 3) * 4 + 4 ||
+      !/^[A-Za-z0-9+/]+={0,2}$/.test(encoded)) throw new Error('添付データの形式が不正です。');
+  const bytes = Utilities.base64Decode(encoded);
+  if (bytes.length !== expectedSize) throw new Error('ファイルサイズが一致しません。');
+  const b = index => bytes[index] & 255;
+  const ascii = (start, length) => bytes.slice(start, start + length).map(x => String.fromCharCode(x & 255)).join('');
+  if (ext === 'pdf' && ascii(0, 5) !== '%PDF-') throw new Error('PDFの内容を確認してください。');
+  if (ext === 'png' && (bytes.length < 8 || [137,80,78,71,13,10,26,10].some((n,i) => b(i) !== n))) throw new Error('PNGの内容を確認してください。');
+  if ((ext === 'jpg' || ext === 'jpeg') && (bytes.length < 3 || b(0) !== 255 || b(1) !== 216 || b(2) !== 255)) throw new Error('JPEGの内容を確認してください。');
+  if (ext === 'gif' && ascii(0, 4) !== 'GIF8') throw new Error('GIFの内容を確認してください。');
+  if (ext === 'webp' && (ascii(0, 4) !== 'RIFF' || ascii(8, 4) !== 'WEBP')) throw new Error('WebPの内容を確認してください。');
+  if (['docx','xlsx','pptx'].includes(ext) && !(b(0) === 80 && b(1) === 75)) throw new Error('Officeファイルの内容を確認してください。');
+  return {filename, mime, bytes, size: expectedSize};
+}
+
+/** 投稿とファイルを1回の呼び出しで作成。requestIdでタイムアウト後の再送を冪等化。 */
+function sendStaffChatAttachment(message, payload, requestId, browserId, adminToken) {
+  requireAdmin_(adminToken);
+  if (!validStaffBrowserId_(browserId)) throw new Error('送信元ブラウザを確認できません。');
+  if (typeof requestId !== 'string' || !/^[0-9a-f-]{36}$/i.test(requestId)) throw new Error('送信IDが不正です。');
+  const body = cleanText_(message, CHAT_MAX_LENGTH);
+  const attachment = validateStaffAttachment_(payload);
+  const lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  let uploaded = null;
+  try {
+    requireAdmin_(adminToken);
+    const sheet = staffChatSheet_(true);
+    const last = sheet.getLastRow();
+    if (last >= 2) {
+      const ids = sheet.getRange(2, 10, last - 1, 1).getDisplayValues();
+      if (ids.some(row => row[0] === requestId)) return {ok: true, duplicate: true};
+    }
+    const folder = staffAttachmentFolder_();
+    const blob = Utilities.newBlob(attachment.bytes, attachment.mime, attachment.filename);
+    uploaded = folder.createFile(blob);
+    sheet.appendRow([
+      Utilities.getUuid(), safeCell_(body), new Date(), browserId, '',
+      uploaded.getId(), safeCell_(attachment.filename), attachment.mime, attachment.size, requestId
+    ]);
+    return {ok: true};
+  } catch (error) {
+    if (uploaded) {
+      try { uploaded.setTrashed(true); } catch (cleanupError) { console.error('添付の後始末に失敗:', cleanupError); }
+    }
+    throw error;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/** Drive共有URLは渡さず、認証済み管理者に該当投稿のデータのみ返す。 */
+function getStaffChatAttachment(messageId, adminToken) {
+  requireAdmin_(adminToken);
+  if (typeof messageId !== 'string' || !/^[0-9a-f-]{36}$/i.test(messageId)) throw new Error('投稿IDが不正です。');
+  const sheet = staffChatSheet_(false);
+  const last = sheet ? sheet.getLastRow() : 0;
+  if (last < 2) throw new Error('添付ファイルは見つかりませんでした。');
+  const rows = sheet.getRange(2, 1, last - 1, 9).getValues();
+  const row = rows.find(item => String(item[0]) === messageId);
+  if (!row || !row[5]) throw new Error('この投稿には添付ファイルがありません。');
+  const file = DriveApp.getFileById(String(row[5]));
+  if (!staffAttachmentFileIsInFolder_(file) || file.isTrashed()) throw new Error('添付ファイルを取得できません。');
+  if (file.getSize() > STAFF_ATTACHMENT_MAX_BYTES) throw new Error('添付ファイルが容量上限を超えています。');
+  const blob = file.getBlob();
+  return {
+    name: String(row[6] || 'attachment'),
+    mime: String(row[7] || 'application/octet-stream'),
+    size: file.getSize(),
+    base64: Utilities.base64Encode(blob.getBytes())
+  };
+}
+
 function deleteStaffChatMessage(id, browserId, adminToken) {
   requireAdmin_(adminToken);
   if (typeof id !== 'string' || !/^[0-9a-f-]{36}$/i.test(id) || !validStaffBrowserId_(browserId)) {
@@ -1735,11 +1853,18 @@ function deleteStaffChatMessage(id, browserId, adminToken) {
     const last = sheet ? sheet.getLastRow() : 0;
     if (last < 2) return {ok: true};
     const first = Math.max(2, last - CHAT_MAX_MESSAGES + 1);
-    const rows = sheet.getRange(first, 1, last - first + 1, 4).getValues();
+    const rows = sheet.getRange(first, 1, last - first + 1, 9).getValues();
     const index = rows.findIndex(row => row[0] === id);
     if (index < 0) return {ok: true};
     if (rows[index][3] !== browserId) throw new Error('自分の投稿のみ削除できます。');
+    const attachmentId = String(rows[index][5] || '');
     sheet.deleteRow(first + index);
+    if (attachmentId) {
+      try {
+        const attachmentFile = DriveApp.getFileById(attachmentId);
+        if (staffAttachmentFileIsInFolder_(attachmentFile)) attachmentFile.setTrashed(true);
+      } catch (error) { console.error('投稿削除後のDrive添付削除に失敗:', error); }
+    }
     return {ok: true};
   } finally {
     lock.releaseLock();
@@ -1754,6 +1879,9 @@ function staffChatSheet_(create) {
   if (!sheet && create) sheet = spreadsheet.insertSheet('AdminChatMessages');
   if (create && sheet.getLastRow() === 0) sheet.appendRow(['ID', 'メッセージ', '送信日時', '送信元ブラウザ', '既読ブラウザ']);
   if (create && sheet.getLastColumn() === 3) sheet.getRange(1, 4, 1, 2).setValues([['送信元ブラウザ', '既読ブラウザ']]);
+  if (create && sheet.getLastColumn() < 10) {
+    sheet.getRange(1, 6, 1, 5).setValues([['添付DriveID', '添付ファイル名', '添付MIME', '添付サイズ', '添付送信ID']]);
+  }
   return sheet;
 }
 

@@ -182,6 +182,19 @@ Google スプレッドシート（スクリプト プロパティ DAILY_CORE_SPR
   `Code.gs` や `bridge.html` を変更したときは、GAS の再デプロイが必要です。
   新しいサーバー関数を追加したときは `bridge.html` の `ALLOWED_METHODS` への追加も忘れないでください。
 
+### 管理者専用チャットのファイル添付
+
+- 管理者画面の「管理者専用チャット」で「📎 添付」を押すと、1投稿に1ファイル（最大2 MiB）を送信できます。
+- 対応形式：PNG、JPEG、GIF、WebP、PDF、TXT、CSV、DOCX、XLSX、PPTX。
+- 添付のみの投稿も可能です。管理者ログイン中に限りダウンロードできます。
+- 初回送信時、GASの実行アカウントのGoogle Drive直下に `LINK CORE - Private Staff Chat Attachments` フォルダが作成されます。**フォルダを共有・公開しないでください。**
+- フォルダIDはスクリプトプロパティ `LINK_CORE_STAFF_ATTACHMENTS_FOLDER_ID` に記録されます。変更や削除は慎重に行ってください。
+- `AdminChatMessages` の既存の5列は維持し、6〜10列目にDrive ID・名前・MIMEタイプ・サイズ・送信IDを追加します。古い投稿はそのまま読めます。
+- 投稿を削除すると紐づくDriveファイルもゴミ箱へ移動します。失敗した場合はGAS実行ログに記録されるため、管理者がDrive側を確認してください。
+- 添付のアップロードはタイムアウトまで最大60秒。通信エラー後は同じファイル・本文で再送しても重複しないよう送信IDを記録します。
+- **新しいGASコードとbridge.htmlを両方反映し、Driveスコープを承認してGASを再デプロイ**してください。公開GitHub Pagesの更新だけでは動作しません。
+- 管理者個人の独立したGoogleログインではなく、既存の管理者トークンを使ったアクセス制御です。共有された管理者パスワードでログインした人には添付ファイルの取得権限があります。
+
 ## PWA について
 
 - `manifest.webmanifest` を `index.html` / `admin.html` で読み込み、
