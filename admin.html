@@ -912,7 +912,10 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
     <textarea id="staffChatInput" aria-label="管理者へのメッセージ" maxlength="1000" rows="2" placeholder="管理者へのメッセージ（ファイルのみでも送信可）"></textarea>
     <input id="staffAttachmentInput" type="file" accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.txt,.csv,.docx,.xlsx,.pptx" hidden aria-label="添付ファイルを選択">
     <button type="button" id="staffAttachmentChoose" class="staff-file-button" aria-label="ファイルを添付">📎 添付</button>
+    <input id="staffScreenshotInput" type="file" accept="image/*" hidden aria-label="共有するスクリーンショットを選択">
+    <button type="button" id="staffScreenshotChoose" class="staff-file-button" aria-describedby="staffScreenshotHint">スクリーンショットを共有</button>
     <button type="submit" id="staffChatSend">送信</button>
+    <span id="staffScreenshotHint" class="chat-subtitle">端末で撮影した画像を選ぶと、上の送信先にすぐ送信されます。</span>
     <span id="staffAttachmentInfo" role="status" aria-live="polite" hidden></span>
     <button type="button" id="staffAttachmentClear" hidden>添付を解除</button>
   </form>
@@ -2675,6 +2678,8 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
 
   const staffAttachmentInput = $('staffAttachmentInput');
   const staffAttachmentInfo = $('staffAttachmentInfo');
+  const staffScreenshotInput = $('staffScreenshotInput');
+  const staffScreenshotChoose = $('staffScreenshotChoose');
   const staffAttachmentClear = $('staffAttachmentClear');
   const STAFF_MAX_FILE_BYTES = 2 * 1024 * 1024;
   const staffAllowedExtensions = new Set(['png','jpg','jpeg','gif','webp','pdf','txt','csv','docx','xlsx','pptx']);
@@ -2709,12 +2714,22 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
       reader.readAsDataURL(file);
     });
   }
-  $('staffChatForm').addEventListener('submit', async event => {
+  $('staffChatForm').addEventListener('submit', event => {
     event.preventDefault();
+    void sendStaffChatPost();
+  });
+  staffScreenshotChoose.addEventListener('click', () => staffScreenshotInput.click());
+  staffScreenshotInput.addEventListener('change', () => {
+    const image = staffScreenshotInput.files[0];
+    staffScreenshotInput.value = '';
+    if (image) void sendStaffChatPost(image);
+  });
+
+  async function sendStaffChatPost(screenshot = null) {
     const button = $('staffChatSend');
-    const body = staffInput.value;
-    const file = staffAttachmentInput.files[0] || null;
-    if (button.disabled || (!body.trim() && !file)) return;
+    const body = screenshot ? '' : staffInput.value;
+    const file = screenshot ? null : staffAttachmentInput.files[0] || null;
+    if (button.disabled || (!body.trim() && !file && !screenshot)) return;
     const token = adminSession.getItem(ADMIN_TOKEN_KEY);
     if (!token) return;
     const destination = staffRecipientSelect.value;
@@ -2751,12 +2766,20 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
     $('staffAttachmentChoose').disabled = true;
     staffAttachmentClear.disabled = true;
     staffAttachmentInput.disabled = true;
+    staffScreenshotChoose.disabled = true;
     staffRecipientSelect.disabled = true;
     staffRecipientCode.disabled = true;
-    staffStatus.textContent = recipientId ? '個人宛てに送信しています…' : (file ? 'ファイルを送信しています…' : '送信しています…');
+    staffStatus.textContent = recipientId ? '個人宛てに送信しています…' : (file || screenshot ? 'ファイルを送信しています…' : '送信しています…');
     try {
       let result;
-      if (file) {
+      if (screenshot) {
+        const image = await encodeChatScreenshot(screenshot);
+        if (token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
+        const base64 = image.slice(image.indexOf(',') + 1);
+        result = await serverCall('sendStaffChatAttachment', '', {
+          name: 'screenshot.jpg', mime: 'image/jpeg', size: atob(base64).length, base64
+        }, crypto.randomUUID(), staffBrowserId, ...(staffOwnMailbox ? [recipientId] : []));
+      } else if (file) {
         const base64 = await staffFileAsBase64(file);
         if (!staffPendingAttachmentRequestId) {
           staffPendingAttachmentRequestId = crypto.randomUUID();
@@ -2769,10 +2792,12 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
       }
       if (!result || !result.ok) throw new Error('送信の完了を確認できませんでした。');
       if (token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
-      if (staffInput.value === body) staffInput.value = '';
-      if (staffAttachmentInput.files[0] === file) staffAttachmentInput.value = '';
-      staffPendingAttachmentRequestId = '';
-      refreshStaffFileSelection();
+      if (!screenshot) {
+        if (staffInput.value === body) staffInput.value = '';
+        if (staffAttachmentInput.files[0] === file) staffAttachmentInput.value = '';
+        staffPendingAttachmentRequestId = '';
+        refreshStaffFileSelection();
+      }
       staffStatus.textContent = recipientId ? '個人宛てに送信しました。' : '送信しました。';
       await refreshStaffChat();
     } catch (error) {
@@ -2782,10 +2807,11 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
       $('staffAttachmentChoose').disabled = false;
       staffAttachmentClear.disabled = false;
       staffAttachmentInput.disabled = false;
+      staffScreenshotChoose.disabled = false;
       staffRecipientSelect.disabled = false;
       staffRecipientCode.disabled = false;
     }
-  });
+  }
 
   const memoOverlay = $('memoOverlay');
   const memoFrame = $('memoFrame');
