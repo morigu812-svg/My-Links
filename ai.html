@@ -68,7 +68,7 @@ textarea:focus,select:focus{border-color:#4bd5ea}
 <div class="content">
   <div class="eyebrow">PRIVATE IN-BROWSER INTELLIGENCE</div>
   <h1>AIチャット</h1>
-  <p class="intro">WebLLMを使い、AIモデルをこの端末で実行します。<strong>会話本文をAI APIやGASへ送信しません。</strong> APIキー・API課金は不要です。</p>
+  <p class="intro">LINK COREの機能は確認済みのヘルプ情報から正確に案内し、それ以外の質問にはWebLLMで回答します。<strong>会話本文をAI APIやGASへ送信しません。</strong> APIキー・API課金は不要です。</p>
   <div class="setup">
     <div><label for="modelSelect">モデルを選択</label>
       <select id="modelSelect">
@@ -78,7 +78,7 @@ textarea:focus,select:focus{border-color:#4bd5ea}
     </div>
     <button class="primary" type="button" id="startButton">AIを起動</button>
   </div>
-  <p class="info" id="siteKnowledgeStatus" role="status" aria-live="polite"><strong>サイト情報：</strong> LINK COREの機能説明を参照できます。登録リンク情報は、LINK COREのメニューから開いた場合に取り込みます。</p>
+  <p class="info" id="siteKnowledgeStatus" role="status" aria-live="polite"><strong>サイト情報：</strong> LINK COREの確認済みヘルプはAIの起動前にも使えます。登録リンク名はLINK COREのメニューから開いた場合に参照します。</p>
   <p class="info"><strong>初回のみ：</strong>起動時にAIプログラムとモデル（数百MB以上の場合あり）を外部配信元からダウンロードし、ブラウザにキャッシュします。Wi-Fi推奨。空き容量・WebGPU対応が必要です。<strong>起動ボタンを押すまでダウンロードしません。</strong> 会話履歴はこのタブのメモリだけに保持し、保存・共有しません。</p>
   <div class="status" id="status" role="status" aria-live="polite">AIは停止中です。「AIを起動」で端末の対応状況を確認します。</div>
   <progress id="loadProgress" max="1" value="0" hidden aria-label="モデルの読み込み進捗"></progress>
@@ -87,20 +87,21 @@ textarea:focus,select:focus{border-color:#4bd5ea}
   </div>
   <form class="compose" id="chatForm">
     <label for="prompt" class="small">メッセージ</label>
-    <textarea id="prompt" maxlength="3000" rows="3" placeholder="質問を入力…（Enterで送信／Shift + Enterで改行）" disabled></textarea>
+    <textarea id="prompt" maxlength="3000" rows="3" placeholder="LINK COREの機能を質問／自由に質問（Enterで送信）"></textarea>
     <div class="actions">
       <span class="small" id="sessionInfo">会話の保存なし ・ 外部AI APIへの送信なし</span>
       <div class="controls">
-        <button class="secondary" type="button" id="askAboutSite" disabled>LINK COREの機能を質問</button>
-        <button class="secondary" type="button" id="newChat" disabled>新しい会話</button>
+        <button class="secondary" type="button" id="askAboutSite">LINK COREの機能を質問</button>
+        <button class="secondary" type="button" id="newChat">新しい会話</button>
         <button class="secondary" type="button" id="stopButton" hidden disabled>停止</button>
-        <button class="primary" type="submit" id="sendButton" disabled>送信</button>
+        <button class="primary" type="submit" id="sendButton">送信</button>
       </div>
     </div>
   </form>
-  <p class="disclaimer">※ 小型モデルのため回答が不正確な場合があります。最新ニュースの検索、Webサイトへのアクセス、LINK COREのスプレッドシートの直接読み取りはできません。LINK COREから開いたときのみ、画面に取得済みのリンク名・カテゴリを参照します。AIの生成結果は重要な用途では必ず確認してください。モデル配信元への初回ダウンロード通信は発生します。</p>
+  <p class="disclaimer">※ LINK COREの標準機能については確認済みのヘルプで回答します。それ以外は小型モデルのため回答が不正確な場合があります。最新ニュースの検索、Webサイトへのアクセス、LINK COREのスプレッドシートの直接読み取りはできません。LINK COREから開いたときのみ、画面に取得済みのリンク名・カテゴリを参照します。AIの生成結果は重要な用途では必ず確認してください。モデル配信元への初回ダウンロード通信は発生します。</p>
 </div>
 </main></div>
+<script src="./linkcore-knowledge.js"></script>
 <script type="module">
 const $ = (id) => document.getElementById(id);
 const searchParams = new URLSearchParams(location.search);
@@ -146,7 +147,7 @@ function updateSiteKnowledgeStatus() {
   const label = $('siteKnowledgeStatus');
   if (!label) return;
   if (!siteContext.received) {
-    label.textContent = 'サイト情報：LINK COREの機能説明を参照できます。登録リンク情報はLINK COREの画面内から開いたときに受信します。';
+    label.textContent = 'サイト情報：LINK COREの機能は確認済みヘルプで回答できます。登録リンク名はLINK CORE内から開いた場合のみ参照します。';
   } else {
     label.textContent = 'サイト情報：LINK COREの機能説明＋' +
       (siteContext.role === 'admin' ? '管理者画面' : '利用者画面') + 'のリンク名 ' +
@@ -207,20 +208,21 @@ function status(message, level) {
 }
 function setBusy(value) {
   busy = value;
-  $('sendButton').disabled = value || !loaded;
-  $('prompt').disabled = value || !loaded;
-  $('newChat').disabled = value || !loaded;
-  $('askAboutSite').disabled = value || !loaded;
+  // LINK COREのヘルプはWebLLM未起動でも利用できる。
+  $('sendButton').disabled = value;
+  $('prompt').disabled = value;
+  $('newChat').disabled = value;
+  $('askAboutSite').disabled = value;
   $('stopButton').hidden = !value || !loaded;
   $('stopButton').disabled = !value || !loaded;
 }
-function appendMessage(role, message) {
+function appendMessage(role, message, verified = false) {
   $('welcome')?.remove();
   const article = document.createElement('article');
   article.className = 'message ' + role;
   const sender = document.createElement('span');
   sender.className = 'sender';
-  sender.textContent = role === 'user' ? 'YOU' : 'LINK CORE AI';
+  sender.textContent = role === 'user' ? 'YOU' : (verified ? 'LINK CORE ヘルプ・仕様に基づく回答' : 'LINK CORE AI');
   const bubble = document.createElement('div');
   bubble.className = 'bubble';
   bubble.textContent = message;
@@ -296,12 +298,12 @@ $('startButton').addEventListener('click', async () => {
 });
 
 $('askAboutSite').addEventListener('click', () => {
-  if (!loaded || busy) return;
+  if (busy) return;
   $('prompt').value = 'LINK COREにはどんな機能がありますか？';
   $('prompt').focus();
 });
 $('newChat').addEventListener('click', async () => {
-  if (busy || !loaded) return;
+  if (busy) return;
   turns = [];
   showWelcome();
   $('prompt').value = '';
@@ -327,11 +329,34 @@ $('prompt').addEventListener('keydown', (event) => {
 
 $('chatForm').addEventListener('submit', async (event) => {
   event.preventDefault();
-  if (!loaded || busy || !engine) return;
+  if (busy) return;
   const prompt = $('prompt').value.trim();
   if (!prompt) return;
   $('prompt').value = '';
   appendMessage('user', prompt);
+  if (window.matchMedia('(pointer: coarse)').matches) $('prompt').blur();
+  // サイト固有の質問には、幻覚が起きる小型LLMではなく仕様に基づく確定回答を返す。
+  const trusted = window.LinkCoreKnowledge?.answer(prompt, siteContext) || null;
+  if (trusted) {
+    appendMessage('assistant', trusted.answer, true);
+    turns.push({role: 'user', content: prompt}, {role: 'assistant', content: trusted.answer});
+    if (turns.length > 12) turns = turns.slice(-12);
+    status('LINK COREの確認済みヘルプから回答しました。', 'ready');
+    return;
+  }
+  // サイトについて資料がない質問を、一般モデルが知っているかのように断定させない。
+  const looksSiteSpecific = /(?:link\s*core|リンクコア|このサイト|このページ)/i.test(prompt) &&
+    /(?:機能|使い方|設定|どこ|方法|できる|何|なぜ|どう|とは)/.test(prompt);
+  if (looksSiteSpecific) {
+    appendMessage('assistant', 'この質問について、LINK COREの確認済み資料だけでは正確な回答を確定できません。機能名を具体的に聞くか、管理者に確認してください。', true);
+    status('根拠がないため、推測回答を避けました。', 'ready');
+    return;
+  }
+  if (!loaded || !engine) {
+    appendMessage('assistant', 'この質問にはAIモデルが必要です。上の「AIを起動」を押してください。LINK COREの機能・登録リンクについては、起動前でも質問できます。');
+    status('一般的な質問にはAIの起動が必要です。');
+    return;
+  }
   const answerBubble = appendMessage('assistant', '考えています…');
   stopRequested = false;
   setBusy(true);
@@ -371,7 +396,7 @@ $('chatForm').addEventListener('submit', async (event) => {
     status('生成エラー：' + (error?.message || String(error)) + '。会話を短くするかページを再読み込みしてください。', 'error');
   } finally {
     setBusy(false);
-    $('prompt').focus();
+    if (window.matchMedia('(pointer: fine)').matches) $('prompt').focus();
   }
 });
 </script>
