@@ -808,6 +808,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
       </details>
       <button class="side-item" type="button" id="sideTrash"><span>🗑</span> ゴミ箱</button>
       <button class="side-item" type="button" id="sideDiagnosis"><span>🩺</span> リンク診断</button>
+      <button class="side-item" type="button" id="openAdminHelp" aria-haspopup="dialog"><span aria-hidden="true">?</span> 管理者機能の使い方</button>
       <button class="side-item" type="button" id="sidePageGuide"><span aria-hidden="true">ⓘ</span> このページの仕組み</button>
       <button class="side-item" type="button" id="sideShare"><span>⤴</span> このページを共有</button>
       <div class="side-label">カテゴリ</div>
@@ -898,6 +899,30 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
 </main>
 
 <div id="undoToast" class="undo-toast" hidden role="status" aria-live="polite"><span id="undoToastText"></span><button id="undoToastRestore" type="button">元に戻す</button><button id="undoToastClose" type="button" aria-label="閉じる">×</button></div>
+<dialog id="adminHelp" aria-labelledby="adminHelpTitle">
+  <h2 id="adminHelpTitle">管理者機能の使い方</h2>
+  <p>知りたい機能を選ぶと、操作手順が開きます。</p>
+  <details><summary>リンクの追加・編集</summary><p>「リンクを追加」を押し、タイトルとURLを入力します。フォルダーを階層にする場合は「勉強/数学」のように指定します。登録済みのリンクはカードの「編集」から変更できます。</p></details>
+  <details><summary>公開・お気に入り・NEW</summary><p>「利用者ページに公開する」にチェックを入れて保存すると、利用者画面に表示されます。カードの星でお気に入りを切り替え、「NEWラベルを表示する」で新着の目印を付けられます。</p></details>
+  <details><summary>公式リンク</summary><p>左メニューの「公式リンク」を開き、フォームに名前とURLを入力して追加します。登録済みの公式リンクは一覧から削除できます。</p></details>
+  <details><summary>削除とゴミ箱</summary><p>通常リンクのカードで「削除」を押すとゴミ箱に移ります。直後は「元に戻す」、後からは「ゴミ箱」の「復元」を使います。「完全に削除」や「ゴミ箱を空にする」を実行すると復元できません。</p></details>
+  <details><summary>リンク診断</summary><p>「リンク診断」を開いて「診断する」を押します。開けない可能性があるURLや、重複して登録されたURLを確認できます。</p></details>
+  <details><summary>管理者専用チャット</summary><p>「チャット」→「管理者専用チャット」を開き、メッセージを送信します。読んだ投稿は「既読にする」を押します。右上の未読通知からもチャットを開けます。</p></details>
+  <details><summary>利用者チャット</summary><p>「チャット」→「利用者チャット」を開きます。宛先欄を空にして送ると全員に表示されます。特定の利用者に送るときは、その利用者から受け取った個別チャットIDを宛先欄に貼り付けます。</p></details>
+  <details><summary>ブラウザ連携</summary><p>メインの管理者専用チャットで「ブラウザ連携」を開いてコードをコピーします。サブブラウザで同じ画面を開き、貼り付けて「サブとして登録」を押します。連携後は、サブからの新規投稿も自分の投稿として扱われます。</p></details>
+  <details><summary>メモ帳</summary><p>左メニューの「メモ帳」を開き、専用パスワードを入力します。メモは新規作成でき、一覧から開いて編集・削除できます。</p></details>
+  <details><summary>リンク操作履歴</summary><p>「ログ」→「リンク操作履歴」で、通常リンクの追加・編集・削除の日時とリンク名を確認できます。最新の記録を見るには「再読み込み」を押します。</p></details>
+  <details><summary>利用者ログイン履歴</summary><p>「ログ」→「利用者ログイン履歴」で、ログイン成功日時とブラウザIDを確認できます。各行の「削除」で1件ずつ、表の上のボタンですべて削除できます。</p></details>
+  <details><summary>クリック履歴</summary><p>「ログ」→「クリック履歴」で、利用者が開いたリンクと日時、ブラウザIDを確認できます。各行の削除と全件削除ができます。</p></details>
+  <details><summary>共有とログアウト</summary><p>「このページを共有」で利用者画面のURLやQRコードを共有できます。「ログアウト」は現在のセッションを終了し、「全ブラウザをログアウト」は管理者と利用者の発行済みセッションを一括で失効させます。</p></details>
+  <form method="dialog" class="foot"><button class="btn" type="submit" autofocus>閉じる</button></form>
+</dialog>
+<style>
+#adminHelp { width:min(680px,calc(100% - 24px)); max-height:85vh; overflow:auto; }
+#adminHelp details { border-bottom:1px solid #28485c; padding:10px 0; }
+#adminHelp summary { cursor:pointer; color:#d9f1ff; font-weight:650; }
+#adminHelp p { line-height:1.65; }
+</style>
 <dialog id="dlg">
   <form id="form" method="dialog">
     <h2 id="dlgTitle">リンクを追加</h2>
@@ -1130,6 +1155,9 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   // 管理者パスワードと利用者ページ用パスワードを初回に設定する。
   const authGate = $('authGate');
   const authForm = $('authForm');
+  $('openAdminHelp').addEventListener('click', () => {
+    if (adminSession.getItem(ADMIN_TOKEN_KEY)) $('adminHelp').showModal();
+  });
   const authField = $('authPassword');
   const authError = $('authError');
   const authTitle = $('authTitle');
@@ -1205,6 +1233,7 @@ function watchSessionExpiry(deadline, onExpired) {
 
   let resumeLinkEdit = false;
   function showAdminReauthentication(message) {
+    $('adminHelp').close();
     $('staffBrowserDialog').close();
     $('staffBrowserCode').value = '';
     $('staffBrowserLink').value = '';
