@@ -1109,6 +1109,18 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   });
 
   const state = { links: [], categories: [], category: '', query: '', busy: false, view: 'all' };
+  // 管理者自身に表示されるリンクの名前・カテゴリのみローカルAIに渡す。
+  // メモ・URL・パスワード・トークンは共有しない。
+  window.getLinkCoreAiContext = () => ({
+    role: 'admin',
+    links: adminSession.getItem('linkCoreAdminToken')
+      ? state.links.map(link => ({
+          title: String(link.title || ''),
+          category: String(link.category || ''),
+          favorite: link.favorite === true
+        }))
+      : []
+  });
 
   // GAS Webアプリ（?mode=bridge）を隠しiframeで読み込み、postMessageで通信する。
   const GAS_URL = 'https://script.google.com/macros/s/AKfycbwr6gUhjgC_zcazwXqDKOqHqiWt1t-NOjrz3IiOjP-NVaXvAJpKOKQ8Ez6It1qKvkxzFw/exec';
@@ -5597,5 +5609,6 @@ var qrcode = function() {
   }
 }
 </style>
+<script src="./ai-launcher.js"></script>
 </body>
 </html>

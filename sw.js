@@ -11,7 +11,7 @@
  */
 'use strict';
 
-var CACHE_VERSION = 'link-core-v22';
+var CACHE_VERSION = 'link-core-v23';
 var STATIC_CACHE = 'link-core-static-' + CACHE_VERSION;
 var DATA_CACHE = 'link-core-data-' + CACHE_VERSION;
 
@@ -22,6 +22,7 @@ var STATIC_ASSETS = [
   './index.html',
   './admin.html',
   './ai.html',
+  './ai-launcher.js',
   './memos.html',
   './bridge.html',
   './manifest.webmanifest',

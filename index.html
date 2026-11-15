@@ -568,6 +568,18 @@ function showClickLogNotice(message,isError){
 }
 
 let links=[],categories=[],view='favorites',selectedCategory='',visitorToken='';
+// ログイン中の公開リンク名・フォルダー名だけをローカルAIに渡す。
+// URL、メモ、管理者専用リンク、認証トークンは渡さない。
+window.getLinkCoreAiContext = () => ({
+  role: 'viewer',
+  links: visitorToken && !$('linksPanel').classList.contains('hidden')
+    ? publicLinks(links).map(link => ({
+        title: String(link.title || ''),
+        category: String(link.category || ''),
+        favorite: link.favorite === true
+      }))
+    : []
+});
 
 const READ_NEW_LINKS_KEY='linkCoreReadNewLinksV1';
 let readNewLinkIds=new Set();
@@ -3651,4 +3663,5 @@ var qrcode = function() {
   border-color: transparent !important;
 }
 </style>
+<script src="./ai-launcher.js"></script>
 </body></html>
