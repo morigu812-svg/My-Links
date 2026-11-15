@@ -11,7 +11,7 @@
  */
 'use strict';
 
-var CACHE_VERSION = 'link-core-v21';
+var CACHE_VERSION = 'link-core-v22';
 var STATIC_CACHE = 'link-core-static-' + CACHE_VERSION;
 var DATA_CACHE = 'link-core-data-' + CACHE_VERSION;
 
@@ -21,6 +21,7 @@ var STATIC_ASSETS = [
   './',
   './index.html',
   './admin.html',
+  './ai.html',
   './memos.html',
   './bridge.html',
   './manifest.webmanifest',
@@ -63,7 +64,10 @@ self.addEventListener('activate', function (event) {
   event.waitUntil(
     caches.keys().then(function (keys) {
       return Promise.all(keys.map(function (key) {
-        if (key !== STATIC_CACHE && key !== DATA_CACHE) return caches.delete(key);
+        // WebLLM等がCache APIに保存するモデルデータは削除しない。
+        // LINK COREが管理する古いキャッシュだけ削除する。
+        if ((key.indexOf('link-core-static-') === 0 || key.indexOf('link-core-data-') === 0) &&
+            key !== STATIC_CACHE && key !== DATA_CACHE) return caches.delete(key);
         return Promise.resolve();
       }));
     }).then(function () {

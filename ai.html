@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#07111b">
+<meta name="robots" content="noindex, nofollow">
+<title>LOCAL AI | LINK CORE</title>
+<link rel="icon" type="image/svg+xml" href="./link-core-icon.svg">
+<link rel="manifest" href="./manifest.webmanifest">
+<style>
+:root{color-scheme:dark;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;background:#06101c;color:#e2f3ff}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%}
+body{background:radial-gradient(ellipse at 10% 0,rgba(8,91,138,.18),transparent 40%),radial-gradient(ellipse at 100% 100%,rgba(16,94,86,.12),transparent 38%),#06101c}
+button,select,textarea{font:inherit}
+button{cursor:pointer}button:disabled,select:disabled,textarea:disabled{cursor:not-allowed;opacity:.55}
+a{color:#78e6ff}
+.wrap{max-width:1060px;margin:22px auto;padding:0 14px 30px}
+.window{border:1px solid #24607d;background:rgba(7,18,32,.95);border-radius:14px;overflow:hidden;box-shadow:0 22px 70px #0007,0 0 22px #00dcff0b}
+.toolbar{min-height:60px;border-bottom:1px solid #274b60;background:#0a182a;display:flex;gap:12px;align-items:center;justify-content:space-between;padding:13px 18px}
+.brand{min-width:0;display:flex;align-items:center;gap:12px;font-weight:760}
+.lights{display:flex;gap:6px}.lights i{width:11px;height:11px;border-radius:50%;background:#f78b8e}.lights i:nth-child(2){background:#edc16b}.lights i:nth-child(3){background:#6dcc98}
+.brand-label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.back{text-decoration:none;color:#a7d3e4;font-size:12px;padding:8px 10px;border:1px solid #30536d;border-radius:8px;white-space:nowrap}
+.back:hover{background:#102a43}
+.content{padding:20px}
+.eyebrow{letter-spacing:.16em;text-transform:uppercase;color:#62ddf1;font-weight:790;font-size:11px}
+h1{font-size:25px;letter-spacing:-.035em;margin:5px 0 9px}
+.intro{color:#a2bdce;font-size:13px;line-height:1.7;margin:0 0 18px}
+.setup{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:13px;align-items:end;background:#0b1c31;border:1px solid #23445f;padding:16px;border-radius:12px}
+.setup label{color:#afcde0;font-size:12px;font-weight:720;display:block;margin-bottom:7px}
+select{width:100%;padding:10px 11px;border:1px solid #3a6782;border-radius:8px;background:#081626;color:#dff6ff;outline-offset:3px}
+.primary{background:linear-gradient(135deg,#24badb,#18a899);color:#02141b;border:0;border-radius:9px;font-weight:800;padding:11px 17px;min-height:42px}
+.primary:hover:not(:disabled){filter:brightness(1.08)}
+.secondary{border:1px solid #345a70;background:#10263a;color:#c0e6ef;border-radius:8px;padding:9px 12px;min-height:40px}
+.secondary:hover:not(:disabled){background:#173651}
+.info{margin:12px 0 16px;color:#9eb9c8;font-size:12px;line-height:1.65}
+.info strong{color:#d5f3ff}
+.status{border:1px solid #2b5368;border-radius:9px;padding:12px 13px;color:#b7dfed;font-size:12px;line-height:1.6;min-height:46px;background:#092034}
+.status[data-level="error"]{border-color:#b56a77;color:#ffd0d7;background:#2a1421}
+.status[data-level="ready"]{border-color:#307b66;color:#d2ffe5;background:#0b2928}
+progress{width:100%;height:8px;margin:10px 0 6px;accent-color:#35d9ff}
+.messages{margin-top:16px;height:min(52vh,530px);min-height:270px;overflow-y:auto;overscroll-behavior:contain;border-radius:12px;border:1px solid #294b60;padding:17px;background:linear-gradient(#071523,#081d2f);display:flex;flex-direction:column;gap:15px}
+.message{display:flex;flex-direction:column;gap:5px;max-width:min(90%,760px)}
+.message.user{align-self:flex-end;align-items:flex-end}
+.message.assistant{align-self:flex-start}
+.sender{font-size:11px;letter-spacing:.08em;color:#7ca4b6;font-weight:740}
+.bubble{padding:11px 14px;line-height:1.75;font-size:14px;border:1px solid #31526b;border-radius:12px;background:#10263a;white-space:pre-wrap;overflow-wrap:anywhere;min-width:42px}
+.message.user .bubble{border-color:#208d9b;background:#123e4c}
+.hello{align-self:center;text-align:center;max-width:580px;color:#9ebbd0;font-size:13px;line-height:1.7;padding:16px}
+.hello strong{color:#b5f6ff;font-size:16px}
+.compose{margin-top:12px;display:grid;gap:10px}
+textarea{resize:vertical;min-height:89px;max-height:210px;width:100%;padding:12px 13px;line-height:1.6;border:1px solid #35647d;border-radius:10px;background:#081727;color:#e5f5ff;outline-offset:3px}
+textarea:focus,select:focus{border-color:#4bd5ea}
+.actions{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.controls{display:flex;gap:8px}
+.small{color:#8aabbc;font-size:11px}
+.disclaimer{margin:16px 0 0;color:#849faf;font-size:11px;line-height:1.7}
+@media(max-width:600px){.wrap{margin:0;padding:0}.window{border-radius:0;min-height:100dvh}.toolbar{padding:12px}.content{padding:14px}h1{font-size:22px}.setup{grid-template-columns:1fr}.messages{height:48dvh;min-height:250px;padding:11px}.message{max-width:96%}.back{font-size:11px}}
+</style>
+</head>
+<body>
+<div class="wrap"><main class="window">
+<header class="toolbar">
+  <div class="brand"><span class="lights" aria-hidden="true"><i></i><i></i><i></i></span><span class="brand-label">✧ LINK CORE / LOCAL AI</span></div>
+  <a id="backLink" class="back" href="./index.html">← LINK COREへ戻る</a>
+</header>
+<div class="content">
+  <div class="eyebrow">PRIVATE IN-BROWSER INTELLIGENCE</div>
+  <h1>AIチャット</h1>
+  <p class="intro">WebLLMを使い、AIモデルをこの端末で実行します。<strong>会話本文をAI APIやGASへ送信しません。</strong> APIキー・API課金は不要です。</p>
+  <div class="setup">
+    <div><label for="modelSelect">モデルを選択</label>
+      <select id="modelSelect">
+        <option value="SmolLM2-360M-Instruct-q4f32_1-MLC">軽量：SmolLM2 360M（推奨・速度優先）</option>
+        <option value="Qwen2.5-0.5B-Instruct-q4f32_1-MLC">日本語優先：Qwen2.5 0.5B（メモリ多め）</option>
+      </select>
+    </div>
+    <button class="primary" type="button" id="startButton">AIを起動</button>
+  </div>
+  <p class="info"><strong>初回のみ：</strong>起動時にAIプログラムとモデル（数百MB以上の場合あり）を外部配信元からダウンロードし、ブラウザにキャッシュします。Wi-Fi推奨。空き容量・WebGPU対応が必要です。<strong>起動ボタンを押すまでダウンロードしません。</strong> 会話履歴はこのタブのメモリだけに保持し、保存・共有しません。</p>
+  <div class="status" id="status" role="status" aria-live="polite">AIは停止中です。「AIを起動」で端末の対応状況を確認します。</div>
+  <progress id="loadProgress" max="1" value="0" hidden aria-label="モデルの読み込み進捗"></progress>
+  <div id="messages" class="messages" role="log" aria-label="AIとの会話" aria-live="polite" aria-relevant="additions text">
+    <div id="welcome" class="hello"><strong>✧ LINK CORE AI</strong><div>ブラウザの中だけで動くAIチャットです。<br>モデルを起動すると、ここから質問できます。</div></div>
+  </div>
+  <form class="compose" id="chatForm">
+    <label for="prompt" class="small">メッセージ</label>
+    <textarea id="prompt" maxlength="3000" rows="3" placeholder="質問を入力…（Enterで送信／Shift + Enterで改行）" disabled></textarea>
+    <div class="actions">
+      <span class="small" id="sessionInfo">会話の保存なし ・ 外部AI APIへの送信なし</span>
+      <div class="controls">
+        <button class="secondary" type="button" id="newChat" disabled>新しい会話</button>
+        <button class="secondary" type="button" id="stopButton" hidden disabled>停止</button>
+        <button class="primary" type="submit" id="sendButton" disabled>送信</button>
+      </div>
+    </div>
+  </form>
+  <p class="disclaimer">※ 小型モデルのため回答が不正確な場合があります。最新ニュースの検索、Webサイトへのアクセス、LINK COREのスプレッドシートの読み取りはできません。AIの生成結果は重要な用途では必ず確認してください。モデル配信元への初回ダウンロード通信は発生します。</p>
+</div>
+</main></div>
+<script type="module">
+const $ = (id) => document.getElementById(id);
+const back = new URLSearchParams(location.search).get('from') === 'admin' ? './admin.html' : './index.html';
+$('backLink').href = back;
+$('backLink').textContent = back.includes('admin') ? '← 管理者画面に戻る' : '← 利用者画面に戻る';
+
+const MODELS = new Set(['SmolLM2-360M-Instruct-q4f32_1-MLC', 'Qwen2.5-0.5B-Instruct-q4f32_1-MLC']);
+const SYSTEM = 'あなたはLINK CORE内の日本語AIアシスタントです。短めで分かりやすく日本語で回答してください。ネット検索やLINK COREデータへのアクセスはできません。分からないことは推測と明示してください。';
+let engine = null;
+let busy = false;
+let loaded = false;
+let stopRequested = false;
+let turns = [];
+
+function status(message, level) {
+  $('status').textContent = message;
+  $('status').dataset.level = level || 'info';
+}
+function setBusy(value) {
+  busy = value;
+  $('sendButton').disabled = value || !loaded;
+  $('prompt').disabled = value || !loaded;
+  $('newChat').disabled = value || !loaded;
+  $('stopButton').hidden = !value || !loaded;
+  $('stopButton').disabled = !value || !loaded;
+}
+function appendMessage(role, message) {
+  $('welcome')?.remove();
+  const article = document.createElement('article');
+  article.className = 'message ' + role;
+  const sender = document.createElement('span');
+  sender.className = 'sender';
+  sender.textContent = role === 'user' ? 'YOU' : 'LINK CORE AI';
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  bubble.textContent = message;
+  article.append(sender, bubble);
+  $('messages').append(article);
+  $('messages').scrollTop = $('messages').scrollHeight;
+  return bubble;
+}
+function showWelcome() {
+  $('messages').replaceChildren();
+  const hello = document.createElement('div');
+  hello.id = 'welcome';
+  hello.className = 'hello';
+  const strong = document.createElement('strong');
+  strong.textContent = '✧ 新しい会話';
+  const note = document.createElement('div');
+  note.textContent = '質問を入力してAIと会話できます。';
+  hello.append(strong, note);
+  $('messages').append(hello);
+}
+
+if (!window.isSecureContext || !navigator.gpu) {
+  status('この環境ではWebGPUを使えません。対応するブラウザ・端末で開いてください。AI APIへの自動切り替えはしません。', 'error');
+  $('startButton').disabled = true;
+}
+
+$('startButton').addEventListener('click', async () => {
+  if (loaded || busy) return;
+  const model = $('modelSelect').value;
+  if (!MODELS.has(model)) {
+    status('不正なモデルが選択されました。', 'error');
+    return;
+  }
+  busy = true;
+  $('startButton').disabled = true;
+  $('modelSelect').disabled = true;
+  $('loadProgress').hidden = false;
+  status('WebGPU対応状況を確認しています…');
+  try {
+    if (!navigator.gpu || !window.isSecureContext) throw new Error('WebGPUを利用できません。');
+    const adapter = await navigator.gpu.requestAdapter();
+    if (!adapter) throw new Error('GPUアダプターを利用できません。端末やブラウザがWebGPU非対応の可能性があります。');
+    status('WebLLMを読み込んでいます…');
+    const webllm = await import('https://esm.run/@mlc-ai/web-llm@0.2.88');
+    const knownModels = webllm.prebuiltAppConfig?.model_list || [];
+    if (!knownModels.some((item) => item.model_id === model)) {
+      throw new Error('選択したモデルがこのWebLLM版で利用できません。別のモデルを選択してください。');
+    }
+    engine = await webllm.CreateMLCEngine(model, {
+      appConfig: {...webllm.prebuiltAppConfig, cacheBackend: 'cache'},
+      initProgressCallback: (report) => {
+        const progress = Number(report?.progress);
+        if (Number.isFinite(progress)) $('loadProgress').value = Math.min(1, Math.max(0, progress));
+        status('モデルを読み込み中：' + String(report?.text || '処理中…'));
+      }
+    });
+    loaded = true;
+    status('AIの起動が完了しました。この端末内で回答を生成します。', 'ready');
+    $('loadProgress').hidden = true;
+    $('startButton').textContent = '起動済み';
+    $('sessionInfo').textContent = '端末内処理 ・ 履歴はこのタブ限り';
+    setBusy(false);
+    $('prompt').focus();
+  } catch (error) {
+    engine = null;
+    status('起動できませんでした：' + (error?.message || String(error)) + '。WebGPUの対応状況、端末のメモリ、ストレージ、通信環境を確認してください。', 'error');
+    $('loadProgress').hidden = true;
+    $('startButton').disabled = false;
+    $('modelSelect').disabled = false;
+  } finally {
+    busy = false;
+  }
+});
+
+$('newChat').addEventListener('click', async () => {
+  if (busy || !loaded) return;
+  turns = [];
+  showWelcome();
+  $('prompt').value = '';
+  status('新しい会話を開始しました。', 'ready');
+  $('prompt').focus();
+});
+
+$('stopButton').addEventListener('click', () => {
+  if (!busy || !loaded) return;
+  stopRequested = true;
+  $('stopButton').disabled = true;
+  status('回答の停止を要求しました…');
+  try { engine?.interruptGenerate?.(); }
+  catch (error) { status('停止要求に失敗しました：' + (error?.message || 'エラー'), 'error'); }
+});
+
+$('prompt').addEventListener('keydown', (event) => {
+  if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
+    event.preventDefault();
+    if (!$('sendButton').disabled) $('chatForm').requestSubmit();
+  }
+});
+
+$('chatForm').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  if (!loaded || busy || !engine) return;
+  const prompt = $('prompt').value.trim();
+  if (!prompt) return;
+  $('prompt').value = '';
+  appendMessage('user', prompt);
+  const answerBubble = appendMessage('assistant', '考えています…');
+  stopRequested = false;
+  setBusy(true);
+  status('回答を端末内で生成しています…');
+  try {
+    // 小型モデルのコンテキストに収めるため直近の会話だけ使う。
+    const history = turns.slice(-10).map(item => ({role: item.role, content: item.content.slice(0, 3000)}));
+    const messages = [{role: 'system', content: SYSTEM}, ...history, {role: 'user', content: prompt}];
+    const chunks = await engine.chat.completions.create({
+      messages, stream: true, max_tokens: 256, temperature: 0.7
+    });
+    let answer = '';
+    for await (const chunk of chunks) {
+      const delta = chunk?.choices?.[0]?.delta?.content;
+      if (typeof delta === 'string') answer += delta;
+      answerBubble.textContent = answer || '回答を生成しています…';
+      $('messages').scrollTop = $('messages').scrollHeight;
+    }
+    if (stopRequested) {
+      answerBubble.textContent = answer ? answer + '\n（生成を停止しました）' : '生成を停止しました。';
+      status('生成を停止しました。', 'ready');
+    } else if (!answer.trim()) {
+      answerBubble.textContent = '回答が得られませんでした。別の聞き方で試してください。';
+      status('回答が空でした。', 'error');
+    } else {
+      turns.push({role: 'user', content: prompt}, {role: 'assistant', content: answer});
+      if (turns.length > 12) turns = turns.slice(-12);
+      status('回答が完了しました。', 'ready');
+    }
+  } catch (error) {
+    answerBubble.textContent = '回答の生成に失敗しました。';
+    status('生成エラー：' + (error?.message || String(error)) + '。会話を短くするかページを再読み込みしてください。', 'error');
+  } finally {
+    setBusy(false);
+    $('prompt').focus();
+  }
+});
+</script>
+</body>
+</html>
