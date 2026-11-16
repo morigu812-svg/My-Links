@@ -112,6 +112,10 @@ h1 sup{margin-left:8px;vertical-align:top;font-size:11px;letter-spacing:.1em;col
 .empty::before{content:"↗";display:block;margin-bottom:7px;font-size:25px;color:var(--accent)}
 .site-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:18px 4px 0;color:#6f879a;font-size:9px;font-weight:750;letter-spacing:.12em}
 .site-footer b{color:var(--accent);font-size:13px;letter-spacing:0}
+.site-footer .site-footer-links{display:inline-flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap}
+.site-footer .site-footer-links a{color:inherit;text-decoration:none;font:inherit;letter-spacing:inherit;transition:color .15s ease}
+.site-footer .site-footer-links a:hover,.site-footer .site-footer-links a:focus-visible{color:var(--accent);text-decoration:underline;text-underline-offset:3px}
+.site-footer .site-footer-links a:focus-visible{outline:2px solid var(--accent);outline-offset:4px;border-radius:2px}
 dialog{width:min(560px,calc(100% - 24px));border:1px solid #47657a;border-radius:14px;background:#101a27;color:var(--ink);padding:24px;box-shadow:0 20px 70px rgba(0,0,0,.65)}
 dialog::backdrop{background:rgba(0,3,10,.78);backdrop-filter:blur(3px)}
 dialog h2{font-size:21px;color:var(--accent);margin:0 0 16px}
@@ -1046,7 +1050,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
     </section>
   </div>
   </div>
-  <footer class="site-footer"><span><b>LC.</b> LINK CORE</span><span>YOUR LINKS. YOUR FLOW.</span><span>DESIGNED TO STAY ORGANIZED <i>✳</i></span></footer>
+  <footer class="site-footer"><span><b>LC.</b> LINK CORE</span><span>YOUR LINKS. YOUR FLOW.</span><span class="site-footer-links"><a href="https://github.com/morigu812-svg/My-Links" target="_blank" rel="noopener noreferrer">GitHub</a><a href="https://www.youtube.com/watch?v=vyOpaNZYQPQ" target="_blank" rel="noopener noreferrer">YouTube</a></span></footer>
 </main>
 
 <div id="undoToast" class="undo-toast" hidden role="status" aria-live="polite"><span id="undoToastText"></span><button id="undoToastRestore" type="button">元に戻す</button><button id="undoToastClose" type="button" aria-label="閉じる">×</button></div>
