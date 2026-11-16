@@ -957,6 +957,10 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
   #staffChatOverlay #staffTalkList { gap: 16px; }
   #staffChatOverlay button.staff-talk-row { padding-inline: 10px; }
 }
+#staffChatOverlay:has(#staffTalkRoom:not([hidden])) > :is(.section-heading, #staffChatStatus, #staffTalkRoom) {
+  max-width: 760px;
+  margin-inline: auto;
+}
 #staffChatOverlay .staff-message-scroll {
   border: 1px solid var(--line);
   border-radius: 12px;
