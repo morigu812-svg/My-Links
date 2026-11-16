@@ -1042,7 +1042,6 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
   .staff-message-list { padding: 10px; }
   .staff-message { max-width: 90%; }
 }
-#staffChatOverlay .staff-private-tag { margin:0 0 2px; color:#b5a4ff; font-size:11px; font-weight:750; }
 #staffChatForm .staff-file-button { flex:0 0 auto; white-space:nowrap; }
 #staffAttachmentInfo { flex:1 1 100%; min-width:0; font-size:12px; color:var(--sub); overflow-wrap:anywhere; }
 #staffAttachmentClear { flex:0 0 auto; }
@@ -2994,7 +2993,7 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
   }
 
   function renderStaffMessages(messages, token) {
-      const key = JSON.stringify(messages.map(item => [item.id, item.readCount, item.unread, item.own, item.author, item.private, item.recipientName, item.attachment?.name]));
+      const key = JSON.stringify(messages.map(item => [item.id, item.readCount, item.unread, item.own, item.author, item.attachment?.name]));
       if (key !== staffRenderKey) {
         closeStaffMessageActions();
         const cards = messages.map(item => {
@@ -3020,12 +3019,6 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
           line.className = 'staff-message-line';
           line.append(bubble);
           card.append(line);
-          if (item.private && item.own) {
-            const tag = document.createElement('div');
-            tag.className = 'staff-private-tag';
-            tag.textContent = '🔒 個人宛 → ' + (item.recipientName || '管理者');
-            bubble.prepend(tag);
-          }
           if (item.attachment) {
             const fileCard = document.createElement('div');
             fileCard.className = 'staff-file-card';
