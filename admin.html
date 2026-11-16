@@ -828,17 +828,136 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
 }
 
 #staffChatOverlay [hidden] { display:none!important; }
-#staffChatOverlay #staffTalks { display:grid; gap:8px; }
-#staffChatOverlay #staffTalks .btn, #staffChatOverlay #staffOpenEveryone { width:100%; text-align:left; overflow-wrap:anywhere; }
-#staffChatOverlay #staffTalkList { margin:12px 0; }
-#staffChatOverlay .staff-recipient-bar { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; gap:10px; margin:13px 0 4px; }
-#staffChatOverlay .staff-recipient-bar label { display:grid; gap:5px; font-size:12px; color:var(--sub); font-weight:650; min-width:0; }
-#staffChatOverlay #staffChatRecipient, #staffChatOverlay #staffChatRecipientCode { width:100%; min-width:0; padding:9px 10px; border:1px solid #2b6786; border-radius:8px; color:var(--ink); background:#0b1d30; font-size:14px; }
-#staffChatOverlay #staffMailboxCopy { min-height:39px; padding:7px 11px; border:1px solid #286b8c; border-radius:8px; background:#122b3f; color:#9ee8fc; font-size:12px; }
-#staffChatOverlay #staffRecipientCodeWrap { display:grid; gap:5px; margin-top:7px; color:var(--sub); font-size:12px; }
-#staffChatOverlay #staffRecipientCodeWrap[hidden] { display:none!important; }
+#staffChatOverlay > .section-heading {
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+#staffChatOverlay .click-log-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+#staffChatOverlay .click-log-actions > button { min-height: 40px; padding: 7px 11px; font-size: 12px; }
+#staffChatOverlay #staffChatStatus:empty { display: none; }
+#staffChatOverlay #staffTalkList { display: grid; gap: 20px; }
+#staffChatOverlay #staffTalks { display: grid; gap: 6px; }
+#staffChatOverlay .staff-talk-label {
+  margin: 0 0 8px;
+  color: var(--sub);
+  font-size: 13px;
+  font-weight: 650;
+}
+#staffChatOverlay button.staff-talk-row {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 12px;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  min-height: 62px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--ink);
+  text-align: left;
+  box-shadow: none;
+}
+body:not(.night-mode) #staffChatOverlay button.staff-talk-row {
+  border-color: var(--line) !important;
+  background: #0d1928 !important;
+}
+body:not(.night-mode) #staffChatOverlay button#staffOpenEveryone {
+  border-color: #2b6786 !important;
+  background: linear-gradient(105deg, #103047, #171d35) !important;
+}
+body:not(.night-mode) #staffChatOverlay button.staff-talk-row:hover {
+  border-color: #53a8bf !important;
+  box-shadow: 0 0 14px #00d9ff18 !important;
+  transform: none;
+}
+#staffChatOverlay :is(button, summary, select, input):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.staff-talk-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid #2a536d;
+  border-radius: 50%;
+  background: #142d41;
+  color: #b7e9fc;
+  font-weight: 700;
+  font-size: 15px;
+}
+#staffOpenEveryone .staff-talk-icon { border-radius: 11px; background: #16445a; }
+.staff-talk-text { display: grid; min-width: 0; gap: 3px; overflow-wrap: anywhere; }
+.staff-talk-text strong { font-size: 15px; line-height: 1.3; }
+.staff-talk-text small { color: var(--sub); font-size: 11px; line-height: 1.35; }
+.staff-talk-arrow {
+  justify-self: center;
+  width: 7px;
+  height: 7px;
+  border-top: 1.5px solid var(--sub);
+  border-right: 1.5px solid var(--sub);
+  transform: rotate(45deg);
+}
+.staff-talk-empty { margin: 0; padding: 12px 14px; color: var(--sub); font-size: 13px; }
+#staffChatOverlay #staffNewTalk {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #0d1928;
+}
+#staffChatOverlay #staffNewTalk > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 14px;
+  list-style: none;
+  cursor: pointer;
+  color: #b7e9fc;
+  font-size: 14px;
+  font-weight: 650;
+}
+#staffChatOverlay #staffNewTalk > summary::-webkit-details-marker { display: none; }
+#staffChatOverlay #staffNewTalk > summary:hover { color: var(--ink); }
+#staffChatOverlay #staffNewTalk > summary .staff-talk-arrow { margin-inline-start: auto; }
+#staffChatOverlay #staffNewTalk[open] > summary .staff-talk-arrow { transform: rotate(135deg); }
+#staffChatOverlay .staff-new-talk-form {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--line);
+}
+#staffChatOverlay .staff-new-talk-form label {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  color: var(--sub);
+  font-size: 12px;
+  font-weight: 650;
+}
+#staffChatOverlay :is(#staffChatRecipient, #staffChatRecipientCode) {
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid #2b6786;
+  border-radius: 8px;
+  background: #0b1d30;
+  color: var(--ink);
+  font-size: 16px;
+}
+#staffChatOverlay .staff-new-talk-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+#staffChatOverlay .staff-new-talk-actions > button { min-height: 40px; padding: 7px 11px; font-size: 12px; }
+body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 !important; }
+@media (max-width: 540px) {
+  #staffChatOverlay #staffTalkList { gap: 16px; }
+  #staffChatOverlay button.staff-talk-row { padding-inline: 10px; }
+}
 #staffChatOverlay .staff-private-tag { margin:0 0 6px; color:#b5a4ff; font-size:11px; font-weight:750; }
-@media(max-width:560px){#staffChatOverlay .staff-recipient-bar{grid-template-columns:minmax(0,1fr)}#staffChatOverlay #staffMailboxCopy{justify-self:start}}
 #staffChatForm .staff-file-button { flex:0 0 auto; white-space:nowrap; }
 #staffAttachmentInfo { flex:1 1 100%; min-width:0; font-size:12px; color:var(--sub); overflow-wrap:anywhere; }
 #staffAttachmentClear { flex:0 0 auto; }
@@ -971,21 +1090,29 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
     </div>
     <div class="chat-subtitle" id="staffChatStatus" role="status"></div>
     <div id="staffTalkList">
-      <button id="staffOpenEveryone" class="btn" type="button">全体トーク</button>
-      <h3>個別トーク</h3>
-      <div id="staffTalks"></div>
+      <button id="staffOpenEveryone" class="staff-talk-row" type="button">
+        <span class="staff-talk-icon" aria-hidden="true">全</span>
+        <span class="staff-talk-text"><strong>全体トーク</strong><small>管理者全員</small></span>
+        <span class="staff-talk-arrow" aria-hidden="true"></span>
+      </button>
+      <section aria-labelledby="staffPrivateTalkLabel">
+        <h3 id="staffPrivateTalkLabel" class="staff-talk-label">個別トーク</h3>
+        <div id="staffTalks"></div>
+      </section>
       <details id="staffNewTalk">
-        <summary>新しいトーク</summary>
-        <div class="staff-recipient-bar">
+        <summary><span aria-hidden="true">＋</span> 新しいトーク<span class="staff-talk-arrow" aria-hidden="true"></span></summary>
+        <div class="staff-new-talk-form">
           <label for="staffChatRecipient">相手を選択
             <select id="staffChatRecipient"></select>
           </label>
-          <button id="staffMailboxCopy" type="button" disabled>自分の宛先コードをコピー</button>
+          <label id="staffRecipientCodeWrap" for="staffChatRecipientCode" hidden>相手の宛先コード
+            <input id="staffChatRecipientCode" type="text" placeholder="mbx-から始まる宛先コード" maxlength="68" autocomplete="off" spellcheck="false">
+          </label>
+          <div class="staff-new-talk-actions">
+            <button id="staffStartTalk" class="btn" type="button" disabled>トークを開く</button>
+            <button id="staffMailboxCopy" class="btn" type="button" disabled>自分の宛先コードをコピー</button>
+          </div>
         </div>
-        <label id="staffRecipientCodeWrap" for="staffChatRecipientCode" hidden>相手の宛先コード
-          <input id="staffChatRecipientCode" type="text" placeholder="mbx-から始まる宛先コード" maxlength="68" autocomplete="off" spellcheck="false">
-        </label>
-        <button id="staffStartTalk" class="btn" type="button" disabled>トークを開く</button>
       </details>
     </div>
     <div id="staffTalkRoom" hidden>
@@ -2549,13 +2676,33 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
     const cards = conversations.map(peer => {
       const button = document.createElement('button');
       button.type = 'button';
-      button.className = 'btn';
-      button.textContent = (peer.name || '管理者') + '  (' + peer.mailboxId.slice(4, 10) + ')';
+      button.className = 'staff-talk-row';
+      const name = peer.name?.trim() || '管理者';
+      const icon = document.createElement('span');
+      icon.className = 'staff-talk-icon';
+      icon.setAttribute('aria-hidden', 'true');
+      icon.textContent = Array.from(name)[0];
+      const label = document.createElement('span');
+      label.className = 'staff-talk-text';
+      const title = document.createElement('strong');
+      title.textContent = name;
+      const code = document.createElement('small');
+      code.textContent = peer.mailboxId.slice(4, 10);
+      label.append(title, code);
+      const arrow = document.createElement('span');
+      arrow.className = 'staff-talk-arrow';
+      arrow.setAttribute('aria-hidden', 'true');
+      button.append(icon, label, arrow);
       button.addEventListener('click', () => showStaffTalk(peer.mailboxId, peer.name));
       return button;
     });
     list.replaceChildren(...cards);
-    if (!cards.length) list.textContent = '個別トークはまだありません。';
+    if (!cards.length) {
+      const empty = document.createElement('p');
+      empty.className = 'staff-talk-empty';
+      empty.textContent = '個別トークはまだありません。';
+      list.append(empty);
+    }
   }
 
   staffRecipientSelect.addEventListener('change', () => {
