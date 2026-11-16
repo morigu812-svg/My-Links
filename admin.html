@@ -3020,10 +3020,10 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
           line.className = 'staff-message-line';
           line.append(bubble);
           card.append(line);
-          if (item.private) {
+          if (item.private && item.own) {
             const tag = document.createElement('div');
             tag.className = 'staff-private-tag';
-            tag.textContent = item.own ? '🔒 個人宛 → ' + (item.recipientName || '管理者') : '🔒 あなた宛の個人メッセージ';
+            tag.textContent = '🔒 個人宛 → ' + (item.recipientName || '管理者');
             bubble.prepend(tag);
           }
           if (item.attachment) {
