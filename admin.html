@@ -994,10 +994,45 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
   background: #103047;
 }
 .staff-message-body { white-space: pre-wrap; }
-.staff-message-meta, .staff-message-actions { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
-.staff-message.is-own :is(.staff-message-meta, .staff-message-actions) { justify-content: flex-end; }
+.staff-message-line { display: flex; align-items: center; gap: 6px; max-width: 100%; }
+.staff-message.is-own .staff-message-line { flex-direction: row-reverse; }
+.staff-message-line .staff-message-bubble { min-width: 0; }
+.staff-message-meta { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+.staff-message.is-own .staff-message-meta { justify-content: flex-end; }
 .staff-message-meta { color: var(--sub); font-size: 11px; }
-#staffChatOverlay .staff-message-actions > button { padding: 4px 8px; font-size: 11px; }
+#staffChatOverlay button.staff-message-more {
+  flex: 0 0 36px;
+  width: 36px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid transparent !important;
+  border-radius: 8px;
+  background: transparent !important;
+  color: var(--sub) !important;
+  box-shadow: none !important;
+  font-size: 20px;
+  line-height: 1;
+}
+#staffChatOverlay button.staff-message-more:is(:hover, [aria-expanded="true"]) {
+  border-color: var(--line) !important;
+  background: var(--panel-2) !important;
+  transform: none;
+}
+.staff-message-actions {
+  position: fixed;
+  z-index: 2147483000;
+  display: grid;
+  gap: 4px;
+  min-width: 110px;
+  max-width: calc(100vw - 16px);
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel-2);
+  box-shadow: 0 8px 24px #0008;
+}
+.staff-message-actions > button { min-height: 36px; padding: 6px 10px; font-size: 13px; }
+.staff-message-actions > button.danger { color: var(--danger) !important; }
 #staffChatOverlay .staff-message .staff-file-card { flex-wrap: wrap; }
 #staffChatOverlay .staff-message .staff-file-detail { min-width: 0; }
 .staff-message-notice { align-self: center; margin: auto; color: var(--sub); font-size: 13px; text-align: center; }
@@ -2906,7 +2941,50 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
     return Array.from(combined.values()).slice(-STAFF_MAX_VISIBLE);
   }
 
+  let openStaffMessageActions = null;
+
+  function closeStaffMessageActions(restoreFocus = false) {
+    if (!openStaffMessageActions) return;
+    const {trigger, actions} = openStaffMessageActions;
+    openStaffMessageActions = null;
+    trigger.setAttribute('aria-expanded', 'false');
+    actions.remove();
+    if (restoreFocus && trigger.isConnected) trigger.focus({preventScroll: true});
+  }
+
+  function toggleStaffMessageActions(trigger, actions) {
+    const wasOpen = openStaffMessageActions?.trigger === trigger;
+    closeStaffMessageActions();
+    if (wasOpen) return;
+    openStaffMessageActions = {trigger, actions};
+    trigger.setAttribute('aria-expanded', 'true');
+    document.body.append(actions);
+    const anchor = trigger.getBoundingClientRect();
+    const {width, height} = actions.getBoundingClientRect();
+    const left = Math.max(8, Math.min(anchor.left, window.innerWidth - width - 8));
+    const top = anchor.bottom + height + 12 <= window.innerHeight ? anchor.bottom + 4
+      : Math.max(8, anchor.top - height - 4);
+    actions.style.left = left + 'px';
+    actions.style.top = top + 'px';
+    actions.querySelector('button:not(:disabled)')?.focus({preventScroll: true});
+  }
+
+  document.addEventListener('click', event => {
+    if (openStaffMessageActions && !openStaffMessageActions.trigger.contains(event.target) &&
+        !openStaffMessageActions.actions.contains(event.target)) closeStaffMessageActions();
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && openStaffMessageActions) {
+      event.preventDefault();
+      event.stopPropagation();
+      closeStaffMessageActions(true);
+    }
+  }, true);
+  staffMessages.closest('.chat-table-wrap').addEventListener('scroll', () => closeStaffMessageActions());
+  window.addEventListener('resize', () => closeStaffMessageActions());
+
   function showStaffMessageNotice(text) {
+    closeStaffMessageActions();
     const notice = document.createElement('p');
     notice.className = 'staff-message-notice';
     notice.textContent = text;
@@ -2916,6 +2994,7 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
   function renderStaffMessages(messages, token) {
       const key = JSON.stringify(messages.map(item => [item.id, item.readCount, item.unread, item.own, item.author, item.private, item.recipientName, item.attachment?.name]));
       if (key !== staffRenderKey) {
+        closeStaffMessageActions();
         const cards = messages.map(item => {
           const card = document.createElement('article');
           card.className = item.own ? 'staff-message is-own' : 'staff-message';
@@ -2935,7 +3014,10 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
             body.textContent = item.message;
             bubble.append(body);
           }
-          card.append(bubble);
+          const line = document.createElement('div');
+          line.className = 'staff-message-line';
+          line.append(bubble);
+          card.append(line);
           if (item.private) {
             const tag = document.createElement('div');
             tag.className = 'staff-private-tag';
@@ -3007,6 +3089,9 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
           card.append(meta);
           const action = document.createElement('div');
           action.className = 'staff-message-actions';
+          action.id = 'staff-message-actions-' + item.id;
+          action.setAttribute('role', 'group');
+          action.setAttribute('aria-label', 'メッセージの操作');
           if (item.own && staffBrowserId) {
             const remove = document.createElement('button');
             remove.type = 'button';
@@ -3014,6 +3099,7 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
             remove.textContent = '削除';
             remove.addEventListener('click', async () => {
               if (remove.disabled || token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
+              closeStaffMessageActions(true);
               if (!confirm('この投稿を削除しますか？')) return;
               remove.disabled = true;
               try {
@@ -3040,6 +3126,7 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
             readButton.disabled = !item.unread;
             readButton.addEventListener('click', async () => {
               if (readButton.disabled || token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
+              closeStaffMessageActions(true);
               readButton.disabled = true;
               try {
                 const result = await serverCall('markStaffChatRead', [item.id], staffBrowserId, token);
@@ -3055,7 +3142,16 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
             });
             action.append(readButton);
           }
-          if (action.childElementCount) card.append(action);
+          if (action.childElementCount) {
+            const trigger = document.createElement('button');
+            trigger.type = 'button';
+            trigger.className = 'staff-message-more';
+            trigger.textContent = '…';
+            trigger.setAttribute('aria-label', 'メッセージの操作');
+            trigger.setAttribute('aria-expanded', 'false');
+            trigger.addEventListener('click', () => toggleStaffMessageActions(trigger, action));
+            line.append(trigger);
+          }
           return card;
         });
         const scrollArea = staffMessages.closest('.chat-table-wrap');
@@ -3220,6 +3316,7 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
   }
 
   function showStaffTalk(room, name = '', reset = false) {
+    closeStaffMessageActions();
     if (!reset && $('staffChatSend').disabled) return;
     if (!reset && staffActiveRoom !== null && (staffInput.value.trim() || staffAttachmentInput.files.length) &&
         !window.confirm('入力中のメッセージと添付を破棄しますか？')) return;
