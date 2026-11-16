@@ -1076,7 +1076,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   <details><summary>公式リンク</summary><p>左メニューの「公式リンク」を開き、フォームに名前とURLを入力して追加します。登録済みの公式リンクは一覧から削除できます。</p></details>
   <details><summary>削除とゴミ箱</summary><p>通常リンクのカードで「削除」を押すとゴミ箱に移ります。直後は「元に戻す」、後からは「ゴミ箱」の「復元」を使います。「完全に削除」や「ゴミ箱を空にする」を実行すると復元できません。</p></details>
   <details><summary>リンク診断</summary><p>「リンク診断」を開いて「診断する」を押します。開けない可能性があるURLや、重複して登録されたURLを確認できます。</p></details>
-  <details><summary>管理者専用チャット</summary><p>「チャット」→「管理者専用チャット」を開き、メッセージを送信します。読んだ投稿は「既読にする」を押します。右上の未読通知からもチャットを開けます。</p></details>
+  <details><summary>管理者専用チャット</summary><p>「チャット」→「管理者専用チャット」を開きます。メッセージが画面に表示されると、そのブラウザの未読投稿だけを自動で既読にします。過去の既読情報と他の管理者の既読は維持されます。通信に失敗した場合は「既読にする」を手動でも使えます。右上の未読通知からもチャットを開けます。</p></details>
   <details><summary>利用者チャット</summary><p>「チャット」→「利用者チャット」を開きます。宛先欄を空にして送ると全員に表示されます。特定の利用者に送るときは、その利用者から受け取った個別チャットIDを宛先欄に貼り付けます。</p></details>
   <details><summary>サブブラウザを設定</summary><p>メインブラウザで左メニューの「サブブラウザを設定」を開いてコードをコピーします。サブブラウザで同じ画面を開き、貼り付けて「サブとして登録」を押します。連携後は、サブからの新規投稿も自分の投稿として扱われます。</p></details>
   <details><summary>メモ帳</summary><p>左メニューの「メモ帳」を開き、専用パスワードを入力します。メモは新規作成でき、一覧から開いて編集・削除できます。</p></details>
@@ -2659,10 +2659,17 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
     $('staffChatNotice').hidden = !count || open;
   }
 
+  let staffRefreshRequestedWhileLoading = false;
   async function refreshStaffChat() {
     const token = adminSession.getItem(ADMIN_TOKEN_KEY);
-    if (!token || refreshStaffButton.disabled || document.hidden) return;
+    if (!token || document.hidden) return;
+    if (refreshStaffButton.disabled) {
+      // 閉じた状態でのポーリングとチャットを開く操作が重なったら、後で再取得する。
+      if (staffChat.classList.contains('open')) staffRefreshRequestedWhileLoading = true;
+      return;
+    }
     refreshStaffButton.disabled = true;
+    let refreshAfterAutoRead = false;
     try {
       const {messages, onlineCount, nickname, members, mailboxId} = await serverCall('getStaffChatMessages', token, staffBrowserId);
       if (token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
@@ -2794,11 +2801,43 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
         staffRenderKey = key;
       }
       staffStatus.textContent = messages.length ? '' : 'まだメッセージはありません。';
+      // 表示された管理者チャットだけを自動既読にする。
+      // GASのmarkStaffChatReadは、過去の既読IDを残したまま自分のIDを追記する。
+      // 未読の投稿IDのみ送るので、他の管理者の既読状態を上書きしない。
+      if (!document.hidden && staffChat.classList.contains('open') && staffBrowserId &&
+          token === adminSession.getItem(ADMIN_TOKEN_KEY)) {
+        const unreadIds = unread.filter(item => !item.own && typeof item.id === 'string')
+          .map(item => item.id);
+        if (unreadIds.length) {
+          try {
+            const result = await serverCall('markStaffChatRead', unreadIds, staffBrowserId, token);
+            if (!result?.ok) throw new Error('既読登録を確認できませんでした。');
+            if (!document.hidden && staffChat.classList.contains('open') &&
+                token === adminSession.getItem(ADMIN_TOKEN_KEY)) {
+              refreshAfterAutoRead = true;
+            }
+          } catch (error) {
+            if (token === adminSession.getItem(ADMIN_TOKEN_KEY) &&
+                staffChat.classList.contains('open')) {
+              staffStatus.textContent = '自動既読の更新に失敗しました。手動の「既読にする」で再試行できます：' +
+                (error?.message || '通信エラー');
+            }
+          }
+        }
+      }
     } catch (error) {
       $('staffOnlineCount').textContent = 'オンライン人数を取得できません';
       staffStatus.textContent = '読み込みに失敗しました。' + error.message;
     } finally {
       refreshStaffButton.disabled = false;
+      const requested = staffRefreshRequestedWhileLoading;
+      staffRefreshRequestedWhileLoading = false;
+      // 途中でreturnした場合も、チャットを開く操作を取りこぼさない。
+      if ((refreshAfterAutoRead || requested) && !document.hidden &&
+          staffChat.classList.contains('open') &&
+          token === adminSession.getItem(ADMIN_TOKEN_KEY)) {
+        void refreshStaffChat();
+      }
     }
   }
 
