@@ -382,6 +382,8 @@ function authenticateVisitor(password, browserId) {
   // 認証直後のリンク取得を同じ応答にまとめ、ブラウザーとの往復を1回減らす。
   const initialLinks = getLinksForToken_(token, false);
   recordVisitorLogin_(browserId);
+  // 同じブラウザは1日1回まで。ログイン履歴の削除とは独立して保存する。
+  recordVisitorCounter_(browserId);
   return {
     ok: true, token: token, expiresIn: SESSION_TTL_SECONDS,
     links: initialLinks.links, categories: initialLinks.categories
@@ -2025,6 +2027,111 @@ function getLinkOperationLogs(adminToken) {
       date: toIso_(date), action: String(action), linkId: String(linkId), title: String(title)
     }));
   return {logs};
+}
+
+/* ===== 利用者来客数：日本時間の日別ユニークブラウザ =====
+ * 既存のVisitorLoginLogsとは独立したVisitorCounterVisitsシート。
+ * 1行 = 1ブラウザ・1日。複数回のログインや再読み込みで重複しない。
+ * ブラウザIDはスクリプト固有saltによるHMAC-SHA256のみ保存し、生IDは記録しない。
+ * この統計は導入後の訪問が対象で、過去ログの削除や編集で変化しない。
+ */
+const VISITOR_COUNTER_SHEET = 'VisitorCounterVisits';
+const VISITOR_COUNTER_SALT_PROPERTY = 'LINK_CORE_VISITOR_COUNT_SALT';
+const VISITOR_COUNTER_TIMEZONE = 'Asia/Tokyo';
+
+function visitorCounterToday_() {
+  return Utilities.formatDate(new Date(), VISITOR_COUNTER_TIMEZONE, 'yyyy-MM-dd');
+}
+function visitorCounterDateKey_(value) {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return Utilities.formatDate(value, VISITOR_COUNTER_TIMEZONE, 'yyyy-MM-dd');
+  }
+  const day = String(value || '').trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : '';
+}
+function visitorCounterSheet_(create) {
+  const id = PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY);
+  if (!id) throw new Error('スプレッドシートIDが未設定です。');
+  const ss = SpreadsheetApp.openById(id);
+  let sheet = ss.getSheetByName(VISITOR_COUNTER_SHEET);
+  if (!sheet && create) {
+    sheet = ss.insertSheet(VISITOR_COUNTER_SHEET);
+    // yyyy-MM-ddがスプレッドシートのタイムゾーンで日付に変換されないよう文字列形式で保存。
+    sheet.getRange(1, 1, sheet.getMaxRows(), 1).setNumberFormat('@');
+  }
+  if (sheet && create && sheet.getLastRow() === 0) {
+    sheet.appendRow(['日付（JST）', 'ブラウザ識別子（ハッシュ）', '当日の初回来客日時']);
+  }
+  return sheet;
+}
+function recordVisitorCounter_(browserId) {
+  // 有効な識別子がない場合に仮のIDでカウントを増やさない。
+  if (typeof browserId !== 'string' || !/^[A-Za-z0-9_-]{8,100}$/.test(browserId)) return;
+  const lock = LockService.getScriptLock();
+  let acquired = false;
+  try {
+    lock.waitLock(10000);
+    acquired = true;
+    const properties = PropertiesService.getScriptProperties();
+    let salt = properties.getProperty(VISITOR_COUNTER_SALT_PROPERTY);
+    if (!salt) {
+      salt = Utilities.getUuid() + Utilities.getUuid();
+      properties.setProperty(VISITOR_COUNTER_SALT_PROPERTY, salt);
+    }
+    const digest = Utilities.computeHmacSha256Signature(browserId, salt)
+      .map(byte => (byte & 255).toString(16).padStart(2, '0')).join('');
+    const day = visitorCounterToday_();
+    const sheet = visitorCounterSheet_(true);
+    const last = sheet.getLastRow();
+    // 新規来客は下に追記されるので、当日の行だけを後ろから確認すればよい。
+    // チャンク読み込みを使い、同一日が大量件数でも重複判定できる。
+    let foundPriorDay = false;
+    for (let end = last; end >= 2 && !foundPriorDay; end -= 400) {
+      const start = Math.max(2, end - 399);
+      const rows = sheet.getRange(start, 1, end - start + 1, 2).getValues();
+      for (let i = rows.length - 1; i >= 0; i--) {
+        if (visitorCounterDateKey_(rows[i][0]) !== day) { foundPriorDay = true; break; }
+        if (String(rows[i][1]) === digest) return;
+      }
+    }
+    sheet.appendRow([day, digest, new Date()]);
+
+  } catch (error) {
+    // カウント機能のトラブルで利用者ログインを失敗させない。
+    console.error('利用者来客カウンターを記録できませんでした。', error && error.message ? error.message : error);
+  } finally {
+    if (acquired) lock.releaseLock();
+  }
+}
+/** 利用者には当日と累計、管理者には日付別履歴も返す。 */
+function getVisitorCounterStats(viewerToken) {
+  requireLinkViewer_(viewerToken);
+  const today = visitorCounterToday_();
+  const sheet = visitorCounterSheet_(false);
+  const last = sheet ? sheet.getLastRow() : 0;
+  const counts = Object.create(null);
+  let total = 0;
+  if (last >= 2) {
+    const values = sheet.getRange(2, 1, last - 1, 1).getValues();
+    values.forEach(row => {
+      const day = visitorCounterDateKey_(row[0]);
+      if (!day) return;
+      counts[day] = (counts[day] || 0) + 1;
+      total++;
+    });
+  }
+  const result = {today: counts[today] || 0, total: total, date: today};
+  if (isSessionValid_('ADMIN', viewerToken)) {
+    // 直近30日については来客0の日も表示する。
+    const keys = new Set(Object.keys(counts));
+    const [year, month, day] = today.split('-').map(Number);
+    for (let offset = 0; offset < 30; offset++) {
+      keys.add(new Date(Date.UTC(year, month - 1, day - offset)).toISOString().slice(0, 10));
+    }
+    result.days = Array.from(keys).sort().reverse().slice(0, 1000)
+      .map(date => ({date: date, count: counts[date] || 0}));
+  }
+  return result;
 }
 
 function recordVisitorLogin_(browserId) {

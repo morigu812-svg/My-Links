@@ -853,6 +853,13 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
 #finderWindow .link-feed-privacy-note a:focus-visible{outline:2px solid #35d9ff;outline-offset:3px}
 </style>
 <script src="./chat-screenshot.js?v=1" defer></script>
+<style id="visitor-counter-style">
+.visitor-counter-strip{display:flex;align-items:center;flex-wrap:wrap;gap:10px 20px;margin:11px 0 13px;padding:11px 14px;border:1px solid rgba(53,217,255,.28);border-radius:10px;background:rgba(14,38,51,.65);font-size:12px;color:#a9c7d4}
+.visitor-counter-strip strong{color:#82eaff;font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;margin-left:5px}
+.visitor-counter-strip .visitor-counter-detail{font-size:11px;color:#93b3c4}
+.visitor-counter-strip button{font-size:11px;cursor:pointer}
+@media(max-width:540px){.visitor-counter-strip{gap:8px 13px;padding:10px}}
+</style>
 </head>
 <body>
 <section id="authGate" class="auth-gate" aria-labelledby="authTitle">
@@ -906,6 +913,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
         <div class="sidebar-log-items">
           <button class="side-item" type="button" id="sideLinkOperations"><span>◷</span> リンク操作履歴</button>
           <button class="side-item" type="button" id="sideVisitorLogins"><span>◷</span> 利用者ログイン履歴</button>
+          <button class="side-item" type="button" id="sideVisitorCounter"><span>▥</span> 来客数カウンター</button>
           <button class="side-item" type="button" id="sideClickLogs"><span>◷</span> クリック履歴</button>
         </div>
       </details>
@@ -934,6 +942,12 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   <p>このページを絶対にバレないようにする方法がこちら↓↓↓</p>
   <a href="https://drive.google.com/file/d/1fAZYVmHeEtuCliQZAqE3PGiA2X2a_0oF/view?usp=sharing" target="_blank" rel="noopener noreferrer">https://drive.google.com/file/d/1fAZYVmHeEtuCliQZAqE3PGiA2X2a_0oF/view?usp=sharing</a>
 </div>
+    <div class="visitor-counter-strip" id="adminVisitorCounterStrip" role="status" aria-live="polite">
+      <span>今日の来客 <strong id="adminVisitorToday">—</strong></span>
+      <span>総来客 <strong id="adminVisitorTotal">—</strong></span>
+      <button id="adminVisitorCounterRefresh" type="button" class="btn">↻ 更新</button>
+      <span id="adminVisitorCounterStatus" class="visitor-counter-detail">日付別は「ログ → 来客数カウンター」</span>
+    </div>
     <div id="status" role="status" aria-live="polite"></div><button id="retryLoadButton" type="button" style="display:none;margin:8px 0;padding:9px 13px;border:1px solid #286b8c;border-radius:8px;background:#10283b;color:#9beaff;cursor:pointer"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:5px"><path d="M20 7v5h-5"/><path d="M20 12a8 8 0 1 1-2.3-5.7L20 9"/></svg>再試行</button>
     <div id="list" class="list loading-skeleton" role="status" aria-label="リンクを読み込み中"><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div></div>
   </section>
@@ -1289,7 +1303,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   }
 
   function serverCall(method, ...args) {
-    const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'getChatScreenshot', 'sendChatMessage', 'sendChatScreenshot', 'getStaffChatMessages', 'getStaffChatAttachment', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendStaffChatAttachment', 'deleteStaffChatMessage', 'sendPrivateChatMessage', 'getClickLogs', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
+    const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'getVisitorCounterStats', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'getChatScreenshot', 'sendChatMessage', 'sendChatScreenshot', 'getStaffChatMessages', 'getStaffChatAttachment', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendStaffChatAttachment', 'deleteStaffChatMessage', 'sendPrivateChatMessage', 'getClickLogs', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
     if (protectedMethods.includes(method)) {
       const token = adminSession.getItem(ADMIN_TOKEN_KEY) || '';
       // 呼び出し元（埋め込みメモ帳など）が既にトークンを渡している場合は二重追加しない。
@@ -1386,6 +1400,7 @@ function watchSessionExpiry(deadline, onExpired) {
     stopAdminExpiry = watchSessionExpiry(savedExpiry, reloadAfterAdminLogout);
     document.body.classList.remove('auth-locked');
     if (authGate) authGate.classList.add('is-hidden');
+    void refreshAdminVisitorCounter();
   }
 
   $('logoutAllBrowsers').addEventListener('click', async event => {
@@ -1479,6 +1494,7 @@ function watchSessionExpiry(deadline, onExpired) {
     if (authGate) authGate.classList.add('is-hidden');
     authField.value = '';
     refreshStaffChat();
+    void refreshAdminVisitorCounter();
     setBusy(true);
     setStatus('認証完了。リンクを読み込んでいます…', '');
 
@@ -1933,6 +1949,30 @@ document.getElementById('authSubmit').disabled = false;
     if (!other && !clickLogsLoaded) refreshClickLogs();
   }
   $('sideClickLogs').addEventListener('click',openClickLogs);
+  async function refreshAdminVisitorCounter() {
+    const token = adminSession.getItem(ADMIN_TOKEN_KEY);
+    if (!token) return;
+    const button = $('adminVisitorCounterRefresh');
+    button.disabled = true;
+    $('adminVisitorCounterStatus').textContent = '来客数を集計中…';
+    try {
+      const stats = await serverCall('getVisitorCounterStats');
+      if (token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
+      if (!stats || !Number.isFinite(Number(stats.today)) || !Number.isFinite(Number(stats.total))) {
+        throw new Error('来客数のデータが不正です。');
+      }
+      $('adminVisitorToday').textContent = Number(stats.today).toLocaleString('ja-JP') + '人';
+      $('adminVisitorTotal').textContent = Number(stats.total).toLocaleString('ja-JP') + '人';
+      $('adminVisitorCounterStatus').textContent = '1ブラウザにつき1日1回・JST（日付別はログから）';
+    } catch (error) {
+      if (token === adminSession.getItem(ADMIN_TOKEN_KEY)) {
+        $('adminVisitorCounterStatus').textContent = '取得失敗（GASの再デプロイが必要な可能性があります）。';
+      }
+    } finally {
+      button.disabled = false;
+    }
+  }
+  $('adminVisitorCounterRefresh').addEventListener('click', () => { void refreshAdminVisitorCounter(); });
   const otherHistories = [
   {
     "key": "linkOperations",
@@ -1957,6 +1997,14 @@ document.getElementById('authSubmit').disabled = false;
       "ブラウザID",
       "操作"
     ]
+  },
+  {
+    "key": "visitorCounter",
+    "side": "sideVisitorCounter",
+    "api": "getVisitorCounterStats",
+    "title": "来客数カウンター",
+    "description": "日本時間で1ブラウザにつき1日1回を集計。総来客数は日別来客数の合計です。記録開始前の来客は含みません。",
+    "columns": ["日付（JST）", "来客数"]
   }
 ];
   let activeHistory = null;
@@ -1972,13 +2020,15 @@ document.getElementById('authSubmit').disabled = false;
     button.disabled = true;
     status.textContent = '履歴を読み込んでいます…';
     try {
-      const {logs} = await serverCall(history.api);
+      const result = await serverCall(history.api);
       if (request !== historyRequest || token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
+      const isCounter = history.key === 'visitorCounter';
+      const logs = isCounter ? (Array.isArray(result.days) ? result.days : []) : (Array.isArray(result.logs) ? result.logs : []);
       const rows = logs.map(log => {
         const row = document.createElement('tr');
-        const cells = [new Date(log.date).toLocaleString('ja-JP')];
+        const cells = isCounter ? [log.date, Number(log.count || 0).toLocaleString('ja-JP') + '人'] : [new Date(log.date).toLocaleString('ja-JP')];
         if (history.key === 'linkOperations') cells.push(log.action, log.title || log.linkId);
-        else cells.push(log.browserId || '未記録');
+        else if (history.key === 'visitorLogins') cells.push(log.browserId || '未記録');
         cells.forEach(value => { row.insertCell().textContent = value; });
         if (history.key === 'visitorLogins') {
           const remove = document.createElement('button');
@@ -2002,7 +2052,9 @@ document.getElementById('authSubmit').disabled = false;
         rows.push(row);
       }
       $('otherHistoryRows').replaceChildren(...rows);
-      status.textContent = '直近 ' + logs.length + ' 件を表示中';
+      status.textContent = isCounter
+        ? '今日 '+Number(result.today || 0).toLocaleString('ja-JP')+'人 ／ 総来客 '+Number(result.total || 0).toLocaleString('ja-JP')+'人 ／ 日付別 '+logs.length+'日を表示中'
+        : '直近 ' + logs.length + ' 件を表示中';
     } catch (error) {
       if (request === historyRequest) status.textContent = '読み込みに失敗しました：' + error.message;
     } finally {

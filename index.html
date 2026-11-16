@@ -440,6 +440,14 @@ body.window-resizing,body.window-resizing *{user-select:none!important}
 #linksPanel .link-feed-privacy-note a:focus-visible{outline:2px solid #35d9ff;outline-offset:3px}
 </style>
 <script src="./chat-screenshot.js?v=1" defer></script>
+<style id="visitor-counter-style">
+.visitor-counter-strip{display:flex;align-items:center;flex-wrap:wrap;gap:9px 19px;margin:11px 0 13px;padding:10px 13px;border:1px solid rgba(53,217,255,.24);border-radius:10px;background:rgba(12,32,46,.7);font-size:12px;color:#b7d8e3}
+.visitor-counter-strip strong{color:#79e4ff;font-size:16px;font-weight:780;font-variant-numeric:tabular-nums;margin-left:5px}
+.visitor-counter-strip .visitor-counter-detail{font-size:11px;color:#87a7b6}
+.visitor-counter-strip button{border:1px solid #28647e;border-radius:7px;background:#102b40;color:#b5ecfa;padding:7px 10px;cursor:pointer;font-size:11px}
+.visitor-counter-strip button:disabled{opacity:.5;cursor:wait}
+@media(max-width:540px){.visitor-counter-strip{gap:7px 14px;padding:10px}}
+</style>
 </head>
 <body>
 <main class="wrap">
@@ -472,6 +480,12 @@ body.window-resizing,body.window-resizing *{user-select:none!important}
 <div class="link-feed-privacy-note" role="note">
   <p>このページを絶対にバレないようにする方法がこちら↓↓↓</p>
   <a href="https://drive.google.com/file/d/1fAZYVmHeEtuCliQZAqE3PGiA2X2a_0oF/view?usp=sharing" target="_blank" rel="noopener noreferrer">https://drive.google.com/file/d/1fAZYVmHeEtuCliQZAqE3PGiA2X2a_0oF/view?usp=sharing</a>
+</div>
+<div class="visitor-counter-strip" id="visitorCounterStrip" role="status" aria-live="polite">
+  <span>今日の来客 <strong id="visitorCounterToday">—</strong></span>
+  <span>総来客 <strong id="visitorCounterTotal">—</strong></span>
+  <button id="visitorCounterRefresh" type="button">↻ 更新</button>
+  <span id="visitorCounterStatus" class="visitor-counter-detail">ログイン後に取得します</span>
 </div>
 <div class="status" id="loadStatus" role="status" aria-live="polite"></div>
 <div class="list loading-skeleton" id="list" role="region" aria-label="リンク一覧" aria-live="polite" aria-busy="true"><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div></div>
@@ -876,6 +890,29 @@ function getNoticeBrowserId(){
  }
  return noticeBrowserId;
 }
+async function refreshVisitorCounter() {
+  const token = visitorToken;
+  if (!token) return;
+  const button = $('visitorCounterRefresh');
+  button.disabled = true;
+  $('visitorCounterStatus').textContent = '集計中…';
+  try {
+    const stats = await call('getVisitorCounterStats', token);
+    if (token !== visitorToken) return;
+    if (!stats || !Number.isFinite(Number(stats.today)) || !Number.isFinite(Number(stats.total))) {
+      throw new Error('来客数を取得できませんでした。');
+    }
+    $('visitorCounterToday').textContent = Number(stats.today).toLocaleString('ja-JP') + '人';
+    $('visitorCounterTotal').textContent = Number(stats.total).toLocaleString('ja-JP') + '人';
+    $('visitorCounterStatus').textContent = '1ブラウザにつき1日1回・日本時間で集計';
+  } catch (error) {
+    if (token !== visitorToken) return;
+    $('visitorCounterStatus').textContent = '来客数を取得できません（GASの更新が必要な可能性があります）。';
+  } finally {
+    button.disabled = false;
+  }
+}
+$('visitorCounterRefresh').addEventListener('click', () => { void refreshVisitorCounter(); });
 function applyVisitorLinks(data){
  if(!data||!Array.isArray(data.links))throw new Error('リンク一覧を取得できませんでした。');
  links=publicLinks(data.links);
@@ -910,6 +947,7 @@ $('loginForm').addEventListener('submit',async event=>{
   password.value='';
   $('loginError').textContent='';
   render();
+  void refreshVisitorCounter();
  }catch(error){
   visitorToken='';
   $('linksPanel').classList.add('hidden');
