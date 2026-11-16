@@ -1743,38 +1743,96 @@ function staffChatCanView_(row, browserId) {
     (row[3] === browserId || recipient === staffChatMailboxId_(browserId)));
 }
 
-function getStaffChatMessages(adminToken, browserId) {
+/**
+ * 管理者専用チャット。通常は従来互換の直近200件取得。
+ * {limit:20} で新着20件だけ、{beforeRow:N,limit:180} で古い投稿を追加取得。
+ * {mode:'summary'} は本文を読まず直近200行の未読件数だけを返す。
+ * どの経路も既存の個人宛て公開範囲と既読データは変更しない。
+ */
+function getStaffChatMessages(adminToken, browserId, pageOptions) {
   requireAdmin_(adminToken);
-  const onlineCount = countOnlineStaffBrowsers_(browserId);
+  const opts = pageOptions && typeof pageOptions === 'object' && !Array.isArray(pageOptions)
+    ? pageOptions : {};
+  const summaryOnly = opts.mode === 'summary';
+  const olderPage = Number.isSafeInteger(opts.beforeRow) && opts.beforeRow >= 2;
+  const limit = Number.isSafeInteger(opts.limit)
+    ? Math.max(1, Math.min(CHAT_MAX_MESSAGES, opts.limit)) : CHAT_MAX_MESSAGES;
+  // 古いページを取得するときはオンライン状況や管理者一覧を毎回再計算しない。
+  const onlineCount = olderPage ? null : countOnlineStaffBrowsers_(browserId);
   const properties = PropertiesService.getScriptProperties();
-  const names = new Map();
-  function nicknameFor(id) {
-    if (!validStaffBrowserId_(id)) return '';
-    if (!names.has(id)) names.set(id, properties.getProperty('LINK_CORE_STAFF_NAME_' + id) || '');
-    return names.get(id);
-  }
-  const nickname = nicknameFor(browserId);
-  const directory = staffChatMemberDirectory_(browserId, nickname, properties);
+  const nickname = olderPage ? '' :
+    (validStaffBrowserId_(browserId) ? (properties.getProperty('LINK_CORE_STAFF_NAME_' + browserId) || '') : '');
+  const directory = olderPage ? {self:'', members:[]} :
+    staffChatMemberDirectory_(browserId, nickname, properties);
+  const metadata = olderPage ? {} : {
+    onlineCount, nickname, mailboxId: directory.self, members: directory.members
+  };
   const sheet = staffChatSheet_(false);
   const last = sheet ? sheet.getLastRow() : 0;
-  if (last < 2) return {messages: [], onlineCount, nickname, mailboxId: directory.self, members: directory.members};
-
+  if (last < 2) return Object.assign({messages:[], nextCursor:null, unreadCount:0},metadata);
   const first = Math.max(2, last - CHAT_MAX_MESSAGES + 1);
-  // 個人宛て投稿は投稿者・受信者以外には本文も添付情報も返さない。
-  const messages = sheet.getRange(first, 1, last - first + 1, Math.min(11, sheet.getMaxColumns())).getValues()
-    .filter(row => row[0] && staffChatCanView_(row, browserId))
-    .map(row => {
+  const browserValid = validStaffBrowserId_(browserId);
+  if (summaryOnly) {
+    // 本文・添付を読み取らない軽量モード。既読数はこれまでと同じ直近200件。
+    const count = last - first + 1;
+    const identities = sheet.getRange(first, 4, count, 2).getValues();
+    const recipients = sheet.getMaxColumns() >= 11
+      ? sheet.getRange(first, 11, count, 1).getValues()
+      : Array.from({length:count}, () => ['']);
+    const mailbox = browserValid ? staffChatMailboxId_(browserId) : '';
+    let unreadCount = 0;
+    for (let i = 0; i < identities.length; i++) {
+      const author = String(identities[i][0] || '');
+      const readers = String(identities[i][1] || '').split(',').filter(Boolean);
+      const recipient = String(recipients[i][0] || '');
+      const canView = !recipient || (browserValid && (author === browserId || recipient === mailbox));
+      if (canView && browserValid && author !== browserId && !readers.includes(browserId)) unreadCount++;
+    }
+    return Object.assign({messages:[], nextCursor:null, unreadCount},metadata);
+  }
+
+  let cursor = olderPage ? Math.min(last, opts.beforeRow) : last;
+  if (cursor < first) return Object.assign({messages:[],nextCursor:null}, metadata);
+  const messages = [];
+  const names = Object.create(null);
+  function nicknameFor(id) {
+    if (!validStaffBrowserId_(id)) return '';
+    if (names[id] === undefined) names[id] = properties.getProperty('LINK_CORE_STAFF_NAME_' + id) || '';
+    return names[id];
+  }
+  // ページ単位で読み取り。個人宛て非公開投稿は件数に含めず、
+  // 見られる投稿を新着順で最大limit件集める。
+  while (cursor >= first && messages.length < limit) {
+    const start = Math.max(first, cursor - 39);
+    const rows = sheet.getRange(start, 1, cursor - start + 1, Math.min(11, sheet.getMaxColumns())).getValues();
+    let finished = false;
+    for (let i = rows.length - 1; i >= 0; i--) {
+      const row = rows[i];
+      if (!row[0] || !staffChatCanView_(row, browserId)) continue;
       const readers = String(row[4] || '').split(',').filter(Boolean);
       const own = !!browserId && row[3] === browserId;
       const recipient = String(row[10] || '');
-      return {
-        id: String(row[0]), author: nicknameFor(row[3]) || '管理者', message: String(row[1]), createdAt: toIso_(row[2]),
-        own, readCount: readers.length, unread: !!browserId && !own && !readers.includes(browserId),
-        private: !!recipient, recipientName: recipient ? (properties.getProperty(STAFF_CHAT_MEMBER_PREFIX + recipient) || '管理者') : '',
-        attachment: row[5] ? {name: String(row[6] || 'attachment'), mime: String(row[7] || ''), size: Number(row[8] || 0)} : null
-      };
-    });
-  return {messages, onlineCount, nickname, mailboxId: directory.self, members: directory.members};
+      messages.push({
+        id: String(row[0]), author: nicknameFor(row[3]) || '管理者',
+        message: String(row[1]), createdAt: toIso_(row[2]), own,
+        readCount: readers.length, unread: !!browserId && !own && !readers.includes(browserId),
+        private: !!recipient,
+        recipientName: recipient ? (properties.getProperty(STAFF_CHAT_MEMBER_PREFIX + recipient) || '管理者') : '',
+        attachment: row[5] ? {
+          name: String(row[6] || 'attachment'), mime: String(row[7] || ''), size: Number(row[8] || 0)
+        } : null
+      });
+      if (messages.length >= limit) {
+        cursor = start + i - 1;
+        finished = true;
+        break;
+      }
+    }
+    if (!finished) cursor = start - 1;
+  }
+  // 従来どおり画面の表示順は古い→新しい。
+  messages.reverse();
+  return Object.assign({messages, nextCursor: cursor >= first ? cursor : null},metadata);
 }
 
 function markStaffChatRead(ids, browserId, adminToken) {

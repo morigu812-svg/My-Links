@@ -2659,31 +2659,23 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
     $('staffChatNotice').hidden = !count || open;
   }
 
+
+  const STAFF_RECENT_BATCH = 20;
+  const STAFF_MAX_VISIBLE = 200;
   let staffRefreshRequestedWhileLoading = false;
-  async function refreshStaffChat() {
-    const token = adminSession.getItem(ADMIN_TOKEN_KEY);
-    if (!token || document.hidden) return;
-    if (refreshStaffButton.disabled) {
-      // 閉じた状態でのポーリングとチャットを開く操作が重なったら、後で再取得する。
-      if (staffChat.classList.contains('open')) staffRefreshRequestedWhileLoading = true;
-      return;
-    }
-    refreshStaffButton.disabled = true;
-    let refreshAfterAutoRead = false;
-    try {
-      const {messages, onlineCount, nickname, members, mailboxId} = await serverCall('getStaffChatMessages', token, staffBrowserId);
-      if (token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
-      updateStaffNickname(nickname);
-      updateStaffRecipientControls(members, mailboxId);
-      const online = $('staffOnlineCount');
-      const label = onlineCount === 1 ? '自分だけがオンラインです'
-        : Number.isInteger(onlineCount) ? onlineCount + '人の管理者がオンラインです'
-        : 'オンライン人数を取得できません';
-      if (online.textContent !== label) online.textContent = label;
-      const open = staffChat.classList.contains('open');
-      const unread = messages.filter(item => item.unread);
-      updateStaffUnread(unread.length, open);
-      if (!open) return;
+  let staffMessageCache = [];
+  let staffHistoryLoaded = false;
+  let staffOpenGeneration = 0;
+
+  function mergeStaffMessagePages(older, newer) {
+    const combined = new Map();
+    [...older, ...newer].forEach(message => {
+      if (message && typeof message.id === 'string') combined.set(message.id, message);
+    });
+    return Array.from(combined.values()).slice(-STAFF_MAX_VISIBLE);
+  }
+
+  function renderStaffMessages(messages, token) {
       const key = JSON.stringify(messages.map(item => [item.id, item.readCount, item.unread, item.own, item.author, item.private, item.recipientName, item.attachment?.name]));
       if (key !== staffRenderKey) {
         const cards = messages.map(item => {
@@ -2759,8 +2751,9 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
                 if (token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
                 if (!result?.ok) throw new Error('削除完了を確認できませんでした。');
                 card.remove();
+                staffMessageCache = staffMessageCache.filter(message => message.id !== item.id);
                 staffRenderKey = '';
-                await refreshStaffChat();
+                await refreshStaffChat(true);
               } catch (error) {
                 if (token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
                 staffStatus.textContent = '削除に失敗しました。' + error.message;
@@ -2794,47 +2787,155 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
           }
           return card;
         });
+        const scrollArea = staffMessages.closest('.chat-table-wrap');
+        const beforeHeight = scrollArea?.scrollHeight || 0;
+        const wasNearBottom = !scrollArea ||
+          scrollArea.scrollHeight - scrollArea.scrollTop - scrollArea.clientHeight < 100;
         if (cards.length) staffMessages.replaceChildren(...cards);
         else chatTableNotice(staffMessages, 5, 'まだメッセージはありません。');
-        const scrollArea = staffMessages.closest('.chat-table-wrap');
-        scrollArea.scrollTop = scrollArea.scrollHeight;
+        if (scrollArea) {
+          if (wasNearBottom) scrollArea.scrollTop = scrollArea.scrollHeight;
+          else scrollArea.scrollTop += scrollArea.scrollHeight - beforeHeight;
+        }
         staffRenderKey = key;
       }
       staffStatus.textContent = messages.length ? '' : 'まだメッセージはありません。';
-      // 表示された管理者チャットだけを自動既読にする。
-      // GASのmarkStaffChatReadは、過去の既読IDを残したまま自分のIDを追記する。
-      // 未読の投稿IDのみ送るので、他の管理者の既読状態を上書きしない。
-      if (!document.hidden && staffChat.classList.contains('open') && staffBrowserId &&
-          token === adminSession.getItem(ADMIN_TOKEN_KEY)) {
-        const unreadIds = unread.filter(item => !item.own && typeof item.id === 'string')
-          .map(item => item.id);
-        if (unreadIds.length) {
-          try {
-            const result = await serverCall('markStaffChatRead', unreadIds, staffBrowserId, token);
-            if (!result?.ok) throw new Error('既読登録を確認できませんでした。');
-            if (!document.hidden && staffChat.classList.contains('open') &&
-                token === adminSession.getItem(ADMIN_TOKEN_KEY)) {
-              refreshAfterAutoRead = true;
-            }
-          } catch (error) {
-            if (token === adminSession.getItem(ADMIN_TOKEN_KEY) &&
-                staffChat.classList.contains('open')) {
-              staffStatus.textContent = '自動既読の更新に失敗しました。手動の「既読にする」で再試行できます：' +
-                (error?.message || '通信エラー');
-            }
+  }
+
+  function updateStaffChatHeader(result) {
+    if (typeof result.nickname === 'string') updateStaffNickname(result.nickname);
+    if (Array.isArray(result.members)) updateStaffRecipientControls(result.members, result.mailboxId);
+    const count = result.onlineCount;
+    const online = $('staffOnlineCount');
+    if (count !== undefined) {
+      const label = count === 1 ? '自分だけがオンラインです'
+        : Number.isInteger(count) ? count + '人の管理者がオンラインです'
+        : 'オンライン人数を取得できません';
+      if (online.textContent !== label) online.textContent = label;
+    }
+  }
+
+  async function markDisplayedStaffUnread(messages, token) {
+    if (document.hidden || !staffChat.classList.contains('open') || !staffBrowserId ||
+        token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return false;
+    const pending = messages.filter(message => !message.own && message.unread && typeof message.id === 'string');
+    if (!pending.length) return false;
+    try {
+      const result = await serverCall('markStaffChatRead', pending.map(message => message.id), staffBrowserId, token);
+      if (!result?.ok) throw new Error('既読登録を確認できませんでした。');
+      if (token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return false;
+      // 読み取り済みの既存IDはGAS側に保持したまま追加。画面内の表示も更新。
+      pending.forEach(message => {
+        message.unread = false;
+        message.readCount = Number(message.readCount || 0) + 1;
+      });
+      return true;
+    } catch (error) {
+      if (token === adminSession.getItem(ADMIN_TOKEN_KEY) && staffChat.classList.contains('open')) {
+        staffStatus.textContent = '自動既読の更新に失敗しました。手動の「既読にする」で再試行できます：' +
+          (error?.message || '通信エラー');
+      }
+      return false;
+    }
+  }
+
+  async function refreshStaffChat(forceFullHistory = false) {
+    const token = adminSession.getItem(ADMIN_TOKEN_KEY);
+    if (!token || document.hidden) return;
+    const startedOpen = staffChat.classList.contains('open');
+    const openGeneration = staffOpenGeneration;
+    if (refreshStaffButton.disabled) {
+      if (startedOpen) staffRefreshRequestedWhileLoading = true;
+      return;
+    }
+    refreshStaffButton.disabled = true;
+    try {
+      // 閉じている間は本文を一切転送せず、未読件数だけ取得する。
+      const result = await serverCall('getStaffChatMessages', token, staffBrowserId,
+        startedOpen ? {limit: STAFF_RECENT_BATCH} : {mode: 'summary'});
+      if (token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
+      updateStaffChatHeader(result);
+      const open = staffChat.classList.contains('open');
+      if (!startedOpen) {
+        const count = Number.isInteger(result.unreadCount)
+          ? result.unreadCount
+          : (Array.isArray(result.messages) ? result.messages.filter(message => message.unread).length : 0);
+        updateStaffUnread(count, open);
+        // 閉じた状態のリクエスト中に開かれた場合は、最新20件を改めて取得する。
+        if (open) staffRefreshRequestedWhileLoading = true;
+        return;
+      }
+      if (!open || openGeneration !== staffOpenGeneration) return;
+      const responseMessages = Array.isArray(result.messages) ? result.messages : [];
+      // GASが旧デプロイでも、受信済み200件を新しい20件から先に描画する。
+      const paged = Object.prototype.hasOwnProperty.call(result, 'nextCursor');
+      const newest = paged ? responseMessages : responseMessages.slice(-STAFF_RECENT_BATCH);
+      const fallbackOlder = paged ? [] : responseMessages.slice(0, -STAFF_RECENT_BATCH);
+      const needOlder = !staffHistoryLoaded || forceFullHistory;
+      if (needOlder) {
+        staffMessageCache = newest.slice();
+        staffRenderKey = '';
+      } else {
+        staffMessageCache = mergeStaffMessagePages(staffMessageCache, newest);
+      }
+      renderStaffMessages(staffMessageCache, token);
+      // 最新20件が表示された時点で既読処理を開始する。旧履歴の取得とは並行。
+      const newestRead = markDisplayedStaffUnread(newest, token);
+      if (needOlder) {
+        staffStatus.textContent = '最新' + newest.length + '件を表示中。古いメッセージを追加で読み込んでいます…';
+        let older = [];
+        try {
+          if (paged && Number.isInteger(result.nextCursor) && result.nextCursor >= 2) {
+            const previous = await serverCall('getStaffChatMessages', token, staffBrowserId,
+              {beforeRow: result.nextCursor, limit: STAFF_MAX_VISIBLE});
+            if (!previous || !Array.isArray(previous.messages)) throw new Error('古い履歴の形式が不正です。');
+            older = previous.messages;
+          } else if (!paged && fallbackOlder.length) {
+            // 旧GASで200件返ってきた場合も、描画は必ず最新20件→残りの順番にする。
+            await new Promise(resolve => requestAnimationFrame(() => resolve()));
+            older = fallbackOlder;
+          }
+          if (token !== adminSession.getItem(ADMIN_TOKEN_KEY) ||
+              openGeneration !== staffOpenGeneration || document.hidden ||
+              !staffChat.classList.contains('open')) {
+            await newestRead;
+            return;
+          }
+          staffMessageCache = mergeStaffMessagePages(older, newest);
+          renderStaffMessages(staffMessageCache, token);
+          const olderRead = markDisplayedStaffUnread(older, token);
+          await Promise.all([newestRead, olderRead]);
+          staffHistoryLoaded = true;
+          renderStaffMessages(staffMessageCache, token);
+        } catch (error) {
+          await newestRead;
+          if (token === adminSession.getItem(ADMIN_TOKEN_KEY) &&
+              staffChat.classList.contains('open')) {
+            staffStatus.textContent = '最新20件は表示しています。古い履歴の読み込みに失敗：' +
+              (error?.message || '通信エラー');
           }
         }
+      } else {
+        await newestRead;
+        if (token === adminSession.getItem(ADMIN_TOKEN_KEY) &&
+            openGeneration === staffOpenGeneration && staffChat.classList.contains('open')) {
+          renderStaffMessages(staffMessageCache, token);
+        }
+      }
+      if (token === adminSession.getItem(ADMIN_TOKEN_KEY) &&
+          openGeneration === staffOpenGeneration && staffChat.classList.contains('open')) {
+        updateStaffUnread(staffMessageCache.filter(item => item.unread).length, true);
       }
     } catch (error) {
-      $('staffOnlineCount').textContent = 'オンライン人数を取得できません';
-      staffStatus.textContent = '読み込みに失敗しました。' + error.message;
+      if (token === adminSession.getItem(ADMIN_TOKEN_KEY)) {
+        $('staffOnlineCount').textContent = 'オンライン人数を取得できません';
+        staffStatus.textContent = '読み込みに失敗しました。' + (error?.message || '通信エラー');
+      }
     } finally {
       refreshStaffButton.disabled = false;
       const requested = staffRefreshRequestedWhileLoading;
       staffRefreshRequestedWhileLoading = false;
-      // 途中でreturnした場合も、チャットを開く操作を取りこぼさない。
-      if ((refreshAfterAutoRead || requested) && !document.hidden &&
-          staffChat.classList.contains('open') &&
+      if (requested && !document.hidden && staffChat.classList.contains('open') &&
           token === adminSession.getItem(ADMIN_TOKEN_KEY)) {
         void refreshStaffChat();
       }
@@ -2843,16 +2944,25 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
 
   $('sideStaffChat').addEventListener('click', () => {
     if (!adminSession.getItem(ADMIN_TOKEN_KEY)) return;
+    staffOpenGeneration++;
+    staffHistoryLoaded = false;
+    staffMessageCache = [];
     openMainChat(staffChat, '管理者専用チャット');
     staffRenderKey = '';
     $('staffChatNotice').hidden = true;
-    refreshStaffChat();
+    void refreshStaffChat(true);
     staffInput.focus();
   });
   $('staffChatNotice').addEventListener('click', () => $('sideStaffChat').click());
-  document.addEventListener('visibilitychange', refreshStaffChat);
-  $('closeStaffChat').addEventListener('click', closeMainChat);
-  refreshStaffButton.addEventListener('click', refreshStaffChat);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) void refreshStaffChat(); });
+  $('closeStaffChat').addEventListener('click', () => {
+    staffOpenGeneration++;
+    closeMainChat();
+  });
+  refreshStaffButton.addEventListener('click', () => {
+    staffHistoryLoaded = false;
+    void refreshStaffChat(true);
+  });
   setInterval(() => {
     if (!document.hidden) refreshStaffChat();
   }, 15000);
