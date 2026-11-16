@@ -965,24 +965,24 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
 .staff-message-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 8px;
   min-height: 130px;
-  padding: 16px;
+  padding: 12px;
 }
 .staff-message {
   align-self: flex-start;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 5px;
+  gap: 2px;
   min-width: 0;
   max-width: min(85%, 640px);
 }
 .staff-message.is-own { align-self: flex-end; align-items: flex-end; }
-.staff-message-author { color: var(--sub); font-size: 12px; overflow-wrap: anywhere; }
+.staff-message-author { color: var(--sub); font-size: 11px; line-height: 1.25; overflow-wrap: anywhere; }
 .staff-message-bubble {
   max-width: 100%;
-  padding: 9px 12px;
+  padding: 4px 9px;
   border: 1px solid var(--line);
   border-radius: 4px 14px 14px;
   background: var(--panel-2);
@@ -993,17 +993,18 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
   border-radius: 14px 4px 14px 14px;
   background: #103047;
 }
-.staff-message-body { white-space: pre-wrap; }
-.staff-message-line { display: flex; align-items: center; gap: 6px; max-width: 100%; }
+.staff-message-body { white-space: pre-wrap; line-height: 1.4; }
+.staff-message-line { display: flex; align-items: center; gap: 4px; max-width: 100%; }
 .staff-message.is-own .staff-message-line { flex-direction: row-reverse; }
 .staff-message-line .staff-message-bubble { min-width: 0; }
-.staff-message-meta { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+.staff-message-meta { display: flex; flex-wrap: wrap; gap: 2px 7px; align-items: center; }
 .staff-message.is-own .staff-message-meta { justify-content: flex-end; }
-.staff-message-meta { color: var(--sub); font-size: 11px; }
+.staff-message-meta { color: var(--sub); font-size: 11px; line-height: 1.2; }
 #staffChatOverlay button.staff-message-more {
   flex: 0 0 36px;
   width: 36px;
-  height: 40px;
+  height: 28px;
+  min-height: 28px;
   padding: 0;
   border: 1px solid transparent !important;
   border-radius: 8px;
@@ -1033,14 +1034,15 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
 }
 .staff-message-actions > button { min-height: 36px; padding: 6px 10px; font-size: 13px; }
 .staff-message-actions > button.danger { color: var(--danger) !important; }
-#staffChatOverlay .staff-message .staff-file-card { flex-wrap: wrap; }
+#staffChatOverlay .staff-message .staff-file-card { flex-wrap: wrap; gap: 4px 8px; margin-top: 4px; padding: 4px 6px; }
+#staffChatOverlay .staff-message .staff-file-card > button { min-height: 28px; padding: 4px 7px; font-size: 11px; }
 #staffChatOverlay .staff-message .staff-file-detail { min-width: 0; }
 .staff-message-notice { align-self: center; margin: auto; color: var(--sub); font-size: 13px; text-align: center; }
 @media (max-width: 540px) {
   .staff-message-list { padding: 10px; }
   .staff-message { max-width: 90%; }
 }
-#staffChatOverlay .staff-private-tag { margin:0 0 6px; color:#b5a4ff; font-size:11px; font-weight:750; }
+#staffChatOverlay .staff-private-tag { margin:0 0 2px; color:#b5a4ff; font-size:11px; font-weight:750; }
 #staffChatForm .staff-file-button { flex:0 0 auto; white-space:nowrap; }
 #staffAttachmentInfo { flex:1 1 100%; min-width:0; font-size:12px; color:var(--sub); overflow-wrap:anywhere; }
 #staffAttachmentClear { flex:0 0 auto; }
