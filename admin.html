@@ -1014,7 +1014,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
     <div id="otherHistoryView" hidden>
       <div class="section-heading">
         <div><span class="section-kicker">LINK CORE / ACTIVITY LOG</span><h2 id="otherHistoryTitle"></h2><p id="otherHistoryDescription"></p></div>
-        <div class="click-log-actions"><button id="refreshOtherHistory" class="btn" type="button">↻ 再読み込み</button><button id="backfillVisitorCounter" class="btn" type="button" hidden>11/14〜11/16の過去ログを取り込む</button><button id="deleteOldVisitorCounter" class="btn danger" type="button" hidden>11/13以前の来客記録を削除</button><button id="deleteVisitorLoginLogs" class="btn danger" type="button" hidden>履歴をすべて削除</button></div>
+        <div class="click-log-actions"><button id="refreshOtherHistory" class="btn" type="button">↻ 再読み込み</button><button id="deleteOldVisitorCounter" class="btn danger" type="button" hidden>11/13以前の来客記録を削除</button><button id="deleteVisitorLoginLogs" class="btn danger" type="button" hidden>履歴をすべて削除</button></div>
       </div>
       <div id="otherHistoryStatus" role="status" aria-live="polite"></div>
       <div class="click-log-table-wrap"><table class="click-log-table">
@@ -1303,7 +1303,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   }
 
   function serverCall(method, ...args) {
-    const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'getVisitorCounterStats', 'backfillVisitorCounterFromLogs', 'deleteVisitorCounterBefore20261114', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'getChatScreenshot', 'sendChatMessage', 'sendChatScreenshot', 'getStaffChatMessages', 'getStaffChatAttachment', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendStaffChatAttachment', 'deleteStaffChatMessage', 'sendPrivateChatMessage', 'getClickLogs', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
+    const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'getVisitorCounterStats', 'deleteVisitorCounterBefore20261114', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'getChatScreenshot', 'sendChatMessage', 'sendChatScreenshot', 'getStaffChatMessages', 'getStaffChatAttachment', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendStaffChatAttachment', 'deleteStaffChatMessage', 'sendPrivateChatMessage', 'getClickLogs', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
     if (protectedMethods.includes(method)) {
       const token = adminSession.getItem(ADMIN_TOKEN_KEY) || '';
       // 呼び出し元（埋め込みメモ帳など）が既にトークンを渡している場合は二重追加しない。
@@ -1945,7 +1945,6 @@ document.getElementById('authSubmit').disabled = false;
     $('clickLogView').hidden = !!other;
     $('otherHistoryView').hidden = !other;
     $('deleteVisitorLoginLogs').hidden = other?.key !== 'visitorLogins';
-    $('backfillVisitorCounter').hidden = other?.key !== 'visitorCounter';
     $('deleteOldVisitorCounter').hidden = other?.key !== 'visitorCounter';
     clickLogPanel.setAttribute('aria-label', other ? other.title : 'クリック履歴');
     if (!other && !clickLogsLoaded) refreshClickLogs();
@@ -2105,42 +2104,6 @@ document.getElementById('authSubmit').disabled = false;
       if (token === adminSession.getItem(ADMIN_TOKEN_KEY)) {
         $('otherHistoryStatus').textContent = '削除に失敗しました：' +
           (error?.message || '通信エラー') + '。GASの再デプロイを確認してください。';
-      }
-    } finally {
-      button.disabled = false;
-    }
-  });
-
-  $('backfillVisitorCounter').addEventListener('click', async event => {
-    const button = event.currentTarget;
-    const token = adminSession.getItem(ADMIN_TOKEN_KEY);
-    if (!token || button.disabled || activeHistory?.key !== 'visitorCounter') return;
-    const proceed = confirm(
-      '2026年11月14〜16日の「利用者ログイン履歴」を来客数カウンターに取り込みます。' +
-      '\n同じブラウザの同日重複は除外し、IDが空欄の履歴は集計しません。' +
-      '\n既にカウントされている来客は二重に追加しません。実行しますか？'
-    );
-    if (!proceed) return;
-    button.disabled = true;
-    $('otherHistoryStatus').textContent = '過去の利用者ログイン履歴を取り込み中…';
-    try {
-      const result = await serverCall('backfillVisitorCounterFromLogs', '2026-11-14', '2026-11-16');
-      if (!result?.ok) throw new Error('取り込み完了を確認できませんでした。');
-      if (token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
-      await refreshOtherHistory();
-      await refreshAdminVisitorCounter();
-      const details = Array.isArray(result.importedDays)
-        ? result.importedDays.map(day => day.date.replaceAll('-', '/') + '：' + Number(day.count) + '件').join(' ／ ')
-        : '';
-      $('otherHistoryStatus').textContent = '取り込み完了：新規' + Number(result.imported) +
-        '件（重複除外' + Number(result.skippedDuplicate) +
-        '件・IDなし除外' + Number(result.skippedMissingId) + '件）' +
-        (details ? ' ／ ' + details : '。対象の日付に新規記録はありませんでした。');
-    } catch (error) {
-      if (token === adminSession.getItem(ADMIN_TOKEN_KEY)) {
-        $('otherHistoryStatus').textContent = '取り込みに失敗：' +
-          (error && error.message ? error.message : '不明なエラー') +
-          '。GASのCode.gsとbridge.htmlが最新バージョンか確認してください。';
       }
     } finally {
       button.disabled = false;
