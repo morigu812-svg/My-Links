@@ -1743,17 +1743,47 @@ function staffChatCanView_(row, browserId) {
     (row[3] === browserId || recipient === staffChatMailboxId_(browserId)));
 }
 
+function staffChatConversationList_(sheet, last, browserId, mailbox, properties) {
+  if (!mailbox || last < 2 || sheet.getMaxColumns() < 11) return [];
+  const authors = sheet.getRange(2, 4, last - 1, 1).getValues();
+  const recipients = sheet.getRange(2, 11, last - 1, 1).getValues();
+  const conversations = new Map();
+  const mailboxes = new Map();
+  for (let i = recipients.length - 1; i >= 0; i--) {
+    const recipient = recipients[i][0];
+    const author = authors[i][0];
+    if (!recipient || (author !== browserId && recipient !== mailbox)) continue;
+    if (!mailboxes.has(author)) mailboxes.set(author, staffChatMailboxId_(author));
+    const peer = author === browserId ? recipient : mailboxes.get(author);
+    if (!peer || peer === mailbox || conversations.has(peer)) continue;
+    conversations.set(peer, {
+      mailboxId: peer,
+      name: properties.getProperty(STAFF_CHAT_MEMBER_PREFIX + peer) || '管理者'
+    });
+  }
+  return Array.from(conversations.values());
+}
+
 /**
  * 管理者専用チャット。通常は従来互換の直近200件取得。
  * {limit:20} で新着20件だけ、{beforeRow:N,limit:180} で古い投稿を追加取得。
- * {mode:'summary'} は本文を読まず直近200行の未読件数だけを返す。
- * どの経路も既存の個人宛て公開範囲と既読データは変更しない。
+ * {room:''} は全体トーク、{room:宛先コード} はその相手との個別トーク。
+ * {mode:'conversations'} は送受信履歴のある相手の一覧を返す。
+ * {mode:'summary'} とトーク一覧は本文を読まず、直近200行の未読件数も返す。
  */
 function getStaffChatMessages(adminToken, browserId, pageOptions) {
   requireAdmin_(adminToken);
   const opts = pageOptions && typeof pageOptions === 'object' && !Array.isArray(pageOptions)
     ? pageOptions : {};
-  const summaryOnly = opts.mode === 'summary';
+  const summaryOnly = opts.mode === 'summary' || opts.mode === 'conversations';
+  const roomScoped = Object.prototype.hasOwnProperty.call(opts, 'room');
+  const room = opts.room;
+  if (roomScoped && room !== '' && (typeof room !== 'string' || !/^mbx-[0-9a-f]{64}$/.test(room))) {
+    throw new Error('トーク相手を確認できません。');
+  }
+  const browserValid = validStaffBrowserId_(browserId);
+  const mailbox = browserValid ? staffChatMailboxId_(browserId) : '';
+  if (roomScoped && room && (!mailbox || room === mailbox)) throw new Error('トーク相手を確認できません。');
   const olderPage = Number.isSafeInteger(opts.beforeRow) && opts.beforeRow >= 2;
   const limit = Number.isSafeInteger(opts.limit)
     ? Math.max(1, Math.min(CHAT_MAX_MESSAGES, opts.limit)) : CHAT_MAX_MESSAGES;
@@ -1769,9 +1799,12 @@ function getStaffChatMessages(adminToken, browserId, pageOptions) {
   };
   const sheet = staffChatSheet_(false);
   const last = sheet ? sheet.getLastRow() : 0;
+  if (opts.mode === 'conversations') {
+    metadata.conversations = staffChatConversationList_(sheet, last, browserId, mailbox, properties);
+  }
+  if (roomScoped) metadata.room = room;
   if (last < 2) return Object.assign({messages:[], nextCursor:null, unreadCount:0},metadata);
-  const first = Math.max(2, last - CHAT_MAX_MESSAGES + 1);
-  const browserValid = validStaffBrowserId_(browserId);
+  const first = roomScoped ? 2 : Math.max(2, last - CHAT_MAX_MESSAGES + 1);
   if (summaryOnly) {
     // 本文・添付を読み取らない軽量モード。既読数はこれまでと同じ直近200件。
     const count = last - first + 1;
@@ -1779,7 +1812,6 @@ function getStaffChatMessages(adminToken, browserId, pageOptions) {
     const recipients = sheet.getMaxColumns() >= 11
       ? sheet.getRange(first, 11, count, 1).getValues()
       : Array.from({length:count}, () => ['']);
-    const mailbox = browserValid ? staffChatMailboxId_(browserId) : '';
     let unreadCount = 0;
     for (let i = 0; i < identities.length; i++) {
       const author = String(identities[i][0] || '');
@@ -1803,15 +1835,19 @@ function getStaffChatMessages(adminToken, browserId, pageOptions) {
   // ページ単位で読み取り。個人宛て非公開投稿は件数に含めず、
   // 見られる投稿を新着順で最大limit件集める。
   while (cursor >= first && messages.length < limit) {
-    const start = Math.max(first, cursor - 39);
+    const start = Math.max(first, cursor - (roomScoped ? CHAT_MAX_MESSAGES : 40) + 1);
     const rows = sheet.getRange(start, 1, cursor - start + 1, Math.min(11, sheet.getMaxColumns())).getValues();
     let finished = false;
     for (let i = rows.length - 1; i >= 0; i--) {
       const row = rows[i];
-      if (!row[0] || !staffChatCanView_(row, browserId)) continue;
-      const readers = String(row[4] || '').split(',').filter(Boolean);
-      const own = !!browserId && row[3] === browserId;
       const recipient = String(row[10] || '');
+      const own = browserValid && row[3] === browserId;
+      if (!row[0] || (recipient && !own && recipient !== mailbox)) continue;
+      if (roomScoped) {
+        const peer = recipient ? (own ? recipient : staffChatMailboxId_(row[3])) : '';
+        if (peer !== room) continue;
+      }
+      const readers = String(row[4] || '').split(',').filter(Boolean);
       messages.push({
         id: String(row[0]), author: nicknameFor(row[3]) || '管理者',
         message: String(row[1]), createdAt: toIso_(row[2]), own,
@@ -1847,19 +1883,29 @@ function markStaffChatRead(ids, browserId, adminToken) {
     const sheet = staffChatSheet_(false);
     const last = sheet ? sheet.getLastRow() : 0;
     if (last < 2) return {ok: true};
-    const first = Math.max(2, last - CHAT_MAX_MESSAGES + 1);
-    const rows = sheet.getRange(first, 1, last - first + 1, Math.min(11, sheet.getMaxColumns())).getValues();
     const wanted = new Set(ids);
-    let changed = false;
-    const reads = rows.map(row => {
-      const value = String(row[4] || '');
-      if (!wanted.has(String(row[0])) || row[3] === browserId || !staffChatCanView_(row, browserId)) return [value];
-      const readers = value.split(',').filter(Boolean);
-      if (readers.includes(browserId) || value.length >= 45000) return [value];
-      changed = true;
-      return [readers.concat(browserId).join(',')];
-    });
-    if (changed) sheet.getRange(first, 5, reads.length, 1).setValues(reads);
+    const mailbox = staffChatMailboxId_(browserId);
+    for (let end = last; end >= 2 && wanted.size;) {
+      const start = Math.max(2, end - CHAT_MAX_MESSAGES + 1);
+      const rows = sheet.getRange(start, 1, end - start + 1, Math.min(11, sheet.getMaxColumns())).getValues();
+      let changes = [];
+      let changeStart = 0;
+      rows.forEach((row, index) => {
+        const value = String(row[4] || '');
+        const recipient = String(row[10] || '');
+        const readers = value.split(',').filter(Boolean);
+        if (wanted.delete(String(row[0])) && row[3] !== browserId &&
+            (!recipient || recipient === mailbox) && !readers.includes(browserId) && value.length < 45000) {
+          if (!changes.length) changeStart = start + index;
+          changes.push([readers.concat(browserId).join(',')]);
+        } else if (changes.length) {
+          sheet.getRange(changeStart, 5, changes.length, 1).setValues(changes);
+          changes = [];
+        }
+      });
+      if (changes.length) sheet.getRange(changeStart, 5, changes.length, 1).setValues(changes);
+      end = start - 1;
+    }
     return {ok: true};
   } finally {
     lock.releaseLock();
@@ -2024,13 +2070,13 @@ function deleteStaffChatMessage(id, browserId, adminToken) {
     const sheet = staffChatSheet_(false);
     const last = sheet ? sheet.getLastRow() : 0;
     if (last < 2) return {ok: true};
-    const first = Math.max(2, last - CHAT_MAX_MESSAGES + 1);
-    const rows = sheet.getRange(first, 1, last - first + 1, 9).getValues();
-    const index = rows.findIndex(row => row[0] === id);
-    if (index < 0) return {ok: true};
-    if (rows[index][3] !== browserId) throw new Error('自分の投稿のみ削除できます。');
-    const attachmentId = String(rows[index][5] || '');
-    sheet.deleteRow(first + index);
+    const match = sheet.getRange(2, 1, last - 1, 1).createTextFinder(id).matchEntireCell(true).findNext();
+    if (!match) return {ok: true};
+    const row = match.getRow();
+    const [author, , fileId] = sheet.getRange(row, 4, 1, 3).getValues()[0];
+    if (author !== browserId) throw new Error('自分の投稿のみ削除できます。');
+    const attachmentId = String(fileId || '');
+    sheet.deleteRow(row);
     if (attachmentId) {
       try {
         const attachmentFile = DriveApp.getFileById(attachmentId);

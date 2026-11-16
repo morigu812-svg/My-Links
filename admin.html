@@ -827,13 +827,16 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   #staffChatOverlay #staffChatForm .staff-compose-actions > button { font-size: 12px; padding: 9px 10px; }
 }
 
+#staffChatOverlay [hidden] { display:none!important; }
+#staffChatOverlay #staffTalks { display:grid; gap:8px; }
+#staffChatOverlay #staffTalks .btn, #staffChatOverlay #staffOpenEveryone { width:100%; text-align:left; overflow-wrap:anywhere; }
+#staffChatOverlay #staffTalkList { margin:12px 0; }
 #staffChatOverlay .staff-recipient-bar { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; gap:10px; margin:13px 0 4px; }
 #staffChatOverlay .staff-recipient-bar label { display:grid; gap:5px; font-size:12px; color:var(--sub); font-weight:650; min-width:0; }
 #staffChatOverlay #staffChatRecipient, #staffChatOverlay #staffChatRecipientCode { width:100%; min-width:0; padding:9px 10px; border:1px solid #2b6786; border-radius:8px; color:var(--ink); background:#0b1d30; font-size:14px; }
 #staffChatOverlay #staffMailboxCopy { min-height:39px; padding:7px 11px; border:1px solid #286b8c; border-radius:8px; background:#122b3f; color:#9ee8fc; font-size:12px; }
 #staffChatOverlay #staffRecipientCodeWrap { display:grid; gap:5px; margin-top:7px; color:var(--sub); font-size:12px; }
 #staffChatOverlay #staffRecipientCodeWrap[hidden] { display:none!important; }
-#staffChatOverlay #staffRecipientHint { margin:5px 0 0; color:var(--muted); font-size:11px; overflow-wrap:anywhere; }
 #staffChatOverlay .staff-private-tag { margin:0 0 6px; color:#b5a4ff; font-size:11px; font-weight:750; }
 @media(max-width:560px){#staffChatOverlay .staff-recipient-bar{grid-template-columns:minmax(0,1fr)}#staffChatOverlay #staffMailboxCopy{justify-self:start}}
 #staffChatForm .staff-file-button { flex:0 0 auto; white-space:nowrap; }
@@ -963,27 +966,33 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
 <label class="chat-subtitle" for="chatRecipient">個別チャットID（空欄なら全員）<input id="chatRecipient" type="text" maxlength="67" autocomplete="off" spellcheck="false" style="display:block;width:100%"></label><div class="chat-subtitle"><button type="button" id="chatScreenshot">スクリーンショットを共有</button><input id="chatScreenshotFile" type="file" accept="image/*" hidden><span id="chatScreenshotHint"> 選んだ画像は共通チャットの全員に送信されます。</span><div id="chatScreenshotStatus" role="status"></div></div><form class="chat-compose" id="chatForm"><textarea id="chatInput" maxlength="1000" rows="2" placeholder="利用者への返信を入力…" required></textarea><button id="chatSend" type="submit">返信</button></form></section>
   <section id="staffChatOverlay" class="click-log-panel chat-main-panel" aria-label="管理者専用チャット">
     <div class="section-heading">
-      <div><span class="section-kicker">LINK CORE / CHAT</span><h2>管理者専用チャット</h2><p>管理者同士のメッセージを表示します。</p></div>
-      <div class="click-log-actions"><button id="refreshStaffChat" class="btn" type="button">↻ 再読み込み</button><button id="closeStaffChat" class="btn" type="button">リンク一覧に戻る</button></div>
+      <div><span class="section-kicker">LINK CORE / CHAT</span><h2 id="staffTalkTitle">トーク一覧</h2></div>
+      <div class="click-log-actions"><button id="staffBackToTalks" class="btn" type="button" hidden>トーク一覧に戻る</button><button id="refreshStaffChat" class="btn" type="button">↻ 再読み込み</button><button id="closeStaffChat" class="btn" type="button">リンク一覧に戻る</button></div>
     </div>
-    <div class="click-log-table-wrap chat-table-wrap"><table class="click-log-table">
-      <thead><tr><th scope="col">日時</th><th scope="col">投稿者</th><th scope="col">メッセージ</th><th scope="col">既読</th><th scope="col">操作</th></tr></thead>
-      <tbody id="staffChatMessages"></tbody>
-    </table></div>
-  <div class="chat-subtitle" id="staffChatStatus" role="status"></div>
-  <div class="staff-recipient-bar">
-    <label for="staffChatRecipient">送信先
-      <select id="staffChatRecipient">
-        <option value="">全員宛て（共有チャット）</option>
-        <option value="manual">宛先コードを入力…</option>
-      </select>
-    </label>
-    <button id="staffMailboxCopy" type="button">自分の宛先コードをコピー</button>
-  </div>
-  <label id="staffRecipientCodeWrap" for="staffChatRecipientCode" hidden>送信先の宛先コード
-    <input id="staffChatRecipientCode" type="text" placeholder="mbx-から始まる宛先コード" maxlength="68" autocomplete="off" spellcheck="false">
-  </label>
-  <p id="staffRecipientHint">個人宛ては選択した管理者だけに表示します。相手が一覧にいない場合、相手の宛先コードを指定できます。</p>
+    <div class="chat-subtitle" id="staffChatStatus" role="status"></div>
+    <div id="staffTalkList">
+      <button id="staffOpenEveryone" class="btn" type="button">全体トーク</button>
+      <h3>個別トーク</h3>
+      <div id="staffTalks"></div>
+      <details id="staffNewTalk">
+        <summary>新しいトーク</summary>
+        <div class="staff-recipient-bar">
+          <label for="staffChatRecipient">相手を選択
+            <select id="staffChatRecipient"></select>
+          </label>
+          <button id="staffMailboxCopy" type="button" disabled>自分の宛先コードをコピー</button>
+        </div>
+        <label id="staffRecipientCodeWrap" for="staffChatRecipientCode" hidden>相手の宛先コード
+          <input id="staffChatRecipientCode" type="text" placeholder="mbx-から始まる宛先コード" maxlength="68" autocomplete="off" spellcheck="false">
+        </label>
+        <button id="staffStartTalk" class="btn" type="button" disabled>トークを開く</button>
+      </details>
+    </div>
+    <div id="staffTalkRoom" hidden>
+      <div class="click-log-table-wrap chat-table-wrap"><table class="click-log-table">
+        <thead><tr><th scope="col">日時</th><th scope="col">投稿者</th><th scope="col">メッセージ</th><th scope="col">既読</th><th scope="col">操作</th></tr></thead>
+        <tbody id="staffChatMessages"></tbody>
+      </table></div>
   <form class="chat-compose" id="staffChatForm">
     <textarea id="staffChatInput" aria-label="管理者へのメッセージ" maxlength="1000" rows="4" placeholder="管理者へのメッセージ（ファイルのみでも送信可）"></textarea>
     <div class="staff-compose-actions">
@@ -993,10 +1002,11 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
       <button type="button" id="staffScreenshotChoose" class="staff-file-button" aria-describedby="staffScreenshotHint">写真を添付</button>
       <button type="submit" id="staffChatSend">送信</button>
     </div>
-    <span id="staffScreenshotHint" class="chat-subtitle">端末で撮影した画像を選ぶと、上の送信先にすぐ送信されます。</span>
+    <span id="staffScreenshotHint" class="chat-subtitle">端末で撮影した画像を選ぶと、開いているトークにすぐ送信されます。</span>
     <span id="staffAttachmentInfo" role="status" aria-live="polite" hidden></span>
     <button type="button" id="staffAttachmentClear" hidden>添付を解除</button>
   </form>
+    </div>
 </section>
   <section id="clickLogPanel" class="click-log-panel" hidden aria-label="クリック履歴">
     <div id="clickLogView">
@@ -2512,30 +2522,57 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
   const staffRecipientSelect = $('staffChatRecipient');
   const staffRecipientCode = $('staffChatRecipientCode');
   let staffOwnMailbox = '';
+  let staffActiveRoom = null;
+  let staffTalkApiReady = false;
   const staffMailboxPattern = /^mbx-[0-9a-f]{64}$/;
   function updateStaffRecipientControls(members, ownMailbox) {
     staffOwnMailbox = staffMailboxPattern.test(ownMailbox) ? ownMailbox : '';
     const selected = staffRecipientSelect.value;
-    const choices = [new Option('全員宛て（共有チャット）', '')];
-    (Array.isArray(members) ? members : []).forEach(member => {
+    const choices = [new Option('相手を選択…', '')];
+    members.forEach(member => {
       if (!staffMailboxPattern.test(member.mailboxId) || member.mailboxId === staffOwnMailbox) return;
       choices.push(new Option((member.name || '管理者') + ' (' + member.mailboxId.slice(4, 10) + ')', member.mailboxId));
     });
     choices.push(new Option('宛先コードを入力…', 'manual'));
     staffRecipientSelect.replaceChildren(...choices);
     if (choices.some(option => option.value === selected)) staffRecipientSelect.value = selected;
-    else if (selected) {
-      staffRecipientSelect.value = 'manual';
-      staffRecipientCode.value = selected;
-    }
     $('staffRecipientCodeWrap').hidden = staffRecipientSelect.value !== 'manual';
     $('staffMailboxCopy').disabled = !staffOwnMailbox;
+    $('staffStartTalk').disabled = !staffOwnMailbox;
   }
+
+  function renderStaffTalks(conversations) {
+    const list = $('staffTalks');
+    const key = JSON.stringify(conversations);
+    if (list.dataset.conversations === key) return;
+    list.dataset.conversations = key;
+    const cards = conversations.map(peer => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'btn';
+      button.textContent = (peer.name || '管理者') + '  (' + peer.mailboxId.slice(4, 10) + ')';
+      button.addEventListener('click', () => showStaffTalk(peer.mailboxId, peer.name));
+      return button;
+    });
+    list.replaceChildren(...cards);
+    if (!cards.length) list.textContent = '個別トークはまだありません。';
+  }
+
   staffRecipientSelect.addEventListener('change', () => {
     $('staffRecipientCodeWrap').hidden = staffRecipientSelect.value !== 'manual';
-    staffPendingAttachmentRequestId = '';
   });
-  staffRecipientCode.addEventListener('input', () => { staffPendingAttachmentRequestId = ''; });
+  $('staffStartTalk').addEventListener('click', () => {
+    const selected = staffRecipientSelect.value;
+    const peer = selected === 'manual' ? staffRecipientCode.value.trim().toLowerCase() : selected;
+    if (!staffMailboxPattern.test(peer) || peer === staffOwnMailbox) {
+      staffStatus.textContent = '相手を選ぶか、相手の宛先コードを入力してください。';
+      return;
+    }
+    const known = Array.from(staffRecipientSelect.options).find(option => option.value === peer);
+    showStaffTalk(peer, known?.textContent || '管理者 (' + peer.slice(4, 10) + ')');
+  });
+  $('staffOpenEveryone').addEventListener('click', () => showStaffTalk(''));
+  $('staffBackToTalks').addEventListener('click', () => showStaffTalk(null));
   $('staffMailboxCopy').addEventListener('click', async () => {
     if (!staffOwnMailbox) {
       staffStatus.textContent = '宛先コードを取得できていません。チャットを再読み込みしてください。';
@@ -2843,6 +2880,7 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
     const token = adminSession.getItem(ADMIN_TOKEN_KEY);
     if (!token || document.hidden) return;
     const startedOpen = staffChat.classList.contains('open');
+    const room = staffActiveRoom;
     const openGeneration = staffOpenGeneration;
     if (refreshStaffButton.disabled) {
       if (startedOpen) staffRefreshRequestedWhileLoading = true;
@@ -2852,7 +2890,8 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
     try {
       // 閉じている間は本文を一切転送せず、未読件数だけ取得する。
       const result = await serverCall('getStaffChatMessages', token, staffBrowserId,
-        startedOpen ? {limit: STAFF_RECENT_BATCH} : {mode: 'summary'});
+        !startedOpen ? {mode: 'summary'} : room === null ? {mode: 'conversations'} :
+          {room, limit: STAFF_RECENT_BATCH});
       if (token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
       updateStaffChatHeader(result);
       const open = staffChat.classList.contains('open');
@@ -2866,11 +2905,21 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
         return;
       }
       if (!open || openGeneration !== staffOpenGeneration) return;
-      const responseMessages = Array.isArray(result.messages) ? result.messages : [];
-      // GASが旧デプロイでも、受信済み200件を新しい20件から先に描画する。
-      const paged = Object.prototype.hasOwnProperty.call(result, 'nextCursor');
-      const newest = paged ? responseMessages : responseMessages.slice(-STAFF_RECENT_BATCH);
-      const fallbackOlder = paged ? [] : responseMessages.slice(0, -STAFF_RECENT_BATCH);
+      if (room === null) {
+        const supported = Array.isArray(result.conversations);
+        if (supported) renderStaffTalks(result.conversations);
+        else $('staffTalks').textContent = '個別トークを表示するにはGASの再デプロイが必要です。';
+        updateStaffUnread(result.unreadCount || 0, true);
+        staffStatus.textContent = '';
+        return;
+      }
+      // 旧GASの共通レスポンスをトーク内に表示しない。
+      if (result.room !== room) {
+        chatTableNotice(staffMessages, 5, 'トークを表示するにはGASの再デプロイが必要です。');
+        return;
+      }
+      staffTalkApiReady = true;
+      const newest = result.messages;
       const needOlder = !staffHistoryLoaded || forceFullHistory;
       if (needOlder) {
         staffMessageCache = newest.slice();
@@ -2881,20 +2930,16 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
       renderStaffMessages(staffMessageCache, token);
       // 最新20件が表示された時点で既読処理を開始する。旧履歴の取得とは並行。
       const newestRead = markDisplayedStaffUnread(newest, token);
-      if (needOlder) {
+      if (needOlder && Number.isInteger(result.nextCursor)) {
         staffStatus.textContent = '最新' + newest.length + '件を表示中。古いメッセージを追加で読み込んでいます…';
         let older = [];
         try {
-          if (paged && Number.isInteger(result.nextCursor) && result.nextCursor >= 2) {
-            const previous = await serverCall('getStaffChatMessages', token, staffBrowserId,
-              {beforeRow: result.nextCursor, limit: STAFF_MAX_VISIBLE});
-            if (!previous || !Array.isArray(previous.messages)) throw new Error('古い履歴の形式が不正です。');
-            older = previous.messages;
-          } else if (!paged && fallbackOlder.length) {
-            // 旧GASで200件返ってきた場合も、描画は必ず最新20件→残りの順番にする。
-            await new Promise(resolve => requestAnimationFrame(() => resolve()));
-            older = fallbackOlder;
+          const previous = await serverCall('getStaffChatMessages', token, staffBrowserId,
+            {room, beforeRow: result.nextCursor, limit: STAFF_MAX_VISIBLE - newest.length});
+          if (previous?.room !== room || !Array.isArray(previous.messages)) {
+            throw new Error('古い履歴の形式が不正です。');
           }
+          older = previous.messages;
           if (token !== adminSession.getItem(ADMIN_TOKEN_KEY) ||
               openGeneration !== staffOpenGeneration || document.hidden ||
               !staffChat.classList.contains('open')) {
@@ -2905,29 +2950,28 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
           renderStaffMessages(staffMessageCache, token);
           const olderRead = markDisplayedStaffUnread(older, token);
           await Promise.all([newestRead, olderRead]);
+          if (openGeneration !== staffOpenGeneration || !staffChat.classList.contains('open') ||
+              token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
           staffHistoryLoaded = true;
           renderStaffMessages(staffMessageCache, token);
         } catch (error) {
           await newestRead;
           if (token === adminSession.getItem(ADMIN_TOKEN_KEY) &&
-              staffChat.classList.contains('open')) {
+              openGeneration === staffOpenGeneration && staffChat.classList.contains('open')) {
             staffStatus.textContent = '最新20件は表示しています。古い履歴の読み込みに失敗：' +
               (error?.message || '通信エラー');
           }
         }
       } else {
+        staffHistoryLoaded = true;
         await newestRead;
         if (token === adminSession.getItem(ADMIN_TOKEN_KEY) &&
             openGeneration === staffOpenGeneration && staffChat.classList.contains('open')) {
           renderStaffMessages(staffMessageCache, token);
         }
       }
-      if (token === adminSession.getItem(ADMIN_TOKEN_KEY) &&
-          openGeneration === staffOpenGeneration && staffChat.classList.contains('open')) {
-        updateStaffUnread(staffMessageCache.filter(item => item.unread).length, true);
-      }
     } catch (error) {
-      if (token === adminSession.getItem(ADMIN_TOKEN_KEY)) {
+      if (token === adminSession.getItem(ADMIN_TOKEN_KEY) && openGeneration === staffOpenGeneration) {
         $('staffOnlineCount').textContent = 'オンライン人数を取得できません';
         staffStatus.textContent = '読み込みに失敗しました。' + (error?.message || '通信エラー');
       }
@@ -2935,23 +2979,47 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
       refreshStaffButton.disabled = false;
       const requested = staffRefreshRequestedWhileLoading;
       staffRefreshRequestedWhileLoading = false;
-      if (requested && !document.hidden && staffChat.classList.contains('open') &&
-          token === adminSession.getItem(ADMIN_TOKEN_KEY)) {
+      if (requested && !document.hidden && staffChat.classList.contains('open')) {
         void refreshStaffChat();
       }
     }
   }
 
-  $('sideStaffChat').addEventListener('click', () => {
-    if (!adminSession.getItem(ADMIN_TOKEN_KEY)) return;
+  function showStaffTalk(room, name = '', reset = false) {
+    if (!reset && $('staffChatSend').disabled) return;
+    if (!reset && staffActiveRoom !== null && (staffInput.value.trim() || staffAttachmentInput.files.length) &&
+        !window.confirm('入力中のメッセージと添付を破棄しますか？')) return;
+    staffInput.value = '';
+    staffAttachmentInput.value = '';
+    staffPendingAttachmentRequestId = '';
+    refreshStaffFileSelection();
+    staffActiveRoom = room;
+    staffTalkApiReady = false;
     staffOpenGeneration++;
     staffHistoryLoaded = false;
     staffMessageCache = [];
-    openMainChat(staffChat, '管理者専用チャット');
     staffRenderKey = '';
-    $('staffChatNotice').hidden = true;
+    $('staffTalkTitle').textContent = room === null ? 'トーク一覧' : room ? (name || '管理者') + 'とのトーク' : '全体トーク';
+    $('staffTalkList').hidden = room !== null;
+    $('staffTalkRoom').hidden = room === null;
+    $('staffBackToTalks').hidden = room === null;
+    staffStatus.textContent = '';
+    if (room === null && reset) {
+      $('staffTalks').replaceChildren();
+      delete $('staffTalks').dataset.conversations;
+      $('staffNewTalk').open = false;
+      staffRecipientCode.value = '';
+      updateStaffRecipientControls([], '');
+    }
+    if (room !== null) chatTableNotice(staffMessages, 5, 'メッセージを読み込んでいます…');
     void refreshStaffChat(true);
-    staffInput.focus();
+  }
+
+  $('sideStaffChat').addEventListener('click', () => {
+    if (!adminSession.getItem(ADMIN_TOKEN_KEY) || $('staffChatSend').disabled) return;
+    openMainChat(staffChat, '管理者専用チャット');
+    $('staffChatNotice').hidden = true;
+    showStaffTalk(null, '', true);
   });
   $('staffChatNotice').addEventListener('click', () => $('sideStaffChat').click());
   document.addEventListener('visibilitychange', () => { if (!document.hidden) void refreshStaffChat(); });
@@ -3009,11 +3077,17 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
     event.preventDefault();
     void sendStaffChatPost();
   });
-  staffScreenshotChoose.addEventListener('click', () => staffScreenshotInput.click());
+  let staffPhotoRoomGeneration;
+  staffScreenshotChoose.addEventListener('click', () => {
+    staffPhotoRoomGeneration = staffOpenGeneration;
+    staffScreenshotInput.click();
+  });
   staffScreenshotInput.addEventListener('change', () => {
     const image = staffScreenshotInput.files[0];
     staffScreenshotInput.value = '';
-    if (image) void sendStaffChatPost(image);
+    if (image && staffPhotoRoomGeneration === staffOpenGeneration && staffChat.classList.contains('open')) {
+      void sendStaffChatPost(image);
+    }
   });
 
   async function sendStaffChatPost(screenshot = null) {
@@ -3023,23 +3097,10 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
     if (button.disabled || (!body.trim() && !file && !screenshot)) return;
     const token = adminSession.getItem(ADMIN_TOKEN_KEY);
     if (!token) return;
-    const destination = staffRecipientSelect.value;
-    const recipientId = (destination === 'manual' ? staffRecipientCode.value : destination).trim().toLowerCase();
-    if (destination === 'manual' && !recipientId) {
-      staffStatus.textContent = '個人宛ての宛先コードを入力してください。';
-      return;
-    }
-    if (recipientId && !staffMailboxPattern.test(recipientId)) {
-      staffStatus.textContent = '宛先コードの形式が正しくありません。';
-      return;
-    }
-    if (recipientId && recipientId === staffOwnMailbox) {
-      staffStatus.textContent = '自分自身には送信できません。';
-      return;
-    }
-    // GitHub Pagesだけ先に更新されても、旧GASが個人宛てを全員へ送信しないよう拒否。
-    if (recipientId && !staffOwnMailbox) {
-      staffStatus.textContent = '個人宛て機能を使うにはGASのコードとデプロイを更新してください。';
+    const recipientId = staffActiveRoom;
+    if (recipientId === null || !staffChat.classList.contains('open')) return;
+    if (!staffTalkApiReady || (recipientId && !staffOwnMailbox)) {
+      staffStatus.textContent = '送信するにはトークの読み込みとGASの再デプロイが必要です。';
       return;
     }
     if (file) {
@@ -3058,8 +3119,8 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
     staffAttachmentClear.disabled = true;
     staffAttachmentInput.disabled = true;
     staffScreenshotChoose.disabled = true;
-    staffRecipientSelect.disabled = true;
-    staffRecipientCode.disabled = true;
+    $('staffBackToTalks').disabled = true;
+    $('closeStaffChat').disabled = true;
     staffStatus.textContent = recipientId ? '個人宛てに送信しています…' : (file || screenshot ? 'ファイルを送信しています…' : '送信しています…');
     try {
       let result;
@@ -3099,8 +3160,8 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
       staffAttachmentClear.disabled = false;
       staffAttachmentInput.disabled = false;
       staffScreenshotChoose.disabled = false;
-      staffRecipientSelect.disabled = false;
-      staffRecipientCode.disabled = false;
+      $('staffBackToTalks').disabled = false;
+      $('closeStaffChat').disabled = false;
     }
   }
 
