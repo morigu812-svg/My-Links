@@ -1014,7 +1014,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
     <div id="otherHistoryView" hidden>
       <div class="section-heading">
         <div><span class="section-kicker">LINK CORE / ACTIVITY LOG</span><h2 id="otherHistoryTitle"></h2><p id="otherHistoryDescription"></p></div>
-        <div class="click-log-actions"><button id="refreshOtherHistory" class="btn" type="button">↻ 再読み込み</button><button id="backfillVisitorCounter" class="btn" type="button" hidden>11/14〜11/16の過去ログを取り込む</button><button id="deleteVisitorLoginLogs" class="btn danger" type="button" hidden>履歴をすべて削除</button></div>
+        <div class="click-log-actions"><button id="refreshOtherHistory" class="btn" type="button">↻ 再読み込み</button><button id="backfillVisitorCounter" class="btn" type="button" hidden>11/14〜11/16の過去ログを取り込む</button><button id="deleteOldVisitorCounter" class="btn danger" type="button" hidden>11/13以前の来客記録を削除</button><button id="deleteVisitorLoginLogs" class="btn danger" type="button" hidden>履歴をすべて削除</button></div>
       </div>
       <div id="otherHistoryStatus" role="status" aria-live="polite"></div>
       <div class="click-log-table-wrap"><table class="click-log-table">
@@ -1303,7 +1303,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   }
 
   function serverCall(method, ...args) {
-    const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'getVisitorCounterStats', 'backfillVisitorCounterFromLogs', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'getChatScreenshot', 'sendChatMessage', 'sendChatScreenshot', 'getStaffChatMessages', 'getStaffChatAttachment', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendStaffChatAttachment', 'deleteStaffChatMessage', 'sendPrivateChatMessage', 'getClickLogs', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
+    const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'getVisitorCounterStats', 'backfillVisitorCounterFromLogs', 'deleteVisitorCounterBefore20261114', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'getChatScreenshot', 'sendChatMessage', 'sendChatScreenshot', 'getStaffChatMessages', 'getStaffChatAttachment', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendStaffChatAttachment', 'deleteStaffChatMessage', 'sendPrivateChatMessage', 'getClickLogs', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
     if (protectedMethods.includes(method)) {
       const token = adminSession.getItem(ADMIN_TOKEN_KEY) || '';
       // 呼び出し元（埋め込みメモ帳など）が既にトークンを渡している場合は二重追加しない。
@@ -1946,6 +1946,7 @@ document.getElementById('authSubmit').disabled = false;
     $('otherHistoryView').hidden = !other;
     $('deleteVisitorLoginLogs').hidden = other?.key !== 'visitorLogins';
     $('backfillVisitorCounter').hidden = other?.key !== 'visitorCounter';
+    $('deleteOldVisitorCounter').hidden = other?.key !== 'visitorCounter';
     clickLogPanel.setAttribute('aria-label', other ? other.title : 'クリック履歴');
     if (!other && !clickLogsLoaded) refreshClickLogs();
   }
@@ -2004,7 +2005,7 @@ document.getElementById('authSubmit').disabled = false;
     "side": "sideVisitorCounter",
     "api": "getVisitorCounterStats",
     "title": "来客数カウンター",
-    "description": "日本時間で1ブラウザにつき1日1回。総来客数は日別来客数の合計です。過去のログは「11/14〜11/16の過去ログを取り込む」から追加できます。",
+    "description": "2026年11月14日から集計（日本時間・1ブラウザにつき1日1回）。総来客数には11月13日以前を含めません。古い記録の物理削除もできます。",
     "columns": ["日付（JST）", "来客数"]
   }
 ];
@@ -2084,6 +2085,31 @@ document.getElementById('authSubmit').disabled = false;
       button.disabled = false;
     }
   }
+
+  $('deleteOldVisitorCounter').addEventListener('click', async event => {
+    const button = event.currentTarget;
+    const token = adminSession.getItem(ADMIN_TOKEN_KEY);
+    if (!token || button.disabled || activeHistory?.key !== 'visitorCounter') return;
+    if (!confirm('来客カウンターの2026年11月13日以前の記録を完全に削除しますか？\n11月14日以降の記録は残し、元の利用者ログイン履歴は削除しません。\nこの操作は取り消せません。')) return;
+    button.disabled = true;
+    $('otherHistoryStatus').textContent = '11月13日以前のカウンター記録を削除中…';
+    try {
+      const result = await serverCall('deleteVisitorCounterBefore20261114');
+      if (!result?.ok) throw new Error('削除完了を確認できませんでした。');
+      if (token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
+      await refreshOtherHistory();
+      await refreshAdminVisitorCounter();
+      $('otherHistoryStatus').textContent = '削除完了：11月13日以前の来客記録 ' +
+        Number(result.deleted || 0).toLocaleString('ja-JP') + '件を削除しました。11月14日以降は保持しています。';
+    } catch (error) {
+      if (token === adminSession.getItem(ADMIN_TOKEN_KEY)) {
+        $('otherHistoryStatus').textContent = '削除に失敗しました：' +
+          (error?.message || '通信エラー') + '。GASの再デプロイを確認してください。';
+      }
+    } finally {
+      button.disabled = false;
+    }
+  });
 
   $('backfillVisitorCounter').addEventListener('click', async event => {
     const button = event.currentTarget;

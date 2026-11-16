@@ -2038,6 +2038,8 @@ function getLinkOperationLogs(adminToken) {
 const VISITOR_COUNTER_SHEET = 'VisitorCounterVisits';
 const VISITOR_COUNTER_SALT_PROPERTY = 'LINK_CORE_VISITOR_COUNT_SALT';
 const VISITOR_COUNTER_TIMEZONE = 'Asia/Tokyo';
+// 2026年11月13日以前はカウントしない（11月14日から集計）。
+const VISITOR_COUNTER_MIN_DATE = '2026-11-14';
 
 function visitorCounterToday_() {
   return Utilities.formatDate(new Date(), VISITOR_COUNTER_TIMEZONE, 'yyyy-MM-dd');
@@ -2087,6 +2089,7 @@ function recordVisitorCounter_(browserId) {
     acquired = true;
     const digest = visitorCounterDigest_(browserId, visitorCounterSalt_());
     const day = visitorCounterToday_();
+    if (day < VISITOR_COUNTER_MIN_DATE) return;
     const sheet = visitorCounterSheet_(true);
     const last = sheet.getLastRow();
     // 過去ログの後日取り込みにより日付が並び順にならないことがある。
@@ -2132,7 +2135,9 @@ function backfillVisitorCounterFromLogs(startDate, endDate, adminToken) {
   if (typeof startDate !== 'string' || typeof endDate !== 'string' ||
       !/^\d{4}-\d{2}-\d{2}$/.test(startDate) ||
       !/^\d{4}-\d{2}-\d{2}$/.test(endDate) ||
-      startDate > endDate) throw new Error('取り込み期間が不正です。');
+      startDate > endDate || startDate < VISITOR_COUNTER_MIN_DATE) {
+    throw new Error('来客カウンターには2026年11月14日以降の履歴のみ取り込めます。');
+  }
   const firstDay = new Date(startDate + 'T00:00:00Z');
   const lastDay = new Date(endDate + 'T00:00:00Z');
   const span = Math.round((lastDay - firstDay) / 86400000);
@@ -2204,6 +2209,43 @@ function backfillVisitorCounterFromLogs(startDate, endDate, adminToken) {
   }
 }
 
+
+/**
+ * 管理者のみ：来客カウンターの2026-11-13以前の行を物理削除する。
+ * VisitorLoginLogs（ログイン履歴）は削除しない。再実行しても安全。
+ */
+function deleteVisitorCounterBefore20261114(adminToken) {
+  requireAdmin_(adminToken);
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    requireAdmin_(adminToken);
+    const sheet = visitorCounterSheet_(false);
+    const last = sheet ? sheet.getLastRow() : 0;
+    if (last < 2) return {ok: true, deleted: 0, cutoff: VISITOR_COUNTER_MIN_DATE};
+    const days = sheet.getRange(2, 1, last - 1, 1).getValues();
+    let endIndex = -1, deleted = 0;
+    // 下から連続区間ごとに削除し、残る行番号が変わらないようにする。
+    for (let index = days.length - 1; index >= -1; index--) {
+      const day = index >= 0 ? visitorCounterDateKey_(days[index][0]) : '';
+      const remove = !!day && day < VISITOR_COUNTER_MIN_DATE;
+      if (remove) {
+        if (endIndex < 0) endIndex = index;
+        continue;
+      }
+      if (endIndex < 0) continue;
+      const start = index + 1;
+      const count = endIndex - start + 1;
+      sheet.deleteRows(start + 2, count);
+      deleted += count;
+      endIndex = -1;
+    }
+    return {ok: true, deleted: deleted, cutoff: VISITOR_COUNTER_MIN_DATE};
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 /** 利用者には当日と累計、管理者には日付別履歴も返す。 */
 function getVisitorCounterStats(viewerToken) {
   requireLinkViewer_(viewerToken);
@@ -2216,7 +2258,7 @@ function getVisitorCounterStats(viewerToken) {
     const values = sheet.getRange(2, 1, last - 1, 1).getValues();
     values.forEach(row => {
       const day = visitorCounterDateKey_(row[0]);
-      if (!day) return;
+      if (!day || day < VISITOR_COUNTER_MIN_DATE) return;
       counts[day] = (counts[day] || 0) + 1;
       total++;
     });
@@ -2227,7 +2269,8 @@ function getVisitorCounterStats(viewerToken) {
     const keys = new Set(Object.keys(counts));
     const [year, month, day] = today.split('-').map(Number);
     for (let offset = 0; offset < 30; offset++) {
-      keys.add(new Date(Date.UTC(year, month - 1, day - offset)).toISOString().slice(0, 10));
+      const dateKey = new Date(Date.UTC(year, month - 1, day - offset)).toISOString().slice(0, 10);
+      if (dateKey >= VISITOR_COUNTER_MIN_DATE) keys.add(dateKey);
     }
     result.days = Array.from(keys).sort().reverse().slice(0, 1000)
       .map(date => ({date: date, count: counts[date] || 0}));
