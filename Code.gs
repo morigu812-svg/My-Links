@@ -2064,6 +2064,19 @@ function visitorCounterSheet_(create) {
   }
   return sheet;
 }
+function visitorCounterSalt_() {
+  const props = PropertiesService.getScriptProperties();
+  let salt = props.getProperty(VISITOR_COUNTER_SALT_PROPERTY);
+  if (!salt) {
+    salt = Utilities.getUuid() + Utilities.getUuid();
+    props.setProperty(VISITOR_COUNTER_SALT_PROPERTY, salt);
+  }
+  return salt;
+}
+function visitorCounterDigest_(browserId, salt) {
+  return Utilities.computeHmacSha256Signature(browserId, salt)
+    .map(byte => (byte & 255).toString(16).padStart(2, '0')).join('');
+}
 function recordVisitorCounter_(browserId) {
   // 有効な識別子がない場合に仮のIDでカウントを増やさない。
   if (typeof browserId !== 'string' || !/^[A-Za-z0-9_-]{8,100}$/.test(browserId)) return;
@@ -2072,26 +2085,18 @@ function recordVisitorCounter_(browserId) {
   try {
     lock.waitLock(10000);
     acquired = true;
-    const properties = PropertiesService.getScriptProperties();
-    let salt = properties.getProperty(VISITOR_COUNTER_SALT_PROPERTY);
-    if (!salt) {
-      salt = Utilities.getUuid() + Utilities.getUuid();
-      properties.setProperty(VISITOR_COUNTER_SALT_PROPERTY, salt);
-    }
-    const digest = Utilities.computeHmacSha256Signature(browserId, salt)
-      .map(byte => (byte & 255).toString(16).padStart(2, '0')).join('');
+    const digest = visitorCounterDigest_(browserId, visitorCounterSalt_());
     const day = visitorCounterToday_();
     const sheet = visitorCounterSheet_(true);
     const last = sheet.getLastRow();
-    // 新規来客は下に追記されるので、当日の行だけを後ろから確認すればよい。
-    // チャンク読み込みを使い、同一日が大量件数でも重複判定できる。
-    let foundPriorDay = false;
-    for (let end = last; end >= 2 && !foundPriorDay; end -= 400) {
+    // 過去ログの後日取り込みにより日付が並び順にならないことがある。
+    // そのため、直近の日付が違っても探索を打ち切らず、全行で照合する。
+    for (let end = last; end >= 2; end -= 400) {
       const start = Math.max(2, end - 399);
       const rows = sheet.getRange(start, 1, end - start + 1, 2).getValues();
       for (let i = rows.length - 1; i >= 0; i--) {
-        if (visitorCounterDateKey_(rows[i][0]) !== day) { foundPriorDay = true; break; }
-        if (String(rows[i][1]) === digest) return;
+        if (visitorCounterDateKey_(rows[i][0]) === day &&
+            String(rows[i][1]) === digest) return;
       }
     }
     sheet.appendRow([day, digest, new Date()]);
@@ -2103,6 +2108,102 @@ function recordVisitorCounter_(browserId) {
     if (acquired) lock.releaseLock();
   }
 }
+
+/** 過去ログの日時を日本時間の日付に揃える。文字列はシートに表示された日付形式のみ許可。 */
+function visitorCounterLegacyDate_(value) {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return Utilities.formatDate(value, VISITOR_COUNTER_TIMEZONE, 'yyyy-MM-dd');
+  }
+  const match = String(value || '').trim().match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})(?:\s|$)/);
+  if (!match) return '';
+  const year = Number(match[1]), month = Number(match[2]), day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return '';
+  return [year, String(month).padStart(2, '0'), String(day).padStart(2, '0')].join('-');
+}
+
+/**
+ * 管理者専用：VisitorLoginLogs の指定期間をカウンターに取り込む。
+ * 既存記録と同一ブラウザ/同一日はスキップし、何回実行しても結果は増えない。
+ * 空欄のIDは来客を特定できないため除外する。生のブラウザIDは移行先に残さない。
+ */
+function backfillVisitorCounterFromLogs(startDate, endDate, adminToken) {
+  requireAdmin_(adminToken);
+  if (typeof startDate !== 'string' || typeof endDate !== 'string' ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(startDate) ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(endDate) ||
+      startDate > endDate) throw new Error('取り込み期間が不正です。');
+  const firstDay = new Date(startDate + 'T00:00:00Z');
+  const lastDay = new Date(endDate + 'T00:00:00Z');
+  const span = Math.round((lastDay - firstDay) / 86400000);
+  if (!Number.isFinite(span) || span < 0 || span > 31) {
+    throw new Error('一度に取り込める期間は32日以内です。');
+  }
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    requireAdmin_(adminToken);
+    const source = visitorLoginLogSheet_();
+    if (!source || source.getLastRow() < 2) {
+      throw new Error('VisitorLoginLogs に過去のログがありません。');
+    }
+    const values = source.getRange(2, 1, source.getLastRow() - 1, 2).getValues();
+    const target = visitorCounterSheet_(true);
+    const existingRows = target.getLastRow();
+    const known = new Set();
+    if (existingRows >= 2) {
+      const existing = target.getRange(2, 1, existingRows - 1, 2).getValues();
+      existing.forEach(row => {
+        const day = visitorCounterDateKey_(row[0]);
+        const digest = String(row[1] || '');
+        if (day && digest) known.add(day + ':' + digest);
+      });
+    }
+    const salt = visitorCounterSalt_();
+    const pending = [];
+    const byDay = Object.create(null);
+    let examined = 0, emptyIds = 0, duplicates = 0;
+    values.forEach(row => {
+      const dateKey = visitorCounterLegacyDate_(row[0]);
+      if (!dateKey || dateKey < startDate || dateKey > endDate) return;
+      examined++;
+      const browserId = String(row[1] || '').trim();
+      if (!/^[A-Za-z0-9_-]{8,100}$/.test(browserId)) {
+        emptyIds++;
+        return;
+      }
+      const digest = visitorCounterDigest_(browserId, salt);
+      const key = dateKey + ':' + digest;
+      if (known.has(key)) {
+        duplicates++;
+        return;
+      }
+      known.add(key);
+      // 元ログの時刻を可能なら保持。文字列だった場合はJSTのその日00:00を使用。
+      const firstSeen = row[0] instanceof Date && !Number.isNaN(row[0].getTime())
+        ? row[0] : new Date(dateKey + 'T00:00:00+09:00');
+      pending.push([dateKey, digest, firstSeen]);
+      byDay[dateKey] = (byDay[dateKey] || 0) + 1;
+    });
+    if (pending.length) {
+      const firstRow = target.getLastRow() + 1;
+      const requiredRows = firstRow + pending.length - 1;
+      if (target.getMaxRows() < requiredRows) {
+        target.insertRowsAfter(target.getMaxRows(), requiredRows - target.getMaxRows());
+      }
+      target.getRange(firstRow, 1, pending.length, 3).setValues(pending);
+    }
+    return {
+      ok: true, startDate, endDate,
+      scanned: examined, imported: pending.length,
+      skippedMissingId: emptyIds, skippedDuplicate: duplicates,
+      importedDays: Object.keys(byDay).sort().map(date => ({date, count: byDay[date]}))
+    };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 /** 利用者には当日と累計、管理者には日付別履歴も返す。 */
 function getVisitorCounterStats(viewerToken) {
   requireLinkViewer_(viewerToken);
