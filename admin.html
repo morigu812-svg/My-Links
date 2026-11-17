@@ -1104,6 +1104,15 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
 .staff-file-card .staff-file-name { display:block; font-weight:700; overflow-wrap:anywhere; }
 .staff-file-card .staff-file-size { display:block; color:var(--muted); font-size:11px; }
 .staff-file-card button { flex:0 0 auto; }
+.staff-image-preview {
+  display: block;
+  max-width: min(100%, 420px);
+  max-height: min(55vh, 420px);
+  height: auto;
+  margin-top: 6px;
+  border-radius: 8px;
+  object-fit: contain;
+}
 </style>
 <style id="link-feed-privacy-note-style">
 #finderWindow .link-feed-privacy-note{margin:0 0 14px;padding:12px 14px;border:1px solid rgba(53,217,255,.34);border-radius:10px;background:rgba(15,40,64,.65);box-shadow:inset 3px 0 rgba(53,217,255,.55)}
@@ -3243,6 +3252,61 @@ $('closeChat').addEventListener('click', closeMainChat);
             size.className = 'staff-file-size';
             size.textContent = (item.attachment.size / 1024).toFixed(0) + ' KB';
             detail.append(name, size);
+            async function fetchAttachment() {
+              const currentToken = adminSession.getItem(ADMIN_TOKEN_KEY);
+              if (!currentToken || currentToken !== token) return null;
+              const result = await serverCall('getStaffChatAttachment', item.id, ...(staffOwnMailbox ? [staffBrowserId] : []));
+              if (currentToken !== adminSession.getItem(ADMIN_TOKEN_KEY)) return null;
+              if (!result?.base64) throw new Error('ファイルを取得できませんでした。');
+              return result;
+            }
+            const imageMimes = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
+            if (imageMimes.includes(item.attachment.mime)) {
+              const preview = document.createElement('button');
+              preview.type = 'button';
+              preview.className = 'btn';
+              preview.textContent = 'プレビュー';
+              preview.setAttribute('aria-expanded', 'false');
+              const image = document.createElement('img');
+              image.className = 'staff-image-preview';
+              image.alt = item.attachment.name || '添付画像';
+              image.hidden = true;
+              image.addEventListener('error', () => {
+                image.hidden = true;
+                image.removeAttribute('src');
+                preview.textContent = 'プレビュー';
+                preview.setAttribute('aria-expanded', 'false');
+                if (image.isConnected) staffStatus.textContent = '画像を表示できませんでした。';
+              });
+              preview.addEventListener('click', async () => {
+                if (preview.disabled) return;
+                if (!image.hidden) {
+                  image.hidden = true;
+                  preview.textContent = 'プレビュー';
+                  preview.setAttribute('aria-expanded', 'false');
+                  return;
+                }
+                preview.disabled = true;
+                preview.textContent = '取得中…';
+                try {
+                  if (!image.hasAttribute('src')) {
+                    const result = await fetchAttachment();
+                    if (!result || !card.isConnected) return;
+                    if (!imageMimes.includes(result.mime)) throw new Error('この画像形式は表示できません。');
+                    image.src = 'data:' + result.mime + ';base64,' + result.base64;
+                  }
+                  image.hidden = false;
+                  preview.setAttribute('aria-expanded', 'true');
+                } catch (error) {
+                  if (card.isConnected) staffStatus.textContent = '画像の取得に失敗しました：' + (error.message || '通信エラー');
+                } finally {
+                  preview.disabled = false;
+                  preview.textContent = image.hidden ? 'プレビュー' : '閉じる';
+                }
+              });
+              fileCard.append(detail, preview);
+              bubble.append(fileCard, image);
+            }
             const download = document.createElement('button');
             download.type = 'button';
             download.className = 'btn';
@@ -3253,10 +3317,8 @@ $('closeChat').addEventListener('click', closeMainChat);
               const before = download.textContent;
               download.textContent = '取得中…';
               try {
-                const token = adminSession.getItem(ADMIN_TOKEN_KEY);
-                const result = await serverCall('getStaffChatAttachment', item.id, ...(staffOwnMailbox ? [staffBrowserId] : []));
-                if (token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
-                if (!result?.base64) throw new Error('ファイルを取得できませんでした。');
+                const result = await fetchAttachment();
+                if (!result) return;
                 const binary = atob(result.base64);
                 const bytes = new Uint8Array(binary.length);
                 for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
@@ -3276,8 +3338,9 @@ $('closeChat').addEventListener('click', closeMainChat);
                 download.textContent = before;
               }
             });
-            fileCard.append(detail, download);
-            bubble.append(fileCard);
+            if (!detail.parentNode) fileCard.append(detail);
+            fileCard.append(download);
+            if (!fileCard.parentNode) bubble.append(fileCard);
           }
           const action = document.createElement('div');
           if (item.own && staffBrowserId) {
