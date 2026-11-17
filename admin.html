@@ -1193,7 +1193,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
         <summary class="side-item"><span class="side-folder-mini" aria-hidden="true"><svg class="folder-icon" viewBox="0 0 64 52" aria-hidden="true"><path d="M4 10a5 5 0 0 1 5-5h17l7 7h22a5 5 0 0 1 5 5v4H4z" fill="currentColor" opacity=".72"/><path d="M4 17a5 5 0 0 1 5-5h46a5 5 0 0 1 5 5v27a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z" fill="currentColor"/><path d="M4 22h56" stroke="#fff" stroke-opacity=".35" stroke-width="2"/></svg></span> チャット <span class="log-folder-chevron" aria-hidden="true">›</span></summary>
         <div class="sidebar-log-items">
           <button class="side-item" type="button" id="sideStaffChat"><span>✉</span> 管理者専用チャット <span id="staffUnreadCount" class="new-badge" hidden></span></button>
-          <button class="side-item" type="button" id="sideChat"><span>✉</span> 利用者チャット <span class="new-badge" id="chatUnreadBadge" hidden>NEW</span></button>
+          <button class="side-item" type="button" id="sideChat"><span>✉</span> 利用者チャット <span class="new-badge" id="chatUnreadBadge" hidden></span></button>
         </div>
       </details>
       <details class="sidebar-log-folder">
@@ -1436,10 +1436,12 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
 </dialog>
 
 <style>
-#staffChatNotice { position:fixed;top:max(16px,env(safe-area-inset-top));right:16px;z-index:120001;width:min(320px,calc(100vw - 32px));display:grid;gap:5px;padding:14px 16px;text-align:left;border:1px solid #ffffff38;border-radius:16px;background:#202533ed;color:#fff;box-shadow:0 12px 35px #0006;backdrop-filter:blur(18px);cursor:pointer }
-#staffChatNotice[hidden] { display:none }
+#adminChatNotices { position:fixed;top:max(16px,env(safe-area-inset-top));right:16px;z-index:120001;width:min(320px,calc(100vw - 32px));display:grid;gap:8px;pointer-events:none }
+#adminChatNotices > button { width:100%;pointer-events:auto;display:grid;gap:5px;padding:14px 16px;text-align:left;border:1px solid #ffffff38;border-radius:16px;background:#202533ed;color:#fff;box-shadow:0 12px 35px #0006;backdrop-filter:blur(18px);cursor:pointer }
+#adminChatNotices > button[hidden] { display:none }
 </style>
-<button id="staffChatNotice" type="button" hidden><strong>管理者専用チャット</strong><span id="staffChatNoticeText"></span></button>
+<div id="adminChatNotices"><button id="visitorChatNotice" type="button" hidden><strong>利用者チャット</strong><span id="visitorChatNoticeText"></span></button>
+<button id="staffChatNotice" type="button" hidden><strong>管理者専用チャット</strong><span id="staffChatNoticeText"></span></button></div>
 
 <dialog id="staffBrowserDialog" aria-labelledby="staffBrowserTitle">
   <form id="staffBrowserForm">
@@ -1764,6 +1766,9 @@ function watchSessionExpiry(deadline, onExpired) {
     chatOverlay.classList.remove('open');
     $('staffChatOverlay').classList.remove('open');
     $('staffChatNotice').hidden = true;
+    lastVisitorChatMessages = [];
+    adminUnreadCount = 0;
+    updateAdminChatBadge();
     $('staffUnreadCount').hidden = true;
     chatMessages.replaceChildren();
     visitorChatRenderKey = '';
@@ -1822,6 +1827,7 @@ function watchSessionExpiry(deadline, onExpired) {
     authField.value = '';
     refreshStaffChat();
     startAdminChatRealtime();
+    void refreshAdminChat();
     void refreshStaffPresence();
     void refreshAdminVisitorCounter();
     setBusy(true);
@@ -2149,7 +2155,10 @@ document.getElementById('authSubmit').disabled = false;
   
   // Shared visitor chat; the server determines the author from the authenticated token.
   const chatOverlay=$('chatOverlay'),chatMessages=$('chatMessages'),chatForm=$('chatForm'),chatInput=$('chatInput'),chatSend=$('chatSend');
-  let chatLoading=false,chatLoaded=false,lastAdminChatId='',adminUnreadCount=0;
+  let chatLoading = false, adminUnreadCount = 0;
+  const VISITOR_CHAT_READ_KEY = 'linkCoreAdminVisitorChatReadV1';
+  let readVisitorChatIds;
+  let lastVisitorChatMessages = [];
   function buildChatBubbles(messages, decorate, {groupIncoming = false, showRead = false} = {}) {
     let previousDay = '';
     let previousMessage;
@@ -2277,7 +2286,10 @@ document.getElementById('authSubmit').disabled = false;
     if (key === visitorChatRenderKey) return;
     const token = adminSession.getItem(ADMIN_TOKEN_KEY);
     if (holdChatRenderWhileMenuOpen(chatMessages, () => {
-      if (token === adminSession.getItem(ADMIN_TOKEN_KEY) && chatOverlay.classList.contains('open')) renderChatMessages(messages);
+      if (token === adminSession.getItem(ADMIN_TOKEN_KEY) && chatOverlay.classList.contains('open')) {
+        renderChatMessages(messages);
+        updateVisitorChatUnread(messages);
+      }
     })) return;
     visitorChatRenderKey = key;
     adminVisitorPreviews.keep(messages.filter(item => item.hasScreenshot).map(item => item.id));
@@ -2295,8 +2307,58 @@ document.getElementById('authSubmit').disabled = false;
     }
     if (nearBottom) scrollArea.scrollTop = scrollArea.scrollHeight;
   }
-  function updateAdminChatBadge(){const badge=$('chatUnreadBadge');if(!badge)return;badge.hidden=adminUnreadCount<1;badge.textContent=adminUnreadCount>99?'99+':String(adminUnreadCount);badge.setAttribute('aria-label',adminUnreadCount+'件の未読メッセージ');}
-  async function refreshAdminChat(){const token=adminSession.getItem(ADMIN_TOKEN_KEY);if(chatLoading||!token)return;const revision=visitorChatRevision;chatLoading=true;try{const fallback=()=>serverCall('getChatMessages');const r=await (adminChatRealtime?.read({chat_type:'visitor'},fallback)??fallback());if(token!==adminSession.getItem(ADMIN_TOKEN_KEY)||revision!==visitorChatRevision)return;const messages=Array.isArray(r.messages)?r.messages:[];const latest=messages.length?messages[messages.length-1].id:'';if(chatLoaded&&latest&&lastAdminChatId&&latest!==lastAdminChatId&&!chatOverlay.classList.contains('open')){const previousIndex=messages.findIndex(item=>item.id===lastAdminChatId);adminUnreadCount+=previousIndex>=0?messages.length-previousIndex-1:1;updateAdminChatBadge();}if(latest)lastAdminChatId=latest;renderChatMessages(messages);$('visitorChatStatus').textContent='';chatLoaded=true;}catch(e){if(chatOverlay.classList.contains('open'))$('visitorChatStatus').textContent='読み込みに失敗しました：'+(e.message||'通信エラー');}finally{chatLoading=false;}}
+  function updateAdminChatBadge() {
+    const badge = $('chatUnreadBadge');
+    const notice = $('visitorChatNotice');
+    const count = adminUnreadCount;
+    badge.hidden = count === 0;
+    badge.textContent = count > 99 ? '99+' : String(count);
+    badge.setAttribute('aria-label', count + '件の未読メッセージ');
+    $('visitorChatNoticeText').textContent = '未読メッセージ ' + count + ' 件';
+    notice.hidden = count === 0 || chatOverlay.classList.contains('open') || !adminSession.getItem(ADMIN_TOKEN_KEY);
+  }
+
+  function updateVisitorChatUnread(messages) {
+    if (!readVisitorChatIds) {
+      let saved;
+      try { saved = JSON.parse(adminSession.getItem(VISITOR_CHAT_READ_KEY) || '[]'); } catch (_) {}
+      readVisitorChatIds = new Set(Array.isArray(saved) ? saved : []);
+    }
+    const incoming = messages.filter(item => item.id && !item.private && item.author !== '管理者');
+    if (chatOverlay.classList.contains('open') && !document.hidden &&
+        !chatMessages.contains(openStaffMessageActions?.trigger)) {
+      const previousSize = readVisitorChatIds.size;
+      incoming.forEach(item => readVisitorChatIds.add(item.id));
+      if (readVisitorChatIds.size !== previousSize) {
+        const ids = Array.from(readVisitorChatIds).slice(-1000);
+        readVisitorChatIds = new Set(ids);
+        adminSession.setItem(VISITOR_CHAT_READ_KEY, JSON.stringify(ids));
+      }
+    }
+    adminUnreadCount = incoming.filter(item => !readVisitorChatIds.has(item.id)).length;
+    updateAdminChatBadge();
+  }
+
+  async function refreshAdminChat() {
+    const token = adminSession.getItem(ADMIN_TOKEN_KEY);
+    if (chatLoading || !token || document.hidden) return;
+    const revision = visitorChatRevision;
+    chatLoading = true;
+    try {
+      const fallback = () => serverCall('getChatMessages');
+      const result = await (adminChatRealtime?.read({chat_type:'visitor'}, fallback) ?? fallback());
+      if (token !== adminSession.getItem(ADMIN_TOKEN_KEY) || revision !== visitorChatRevision) return;
+      const messages = Array.isArray(result.messages) ? result.messages : [];
+      lastVisitorChatMessages = messages;
+      renderChatMessages(messages);
+      updateVisitorChatUnread(messages);
+      $('visitorChatStatus').textContent = '';
+    } catch (error) {
+      if (chatOverlay.classList.contains('open')) $('visitorChatStatus').textContent = '読み込みに失敗しました：' + (error.message || '通信エラー');
+    } finally {
+      chatLoading = false;
+    }
+  }
   function hideMainChats() {
     $('chatOverlay').classList.remove('open');
     $('staffChatOverlay').classList.remove('open');
@@ -2319,8 +2381,9 @@ document.getElementById('authSubmit').disabled = false;
     hideMainChats();
     document.querySelector('[data-view="all"]').click();
   }
-  function openAdminChat(){if(!adminSession.getItem(ADMIN_TOKEN_KEY)){alert('先に管理者ログインをしてください。');return;}adminUnreadCount=0;updateAdminChatBadge();openMainChat(chatOverlay, '利用者チャット');refreshAdminChat();}
+  function openAdminChat(){if(!adminSession.getItem(ADMIN_TOKEN_KEY)){alert('先に管理者ログインをしてください。');return;}openMainChat(chatOverlay, '利用者チャット');updateVisitorChatUnread(lastVisitorChatMessages);void refreshAdminChat();}
   $('sideChat').addEventListener('click',openAdminChat);
+  $('visitorChatNotice').addEventListener('click', openAdminChat);
   const clickLogPanel=$('clickLogPanel');
   let clickLogsLoaded=false,clickLogsLoading=false,clickBrowserNameSaving=false;
   function historyBrowserCell(log, missingLabel, statusId, viewId, refresh) {
@@ -4106,6 +4169,7 @@ $('closeChat').addEventListener('click', closeMainChat);
   (async function initializeAdminPage() {
     if (!document.hidden && adminSession.getItem(ADMIN_TOKEN_KEY)) {
       startAdminChatRealtime();
+      void refreshAdminChat();
       void refreshStaffPresence();
     }
     // 未ログイン状態では保護されたAPIを呼ばず、認証画面をそのまま表示する。
