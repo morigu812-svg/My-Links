@@ -37,7 +37,7 @@
         return fallback();
       }
       if (current !== generation) throw new Error('チャット接続が終了しました。');
-      if (!session?.direct || (action === 'send' && !verifiedDirect) ||
+      if (!session?.direct || (action === 'send' && !verifiedDirect && !parameters.target_id) ||
           (action === 'send' && parameters.chat_type === 'staff' &&
           parameters.destination && !session.recipients?.includes(parameters.destination))) return fallback();
       try {

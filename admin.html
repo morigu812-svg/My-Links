@@ -1104,7 +1104,13 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
   background: var(--panel-2);
   box-shadow: 0 8px 24px #0008;
 }
-.staff-message-actions > button { min-height: 36px; padding: 6px 10px; font-size: 13px; }
+.staff-message-actions > button { min-height: 44px; padding: 6px 10px; font-size: 13px; touch-action: manipulation; }
+@media (hover: none) {
+  .staff-message-actions > button:hover { box-shadow: none !important; transform: none !important; }
+}
+.chat-send-status { color: var(--sub); font-size: 12px; overflow-wrap: anywhere; }
+.chat-send-status:empty { display: none; }
+.chat-send-status[data-error="true"] { color: #ffafb9; }
 .staff-message-actions > button.danger { color: var(--danger) !important; }
 #staffChatOverlay .staff-message .staff-file-card { flex-wrap: wrap; gap: 4px 8px; margin-top: 4px; padding: 4px 6px; }
 #staffChatOverlay .staff-message .staff-file-card > button { min-height: 28px; padding: 4px 7px; font-size: 11px; }
@@ -1254,6 +1260,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
           <button id="chatSend" type="submit">返信</button>
         </div>
         <span id="chatScreenshotHint" class="chat-subtitle">選んだ画像は共通チャットの全員に送信されます。</span>
+        <div id="visitorChatSendStatus" class="chat-send-status" role="status"></div>
         <div id="chatScreenshotStatus" role="status"></div>
       </form>
     </div>
@@ -1304,6 +1311,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
       <button type="button" id="staffScreenshotChoose" class="staff-file-button" aria-describedby="staffScreenshotHint">写真を添付</button>
       <button type="submit" id="staffChatSend">送信</button>
     </div>
+    <div id="staffChatSendStatus" class="chat-send-status" role="status"></div>
     <span id="staffScreenshotHint" class="chat-subtitle">端末で撮影した画像を選ぶと、開いているトークにすぐ送信されます。</span>
     <span id="staffAttachmentInfo" role="status" aria-live="polite" hidden></span>
     <button type="button" id="staffAttachmentClear" hidden>添付を解除</button>
@@ -2267,6 +2275,10 @@ document.getElementById('authSubmit').disabled = false;
   function renderChatMessages(messages) {
     const key = JSON.stringify(messages);
     if (key === visitorChatRenderKey) return;
+    const token = adminSession.getItem(ADMIN_TOKEN_KEY);
+    if (holdChatRenderWhileMenuOpen(chatMessages, () => {
+      if (token === adminSession.getItem(ADMIN_TOKEN_KEY) && chatOverlay.classList.contains('open')) renderChatMessages(messages);
+    })) return;
     visitorChatRenderKey = key;
     adminVisitorPreviews.keep(messages.filter(item => item.hasScreenshot).map(item => item.id));
     if (chatMessages.contains(openStaffMessageActions?.trigger)) closeStaffMessageActions();
@@ -2940,18 +2952,37 @@ $('closeChat').addEventListener('click', closeMainChat);
     }
   };
 
-  chatForm.addEventListener('submit',async e=>{e.preventDefault();const message=chatInput.value.trim();if(!message)return;chatSend.disabled=true;try {
+  chatForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (chatSend.disabled) return;
+    const message = chatInput.value.trim();
+    if (!message) return;
+    const token = adminSession.getItem(ADMIN_TOKEN_KEY);
+    if (!token) return;
+    chatSend.disabled = true;
+    const target = adminVisitorReply?.target;
+    updateChatSendStatus('visitorChatSendStatus', target ? '返信を送信中…' : '送信中…');
+    try {
       const recipient = $('chatRecipient').value.trim();
-      const target = adminVisitorReply?.target;
       const fallback = () => {
         if (target) throw new Error('引用返信にはSupabaseへの接続が必要です。');
         return recipient ? serverCall('sendPrivateChatMessage', message, recipient) : serverCall('sendChatMessage', message);
       };
       await (adminChatRealtime?.send(recipient ? 'direct' : 'public', message, recipient, fallback, target?.id) ?? fallback());
+      if (token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
       if (adminVisitorReply?.target === target) adminVisitorReply?.clear();
       chatInput.value = '';
+      updateChatSendStatus('visitorChatSendStatus', '送信しました。');
       await refreshAdminChat();
-    }catch(error){$('visitorChatStatus').textContent=error.message||'送信できませんでした。';}finally{chatSend.disabled=false;chatInput.focus();}});
+    } catch (error) {
+      if (token === adminSession.getItem(ADMIN_TOKEN_KEY)) {
+        updateChatSendStatus('visitorChatSendStatus', '送信できませんでした：' + (error.message || '通信エラー'), true);
+      }
+    } finally {
+      chatSend.disabled = false;
+      if (token === adminSession.getItem(ADMIN_TOKEN_KEY)) chatInput.focus({preventScroll: true});
+    }
+  });
 
   const staffChat = $('staffChatOverlay');
   const staffMessages = $('staffChatMessages');
@@ -3174,6 +3205,19 @@ $('closeChat').addEventListener('click', closeMainChat);
   }
 
   let openStaffMessageActions = null;
+  let deferredChatMenuRender;
+
+  function holdChatRenderWhileMenuOpen(messages, render) {
+    if (!messages.contains(openStaffMessageActions?.trigger)) return false;
+    deferredChatMenuRender = render;
+    return true;
+  }
+
+  function updateChatSendStatus(id, message, error = false) {
+    const status = $(id);
+    status.dataset.error = String(error);
+    status.textContent = message;
+  }
 
   function closeStaffMessageActions(restoreFocus = false) {
     if (!openStaffMessageActions) return;
@@ -3181,6 +3225,9 @@ $('closeChat').addEventListener('click', closeMainChat);
     openStaffMessageActions = null;
     trigger.setAttribute('aria-expanded', 'false');
     actions.remove();
+    const resumeRender = deferredChatMenuRender;
+    deferredChatMenuRender = undefined;
+    if (resumeRender) queueMicrotask(resumeRender);
     if (restoreFocus && trigger.isConnected) trigger.focus({preventScroll: true});
   }
 
@@ -3207,11 +3254,11 @@ $('closeChat').addEventListener('click', closeMainChat);
     trigger.textContent = '…';
     trigger.setAttribute('aria-label', 'メッセージの操作');
     trigger.setAttribute('aria-expanded', 'false');
-    trigger.addEventListener('click', () => toggleStaffMessageActions(trigger, actions));
+    trigger.addEventListener('click', event => toggleStaffMessageActions(trigger, actions, event.detail === 0));
     line.append(trigger);
   }
 
-  function toggleStaffMessageActions(trigger, actions) {
+  function toggleStaffMessageActions(trigger, actions, keyboard) {
     const wasOpen = openStaffMessageActions?.trigger === trigger;
     closeStaffMessageActions();
     if (wasOpen) return;
@@ -3225,7 +3272,7 @@ $('closeChat').addEventListener('click', closeMainChat);
       : Math.max(8, anchor.top - height - 4);
     actions.style.left = left + 'px';
     actions.style.top = top + 'px';
-    actions.querySelector('button:not(:disabled)')?.focus({preventScroll: true});
+    if (keyboard) actions.querySelector('button:not(:disabled)')?.focus({preventScroll: true});
   }
 
   document.addEventListener('click', event => {
@@ -3257,6 +3304,11 @@ $('closeChat').addEventListener('click', closeMainChat);
   function renderStaffMessages(messages, token) {
       const key = JSON.stringify(messages.map(item => [item.id, item.readCount, item.unread, item.own, item.author, item.reply, item.attachment?.name]));
       if (key !== staffRenderKey) {
+        const generation = staffOpenGeneration;
+        if (holdChatRenderWhileMenuOpen(staffMessages, () => {
+          if (generation === staffOpenGeneration && token === adminSession.getItem(ADMIN_TOKEN_KEY) &&
+              staffChat.classList.contains('open')) renderStaffMessages(staffMessageCache, token);
+        })) return;
         closeStaffMessageActions();
         staffImagePreviews.keep(messages.filter(item => item.attachment).map(item => item.id));
         const cards = buildChatBubbles(messages, (item, card, bubble, line) => {
@@ -3616,6 +3668,7 @@ $('closeChat').addEventListener('click', closeMainChat);
     staffPendingAttachmentRequestId = '';
     refreshStaffFileSelection();
     staffReply?.clear();
+    updateChatSendStatus('staffChatSendStatus', '');
     if (room !== staffActiveRoom || reset) staffImagePreviews.clear();
     staffActiveRoom = room;
     showStaffPeerPresence(null);
@@ -3758,21 +3811,21 @@ $('closeChat').addEventListener('click', closeMainChat);
     const target = staffReply?.target;
     if (recipientId === null || !staffChat.classList.contains('open')) return;
     if (!staffTalkApiReady || (recipientId && !staffOwnMailbox)) {
-      staffStatus.textContent = '送信するにはトークの読み込みとGASの再デプロイが必要です。';
+      updateChatSendStatus('staffChatSendStatus', '送信するにはトークの読み込みとGASの再デプロイが必要です。', true);
       return;
     }
     if (target && (file || screenshot)) {
-      staffStatus.textContent = '引用返信はテキストのみ送信できます。';
+      updateChatSendStatus('staffChatSendStatus', '引用返信はテキストのみ送信できます。', true);
       return;
     }
     if (file) {
       const extension = file.name.split('.').pop().toLowerCase();
       if (!staffAllowedExtensions.has(extension)) {
-        staffStatus.textContent = 'この形式のファイルは添付できません。';
+        updateChatSendStatus('staffChatSendStatus', 'この形式のファイルは添付できません。', true);
         return;
       }
       if (file.size < 1 || file.size > STAFF_MAX_FILE_BYTES) {
-        staffStatus.textContent = '添付ファイルの容量は1バイト〜2 MBにしてください。';
+        updateChatSendStatus('staffChatSendStatus', '添付ファイルの容量は1バイト〜2 MBにしてください。', true);
         return;
       }
     }
@@ -3783,7 +3836,7 @@ $('closeChat').addEventListener('click', closeMainChat);
     staffScreenshotChoose.disabled = true;
     $('staffBackToTalks').disabled = true;
     $('closeStaffChat').disabled = true;
-    staffStatus.textContent = recipientId ? '個人宛てに送信しています…' : (file || screenshot ? 'ファイルを送信しています…' : '送信しています…');
+    updateChatSendStatus('staffChatSendStatus', target ? '返信を送信中…' : '送信中…');
     try {
       let result;
       if (screenshot) {
@@ -3817,10 +3870,12 @@ $('closeChat').addEventListener('click', closeMainChat);
         staffPendingAttachmentRequestId = '';
         refreshStaffFileSelection();
       }
-      staffStatus.textContent = recipientId ? '個人宛てに送信しました。' : '送信しました。';
+      updateChatSendStatus('staffChatSendStatus', recipientId ? '個人宛てに送信しました。' : '送信しました。');
       await refreshStaffChat();
     } catch (error) {
-      staffStatus.textContent = '送信に失敗しました。' + (error.message || '通信エラー');
+      if (token === adminSession.getItem(ADMIN_TOKEN_KEY)) {
+        updateChatSendStatus('staffChatSendStatus', '送信できませんでした：' + (error.message || '通信エラー'), true);
+      }
     } finally {
       button.disabled = false;
       $('staffAttachmentChoose').disabled = false;
