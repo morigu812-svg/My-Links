@@ -3127,6 +3127,7 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
   const STAFF_RECENT_BATCH = 20;
   const STAFF_MAX_VISIBLE = 200;
   let staffRefreshRequestedWhileLoading = false;
+  let staffFullRefreshRequestedWhileLoading = false;
   let staffMessageCache = [];
   let staffHistoryLoaded = false;
   let staffOpenGeneration = 0;
@@ -3390,7 +3391,10 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
     const room = staffActiveRoom;
     const openGeneration = staffOpenGeneration;
     if (refreshStaffButton.disabled) {
-      if (startedOpen) staffRefreshRequestedWhileLoading = true;
+      if (startedOpen) {
+        staffRefreshRequestedWhileLoading = true;
+        staffFullRefreshRequestedWhileLoading ||= forceFullHistory;
+      }
       return;
     }
     refreshStaffButton.disabled = true;
@@ -3427,18 +3431,19 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
       }
       staffTalkApiReady = true;
       const newest = result.messages;
-      const needOlder = !staffHistoryLoaded || forceFullHistory;
-      if (needOlder) {
+      const firstLoad = !staffHistoryLoaded;
+      const needOlder = firstLoad || forceFullHistory;
+      if (firstLoad || (needOlder && !Number.isInteger(result.nextCursor))) {
         staffMessageCache = newest.slice();
-        staffRenderKey = '';
-      } else {
+        renderStaffMessages(staffMessageCache, token);
+      } else if (!needOlder) {
         staffMessageCache = mergeStaffMessagePages(staffMessageCache, newest);
+        renderStaffMessages(staffMessageCache, token);
       }
-      renderStaffMessages(staffMessageCache, token);
       // 最新20件が表示された時点で既読処理を開始する。旧履歴の取得とは並行。
       const newestRead = markDisplayedStaffUnread(newest, token);
       if (needOlder && Number.isInteger(result.nextCursor)) {
-        staffStatus.textContent = '最新' + newest.length + '件を表示中。古いメッセージを追加で読み込んでいます…';
+        if (firstLoad) staffStatus.textContent = '最新' + newest.length + '件を表示中。古いメッセージを追加で読み込んでいます…';
         let older = [];
         try {
           const previous = await readStaffRoom(token,
@@ -3485,9 +3490,11 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
     } finally {
       refreshStaffButton.disabled = false;
       const requested = staffRefreshRequestedWhileLoading;
+      const fullRefreshRequested = staffFullRefreshRequestedWhileLoading;
       staffRefreshRequestedWhileLoading = false;
+      staffFullRefreshRequestedWhileLoading = false;
       if (requested && !document.hidden && staffChat.classList.contains('open')) {
-        void refreshStaffChat();
+        void refreshStaffChat(fullRefreshRequested);
       }
     }
   }
