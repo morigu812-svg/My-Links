@@ -674,6 +674,22 @@ main { width:100%; max-width:none !important; }
 <style>
 .click-log-panel{min-width:0;padding:25px 27px}
 .click-browser-name{margin-bottom:4px;max-width:100%;overflow-wrap:anywhere;text-align:left}
+#clickLogPanel button.click-browser-name[data-browser-name=""] {
+  background: #202938 !important;
+  border-color: #536174 !important;
+  color: #c1cbda !important;
+}
+#clickLogPanel button.click-browser-name[data-browser-name]:not([data-browser-name=""]) {
+  background: #123641 !important;
+  border-color: #39859a !important;
+  color: #a0efff !important;
+}
+#clickLogPanel button.click-browser-name[data-browser-name=""]:hover {
+  border-color: #8493a8 !important;
+}
+#clickLogPanel button.click-browser-name[data-browser-name]:not([data-browser-name=""]):hover {
+  border-color: #75d4eb !important;
+}
 .click-log-panel[hidden]{display:none!important}
 .workspace[hidden]{display:none!important}
 .click-log-panel .section-heading p{margin:6px 0 0;color:var(--muted,#9aabba);font-size:12px}
