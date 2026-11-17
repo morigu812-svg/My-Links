@@ -1,4 +1,4 @@
-/* The database keeps the messages; private broadcast asks active pages to refresh. */
+/* The database keeps the messages; a protected change stream asks active pages to refresh. */
 (() => {
   const sdkUrl = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.91.0/+esm';
   window.createChatRealtime = function (issueSession, onChange) {
@@ -51,8 +51,10 @@
         await client.realtime.setAuth(session.token);
         if (current !== generation) return;
         if (!channels.length) {
-          channels = session.topics.map(topic => client.channel(topic, {config: {private: true}})
-            .on('broadcast', {event: 'change'}, () => { if (current === generation) notify(topic); })
+          channels = session.topics.map(topic => client.channel(topic)
+            .on('postgres_changes', {
+              event: '*', schema: 'public', table: 'link_core_chat_signals', filter: 'topic=eq.' + topic
+            }, () => { if (current === generation) notify(topic); })
             .subscribe(status => {
               if (current === generation && status === 'SUBSCRIBED') notify(topic);
             }));

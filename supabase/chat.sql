@@ -29,17 +29,28 @@ create index if not exists link_core_chat_recipient on public.link_core_chat (ki
 create index if not exists link_core_chat_sender on public.link_core_chat (kind, sender, seq desc);
 create unique index if not exists link_core_chat_request on public.link_core_chat (request_id) where request_id is not null;
 
-alter table realtime.messages enable row level security;
-drop policy if exists link_core_chat_subscribe on realtime.messages;
-create policy link_core_chat_subscribe on realtime.messages
+create table if not exists public.link_core_chat_signals (
+  topic text primary key,
+  revision bigint not null default 1
+);
+alter table public.link_core_chat_signals enable row level security;
+revoke all on public.link_core_chat_signals from public, anon, authenticated;
+grant select on public.link_core_chat_signals to authenticated;
+drop policy if exists link_core_chat_subscribe on public.link_core_chat_signals;
+create policy link_core_chat_subscribe on public.link_core_chat_signals
   for select to authenticated
-  using (
-    extension = 'broadcast'
-    and realtime.topic() like 'lc-chat-%'
-    and (auth.jwt() -> 'link_core_topics') ? realtime.topic()
-  );
+  using (((select auth.jwt()) -> 'link_core_topics') ? topic);
 
--- Send after the transaction commits. WebSocket frames carry only a refresh signal.
+do $publication$
+begin
+  if not exists (select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'link_core_chat_signals') then
+    alter publication supabase_realtime add table public.link_core_chat_signals;
+  end if;
+end
+$publication$;
+
+-- Publish only a topic and a revision, without chat content.
 create or replace function public.link_core_chat_notify() returns trigger
 language plpgsql security definer set search_path = ''
 as $$
@@ -48,19 +59,15 @@ declare
 begin
   if current_setting('link_core.import', true) = 'on' then return null; end if;
   if TG_OP = 'DELETE' then msg := old; else msg := new; end if;
-  if msg.kind = 'public' then
-    perform realtime.send('{}', 'change', 'lc-chat-public', true);
-  elsif msg.kind = 'direct' then
-    perform realtime.send('{}', 'change', 'lc-chat-direct-admin', true);
-    perform realtime.send('{}', 'change', 'lc-chat-direct-' || msg.recipient, true);
-  elsif msg.recipient = '' then
-    perform realtime.send('{}', 'change', 'lc-chat-staff-all', true);
-  else
-    perform realtime.send('{}', 'change', 'lc-chat-staff-' || msg.sender, true);
-    if msg.recipient <> msg.sender then
-      perform realtime.send('{}', 'change', 'lc-chat-staff-' || msg.recipient, true);
-    end if;
-  end if;
+  insert into public.link_core_chat_signals (topic)
+  select distinct topic from unnest(case
+    when msg.kind = 'public' then array['lc-chat-public']
+    when msg.kind = 'direct' then array['lc-chat-direct-admin', 'lc-chat-direct-' || msg.recipient]
+    when msg.recipient = '' then array['lc-chat-staff-all']
+    else array['lc-chat-staff-' || msg.sender, 'lc-chat-staff-' || msg.recipient]
+  end) as topics(topic)
+  order by topic
+  on conflict (topic) do update set revision = public.link_core_chat_signals.revision + 1;
   return null;
 end;
 $$;
