@@ -990,6 +990,25 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
 #chatOverlay > .section-heading { flex-wrap: wrap; gap: 12px; }
 #chatOverlay #chatRecipient { width: 100%; min-width: 0; margin-top: 4px; }
 #chatOverlay :is(#visitorChatStatus, #chatScreenshotStatus):empty { display: none; }
+#staffPeerPresence {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 8px 2px 0;
+  color: var(--sub);
+  font-size: 12px;
+}
+#staffPeerPresence[hidden] { display: none !important; }
+#staffPeerPresence::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  border-radius: 50%;
+  background: #8294aa;
+}
+#staffPeerPresence[data-online="true"] { color: #a6efd3; }
+#staffPeerPresence[data-online="true"]::before { background: #65d8ad; }
 .staff-message-list {
   display: flex;
   flex-direction: column;
@@ -1275,6 +1294,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
       <div class="chat-table-wrap staff-message-scroll" aria-label="メッセージ履歴" tabindex="0">
         <div id="staffChatMessages" class="staff-message-list"></div>
       </div>
+  <div id="staffPeerPresence" role="status" hidden></div>
   <form class="chat-compose" id="staffChatForm">
     <textarea id="staffChatInput" aria-label="管理者へのメッセージ" maxlength="1000" rows="4" placeholder="管理者へのメッセージ（ファイルのみでも送信可）"></textarea>
     <div class="staff-compose-actions">
@@ -1794,6 +1814,7 @@ function watchSessionExpiry(deadline, onExpired) {
     authField.value = '';
     refreshStaffChat();
     startAdminChatRealtime();
+    void refreshStaffPresence();
     void refreshAdminVisitorCounter();
     setBusy(true);
     setStatus('認証完了。リンクを読み込んでいます…', '');
@@ -2221,6 +2242,7 @@ document.getElementById('authSubmit').disabled = false;
     });
     const actions = document.createElement('div');
     actions.append(remove);
+    addChatReplyAction(actions, adminVisitorReply, item);
     attachChatMessageActions(line, actions);
 
     if (item.private) {
@@ -3162,6 +3184,19 @@ $('closeChat').addEventListener('click', closeMainChat);
     if (restoreFocus && trigger.isConnected) trigger.focus({preventScroll: true});
   }
 
+  function addChatReplyAction(actions, reply, item) {
+    if (!reply) return;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'btn';
+    button.textContent = '返信';
+    button.addEventListener('click', () => {
+      closeStaffMessageActions();
+      reply.select(item);
+    });
+    actions.prepend(button);
+  }
+
   function attachChatMessageActions(line, actions) {
     actions.className = 'staff-message-actions';
     actions.setAttribute('role', 'group');
@@ -3340,6 +3375,7 @@ $('closeChat').addEventListener('click', closeMainChat);
             });
             action.append(readButton);
           }
+          addChatReplyAction(action, staffReply, item);
           if (action.childElementCount) attachChatMessageActions(line, action);
         }, {groupIncoming: Boolean(staffActiveRoom), showRead: staffActiveRoom === ''});
         const scrollArea = staffMessages.closest('.chat-table-wrap');
@@ -3528,6 +3564,48 @@ $('closeChat').addEventListener('click', closeMainChat);
     }
   }
 
+  let staffPresencePending = false;
+  let staffPresenceRefreshQueued = false;
+
+  function showStaffPeerPresence(online) {
+    const status = $('staffPeerPresence');
+    status.hidden = !staffActiveRoom;
+    status.dataset.online = String(online === true);
+    const label = online === true ? '相手はオンライン' : online === false ? '相手はオフライン' : 'オンライン状態を確認中…';
+    if (status.textContent !== label) status.textContent = label;
+  }
+
+  async function refreshStaffPresence() {
+    const token = adminSession.getItem(ADMIN_TOKEN_KEY);
+    if (!token || document.hidden) return;
+    if (staffPresencePending) {
+      staffPresenceRefreshQueued = true;
+      return;
+    }
+    const peer = staffChat.classList.contains('open') ? staffActiveRoom || '' : '';
+    staffPresencePending = true;
+    try {
+      const result = await serverCall('getStaffChatPresence', token, staffBrowserId, peer);
+      if (token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
+      if (peer && peer === staffActiveRoom && staffChat.classList.contains('open') && result) {
+        showStaffPeerPresence(result.peerOnline);
+      }
+    } catch (_) {
+      if (peer && peer === staffActiveRoom && staffChat.classList.contains('open') &&
+          token === adminSession.getItem(ADMIN_TOKEN_KEY)) {
+        const status = $('staffPeerPresence');
+        status.dataset.online = 'false';
+        status.textContent = 'オンライン状態を取得できません';
+      }
+    } finally {
+      staffPresencePending = false;
+      if (staffPresenceRefreshQueued) {
+        staffPresenceRefreshQueued = false;
+        void refreshStaffPresence();
+      }
+    }
+  }
+
   function showStaffTalk(room, name = '', reset = false) {
     closeStaffMessageActions();
     if (!reset && $('staffChatSend').disabled) return;
@@ -3540,6 +3618,8 @@ $('closeChat').addEventListener('click', closeMainChat);
     staffReply?.clear();
     if (room !== staffActiveRoom || reset) staffImagePreviews.clear();
     staffActiveRoom = room;
+    showStaffPeerPresence(null);
+    if (room) void refreshStaffPresence();
     staffTalkApiReady = false;
     staffOpenGeneration++;
     staffHistoryLoaded = false;
@@ -3589,6 +3669,7 @@ $('closeChat').addEventListener('click', closeMainChat);
     if (!document.hidden) {
       void refreshAdminChat();
       void refreshStaffChat();
+      void refreshStaffPresence();
       if (adminSession.getItem(ADMIN_TOKEN_KEY)) startAdminChatRealtime();
     }
   });
@@ -3600,6 +3681,7 @@ $('closeChat').addEventListener('click', closeMainChat);
   setInterval(() => {
     if (!document.hidden) {
       void refreshStaffChat();
+      void refreshStaffPresence();
       if (adminSession.getItem(ADMIN_TOKEN_KEY) && adminPageRealtimeToken !== adminSession.getItem(ADMIN_TOKEN_KEY)) startAdminChatRealtime();
     }
   }, 15000);
@@ -3967,7 +4049,10 @@ $('closeChat').addEventListener('click', closeMainChat);
 
   // 初期読み込みを独立した手順にし、各段階の状態を表示する。
   (async function initializeAdminPage() {
-    if (!document.hidden && adminSession.getItem(ADMIN_TOKEN_KEY)) startAdminChatRealtime();
+    if (!document.hidden && adminSession.getItem(ADMIN_TOKEN_KEY)) {
+      startAdminChatRealtime();
+      void refreshStaffPresence();
+    }
     // 未ログイン状態では保護されたAPIを呼ばず、認証画面をそのまま表示する。
     if (adminSession.getItem(AUTH_KEY) !== 'yes' || !adminSession.getItem(ADMIN_TOKEN_KEY)) {
       setBusy(false);

@@ -1796,6 +1796,19 @@ function diagnoseLinks(offset, adminToken) {
 }
 
 function countOnlineStaffBrowsers_(browserId) {
+  const presence = refreshStaffPresence_(browserId, '');
+  return presence ? presence.count : null;
+}
+
+function getStaffChatPresence(adminToken, browserId, peerMailbox) {
+  requireAdmin_(adminToken);
+  if (typeof peerMailbox !== 'string' || (peerMailbox && !/^mbx-[0-9a-f]{64}$/.test(peerMailbox))) {
+    throw new Error('トーク相手を確認できません。');
+  }
+  return refreshStaffPresence_(browserId, peerMailbox);
+}
+
+function refreshStaffPresence_(browserId, peerMailbox) {
   if (!validStaffBrowserId_(browserId)) return null;
   const cache = CacheService.getScriptCache();
   const key = 'LINK_CORE_STAFF_ONLINE_' + sessionGeneration_();
@@ -1809,7 +1822,11 @@ function countOnlineStaffBrowsers_(browserId) {
     });
     online[browserId] = now + 45000;
     cache.put(key, JSON.stringify(online), 45);
-    return Object.keys(online).length;
+    const active = Object.keys(online);
+    return {
+      count: active.length,
+      peerOnline: peerMailbox ? active.some(id => staffChatMailboxId_(id) === peerMailbox) : null
+    };
   } finally {
     lock.releaseLock();
   }
