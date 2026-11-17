@@ -3779,7 +3779,7 @@ $('closeChat').addEventListener('click', closeMainChat);
   const adminChatRealtime = window.createChatRealtime?.(
     () => {
       const token = adminSession.getItem(ADMIN_TOKEN_KEY);
-      return token ? serverCall('getChatRealtimeSession', token, '', staffBrowserId) : {enabled:false};
+      return token ? serverCall('getChatRealtimeSession', 'visitorDirectChatProxy', token, '', staffBrowserId) : {enabled:false};
     },
     topics => {
       if (document.hidden) return;
@@ -3788,7 +3788,7 @@ $('closeChat').addEventListener('click', closeMainChat);
       if (topics.some(topic => !topic.startsWith('lc-chat-staff-'))) void refreshAdminChat();
     }
   );
-  const adminVisitorDirectChat = window.createVisitorDirectChat(params => adminChatRealtime.visitorDm(params), true);
+  const adminVisitorDirectChat = window.createVisitorDirectChat(params => serverCall('visitorDirectChatProxy', params), true);
   $('openVisitorDirectAdmin').addEventListener('click', () => adminVisitorDirectChat.open());
   let adminPageRealtimeToken = '';
   function startAdminChatRealtime() {

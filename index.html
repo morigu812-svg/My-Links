@@ -852,7 +852,7 @@ const viewerChatRealtime = window.createChatRealtime?.(
     if (topics.some(topic=>!topic.startsWith('lc-chat-direct-vb_')) && !document.hidden && chatOverlay.classList.contains('open')) void refreshChat();
   }
 );
-const viewerDirectChat = window.createVisitorDirectChat(params => viewerChatRealtime.visitorDm(params), false);
+const viewerDirectChat = window.createVisitorDirectChat(params => call('visitorDirectChatProxy', params, visitorToken), false);
 $('openVisitorDirectChat').addEventListener('click', () => viewerDirectChat.open());
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && visitorToken && chatOverlay.classList.contains('open')) {

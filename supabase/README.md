@@ -23,3 +23,11 @@
 4. 端末２台で、利用者の共通チャット、個別返信、管理者専用の全体と個別トークを送受信します。対象外の端末に個別投稿が表示されないことを確認し、既読・削除・添付と、通信復帰後の取得も試します。
 
 切り替え前に中止する場合は `sheets` に戻せます。シートへの書き込みを再開した後に移行をやり直す場合は、Supabase の取り込み先と移行位置を見直します。切り替え後に新しい投稿が入った状態で元に戻す場合は、Supabase 側の追加分と変更を先に退避・照合します。
+
+## 利用者との個人トークの `Load failed` 対策
+
+ブラウザからSupabase RPCへの直接通信がSafari等で失敗しても動作するよう、個人トークの読み込み・送信は **GitHub Pages → GAS bridge.html → `visitorDirectChatProxy` → Supabase** で中継します。通信は既存のGASログイントークンで認証し、短命の権限限定JWTでSupabaseの`link_core_visitor_dm` RPCを呼び出します。管理者以外は他のブラウザIDを指定できません。ブラウザに秘密のサーバーキーは渡しません。
+
+修正の反映には、新しい`Code.gs`と`bridge.html`をGASプロジェクトに反映し、**GASウェブアプリを新しいバージョンで再デプロイ**する必要があります。また`supabase/chat.sql`・`supabase/chat-direct.sql`・`supabase/visitor-direct-chat.sql`を適用済みで、`LINK_CORE_CHAT_BACKEND=supabase`になっていることも必要です。
+
+個人トークを利用する端末では再ログインしてブラウザ連携を再登録します。登録に失敗したときは認証情報エラーを表示するため、GAS実行ログとSupabaseの関数・設定を確認してください。GitHub Pagesのデプロイ成功はGASやSupabase本番設定の成功を意味しません。

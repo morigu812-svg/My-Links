@@ -2827,6 +2827,89 @@ function getChatRealtimeSession(viewerToken, browserSecret, staffBrowserId) {
   return {enabled:true, url, key, token:body + '.' + signature, topics, visitorDm:!!directClaims.link_core_visitor_browser || topics.includes('lc-chat-direct-admin'), recipients:directClaims.link_core_staff_recipients || [], direct:true, expiresAt:exp*1000};
 }
 
+/**
+ * 利用者との個人トーク専用GASプロキシ。
+ * iOS Safariなどでブラウザ→Supabaseのクロスオリジンfetchが
+ * "Load failed" になる場合でも、既存の安全なGASブリッジ経由で送受信する。
+ * 送信元はGASセッショントークンから検証した短命のJWTで識別する。
+ * クライアントが要求した管理者権限・ブラウザIDをJWTには使用しない。
+ */
+function visitorDirectChatProxy(parameters, viewerToken) {
+  requireLinkViewer_(viewerToken);
+  if (supabaseChatMode_() !== 'supabase') {
+    throw new Error('個人トークはSupabaseに接続されていません。GASとSupabaseの設定を確認してください。');
+  }
+  if (!parameters || typeof parameters !== 'object' || Array.isArray(parameters)) {
+    throw new Error('個人トークのリクエストが不正です。');
+  }
+  const operation = parameters.operation;
+  if (!['list', 'read', 'send'].includes(operation)) {
+    throw new Error('個人トークの操作を確認してください。');
+  }
+  const isAdmin = isSessionValid_('ADMIN', viewerToken);
+  if (operation === 'list' && !isAdmin) throw new Error('管理者専用の操作です。');
+  const browser = parameters.browser === undefined ? '' : parameters.browser;
+  if (typeof browser !== 'string' ||
+      (browser !== '' && !/^[A-Za-z0-9_-]{8,100}$/.test(browser)) ||
+      (isAdmin && operation !== 'list' && !browser) ||
+      (!isAdmin && browser)) {
+    throw new Error('トーク相手のブラウザIDを確認してください。');
+  }
+  const beforeCursor = parameters.before_cursor == null ? null : parameters.before_cursor;
+  if (beforeCursor !== null &&
+      (!Number.isSafeInteger(beforeCursor) || beforeCursor < 1)) {
+    throw new Error('読み込み位置が不正です。');
+  }
+  let message = '';
+  let messageId = null;
+  if (operation === 'send') {
+    if (typeof parameters.message !== 'string') throw new Error('送信するメッセージが不正です。');
+    message = parameters.message.trim();
+    if (!message || message.length > 1000) throw new Error('メッセージは1〜1000文字で入力してください。');
+    messageId = parameters.message_id;
+    if (typeof messageId !== 'string' ||
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(messageId)) {
+      throw new Error('メッセージ送信IDが不正です。');
+    }
+  }
+  // 同じ認証・権限を使うRealtime用の短命JWTをサーバー内で発行。
+  const session = getChatRealtimeSession(viewerToken, '', '');
+  if (!session.enabled || !session.visitorDm) {
+    throw new Error('個人トークの認証情報を確認できません。利用者ページから再ログインしてください。');
+  }
+  // Supabaseのservice_roleキーもJWT署名秘密鍵もブラウザに渡さない。
+  const body = {operation, browser, message, message_id:messageId, before_cursor:beforeCursor};
+  let response;
+  try {
+    response = UrlFetchApp.fetch(session.url + '/rest/v1/rpc/link_core_visitor_dm', {
+      method:'post',
+      contentType:'application/json',
+      headers:{apikey:session.key, Authorization:'Bearer ' + session.token},
+      payload:JSON.stringify(body),
+      muteHttpExceptions:true
+    });
+  } catch (_) {
+    throw new Error('個人トークのサーバーに接続できません。ネットワーク接続を確認してください。');
+  }
+  const status = response.getResponseCode();
+  let data = null;
+  try { data = JSON.parse(response.getContentText()); } catch (_) {}
+  if (status < 200 || status >= 300) {
+    if (status === 404) {
+      throw new Error('個人トークのSupabase関数が見つかりません。visitor-direct-chat.sql の適用を確認してください（404）。');
+    }
+    if (status === 401 || status === 403) {
+      throw new Error('個人トークの認証が拒否されました。SupabaseのJWT署名設定とアクセス権限を確認してください（HTTP ' + status + '）。');
+    }
+    const reason = data && typeof data.message === 'string' ? data.message.slice(0, 180) : '';
+    throw new Error(reason || ('個人トークの通信に失敗しました（HTTP ' + status + '）。'));
+  }
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    throw new Error('個人トークの返答形式を確認できません。');
+  }
+  return data;
+}
+
 /** Run from the Apps Script editor. Rerun until all three reports say done. */
 function migrateChatHistoryToSupabase_() {
   const {props} = supabaseChatConfig_();
