@@ -1913,6 +1913,13 @@ function staffChatConversationList_(sheet, last, browserId, mailbox, properties)
  * {mode:'conversations'} は送受信履歴のある相手の一覧を返す。
  * {mode:'summary'} とトーク一覧は本文を読まず、直近200行の未読件数も返す。
  */
+/** 旧スプレッドシートの既読ブラウザIDを、個人トークの相手のメールボックスIDと照合する。 */
+function staffPeerHasRead_(readerBrowserIds, recipientMailbox) {
+  if (!/^mbx-[0-9a-f]{64}$/.test(String(recipientMailbox || ''))) return false;
+  return readerBrowserIds.some(id => validStaffBrowserId_(id) &&
+    staffChatMailboxId_(id) === recipientMailbox);
+}
+
 function getStaffChatMessages(adminToken, browserId, pageOptions) {
   requireAdmin_(adminToken);
   const opts = pageOptions && typeof pageOptions === 'object' && !Array.isArray(pageOptions)
@@ -1995,6 +2002,9 @@ function getStaffChatMessages(adminToken, browserId, pageOptions) {
         id: String(row[0]), author: nicknameFor(row[3]) || '管理者',
         message: String(row[1]), createdAt: toIso_(row[2]), own,
         readCount: readers.length, unread: !!browserId && !own && !readers.includes(browserId),
+        // 自分が送った個人メッセージのみ、実際の相手の既読に基づく状態を返す。
+        peerRead: !!roomScoped && !!room && own && recipient === room
+          ? staffPeerHasRead_(readers, room) : null,
         private: !!recipient,
         recipientName: recipient ? (properties.getProperty(STAFF_CHAT_MEMBER_PREFIX + recipient) || '管理者') : '',
         attachment: row[5] ? {
@@ -2773,6 +2783,8 @@ function supabaseStaffChatMessages_(opts, mailbox, metadata, limit) {
     id:row.id, author:names[STAFF_CHAT_MEMBER_PREFIX+row.sender] || '管理者',
     message:row.body, createdAt:row.created_at, own:!!mailbox && row.sender===mailbox,
     readCount:row.readers.length, unread:!!mailbox && row.sender!==mailbox && !row.readers.includes(mailbox),
+    peerRead:roomScoped && !!opts.room && row.sender===mailbox && row.recipient===opts.room
+      ? row.readers.includes(opts.room) : null,
     private:!!row.recipient, recipientName:names[STAFF_CHAT_MEMBER_PREFIX+row.recipient] || '管理者',
     attachment:row.file_name ? {name:row.file_name, mime:row.file_mime, size:row.file_size} : null
   }));

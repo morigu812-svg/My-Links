@@ -836,6 +836,10 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   width: 100%;
   min-width: 0;
 }
+#staffChatOverlay .staff-peer-read-receipt { font-size: 10px; font-weight: 600; letter-spacing: .01em; color: #92a4bb; }
+#staffChatOverlay .staff-peer-read-receipt[data-read="true"] { color: #6bdfbb; }
+body:not(.night-mode) #staffChatOverlay .staff-peer-read-receipt { color: #64748b; }
+body:not(.night-mode) #staffChatOverlay .staff-peer-read-receipt[data-read="true"] { color: #16785e; }
 #staffChatOverlay #staffChatForm #staffAttachmentClear {
   align-self: flex-start;
 }
@@ -3377,7 +3381,7 @@ $('closeChat').addEventListener('click', closeMainChat);
   }
 
   function renderStaffMessages(messages, token) {
-      const key = JSON.stringify(messages.map(item => [item.id, item.readCount, item.unread, item.own, item.author, item.reply, item.attachment?.name]));
+      const key = JSON.stringify(messages.map(item => [item.id, item.readCount, item.peerRead, item.unread, item.own, item.author, item.reply, item.attachment?.name]));
       if (key !== staffRenderKey) {
         const generation = staffOpenGeneration;
         if (holdChatRenderWhileMenuOpen(staffMessages, () => {
@@ -3387,6 +3391,20 @@ $('closeChat').addEventListener('click', closeMainChat);
         closeStaffMessageActions();
         staffImagePreviews.keep(messages.filter(item => item.attachment).map(item => item.id));
         const cards = buildChatBubbles(messages, (item, card, bubble, line) => {
+          // 個人トークの送信済みメッセージだけ、相手本人の既読状態を表示する。
+          // 共有チャットの人数カウンターとは区別し、相手の既読データを変更しない。
+          if (staffActiveRoom && item.own && typeof item.peerRead === 'boolean') {
+            const meta = card.querySelector('.staff-message-meta');
+            if (meta) {
+              const receipt = document.createElement('span');
+              receipt.className = 'staff-peer-read-receipt';
+              receipt.dataset.read = String(item.peerRead);
+              receipt.textContent = item.peerRead ? '✓ 既読' : '未読';
+              receipt.setAttribute('aria-label', item.peerRead ? '相手が既読' : '相手は未読');
+              receipt.title = item.peerRead ? 'このメッセージは相手が読みました' : 'このメッセージはまだ相手が読んでいません';
+              meta.append(receipt);
+            }
+          }
           if (staffReply) window.bindChatReply(bubble, item, staffReply, true, card);
           if (item.attachment) {
             const fileCard = document.createElement('div');
@@ -3569,6 +3587,22 @@ $('closeChat').addEventListener('click', closeMainChat);
     const result = await adminChatRealtime.read({
       chat_type:'staff', room:options.room, page_size:options.limit, before_cursor:options.beforeRow ?? null
     }, fallback);
+    // 旧Supabase SQLがpeerReadをまだ返さない間も、GASが持つ同じ既読情報で補完する。
+    // 元の返信引用付きデータは維持し、相手の既読判定だけを差し込む。
+    if (options.room && Array.isArray(result.messages)) {
+      const missing = result.messages.filter(item => item.own && typeof item.peerRead !== 'boolean');
+      if (missing.length) {
+        try {
+          const extra = await fallback();
+          const values = new Map((extra.messages || []).map(item => [item.id, item.peerRead]));
+          missing.forEach(item => {
+            if (typeof values.get(item.id) === 'boolean') item.peerRead = values.get(item.id);
+          });
+        } catch (_) {
+          // 既読取得だけ失敗しても、既存のチャット本文はそのまま表示する。
+        }
+      }
+    }
     for (const item of result.messages || []) {
       if (item.senderMailbox) item.author = staffRealtimeNames.get(item.senderMailbox) || item.author || '管理者';
       if (item.reply?.senderMailbox) item.reply.author = staffRealtimeNames.get(item.reply.senderMailbox) || item.reply.author;

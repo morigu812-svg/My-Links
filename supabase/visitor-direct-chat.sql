@@ -131,6 +131,8 @@ begin
       'id', id, 'author', author, 'senderMailbox', sender,
       'message', body, 'createdAt', created_at, 'own', own_mailbox <> '' and sender = own_mailbox,
       'readCount', cardinality(readers), 'unread', own_mailbox <> '' and sender <> own_mailbox and not own_mailbox=any(readers),
+      'peerRead', case when room <> '' and sender = own_mailbox and recipient = room
+        then room = any(readers) else null end,
       'private', recipient <> '', 'attachment', case when file_name <> ''
         then jsonb_build_object('name',file_name,'mime',file_mime,'size',file_size) else null end
     ) as message

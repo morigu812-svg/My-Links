@@ -31,3 +31,9 @@
 修正の反映には、新しい`Code.gs`と`bridge.html`をGASプロジェクトに反映し、**GASウェブアプリを新しいバージョンで再デプロイ**する必要があります。また`supabase/chat.sql`・`supabase/chat-direct.sql`・`supabase/visitor-direct-chat.sql`を適用済みで、`LINK_CORE_CHAT_BACKEND=supabase`になっていることも必要です。
 
 個人トークを利用する端末では再ログインしてブラウザ連携を再登録します。登録に失敗したときは認証情報エラーを表示するため、GAS実行ログとSupabaseの関数・設定を確認してください。GitHub Pagesのデプロイ成功はGASやSupabase本番設定の成功を意味しません。
+
+## 管理者の個人トーク：相手の既読表示
+
+自分が送った個人メッセージの下に「未読 / ✓ 既読」を表示します。既存の `AdminChatMessages` の既読ブラウザID、または Supabase の `link_core_chat.readers` に含まれる**相手のメールボックスID**を使うため、過去の既読を消したり移行し直す必要はありません。共有トークの既読件数は変更しません。
+
+`Code.gs` をGASに反映して**ウェブアプリを新バージョンで再デプロイ**してください。Supabaseを使う場合は、SQL Editorで**最新版の `supabase/visitor-direct-chat.sql` にある `create or replace function public.link_core_chat_read_direct(...)` の定義**を更新すると、ブラウザへの直接取得でも `peerRead` が返るようになります（`chat-direct.sql` 側も同じフィールドに更新済み）。SQLが未更新の場合も、新しいGASを通じて既読を補完しますが、追加の通信が発生することがあります。既存テーブルや `readers` 列を削除・初期化しないでください。
