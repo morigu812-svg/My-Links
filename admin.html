@@ -1213,7 +1213,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
   <section id="chatOverlay" class="click-log-panel chat-main-panel" aria-label="利用者との共通チャット">
     <div class="section-heading">
       <div><span class="section-kicker">LINK CORE / CHAT</span><h2>利用者チャット</h2><p>利用者とのメッセージを表示します。</p></div>
-      <div class="click-log-actions"><button id="refreshChat" class="btn" type="button">↻ 再読み込み</button><button id="closeChat" class="btn" type="button">リンク一覧に戻る</button></div>
+      <div class="click-log-actions"><button id="closeChat" class="btn" type="button">リンク一覧に戻る</button></div>
     </div>
     <div id="visitorChatRoom">
       <div id="visitorChatStatus" class="chat-subtitle" role="status"></div>
@@ -1238,7 +1238,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
   <section id="staffChatOverlay" class="click-log-panel chat-main-panel" aria-label="管理者専用チャット">
     <div class="section-heading">
       <div><span class="section-kicker">LINK CORE / CHAT</span><h2 id="staffTalkTitle">トーク一覧</h2></div>
-      <div class="click-log-actions"><button id="staffBackToTalks" class="btn" type="button" hidden>トーク一覧に戻る</button><button id="refreshStaffChat" class="btn" type="button">↻ 再読み込み</button><button id="closeStaffChat" class="btn" type="button">リンク一覧に戻る</button></div>
+      <div class="click-log-actions"><button id="staffBackToTalks" class="btn" type="button" hidden>トーク一覧に戻る</button><button id="closeStaffChat" class="btn" type="button">リンク一覧に戻る</button></div>
     </div>
     <div class="chat-subtitle" id="staffChatStatus" role="status"></div>
     <div id="staffTalkList">
@@ -2257,7 +2257,7 @@ document.getElementById('authSubmit').disabled = false;
     if (nearBottom) scrollArea.scrollTop = scrollArea.scrollHeight;
   }
   function updateAdminChatBadge(){const badge=$('chatUnreadBadge');if(!badge)return;badge.hidden=adminUnreadCount<1;badge.textContent=adminUnreadCount>99?'99+':String(adminUnreadCount);badge.setAttribute('aria-label',adminUnreadCount+'件の未読メッセージ');}
-  async function refreshAdminChat(){const token=adminSession.getItem(ADMIN_TOKEN_KEY);if(chatLoading||!token)return;const revision=visitorChatRevision;const button=$('refreshChat');chatLoading=true;if(button){button.disabled=true;button.classList.add('is-refreshing');button.setAttribute('aria-busy','true');}try{const fallback=()=>serverCall('getChatMessages');const r=await (adminChatRealtime?.read({chat_type:'visitor'},fallback)??fallback());if(token!==adminSession.getItem(ADMIN_TOKEN_KEY)||revision!==visitorChatRevision)return;const messages=Array.isArray(r.messages)?r.messages:[];const latest=messages.length?messages[messages.length-1].id:'';if(chatLoaded&&latest&&lastAdminChatId&&latest!==lastAdminChatId&&!chatOverlay.classList.contains('open')){const previousIndex=messages.findIndex(item=>item.id===lastAdminChatId);adminUnreadCount+=previousIndex>=0?messages.length-previousIndex-1:1;updateAdminChatBadge();}if(latest)lastAdminChatId=latest;renderChatMessages(messages);$('visitorChatStatus').textContent='';chatLoaded=true;}catch(e){if(chatOverlay.classList.contains('open'))$('visitorChatStatus').textContent='読み込みに失敗しました：'+(e.message||'通信エラー');}finally{chatLoading=false;if(button){button.disabled=false;button.classList.remove('is-refreshing');button.removeAttribute('aria-busy');}}}
+  async function refreshAdminChat(){const token=adminSession.getItem(ADMIN_TOKEN_KEY);if(chatLoading||!token)return;const revision=visitorChatRevision;chatLoading=true;try{const fallback=()=>serverCall('getChatMessages');const r=await (adminChatRealtime?.read({chat_type:'visitor'},fallback)??fallback());if(token!==adminSession.getItem(ADMIN_TOKEN_KEY)||revision!==visitorChatRevision)return;const messages=Array.isArray(r.messages)?r.messages:[];const latest=messages.length?messages[messages.length-1].id:'';if(chatLoaded&&latest&&lastAdminChatId&&latest!==lastAdminChatId&&!chatOverlay.classList.contains('open')){const previousIndex=messages.findIndex(item=>item.id===lastAdminChatId);adminUnreadCount+=previousIndex>=0?messages.length-previousIndex-1:1;updateAdminChatBadge();}if(latest)lastAdminChatId=latest;renderChatMessages(messages);$('visitorChatStatus').textContent='';chatLoaded=true;}catch(e){if(chatOverlay.classList.contains('open'))$('visitorChatStatus').textContent='読み込みに失敗しました：'+(e.message||'通信エラー');}finally{chatLoading=false;}}
   function hideMainChats() {
     $('chatOverlay').classList.remove('open');
     $('staffChatOverlay').classList.remove('open');
@@ -2867,7 +2867,7 @@ document.getElementById('authSubmit').disabled = false;
   $('runDiagnosis').addEventListener('click',runDiagnosis);
 
 
-$('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEventListener('click', closeMainChat);
+$('closeChat').addEventListener('click', closeMainChat);
   setInterval(()=>{if(document.visibilityState==='visible'&&adminSession.getItem(ADMIN_TOKEN_KEY))refreshAdminChat();},30000);
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&adminSession.getItem(ADMIN_TOKEN_KEY))refreshAdminChat();});
   const screenshotButton = $('chatScreenshot');
@@ -2925,7 +2925,7 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
   const staffMessages = $('staffChatMessages');
   const staffStatus = $('staffChatStatus');
   const staffInput = $('staffChatInput');
-  const refreshStaffButton = $('refreshStaffChat');
+  let staffChatLoading = false;
   const staffRecipientSelect = $('staffChatRecipient');
   const staffRecipientCode = $('staffChatRecipientCode');
   let staffOwnMailbox = '';
@@ -3390,14 +3390,14 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
     const startedOpen = staffChat.classList.contains('open');
     const room = staffActiveRoom;
     const openGeneration = staffOpenGeneration;
-    if (refreshStaffButton.disabled) {
+    if (staffChatLoading) {
       if (startedOpen) {
         staffRefreshRequestedWhileLoading = true;
         staffFullRefreshRequestedWhileLoading ||= forceFullHistory;
       }
       return;
     }
-    refreshStaffButton.disabled = true;
+    staffChatLoading = true;
     try {
       // 閉じている間は本文を一切転送せず、未読件数だけ取得する。
       const result = await readStaffRoom(token,
@@ -3488,7 +3488,7 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
         staffStatus.textContent = '読み込みに失敗しました。' + (error?.message || '通信エラー');
       }
     } finally {
-      refreshStaffButton.disabled = false;
+      staffChatLoading = false;
       const requested = staffRefreshRequestedWhileLoading;
       const fullRefreshRequested = staffFullRefreshRequestedWhileLoading;
       staffRefreshRequestedWhileLoading = false;
@@ -3565,10 +3565,6 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
   $('closeStaffChat').addEventListener('click', () => {
     staffOpenGeneration++;
     closeMainChat();
-  });
-  refreshStaffButton.addEventListener('click', () => {
-    staffHistoryLoaded = false;
-    void refreshStaffChat(true);
   });
   setInterval(() => {
     if (!document.hidden) {
