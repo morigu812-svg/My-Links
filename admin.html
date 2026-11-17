@@ -2151,6 +2151,46 @@ document.getElementById('authSubmit').disabled = false;
   $('sideChat').addEventListener('click',openAdminChat);
   const clickLogPanel=$('clickLogPanel');
   let clickLogsLoaded=false,clickLogsLoading=false,clickBrowserNameSaving=false;
+  function historyBrowserCell(log, missingLabel, statusId, viewId, refresh) {
+  const browserCell=document.createElement('td');
+  browserCell.className='log-browser-id';
+  const browserId=document.createElement('div');
+  browserId.textContent=log.browserId||missingLabel;
+  browserCell.append(browserId);
+  if (/^[A-Za-z0-9_-]{8,100}$/.test(log.browserId)) {
+    const nameButton=document.createElement('button');
+    nameButton.type='button';
+    nameButton.className='btn click-browser-name';
+    function showName(name) {
+      nameButton.dataset.browserName=name;
+      nameButton.textContent=name||'名前をつける';
+      nameButton.setAttribute('aria-label', name ? name+'の名前を編集（ブラウザID '+log.browserId+'）' : 'ブラウザID '+log.browserId+'に名前をつける');
+    }
+    showName(log.browserName || '');
+    nameButton.addEventListener('click',async()=>{
+      if (clickBrowserNameSaving) return;
+      const input=window.prompt('ブラウザIDに付ける名前（最大40文字・空欄で解除）',nameButton.dataset.browserName);
+      if(input===null || input.trim()===nameButton.dataset.browserName)return;
+      const name=input.trim();
+      if(name.length>40){$(statusId).textContent='名前は40文字以内で入力してください。';return;}
+      clickBrowserNameSaving=true;
+      nameButton.disabled=true;
+      try{
+        const result=await serverCall('setClickBrowserName',log.browserId,name);
+        if(!result?.ok)throw new Error('保存完了の応答がありません。');
+        clickLogsLoaded=false;
+        if (!clickLogPanel.hidden && !$(viewId).hidden) await refresh();
+      }catch(error){
+        $(statusId).textContent='名前を保存できませんでした：'+(error.message||'通信エラー');
+      }finally{
+        clickBrowserNameSaving=false;
+        nameButton.disabled=false;
+      }
+    });
+    browserCell.prepend(nameButton);
+  }
+    return browserCell;
+  }
   function renderClickLogs(logs){
     const body=$('clickLogRows');body.replaceChildren();
     if(!logs.length){const tr=document.createElement('tr');const td=document.createElement('td');td.colSpan=5;td.className='click-log-empty';td.textContent='まだクリック履歴はありません。';tr.appendChild(td);body.appendChild(tr);return;}
@@ -2158,42 +2198,7 @@ document.getElementById('authSubmit').disabled = false;
       const tr=document.createElement('tr');const time=document.createElement('td');const date=new Date(log.clickedAt);
       time.textContent=isNaN(date.getTime())?'日時不明':date.toLocaleString('ja-JP');
       const title=document.createElement('td');title.textContent=log.title||'（タイトルなし）';
-      const browserCell=document.createElement('td');
-      browserCell.className='log-browser-id';
-      const browserId=document.createElement('div');
-      browserId.textContent=log.browserId||'旧データ（未識別）';
-      browserCell.append(browserId);
-      if (/^[A-Za-z0-9_-]{8,100}$/.test(log.browserId)) {
-        const nameButton=document.createElement('button');
-        nameButton.type='button';
-        nameButton.className='btn click-browser-name';
-        function showName(name) {
-          nameButton.dataset.browserName=name;
-          nameButton.textContent=name||'名前をつける';
-          nameButton.setAttribute('aria-label', name ? name+'の名前を編集（ブラウザID '+log.browserId+'）' : 'ブラウザID '+log.browserId+'に名前をつける');
-        }
-        showName(log.browserName || '');
-        nameButton.addEventListener('click',async()=>{
-          if (clickBrowserNameSaving) return;
-          const input=window.prompt('ブラウザIDに付ける名前（最大40文字・空欄で解除）',nameButton.dataset.browserName);
-          if(input===null || input.trim()===nameButton.dataset.browserName)return;
-          const name=input.trim();
-          if(name.length>40){$('clickLogStatus').textContent='名前は40文字以内で入力してください。';return;}
-          clickBrowserNameSaving=true;
-          nameButton.disabled=true;
-          try{
-            const result=await serverCall('setClickBrowserName',log.browserId,name);
-            if(!result?.ok)throw new Error('保存完了の応答がありません。');
-            await refreshClickLogs();
-          }catch(error){
-            $('clickLogStatus').textContent='名前を保存できませんでした：'+(error.message||'通信エラー');
-          }finally{
-            clickBrowserNameSaving=false;
-            nameButton.disabled=false;
-          }
-        });
-        browserCell.prepend(nameButton);
-      }
+      const browserCell=historyBrowserCell(log, '旧データ（未識別）', 'clickLogStatus', 'clickLogView', refreshClickLogs);
       const urlCell=document.createElement('td');urlCell.className='log-url';
       if(log.url.indexOf('https://')===0||log.url.indexOf('http://')===0){const a=document.createElement('a');a.href=log.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent=log.url;urlCell.appendChild(a);}else{urlCell.textContent=log.url||'';}
       const actionCell=document.createElement('td');actionCell.className='click-log-action';
@@ -2308,9 +2313,9 @@ document.getElementById('authSubmit').disabled = false;
         const row = document.createElement('tr');
         const cells = isCounter ? [log.date, Number(log.count || 0).toLocaleString('ja-JP') + '人'] : [new Date(log.date).toLocaleString('ja-JP')];
         if (history.key === 'linkOperations') cells.push(log.action, log.title || log.linkId);
-        else if (history.key === 'visitorLogins') cells.push(log.browserId || '未記録');
         cells.forEach(value => { row.insertCell().textContent = value; });
         if (history.key === 'visitorLogins') {
+          row.append(historyBrowserCell(log, '未記録', 'otherHistoryStatus', 'otherHistoryView', refreshOtherHistory));
           const remove = document.createElement('button');
           remove.type = 'button';
           remove.className = 'btn danger';

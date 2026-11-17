@@ -1467,6 +1467,12 @@ function setClickBrowserName(browserId, name, adminToken) {
   }
 }
 
+function getClickBrowserNames_() {
+  const namesSheet = twoColumnRecordsSheet_(CLICK_BROWSER_NAMES_SHEET, [], false);
+  const namesLast = namesSheet ? namesSheet.getLastRow() : 0;
+  return new Map(namesLast < 2 ? [] : namesSheet.getRange(2, 1, namesLast - 1, 2).getDisplayValues());
+}
+
 function getClickLogs(adminToken) {
   requireAdmin_(adminToken);
   const sheet = ensureClickLogSheet_();
@@ -1474,9 +1480,7 @@ function getClickLogs(adminToken) {
   if (last < 2) return {logs: []};
   const first = Math.max(2, last - 499);
   const rows = sheet.getRange(first, 1, last - first + 1, Math.max(CLICK_LOG_HEADERS.length, sheet.getLastColumn())).getValues();
-  const namesSheet = twoColumnRecordsSheet_(CLICK_BROWSER_NAMES_SHEET, [], false);
-  const namesLast = namesSheet ? namesSheet.getLastRow() : 0;
-  const names = new Map(namesLast < 2 ? [] : namesSheet.getRange(2, 1, namesLast - 1, 2).getDisplayValues());
+  const names = getClickBrowserNames_();
   return {logs: rows.filter(row => row[0] !== '').reverse().map(row => ({
     id: String(row[0] || ''), linkId: String(row[1] || ''), title: String(row[2] || ''),
     url: String(row[3] || ''), clickedAt: toIso_(row[4]), browserId: String(row[5] || ''), browserName: names.get(String(row[5] || '')) || ''
@@ -2467,8 +2471,10 @@ function getVisitorLoginLogs(adminToken) {
       sheet.getRange(first, 3, rows.length, 1).setValues(rows.map(row => [row[2]]));
     }
     if (!sheet.getRange(1, 3).getValue()) sheet.getRange(1, 3).setValue('履歴ID');
+    const names = getClickBrowserNames_();
     return {logs: rows.reverse().filter(row => row[0]).map(([date, browserId, id]) => ({
-      date: toIso_(date), browserId: String(browserId || ''), id: String(id)
+      date: toIso_(date), browserId: String(browserId || ''), id: String(id),
+      browserName: names.get(String(browserId || '')) || ''
     }))};
   } finally {
     lock.releaseLock();
