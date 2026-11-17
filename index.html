@@ -441,6 +441,8 @@ body.window-resizing,body.window-resizing *{user-select:none!important}
 </style>
 <link rel="stylesheet" href="./chat-reply.css">
 <script src="./chat-reply.js"></script>
+<link rel="stylesheet" href="./chat-preview.css">
+<script src="./chat-preview.js"></script>
 <script src="./chat-realtime.js"></script>
 <script src="./chat-screenshot.js?v=1" defer></script>
 <style id="visitor-counter-style">
@@ -725,8 +727,9 @@ function render(){
  
 }
 const chatOverlay=$('chatOverlay'),chatMessages=$('chatMessages'),chatForm=$('chatForm'),chatInput=$('chatInput'),chatSend=$('chatSend');let chatLoading=false,chatLoaded=false,viewerMessagesKey='';
+const viewerChatPreviews = window.createChatImagePreviews();
 const viewerReply = window.createChatReply?.(chatInput);
-function renderChat(messages){const key=JSON.stringify(messages);if(key===viewerMessagesKey)return;viewerMessagesKey=key;chatMessages.replaceChildren();if(!messages.length){const e=document.createElement('div');e.className='chat-empty';e.textContent='まだメッセージはありません。最初のメッセージを送ってみましょう。';chatMessages.appendChild(e);return;}messages.forEach(item=>{const bubble=document.createElement('article');bubble.className='chat-message'+(item.author==='管理者'?' admin':'');const meta=document.createElement('div');meta.className='chat-message-meta';const author=document.createElement('strong');author.textContent=item.private?'管理者からの個別メッセージ':(item.author==='管理者'?'管理者':'利用者');const time=document.createElement('time');const date=new Date(item.createdAt);time.textContent=isNaN(date.getTime())?'':date.toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});const body=document.createElement('div');body.className='chat-message-body';body.textContent=item.message;if(item.hasScreenshot) showChatImageButton(body,item.id);meta.append(author,time);bubble.append(meta,body);if(viewerReply)window.bindChatReply(bubble,item,viewerReply,!item.private);chatMessages.appendChild(bubble);});chatMessages.scrollTop=chatMessages.scrollHeight;}
+function renderChat(messages){const key=JSON.stringify(messages);if(key===viewerMessagesKey)return;viewerMessagesKey=key;viewerChatPreviews.keep(messages.filter(item=>item.hasScreenshot).map(item=>item.id));const atBottom=chatMessages.scrollHeight-chatMessages.scrollTop-chatMessages.clientHeight<80;chatMessages.replaceChildren();if(!messages.length){const e=document.createElement('div');e.className='chat-empty';e.textContent='まだメッセージはありません。最初のメッセージを送ってみましょう。';chatMessages.appendChild(e);return;}messages.forEach(item=>{const bubble=document.createElement('article');bubble.className='chat-message'+(item.author==='管理者'?' admin':'');const meta=document.createElement('div');meta.className='chat-message-meta';const author=document.createElement('strong');author.textContent=item.private?'管理者からの個別メッセージ':(item.author==='管理者'?'管理者':'利用者');const time=document.createElement('time');const date=new Date(item.createdAt);time.textContent=isNaN(date.getTime())?'':date.toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});const body=document.createElement('div');body.className='chat-message-body';body.textContent=item.message;if(item.hasScreenshot) showChatImageButton(body,item.id);meta.append(author,time);bubble.append(meta,body);if(viewerReply)window.bindChatReply(bubble,item,viewerReply,!item.private);chatMessages.appendChild(bubble);});if(atBottom)chatMessages.scrollTop=chatMessages.scrollHeight;}
 function isVisitorAuthError(error){return /閲覧にはサイトのパスワード認証が必要|利用者用パスワード|認証が必要/.test(error&&error.message?error.message:String(error||''));}
 let checkingViewerSession = false;
 let viewerSessionCheckAvailable = true;
@@ -792,6 +795,7 @@ function showVisitorLogin(message){
   $('sideCats').replaceChildren();
   chatMessages.replaceChildren();
   viewerMessagesKey='';
+  viewerChatPreviews.clear();
   $('chatScreenshotStatus').textContent='';
   chatLoaded=false;
   chatOverlay.classList.remove('open');
@@ -859,27 +863,13 @@ $('openChat').addEventListener('click',openChat);$('closeChat').addEventListener
 chatForm.addEventListener('submit',async e=>{e.preventDefault();const message=chatInput.value.trim();if(!message||!visitorToken)return;chatSend.disabled=true;try{const target=viewerReply?.target;await sendViewerChat(message,visitorToken);if(viewerReply?.target===target)viewerReply?.clear();chatInput.value='';await refreshChat();}catch(error){if(isVisitorAuthError(error)){showVisitorLogin('ログインの有効期限が切れました。もう一度サイトのパスワードを入力してください。');}else{const s=document.createElement('div');s.className='chat-status';s.textContent=error.message||'送信できませんでした。';chatMessages.appendChild(s);}}finally{chatSend.disabled=false;if(visitorToken)chatInput.focus();}});
 
 function showChatImageButton(container, messageId) {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.textContent = '画像を開く';
-  button.onclick = async () => {
+  const preview = viewerChatPreviews.create(messageId, '共有されたスクリーンショット', async () => {
     const token = visitorToken;
-    button.disabled = true;
-    try {
-      const result = await call('getChatScreenshot', messageId, token);
-      if (visitorToken !== token || !container.isConnected) return;
-      const image = document.createElement('img');
-      image.src = result.image;
-      image.alt = '共有されたスクリーンショット';
-      image.style.cssText = 'display:block;max-width:100%;height:auto';
-      button.replaceWith(image);
-    } catch (_) {
-      button.textContent = '画像を再読み込み';
-    } finally {
-      button.disabled = false;
-    }
-  };
-  container.append(document.createElement('br'), button);
+    if (!token) return null;
+    const result = await call('getChatScreenshot', messageId, token);
+    return token === visitorToken ? result?.image : null;
+  });
+  container.append(document.createElement('br'), preview.button, preview.image);
 }
 
 const screenshotButton = $('chatScreenshot');

@@ -1104,15 +1104,6 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
 .staff-file-card .staff-file-name { display:block; font-weight:700; overflow-wrap:anywhere; }
 .staff-file-card .staff-file-size { display:block; color:var(--muted); font-size:11px; }
 .staff-file-card button { flex:0 0 auto; }
-.staff-image-preview {
-  display: block;
-  max-width: min(100%, 420px);
-  max-height: min(55vh, 420px);
-  height: auto;
-  margin-top: 6px;
-  border-radius: 8px;
-  object-fit: contain;
-}
 </style>
 <style id="link-feed-privacy-note-style">
 #finderWindow .link-feed-privacy-note{margin:0 0 14px;padding:12px 14px;border:1px solid rgba(53,217,255,.34);border-radius:10px;background:rgba(15,40,64,.65);box-shadow:inset 3px 0 rgba(53,217,255,.55)}
@@ -1122,6 +1113,8 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
 </style>
 <link rel="stylesheet" href="./chat-reply.css">
 <script src="./chat-reply.js"></script>
+<link rel="stylesheet" href="./chat-preview.css">
+<script src="./chat-preview.js"></script>
 <script src="./chat-realtime.js"></script>
 <script src="./chat-screenshot.js?v=1" defer></script>
 <style id="visitor-counter-style">
@@ -1746,6 +1739,8 @@ function watchSessionExpiry(deadline, onExpired) {
     $('staffUnreadCount').hidden = true;
     chatMessages.replaceChildren();
     visitorChatRenderKey = '';
+    adminVisitorPreviews.clear();
+    staffImagePreviews.clear();
     $('staffChatMessages').replaceChildren();
     $('staffChatInput').value = '';
     adminVisitorReply?.clear();
@@ -2191,6 +2186,9 @@ document.getElementById('authSubmit').disabled = false;
     updateScreenshotButton();
   });
 
+  const adminVisitorPreviews = window.createChatImagePreviews();
+  const staffImagePreviews = window.createChatImagePreviews();
+
   function decorateVisitorBubble(item, card, bubble, line) {
     if (adminVisitorReply) window.bindChatReply(bubble, item, adminVisitorReply, true, card);
     const remove = document.createElement('button');
@@ -2232,27 +2230,13 @@ document.getElementById('authSubmit').disabled = false;
       bubble.prepend(recipient);
     }
     if (item.hasScreenshot) {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.textContent = '画像を開く';
-      button.onclick = async () => {
-        button.disabled = true;
-        try {
-          const result = await serverCall('getChatScreenshot', item.id);
-          if (!bubble.isConnected) return;
-          const image = document.createElement('img');
-          image.src = result.image;
-          image.alt = '共有されたスクリーンショット';
-          image.style.cssText = 'display:block;max-width:min(100%,40rem);height:auto';
-          button.replaceWith(image);
-        } catch (_) {
-          button.textContent = '画像を再読み込み';
-        } finally {
-          button.disabled = false;
-        }
-      };
-      button.className = 'btn';
-      bubble.append(button);
+      const preview = adminVisitorPreviews.create(item.id, '共有されたスクリーンショット', async () => {
+        const token = adminSession.getItem(ADMIN_TOKEN_KEY);
+        if (!token) return null;
+        const result = await serverCall('getChatScreenshot', item.id);
+        return token === adminSession.getItem(ADMIN_TOKEN_KEY) ? result?.image : null;
+      });
+      bubble.append(preview.button, preview.image);
     }
   }
 
@@ -2262,6 +2246,7 @@ document.getElementById('authSubmit').disabled = false;
     const key = JSON.stringify(messages);
     if (key === visitorChatRenderKey) return;
     visitorChatRenderKey = key;
+    adminVisitorPreviews.keep(messages.filter(item => item.hasScreenshot).map(item => item.id));
     if (chatMessages.contains(openStaffMessageActions?.trigger)) closeStaffMessageActions();
     const scrollArea = chatMessages.closest('.chat-table-wrap');
     const nearBottom = scrollArea.scrollHeight - scrollArea.scrollTop - scrollArea.clientHeight < 100;
@@ -3238,6 +3223,7 @@ $('closeChat').addEventListener('click', closeMainChat);
       const key = JSON.stringify(messages.map(item => [item.id, item.readCount, item.unread, item.own, item.author, item.reply, item.attachment?.name]));
       if (key !== staffRenderKey) {
         closeStaffMessageActions();
+        staffImagePreviews.keep(messages.filter(item => item.attachment).map(item => item.id));
         const cards = buildChatBubbles(messages, (item, card, bubble, line) => {
           if (staffReply) window.bindChatReply(bubble, item, staffReply, true, card);
           if (item.attachment) {
@@ -3261,52 +3247,11 @@ $('closeChat').addEventListener('click', closeMainChat);
               return result;
             }
             const imageMimes = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
-            if (imageMimes.includes(item.attachment.mime)) {
-              const preview = document.createElement('button');
-              preview.type = 'button';
-              preview.className = 'btn';
-              preview.textContent = 'プレビュー';
-              preview.setAttribute('aria-expanded', 'false');
-              const image = document.createElement('img');
-              image.className = 'staff-image-preview';
-              image.alt = item.attachment.name || '添付画像';
-              image.hidden = true;
-              image.addEventListener('error', () => {
-                image.hidden = true;
-                image.removeAttribute('src');
-                preview.textContent = 'プレビュー';
-                preview.setAttribute('aria-expanded', 'false');
-                if (image.isConnected) staffStatus.textContent = '画像を表示できませんでした。';
-              });
-              preview.addEventListener('click', async () => {
-                if (preview.disabled) return;
-                if (!image.hidden) {
-                  image.hidden = true;
-                  preview.textContent = 'プレビュー';
-                  preview.setAttribute('aria-expanded', 'false');
-                  return;
-                }
-                preview.disabled = true;
-                preview.textContent = '取得中…';
-                try {
-                  if (!image.hasAttribute('src')) {
-                    const result = await fetchAttachment();
-                    if (!result || !card.isConnected) return;
-                    if (!imageMimes.includes(result.mime)) throw new Error('この画像形式は表示できません。');
-                    image.src = 'data:' + result.mime + ';base64,' + result.base64;
-                  }
-                  image.hidden = false;
-                  preview.setAttribute('aria-expanded', 'true');
-                } catch (error) {
-                  if (card.isConnected) staffStatus.textContent = '画像の取得に失敗しました：' + (error.message || '通信エラー');
-                } finally {
-                  preview.disabled = false;
-                  preview.textContent = image.hidden ? 'プレビュー' : '閉じる';
-                }
-              });
-              fileCard.append(detail, preview);
-              bubble.append(fileCard, image);
-            }
+            const preview = imageMimes.includes(item.attachment.mime)
+              ? staffImagePreviews.create(item.id, item.attachment.name || '添付画像', async () => {
+                const result = await fetchAttachment();
+                return result && imageMimes.includes(result.mime) ? 'data:' + result.mime + ';base64,' + result.base64 : null;
+              }) : null;
             const download = document.createElement('button');
             download.type = 'button';
             download.className = 'btn';
@@ -3338,9 +3283,11 @@ $('closeChat').addEventListener('click', closeMainChat);
                 download.textContent = before;
               }
             });
-            if (!detail.parentNode) fileCard.append(detail);
+            fileCard.append(detail);
+            if (preview) fileCard.append(preview.button);
             fileCard.append(download);
-            if (!fileCard.parentNode) bubble.append(fileCard);
+            bubble.append(fileCard);
+            if (preview) bubble.append(preview.image);
           }
           const action = document.createElement('div');
           if (item.own && staffBrowserId) {
@@ -3591,6 +3538,7 @@ $('closeChat').addEventListener('click', closeMainChat);
     staffPendingAttachmentRequestId = '';
     refreshStaffFileSelection();
     staffReply?.clear();
+    if (room !== staffActiveRoom || reset) staffImagePreviews.clear();
     staffActiveRoom = room;
     staffTalkApiReady = false;
     staffOpenGeneration++;

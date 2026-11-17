@@ -1,0 +1,11 @@
+.chat-image-preview {
+  display: block;
+  width: auto;
+  max-width: min(100%, 420px);
+  max-height: min(55vh, 420px);
+  height: auto;
+  margin-top: 6px;
+  border-radius: 8px;
+  object-fit: contain;
+}
+.chat-image-preview[hidden] { display: none !important; }
