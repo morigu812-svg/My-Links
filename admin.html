@@ -1053,7 +1053,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
   font-variant-numeric: tabular-nums;
 }
 .staff-message.is-own .staff-message-meta { justify-content: flex-end; }
-#staffChatOverlay button.staff-message-more {
+:is(#staffChatOverlay, #chatOverlay) button.staff-message-more {
   flex: 0 0 30px;
   width: 30px;
   height: 28px;
@@ -1067,7 +1067,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
   font-size: 16px;
   line-height: 1;
 }
-#staffChatOverlay button.staff-message-more:is(:hover, [aria-expanded="true"]) {
+:is(#staffChatOverlay, #chatOverlay) button.staff-message-more:is(:hover, [aria-expanded="true"]) {
   border-color: var(--line) !important;
   background: var(--panel-2) !important;
   transform: none;
@@ -1589,7 +1589,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
   }
 
   function serverCall(method, ...args) {
-    const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'deleteLink', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'getVisitorCounterStats', 'deleteVisitorCounterBefore20261114', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'getChatScreenshot', 'sendChatMessage', 'sendChatScreenshot', 'getStaffChatMessages', 'getStaffChatAttachment', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendStaffChatAttachment', 'deleteStaffChatMessage', 'sendPrivateChatMessage', 'getClickLogs', 'setClickBrowserName', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
+    const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'deleteLink', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'getVisitorCounterStats', 'deleteVisitorCounterBefore20261114', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'deleteVisitorChatMessage', 'getChatScreenshot', 'sendChatMessage', 'sendChatScreenshot', 'getStaffChatMessages', 'getStaffChatAttachment', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendStaffChatAttachment', 'deleteStaffChatMessage', 'sendPrivateChatMessage', 'getClickLogs', 'setClickBrowserName', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
     if (protectedMethods.includes(method)) {
       const token = adminSession.getItem(ADMIN_TOKEN_KEY) || '';
       // 呼び出し元（埋め込みメモ帳など）が既にトークンを渡している場合は二重追加しない。
@@ -2168,7 +2168,39 @@ document.getElementById('authSubmit').disabled = false;
     });
   }
 
-  function decorateVisitorBubble(item, card, bubble) {
+  function decorateVisitorBubble(item, card, bubble, line) {
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'btn danger';
+    remove.textContent = '削除';
+    remove.addEventListener('click', async () => {
+      const token = adminSession.getItem(ADMIN_TOKEN_KEY);
+      if (!token || remove.disabled) return;
+      closeStaffMessageActions(true);
+      if (!confirm('このメッセージを削除しますか？')) return;
+      remove.disabled = true;
+      try {
+        const result = await serverCall('deleteVisitorChatMessage', item.id, item.private === true);
+        if (token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
+        if (!result?.ok) throw new Error('削除完了を確認できませんでした。');
+        visitorChatRevision++;
+        visitorChatRenderKey = '';
+        card.remove();
+        if (!chatMessages.querySelector('.staff-message')) renderChatMessages([]);
+        $('visitorChatStatus').textContent = 'メッセージを削除しました。';
+        await refreshAdminChat();
+      } catch (error) {
+        if (token === adminSession.getItem(ADMIN_TOKEN_KEY)) {
+          $('visitorChatStatus').textContent = '削除に失敗しました：' + (error.message || '通信エラー');
+        }
+      } finally {
+        remove.disabled = false;
+      }
+    });
+    const actions = document.createElement('div');
+    actions.append(remove);
+    attachChatMessageActions(line, actions);
+
     if (item.private) {
       const recipient = document.createElement('div');
       recipient.className = 'staff-message-author';
@@ -2201,10 +2233,12 @@ document.getElementById('authSubmit').disabled = false;
   }
 
   let visitorChatRenderKey = '';
+  let visitorChatRevision = 0;
   function renderChatMessages(messages) {
     const key = JSON.stringify(messages);
     if (key === visitorChatRenderKey) return;
     visitorChatRenderKey = key;
+    if (chatMessages.contains(openStaffMessageActions?.trigger)) closeStaffMessageActions();
     const scrollArea = chatMessages.closest('.chat-table-wrap');
     const nearBottom = scrollArea.scrollHeight - scrollArea.scrollTop - scrollArea.clientHeight < 100;
     if (messages.length) {
@@ -2219,7 +2253,7 @@ document.getElementById('authSubmit').disabled = false;
     if (nearBottom) scrollArea.scrollTop = scrollArea.scrollHeight;
   }
   function updateAdminChatBadge(){const badge=$('chatUnreadBadge');if(!badge)return;badge.hidden=adminUnreadCount<1;badge.textContent=adminUnreadCount>99?'99+':String(adminUnreadCount);badge.setAttribute('aria-label',adminUnreadCount+'件の未読メッセージ');}
-  async function refreshAdminChat(){const token=adminSession.getItem(ADMIN_TOKEN_KEY);if(chatLoading||!token)return;const button=$('refreshChat');chatLoading=true;if(button){button.disabled=true;button.classList.add('is-refreshing');button.setAttribute('aria-busy','true');}try{const r=await serverCall('getChatMessages');if(token!==adminSession.getItem(ADMIN_TOKEN_KEY))return;const messages=Array.isArray(r.messages)?r.messages:[];const latest=messages.length?messages[messages.length-1].id:'';if(chatLoaded&&latest&&lastAdminChatId&&latest!==lastAdminChatId&&!chatOverlay.classList.contains('open')){const previousIndex=messages.findIndex(item=>item.id===lastAdminChatId);adminUnreadCount+=previousIndex>=0?messages.length-previousIndex-1:1;updateAdminChatBadge();}if(latest)lastAdminChatId=latest;renderChatMessages(messages);$('visitorChatStatus').textContent='';chatLoaded=true;}catch(e){if(chatOverlay.classList.contains('open'))$('visitorChatStatus').textContent='読み込みに失敗しました：'+(e.message||'通信エラー');}finally{chatLoading=false;if(button){button.disabled=false;button.classList.remove('is-refreshing');button.removeAttribute('aria-busy');}}}
+  async function refreshAdminChat(){const token=adminSession.getItem(ADMIN_TOKEN_KEY);if(chatLoading||!token)return;const revision=visitorChatRevision;const button=$('refreshChat');chatLoading=true;if(button){button.disabled=true;button.classList.add('is-refreshing');button.setAttribute('aria-busy','true');}try{const r=await serverCall('getChatMessages');if(token!==adminSession.getItem(ADMIN_TOKEN_KEY)||revision!==visitorChatRevision)return;const messages=Array.isArray(r.messages)?r.messages:[];const latest=messages.length?messages[messages.length-1].id:'';if(chatLoaded&&latest&&lastAdminChatId&&latest!==lastAdminChatId&&!chatOverlay.classList.contains('open')){const previousIndex=messages.findIndex(item=>item.id===lastAdminChatId);adminUnreadCount+=previousIndex>=0?messages.length-previousIndex-1:1;updateAdminChatBadge();}if(latest)lastAdminChatId=latest;renderChatMessages(messages);$('visitorChatStatus').textContent='';chatLoaded=true;}catch(e){if(chatOverlay.classList.contains('open'))$('visitorChatStatus').textContent='読み込みに失敗しました：'+(e.message||'通信エラー');}finally{chatLoading=false;if(button){button.disabled=false;button.classList.remove('is-refreshing');button.removeAttribute('aria-busy');}}}
   function hideMainChats() {
     $('chatOverlay').classList.remove('open');
     $('staffChatOverlay').classList.remove('open');
@@ -3112,6 +3146,20 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
     if (restoreFocus && trigger.isConnected) trigger.focus({preventScroll: true});
   }
 
+  function attachChatMessageActions(line, actions) {
+    actions.className = 'staff-message-actions';
+    actions.setAttribute('role', 'group');
+    actions.setAttribute('aria-label', 'メッセージの操作');
+    const trigger = document.createElement('button');
+    trigger.type = 'button';
+    trigger.className = 'staff-message-more';
+    trigger.textContent = '…';
+    trigger.setAttribute('aria-label', 'メッセージの操作');
+    trigger.setAttribute('aria-expanded', 'false');
+    trigger.addEventListener('click', () => toggleStaffMessageActions(trigger, actions));
+    line.append(trigger);
+  }
+
   function toggleStaffMessageActions(trigger, actions) {
     const wasOpen = openStaffMessageActions?.trigger === trigger;
     closeStaffMessageActions();
@@ -3140,7 +3188,11 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
       closeStaffMessageActions(true);
     }
   }, true);
-  staffMessages.closest('.chat-table-wrap').addEventListener('scroll', () => closeStaffMessageActions());
+  for (const messages of [chatMessages, staffMessages]) {
+    messages.closest('.chat-table-wrap').addEventListener('scroll', () => {
+      if (messages.contains(openStaffMessageActions?.trigger)) closeStaffMessageActions();
+    });
+  }
   window.addEventListener('resize', () => closeStaffMessageActions());
 
   function showStaffMessageNotice(text) {
@@ -3205,10 +3257,6 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
             bubble.append(fileCard);
           }
           const action = document.createElement('div');
-          action.className = 'staff-message-actions';
-          action.id = 'staff-message-actions-' + item.id;
-          action.setAttribute('role', 'group');
-          action.setAttribute('aria-label', 'メッセージの操作');
           if (item.own && staffBrowserId) {
             const remove = document.createElement('button');
             remove.type = 'button';
@@ -3259,16 +3307,7 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
             });
             action.append(readButton);
           }
-          if (action.childElementCount) {
-            const trigger = document.createElement('button');
-            trigger.type = 'button';
-            trigger.className = 'staff-message-more';
-            trigger.textContent = '…';
-            trigger.setAttribute('aria-label', 'メッセージの操作');
-            trigger.setAttribute('aria-expanded', 'false');
-            trigger.addEventListener('click', () => toggleStaffMessageActions(trigger, action));
-            line.append(trigger);
-          }
+          if (action.childElementCount) attachChatMessageActions(line, action);
         }, {groupIncoming: Boolean(staffActiveRoom), showRead: staffActiveRoom === ''});
         const scrollArea = staffMessages.closest('.chat-table-wrap');
         const beforeHeight = scrollArea?.scrollHeight || 0;

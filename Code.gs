@@ -1290,6 +1290,33 @@ function sendPrivateChatMessage(message, recipient, adminToken) {
   }
 }
 
+function deleteVisitorChatMessage(messageId, isPrivate, adminToken) {
+  requireAdmin_(adminToken);
+  if (typeof messageId !== 'string' || !messageId || messageId.length > 200 ||
+      typeof isPrivate !== 'boolean') throw new Error('メッセージIDが不正です。');
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    requireAdmin_(adminToken);
+    const sheet = isPrivate ? privateChatSheet_(false) : ensureChatSheet_();
+    const last = sheet ? sheet.getLastRow() : 0;
+    if (last >= 2) {
+      const idColumn = isPrivate ? 1 :
+        sheet.getRange(1, 1, 1, sheet.getLastColumn()).getDisplayValues()[0].indexOf('ID') + 1;
+      const match = sheet.getRange(2, idColumn, last - 1, 1).createTextFinder(messageId)
+        .matchCase(true).matchEntireCell(true).findNext();
+      if (match) {
+        sheet.deleteRow(match.getRow());
+        SpreadsheetApp.flush();
+      }
+    }
+    if (!isPrivate) invalidateChatCache_();
+    return {ok: true};
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 function getPublicChatMessages_(viewerToken) {
   requireLinkViewer_(viewerToken);
   const cached = readJsonCache_('LINK_CORE_CHAT_MESSAGES_V1');
