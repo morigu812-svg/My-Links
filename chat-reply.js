@@ -20,9 +20,9 @@
       select(item) {
         target = item;
         onSelect?.(item);
-        text.textContent = '↩ ' + (item.author || 'メッセージ') + ' · ' + excerpt(item);
+        text.textContent = '返信先 ' + (item.author || 'メッセージ') + ' · ' + excerpt(item);
         bar.hidden = false;
-        input.focus();
+        input.focus({preventScroll: true});
       }
     };
   };
@@ -48,7 +48,7 @@
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'lc-reply-button';
-    button.textContent = '↩';
+    button.textContent = '返信';
     button.setAttribute('aria-label', 'このメッセージに返信');
     button.addEventListener('click', () => composer.select(item));
     bubble.append(button);
@@ -62,16 +62,27 @@
     gestureArea.addEventListener('pointermove', event => {
       if (start?.id !== event.pointerId) return;
       const x = event.clientX - start.x;
-      if (Math.abs(event.clientY - start.y) > 24 && Math.abs(event.clientY - start.y) > -x) {
+      const y = Math.abs(event.clientY - start.y);
+      if (!start.dragging && y > 12 && y > Math.abs(x)) {
         start = null;
-        bubble.style.removeProperty('--reply-shift');
-      } else if (x < -8) bubble.style.setProperty('--reply-shift', Math.max(-32, x / 3) + 'px');
+        return;
+      }
+      if (!start.dragging && x < -8 && -x > y) {
+        start.dragging = true;
+        bubble.classList.add('is-reply-dragging');
+        gestureArea.setPointerCapture?.(event.pointerId);
+      }
+      if (start.dragging) {
+        bubble.style.setProperty('--reply-shift', Math.max(-52, Math.min(0, x * 0.72)) + 'px');
+      }
     });
     function end(event) {
       if (start?.id !== event.pointerId) return;
       const reply = event.type === 'pointerup' && start.x - event.clientX >= 56 &&
         Math.abs(event.clientY - start.y) <= 38;
       start = null;
+      bubble.classList.remove('is-reply-dragging');
+      if (gestureArea.hasPointerCapture?.(event.pointerId)) gestureArea.releasePointerCapture(event.pointerId);
       bubble.style.removeProperty('--reply-shift');
       if (reply) {
         suppressTap = true;

@@ -14,16 +14,32 @@
 .lc-reply-draft[hidden] { display: none !important; }
 .lc-reply-draft > span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lc-reply-draft > button { flex: 0 0 auto; padding: 2px 8px; }
-.lc-reply-target { position: relative; touch-action: pan-y pinch-zoom; transform: translateX(var(--reply-shift, 0)); }
+.lc-reply-target {
+  position: relative;
+  touch-action: pan-y pinch-zoom;
+  translate: var(--reply-shift, 0px) 0;
+  transition: translate 210ms cubic-bezier(.22, .61, .36, 1) !important;
+}
+.lc-reply-target.is-reply-dragging { transition: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  .lc-reply-target { translate: none; transition: none !important; }
+}
 .lc-reply-button {
   position: absolute;
-  inset-inline-end: 3px;
-  inset-block-start: 3px;
-  padding: 2px 5px;
-  font-size: 12px;
+  inset-inline-end: 0;
+  inset-block-end: 100%;
+  z-index: 1;
+  min-width: 0;
+  min-height: 0;
+  padding: 3px 7px !important;
+  border-radius: 7px;
+  font-size: 11px !important;
+  line-height: 1.2;
+  white-space: nowrap;
   opacity: 0;
+  pointer-events: none;
 }
-.lc-reply-target:is(:hover, :focus-within) .lc-reply-button { opacity: 1; }
+.lc-reply-target:is(:hover, :focus-within) .lc-reply-button { opacity: 1; pointer-events: auto; }
 .lc-reply-quote {
   display: grid;
   gap: 2px;
