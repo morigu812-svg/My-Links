@@ -15,3 +15,9 @@ function runLinkCoreChatMigration() {
   }
   return migrateChatHistoryToSupabase_();
 }
+
+/** 履歴の照合後にエディタから実行します。 */
+function runLinkCoreChatActivation() {
+  activateSupabaseChat_();
+  console.log('チャットの保存先を Supabase に切り替えました');
+}
