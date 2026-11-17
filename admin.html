@@ -673,6 +673,7 @@ main { width:100%; max-width:none !important; }
 </style>
 <style>
 .click-log-panel{min-width:0;padding:25px 27px}
+.click-browser-name{margin-bottom:4px;max-width:100%;overflow-wrap:anywhere;text-align:left}
 .click-log-panel[hidden]{display:none!important}
 .workspace[hidden]{display:none!important}
 .click-log-panel .section-heading p{margin:6px 0 0;color:var(--muted,#9aabba);font-size:12px}
@@ -1102,7 +1103,6 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
     <aside class="sidebar" aria-label="サイドバー">
       <button class="side-item" type="button" data-view="desktop"><span>▣</span> My Desktop</button>
       <div class="side-label">よく使う項目</div>
-      <button class="side-item" type="button" data-view="favorites"><span>★</span> お気に入り</button>
       <button class="side-item" type="button" data-view="recent"><span>◷</span> 最近追加した項目</button>
       <button class="side-item selected" type="button" data-view="all"><span>▦</span> すべてのリンク</button>
       <div class="side-label">クイックアクセス</div>
@@ -1330,7 +1330,6 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
     <label for="fMemo">メモ</label>
     <textarea id="fMemo" rows="3"></textarea>
     <label class="check"><input id="fNew" type="checkbox"> NEWラベルを表示する</label>
-    <label class="check"><input id="fFav" type="checkbox"> お気に入りにする</label>
     <label class="check"><input id="fVisible" type="checkbox"> 利用者ページに公開する</label>
     <p id="linkSaveStatus" role="status"></p>
     <div class="foot">
@@ -1527,7 +1526,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
   }
 
   function serverCall(method, ...args) {
-    const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'toggleFavorite', 'deleteLink', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'getVisitorCounterStats', 'deleteVisitorCounterBefore20261114', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'getChatScreenshot', 'sendChatMessage', 'sendChatScreenshot', 'getStaffChatMessages', 'getStaffChatAttachment', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendStaffChatAttachment', 'deleteStaffChatMessage', 'sendPrivateChatMessage', 'getClickLogs', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
+    const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'deleteLink', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'getVisitorCounterStats', 'deleteVisitorCounterBefore20261114', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'getChatScreenshot', 'sendChatMessage', 'sendChatScreenshot', 'getStaffChatMessages', 'getStaffChatAttachment', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendStaffChatAttachment', 'deleteStaffChatMessage', 'sendPrivateChatMessage', 'getClickLogs', 'setClickBrowserName', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
     if (protectedMethods.includes(method)) {
       const token = adminSession.getItem(ADMIN_TOKEN_KEY) || '';
       // 呼び出し元（埋め込みメモ帳など）が既にトークンを渡している場合は二重追加しない。
@@ -1827,12 +1826,9 @@ document.getElementById('authSubmit').disabled = false;
   function visibleLinks() {
     const q = state.query.trim().toLowerCase();
     return state.links
-      .filter(link => state.view !== 'favorites' || link.favorite)
       .filter(link => state.category === '__uncategorized__' ? !folderPath(link.category) : (!state.category || folderPath(link.category) === state.category))
       .filter(link => !q || [link.title, link.url, link.memo, link.category].some(text => String(text || '').toLowerCase().includes(q)))
-      .sort((a, b) => state.view === 'recent'
-        ? String(b.createdAt || '').localeCompare(String(a.createdAt || ''))
-        : (b.favorite - a.favorite) || String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+      .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
   }
 
   let renderedLinks, renderedCategories, renderedCategory;
@@ -1866,7 +1862,7 @@ document.getElementById('authSubmit').disabled = false;
     const links = visibleLinks();
     const folderChildren = state.category && state.category !== '__uncategorized__' ? childFolders(state.category, state.links) : [];
     const folderName = state.category === '__uncategorized__' ? '未分類' : state.category;
-    const titles = { favorites: 'お気に入り', recent: '最近追加した項目' };
+    const titles = { recent: '最近追加した項目' };
     $('viewTitle').textContent = folderName || titles[state.view] || 'My Desktop';
     const back = state.category ? `<div class="folder-toolbar"><button type="button" data-folder-back>‹ ${state.category !== '__uncategorized__' && folderParent(state.category) ? '親フォルダーに戻る' : 'フォルダー一覧に戻る'}</button><span>My Desktop　›　${esc(state.category === '__uncategorized__' ? '未分類' : state.category.split('/').join('　›　'))}</span></div>` : '';
     const childHtml = folderChildren.map(folder => folderButton(folder.name, folder.key, folder.count)).join('');
@@ -1875,7 +1871,6 @@ document.getElementById('authSubmit').disabled = false;
       return `
       <div class="item lc-link-card ${link.visibleToVisitors === true ? 'visitor-visible' : 'visitor-hidden'}" data-id="${esc(link.id)}">
         <div class="lc-link-info">
-          <button type="button" class="star" aria-pressed="${link.favorite}" aria-label="お気に入り">★</button>
           <div class="lc-link-main">
             <a class="title" href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(link.title)}</a>
             ${link.isNew ? '<span class="new-label">NEW</span>' : ''}
@@ -1916,7 +1911,6 @@ document.getElementById('authSubmit').disabled = false;
     $('fCat').value = link ? link.category : (state.category === '__uncategorized__' ? '' : state.category);
     $('fMemo').value = link ? link.memo : '';
     $('fNew').checked = link ? link.isNew === true : false;
-    $('fFav').checked = link ? link.favorite : false;
     $('fVisible').checked = link ? link.visibleToVisitors === true : false;
     $('dlgTitle').textContent = link ? 'リンクを編集' : 'リンクを追加';
     $('saveBtn').textContent = link ? '変更を保存' : '保存する';
@@ -1944,7 +1938,6 @@ document.getElementById('authSubmit').disabled = false;
       category: $('fCat').value,
       memo: $('fMemo').value,
       isNew: $('fNew').checked,
-      favorite: $('fFav').checked,
       visibleToVisitors: $('fVisible').checked,
       openMode: 'external'
     };
@@ -2031,7 +2024,7 @@ document.getElementById('authSubmit').disabled = false;
     state.view = button.dataset.view;
     state.category = '';
     const isOfficial = state.view === 'official';
-    $('viewTitle').textContent = state.view === 'favorites' ? 'お気に入り' : state.view === 'recent' ? '最近追加した項目' : 'My Desktop';
+    $('viewTitle').textContent = state.view === 'recent' ? '最近追加した項目' : 'My Desktop';
     // officialPanel is inside finder-content; hide only the workspace, never its parent.
     document.querySelector('.workspace').hidden = isOfficial;
     $('clickLogPanel').hidden = true;
@@ -2130,7 +2123,7 @@ document.getElementById('authSubmit').disabled = false;
   function openAdminChat(){if(!adminSession.getItem(ADMIN_TOKEN_KEY)){alert('先に管理者ログインをしてください。');return;}adminUnreadCount=0;updateAdminChatBadge();openMainChat(chatOverlay, '利用者チャット');refreshAdminChat();}
   $('sideChat').addEventListener('click',openAdminChat);
   const clickLogPanel=$('clickLogPanel');
-  let clickLogsLoaded=false,clickLogsLoading=false;
+  let clickLogsLoaded=false,clickLogsLoading=false,clickBrowserNameSaving=false;
   function renderClickLogs(logs){
     const body=$('clickLogRows');body.replaceChildren();
     if(!logs.length){const tr=document.createElement('tr');const td=document.createElement('td');td.colSpan=5;td.className='click-log-empty';td.textContent='まだクリック履歴はありません。';tr.appendChild(td);body.appendChild(tr);return;}
@@ -2138,7 +2131,42 @@ document.getElementById('authSubmit').disabled = false;
       const tr=document.createElement('tr');const time=document.createElement('td');const date=new Date(log.clickedAt);
       time.textContent=isNaN(date.getTime())?'日時不明':date.toLocaleString('ja-JP');
       const title=document.createElement('td');title.textContent=log.title||'（タイトルなし）';
-      const browserCell=document.createElement('td');browserCell.textContent=log.browserId||'旧データ（未識別）';browserCell.className='log-browser-id';
+      const browserCell=document.createElement('td');
+      browserCell.className='log-browser-id';
+      const browserId=document.createElement('div');
+      browserId.textContent=log.browserId||'旧データ（未識別）';
+      browserCell.append(browserId);
+      if (/^[A-Za-z0-9_-]{8,100}$/.test(log.browserId)) {
+        const nameButton=document.createElement('button');
+        nameButton.type='button';
+        nameButton.className='btn click-browser-name';
+        function showName(name) {
+          nameButton.dataset.browserName=name;
+          nameButton.textContent=name||'名前をつける';
+          nameButton.setAttribute('aria-label', name ? name+'の名前を編集（ブラウザID '+log.browserId+'）' : 'ブラウザID '+log.browserId+'に名前をつける');
+        }
+        showName(log.browserName || '');
+        nameButton.addEventListener('click',async()=>{
+          if (clickBrowserNameSaving) return;
+          const input=window.prompt('ブラウザIDに付ける名前（最大40文字・空欄で解除）',nameButton.dataset.browserName);
+          if(input===null || input.trim()===nameButton.dataset.browserName)return;
+          const name=input.trim();
+          if(name.length>40){$('clickLogStatus').textContent='名前は40文字以内で入力してください。';return;}
+          clickBrowserNameSaving=true;
+          nameButton.disabled=true;
+          try{
+            const result=await serverCall('setClickBrowserName',log.browserId,name);
+            if(!result?.ok)throw new Error('保存完了の応答がありません。');
+            await refreshClickLogs();
+          }catch(error){
+            $('clickLogStatus').textContent='名前を保存できませんでした：'+(error.message||'通信エラー');
+          }finally{
+            clickBrowserNameSaving=false;
+            nameButton.disabled=false;
+          }
+        });
+        browserCell.prepend(nameButton);
+      }
       const urlCell=document.createElement('td');urlCell.className='log-url';
       if(log.url.indexOf('https://')===0||log.url.indexOf('http://')===0){const a=document.createElement('a');a.href=log.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent=log.url;urlCell.appendChild(a);}else{urlCell.textContent=log.url||'';}
       const actionCell=document.createElement('td');actionCell.className='click-log-action';
@@ -3701,9 +3729,7 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
     const link = state.links.find(l => l.id === item.dataset.id);
     if (!link) return;
 
-    if (event.target.closest('.star')) {
-      run('更新中…', () => serverCall('toggleFavorite', link.id, !link.favorite), '');
-    } else if (event.target.closest('.edit')) {
+    if (event.target.closest('.edit')) {
       openForm(link);
     } else if (event.target.closest('.del')) {
       if (confirm(`「${link.title}」を削除しますか？`)) {

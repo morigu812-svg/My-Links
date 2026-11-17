@@ -487,6 +487,7 @@ body.window-resizing,body.window-resizing *{user-select:none!important}
   <button id="visitorCounterRefresh" type="button">↻ 更新</button>
   <span id="visitorCounterStatus" class="visitor-counter-detail">ログイン後に取得します</span>
 </div>
+<div class="status" id="favoriteStatus" role="status"></div>
 <div class="status" id="loadStatus" role="status" aria-live="polite"></div>
 <div class="list loading-skeleton" id="list" role="region" aria-label="リンク一覧" aria-live="polite" aria-busy="true"><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div></div>
 </div></section></div>
@@ -583,6 +584,30 @@ function showClickLogNotice(message,isError){
 }
 
 let links=[],categories=[],view='favorites',selectedCategory='',visitorToken='';
+let favoriteIds=new Set(), favoritesReady=false;
+let pendingFavorites=new Set();
+const isVisitorFavorite=id=>favoriteIds.has(String(id));
+
+async function loadVisitorFavorites(token) {
+ if (!token || token !== visitorToken || pendingFavorites.size) return;
+ $('favoriteStatus').textContent='お気に入りを読み込んでいます…';
+ try{
+  const secret=await privateChatSecret();
+  if(token!==visitorToken)return;
+  const data=await call('getVisitorFavorites',secret,token);
+  if(token!==visitorToken || pendingFavorites.size)return;
+  if(!Array.isArray(data?.ids))throw new Error('お気に入りの形式が不正です。');
+  favoriteIds=new Set(data.ids.map(String));
+  favoritesReady=true;
+  render();
+  $('favoriteStatus').textContent='';
+ }catch(error){
+  if(token!==visitorToken)return;
+  if(isVisitorAuthError(error))showVisitorLogin();
+  else $('favoriteStatus').textContent='お気に入りを読み込めませんでした：'+(error.message||'通信エラー');
+ }
+}
+
 // ログイン中の公開リンク名・フォルダー名だけをローカルAIに渡す。
 // URL、メモ、管理者専用リンク、認証トークンは渡さない。
 window.getLinkCoreAiContext = () => ({
@@ -591,7 +616,7 @@ window.getLinkCoreAiContext = () => ({
     ? publicLinks(links).map(link => ({
         title: String(link.title || ''),
         category: String(link.category || ''),
-        favorite: link.favorite === true
+        favorite: isVisitorFavorite(link.id)
       }))
     : []
 });
@@ -656,7 +681,7 @@ function visibleLinks(){
  let items=links;
  if(selectedCategory==='__uncategorized__')items=items.filter(x=>!folderPath(x.category));
  else if(selectedCategory)items=items.filter(x=>folderPath(x.category)===selectedCategory);
- else if(view==='favorites')items=items.filter(x=>x.favorite);
+ else if(view==='favorites')items=items.filter(x=>isVisitorFavorite(x.id));
  else if(view==='recent')items=items.slice().sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
  return items;
 }
@@ -688,12 +713,12 @@ function render(){
  }
  const folderChildren=!query&&selectedCategory&&selectedCategory!=='__uncategorized__'?childFolders(selectedCategory,visible):[];
  const currentLinks=visibleLinks();
- const linkCards=currentLinks.map(x=>{const href=/^https?:\/\//i.test(x.url)?x.url:'#';const ini=Array.from(String(x.title||'').trim())[0]||'•';let hh=0;for(const ch of String(x.title||''))hh=(hh*31+ch.charCodeAt(0))%90;return '<article class="item lc-link-card" data-link-id="'+esc(x.id)+'"><div class="lc-link-info"><span class="lc-avatar" aria-hidden="true" style="--h:'+(175+hh)+'">'+esc(ini.toUpperCase())+'</span><div class="lc-link-main"><a class="title" data-open-mode="external" href="'+esc(href)+'" target="_blank" rel="noopener noreferrer">'+esc(x.title)+'</a>'+(x.isNew&&!readNewLinkIds.has(String(x.id))?'<span class="new-label">NEW</span>':'')+'<div class="meta">'+esc((()=>{try{return new URL(x.url).hostname}catch(e){return x.category||''}})())+'</div>'+(x.memo?'<div class="memo">'+esc(x.memo)+'</div>':'')+(query&&folderPath(x.category)?'<span class="lc-cat">'+esc(folderPath(x.category).split('/').join(' › '))+'</span>':'')+'</div><span class="lc-link-arrow" aria-hidden="true">↗</span></div></article>';}).join('');
+ const linkCards=currentLinks.map(x=>{const href=/^https?:\/\//i.test(x.url)?x.url:'#';const ini=Array.from(String(x.title||'').trim())[0]||'•';let hh=0;for(const ch of String(x.title||''))hh=(hh*31+ch.charCodeAt(0))%90;return '<article class="item lc-link-card" data-link-id="'+esc(x.id)+'"><div class="lc-link-info"><span class="lc-avatar" aria-hidden="true" style="--h:'+(175+hh)+'">'+esc(ini.toUpperCase())+'</span><div class="lc-link-main"><a class="title" data-open-mode="external" href="'+esc(href)+'" target="_blank" rel="noopener noreferrer">'+esc(x.title)+'</a>'+(x.isNew&&!readNewLinkIds.has(String(x.id))?'<span class="new-label">NEW</span>':'')+'<div class="meta">'+esc((()=>{try{return new URL(x.url).hostname}catch(e){return x.category||''}})())+'</div>'+(x.memo?'<div class="memo">'+esc(x.memo)+'</div>':'')+(query&&folderPath(x.category)?'<span class="lc-cat">'+esc(folderPath(x.category).split('/').join(' › '))+'</span>':'')+'</div><button type="button" class="lc-visitor-favorite" data-visitor-favorite aria-label="お気に入り" aria-pressed="'+isVisitorFavorite(x.id)+'"'+(!favoritesReady||pendingFavorites.has(String(x.id))?' disabled':'')+'>'+ (isVisitorFavorite(x.id)?'★':'☆')+'</button></div></article>';}).join('');
  const back=query?'':selectedCategory&&selectedCategory!=='__uncategorized__'?'<div class="folder-toolbar"><button type="button" data-folder-back>‹ '+(folderParent(selectedCategory)?'親フォルダーに戻る':'フォルダー一覧に戻る')+'</button><span>My Desktop　›　'+esc(selectedCategory.split('/').join('　›　'))+'</span></div>':(selectedCategory?'<div class="folder-toolbar"><button type="button" data-folder-back>‹ フォルダー一覧に戻る</button><span>My Desktop　›　未分類</span></div>':'');
  const childHtml=folderChildren.map(f=>folderButton(f.name,f.key,f.count)).join('');
  $('count').textContent=(folderChildren.length?folderChildren.length+' フォルダー / ':'')+currentLinks.length+' 件';
  $('loadStatus').textContent='';
- $('list').innerHTML=back+childHtml+linkCards+(!folderChildren.length&&!currentLinks.length?'<div class="empty">'+(query?'検索条件に一致するリンクがありません。<button type="button" class="lc-empty-clear" data-clear-search>検索をクリア</button>':selectedCategory?'このフォルダーは空です。':'表示できるリンクがありません。')+'</div>':'');
+ $('list').innerHTML=back+childHtml+linkCards+(!folderChildren.length&&!currentLinks.length?'<div class="empty">'+(query?'検索条件に一致するリンクがありません。<button type="button" class="lc-empty-clear" data-clear-search>検索をクリア</button>':selectedCategory?'このフォルダーは空です。':view==='favorites'?(favoritesReady?'リンクカードの ☆ を押すと、ここに表示されます。':''):'表示できるリンクがありません。')+'</div>':'');
  
 }
 const chatOverlay=$('chatOverlay'),chatMessages=$('chatMessages'),chatForm=$('chatForm'),chatInput=$('chatInput'),chatSend=$('chatSend');let chatLoading=false,chatLoaded=false;
@@ -753,6 +778,10 @@ function showVisitorLogin(message){
   visitorToken='';
   links=[];
   categories=[];
+  favoriteIds=new Set();
+  pendingFavorites=new Set();
+  favoritesReady=false;
+  $('favoriteStatus').textContent='';
   $('list').replaceChildren();
   $('sideCats').replaceChildren();
   chatMessages.replaceChildren();
@@ -847,6 +876,40 @@ $('search').addEventListener('input', () => {
 $('sideCats').addEventListener('click',event=>{const btn=event.target.closest('[data-category]');if(!btn)return;selectedCategory=btn.dataset.category;view='all';render()});
 $('list').addEventListener('click',event=>{const folder=event.target.closest('[data-open-folder]');if(folder){selectedCategory=folder.dataset.openFolder;view='all';render();return;}if(event.target.closest('[data-folder-back]')){selectedCategory=selectedCategory==='__uncategorized__'?'':folderParent(selectedCategory);view=selectedCategory?'all':'desktop';render();}});
 document.querySelector('.sidebar').addEventListener('click',event=>{const btn=event.target.closest('[data-view]');if(!btn)return;selectedCategory='';view=btn.dataset.view;render()});
+$('list').addEventListener('click',async event=>{
+ const button=event.target.closest('[data-visitor-favorite]');
+ const token=visitorToken;
+ if(!button||!token||!favoritesReady||button.disabled)return;
+ const id=button.closest('[data-link-id]').dataset.linkId;
+ const pending=pendingFavorites;
+ if(pending.has(id))return;
+ const favorite=!isVisitorFavorite(id);
+ pending.add(id);
+ button.disabled=true;
+ try{
+  const secret=await privateChatSecret();
+  if(token!==visitorToken)return;
+  const result=await call('setVisitorFavorite',id,favorite,secret,token);
+  if(token!==visitorToken)return;
+  if(!result?.ok||result.favorite!==favorite)throw new Error('保存完了の応答がありません。');
+  if(favorite)favoriteIds.add(id);else favoriteIds.delete(id);
+  $('favoriteStatus').textContent='';
+  pending.delete(id);
+  const restoreFocus=document.activeElement===button;
+  render();
+  if(restoreFocus)($('list').querySelector('[data-link-id="'+CSS.escape(id)+'"] [data-visitor-favorite]')||document.querySelector('[data-view="favorites"]')).focus({preventScroll:true});
+ }catch(error){
+  if(token!==visitorToken)return;
+  if(isVisitorAuthError(error))showVisitorLogin();
+  else $('favoriteStatus').textContent='お気に入りを保存できませんでした：'+(error.message||'通信エラー');
+ }finally{
+  pending.delete(id);
+  if(token===visitorToken){
+   const current=$('list').querySelector('[data-link-id="'+CSS.escape(id)+'"] [data-visitor-favorite]');
+   if(current)current.disabled=false;
+  }
+ }
+});
 const clickLogPending=new Set();
 $('list').addEventListener('click',event=>{
  const anchor=event.target.closest('a[href]');
@@ -939,7 +1002,7 @@ $('loginForm').addEventListener('submit',async event=>{
     showVisitorLogin();
     location.reload();
   });
-  view=links.some(link=>link.favorite)?'favorites':'all';
+  view='favorites';
   selectedCategory='';
   $('search').value='';
   $('loginPanel').classList.add('hidden');
@@ -948,6 +1011,7 @@ $('loginForm').addEventListener('submit',async event=>{
   $('loginError').textContent='';
   render();
   void refreshVisitorCounter();
+  void loadVisitorFavorites(visitorToken);
  }catch(error){
   visitorToken='';
   $('linksPanel').classList.add('hidden');
@@ -976,6 +1040,7 @@ $('refreshLinks').addEventListener('click',async()=>{
   }))selectedCategory='';
   render();
   $('loadStatus').textContent='リンク一覧を更新しました。';
+  if(!favoritesReady)void loadVisitorFavorites(token);
  }catch(error){
   if(token!==visitorToken)return;
   if(isVisitorAuthError(error))showVisitorLogin();
@@ -3830,6 +3895,9 @@ html body #linksPanel #list .lc-link-card:has(.title:focus-visible){border-color
 #linksPanel .lc-avatar{flex:0 0 auto;display:grid;place-items:center;width:40px;height:40px;border-radius:12px;font-size:17px;font-weight:800;line-height:1;color:hsl(var(--h,200) 95% 85%);background:linear-gradient(145deg,hsl(var(--h,200) 60% 22%),hsl(calc(var(--h,200) + 28) 55% 14%));border:1px solid hsl(var(--h,200) 65% 40%/.55);user-select:none}
 #linksPanel .lc-link-card .title{display:inline!important;min-height:0!important;font-size:15px!important;font-weight:700!important;line-height:1.45;color:#9cf0ff!important}
 #linksPanel .lc-link-card .title:focus-visible{outline:none!important}
+#linksPanel button.lc-visitor-favorite{position:relative;z-index:2;flex:0 0 36px;min-height:36px;padding:0;border:1px solid var(--lc-line)!important;border-radius:8px;background:#101e31!important;color:#a8bfd4!important;font-size:19px;line-height:1}
+#linksPanel button.lc-visitor-favorite[aria-pressed="true"]{color:#ffe28b!important;border-color:#806539!important}
+#linksPanel button.lc-visitor-favorite:disabled{opacity:.55}
 #linksPanel .lc-link-card .title::after{content:"";position:absolute;inset:0;z-index:1}
 #linksPanel .lc-link-card:hover .title{color:#fff!important;text-decoration:none}
 #linksPanel .lc-link-card .meta{display:block!important;margin-top:4px!important;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:#7e9bb2!important;font-size:11.5px!important;letter-spacing:.01em}

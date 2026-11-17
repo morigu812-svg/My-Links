@@ -598,7 +598,6 @@ function saveLink(input, adminToken) {
       'URL': url,
       'カテゴリ': safeCell_(category),
       'メモ': safeCell_(memo),
-      'お気に入り': input.favorite === true,
       '利用者に公開': input.visibleToVisitors !== false,
       '開き方': input.openMode === 'external' ? 'external' : 'internal',
       'NEWラベル': input.isNew === true,
@@ -621,38 +620,66 @@ function saveLink(input, adminToken) {
   }
 }
 
-/**
- * お気に入りだけを切り替える。
- */
-function toggleFavorite(id, favorite, adminToken) {
-  requireAdmin_(adminToken);
-  const linkId = cleanText_(id, 200);
-  if (!linkId) throw new Error('リンクIDがありません。');
+const VISITOR_FAVORITES_SHEET = 'VisitorFavorites';
+const CLICK_BROWSER_NAMES_SHEET = 'ClickBrowserNames';
 
+function twoColumnRecordsSheet_(name, headers, create) {
+  const id = PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY);
+  if (!id) throw new Error('スプレッドシートIDが未設定です。');
+  const spreadsheet = SpreadsheetApp.openById(id);
+  let sheet = spreadsheet.getSheetByName(name);
+  if (!sheet && create) sheet = spreadsheet.insertSheet(name);
+  if (create && sheet.getLastRow() === 0) sheet.getRange(1, 1, 1, 2).setValues([headers]);
+  return sheet;
+}
+
+function matchingRecordRows_(sheet, key) {
+  const last = sheet ? sheet.getLastRow() : 0;
+  if (last < 2) return [];
+  return sheet.getRange(2, 1, last - 1, 1).createTextFinder(key).matchCase(true).matchEntireCell(true).findAll();
+}
+
+function visitorFavoritesProfile_(secret, token) {
+  if (typeof token !== 'string' || !token || !isSessionValid_('VISITOR', token)) {
+    throw new Error('閲覧にはサイトのパスワード認証が必要です。');
+  }
+  if (typeof secret !== 'string' || !/^[0-9a-f]{64}$/.test(secret)) {
+    throw new Error('お気に入りを利用するにはブラウザで保存を許可してください。');
+  }
+  return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, 'favorites:' + secret, Utilities.Charset.UTF_8)
+    .map(byte => (byte & 255).toString(16).padStart(2, '0')).join('');
+}
+
+function getVisitorFavorites(secret, token) {
+  const profile = visitorFavoritesProfile_(secret, token);
+  const sheet = twoColumnRecordsSheet_(VISITOR_FAVORITES_SHEET, [], false);
+  const last = sheet ? sheet.getLastRow() : 0;
+  if (last < 2) return {ids: []};
+  const rows = sheet.getRange(2, 1, last - 1, 2).getDisplayValues();
+  return {ids: rows.filter(row => row[0] === 'visitor-' + profile).map(row => row[1])};
+}
+
+function setVisitorFavorite(linkId, favorite, secret, token) {
+  const profile = 'visitor-' + visitorFavoritesProfile_(secret, token);
+  const id = cleanText_(linkId, 200);
+  if (!id || typeof favorite !== 'boolean') throw new Error('お気に入りの指定が不正です。');
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
-
   try {
-    const sheet = ensureSheet_();
-    const columns = getColumnMap_(sheet);
-    const lastRow = sheet.getLastRow();
-
-    if (lastRow >= 2) {
-      const ids = sheet
-        .getRange(2, columns['ID'], lastRow - 1, 1)
-        .getDisplayValues();
-
-      for (let i = 0; i < ids.length; i++) {
-        if (ids[i][0] === linkId) {
-          sheet.getRange(i + 2, columns['お気に入り']).setValue(favorite === true);
-          sheet.getRange(i + 2, columns['更新日時']).setValue(new Date());
-          break;
-        }
-      }
+    visitorFavoritesProfile_(secret, token);
+    if (favorite && !getLinksForToken_(token, false).links.some(link => link.id === id)) {
+      throw new Error('利用者に公開されているリンクが見つかりません。');
     }
-
-    invalidateLinksCache_();
-    return refreshLinksCacheFromSheet_(sheet);
+    const sheet = twoColumnRecordsSheet_(VISITOR_FAVORITES_SHEET, ['利用者', 'リンクID'], favorite);
+    const last = sheet ? sheet.getLastRow() : 0;
+    const records = last < 2 ? [] : sheet.getRange(2, 1, last - 1, 2).getDisplayValues();
+    const rows = [];
+    records.forEach((row, index) => {
+      if (row[0] === profile && row[1] === id) rows.push(index + 2);
+    });
+    if (favorite && !rows.length) sheet.appendRow([profile, safeCell_(id)]);
+    if (!favorite) rows.reverse().forEach(row => sheet.deleteRow(row));
+    return {ok: true, favorite};
   } finally {
     lock.releaseLock();
   }
@@ -1420,6 +1447,26 @@ function recordLinkClick(linkId, browserId, visitorToken) {
     throw new Error('クリック履歴の保存処理（' + stage + '）で失敗しました：' + detail);
   }
 }
+function setClickBrowserName(browserId, name, adminToken) {
+  requireAdmin_(adminToken);
+  const id = cleanText_(browserId, 100);
+  const label = cleanText_(name, 40);
+  if (!/^[A-Za-z0-9_-]{8,100}$/.test(id)) throw new Error('ブラウザIDが不正です。');
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    requireAdmin_(adminToken);
+    const sheet = twoColumnRecordsSheet_(CLICK_BROWSER_NAMES_SHEET, ['ブラウザID', '名前'], !!label);
+    const row = matchingRecordRows_(sheet, id)[0];
+    if (row && label) sheet.getRange(row.getRow(), 2).setValue(safeCell_(label));
+    else if (row) sheet.deleteRow(row.getRow());
+    else if (label) sheet.appendRow([safeCell_(id), safeCell_(label)]);
+    return {ok: true, name: label};
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 function getClickLogs(adminToken) {
   requireAdmin_(adminToken);
   const sheet = ensureClickLogSheet_();
@@ -1427,9 +1474,12 @@ function getClickLogs(adminToken) {
   if (last < 2) return {logs: []};
   const first = Math.max(2, last - 499);
   const rows = sheet.getRange(first, 1, last - first + 1, Math.max(CLICK_LOG_HEADERS.length, sheet.getLastColumn())).getValues();
+  const namesSheet = twoColumnRecordsSheet_(CLICK_BROWSER_NAMES_SHEET, [], false);
+  const namesLast = namesSheet ? namesSheet.getLastRow() : 0;
+  const names = new Map(namesLast < 2 ? [] : namesSheet.getRange(2, 1, namesLast - 1, 2).getDisplayValues());
   return {logs: rows.filter(row => row[0] !== '').reverse().map(row => ({
     id: String(row[0] || ''), linkId: String(row[1] || ''), title: String(row[2] || ''),
-    url: String(row[3] || ''), clickedAt: toIso_(row[4]), browserId: String(row[5] || '')
+    url: String(row[3] || ''), clickedAt: toIso_(row[4]), browserId: String(row[5] || ''), browserName: names.get(String(row[5] || '')) || ''
   }))};
 }
 
