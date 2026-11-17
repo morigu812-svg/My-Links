@@ -1631,7 +1631,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
 
   function serverCall(method, ...args) {
     const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'deleteLink', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'getVisitorCounterStats', 'deleteVisitorCounterBefore20261114', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'deleteVisitorChatMessage', 'getChatScreenshot', 'sendChatMessage', 'sendChatScreenshot', 'getStaffChatMessages', 'getStaffChatAttachment', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendStaffChatAttachment', 'startStaffChatLargeUpload', 'appendStaffChatLargeUploadChunk',
-        'finishStaffChatLargeUpload', 'getStaffChatAttachmentChunk', 'deleteStaffChatMessage', 'sendPrivateChatMessage', 'getClickLogs', 'setClickBrowserName', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
+        'finishStaffChatLargeUpload', 'getStaffChatAttachmentChunk', 'deleteStaffChatMessage', 'sendPrivateChatMessage', 'visitorDirectChatProxy', 'getClickLogs', 'setClickBrowserName', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
     if (protectedMethods.includes(method)) {
       const token = adminSession.getItem(ADMIN_TOKEN_KEY) || '';
       // 呼び出し元（埋め込みメモ帳など）が既にトークンを渡している場合は二重追加しない。
