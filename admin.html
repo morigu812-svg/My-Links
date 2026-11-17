@@ -3269,7 +3269,7 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
             trigger.addEventListener('click', () => toggleStaffMessageActions(trigger, action));
             line.append(trigger);
           }
-        }, {groupIncoming: Boolean(staffActiveRoom), showRead: true});
+        }, {groupIncoming: Boolean(staffActiveRoom), showRead: staffActiveRoom === ''});
         const scrollArea = staffMessages.closest('.chat-table-wrap');
         const beforeHeight = scrollArea?.scrollHeight || 0;
         const wasNearBottom = !scrollArea ||
