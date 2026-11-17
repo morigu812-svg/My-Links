@@ -39,7 +39,11 @@
   opacity: 0;
   pointer-events: none;
 }
-.lc-reply-target:is(:hover, :focus-within) .lc-reply-button { opacity: 1; pointer-events: auto; }
+.lc-reply-button:focus-visible { opacity: 1; pointer-events: auto; }
+@media (hover: hover) and (pointer: fine) {
+  .lc-reply-target:hover .lc-reply-button,
+  .lc-reply-button:hover { opacity: 1; pointer-events: auto; }
+}
 .lc-reply-quote {
   display: grid;
   gap: 2px;
@@ -62,5 +66,26 @@
 @media (max-width: 540px) {
   .staff-message.lc-reply-row > :is(.staff-message-author, .staff-message-line, .staff-message-meta) {
     max-width: 90%;
+  }
+}
+
+/* Keep the caret and a subtle border, without a glowing frame around the composer. */
+:is(#staffChatOverlay, #chatOverlay) .chat-compose textarea:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: #3c6a82 !important;
+}
+:is(#staffChatOverlay, #chatOverlay) button {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+@media (hover: none) {
+  :is(#staffChatOverlay, #chatOverlay) button:hover {
+    box-shadow: none !important;
+    transform: none !important;
+  }
+  :is(#staffChatOverlay, #chatOverlay) button:focus:not(:focus-visible) {
+    outline: none !important;
+    box-shadow: none !important;
   }
 }
