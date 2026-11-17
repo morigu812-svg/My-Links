@@ -456,7 +456,7 @@ body.window-resizing,body.window-resizing *{user-select:none!important}
 <section class="finder-window login-window" id="loginPanel">
   <div class="finder-toolbar"><div class="traffic-lights" aria-label="ウィンドウ操作"><span class="traffic-red" aria-hidden="true"></span><span class="traffic-yellow" aria-hidden="true"></span><span class="traffic-green" aria-hidden="true"></span></div><div class="finder-title">My Desktop</div><div class="toolbar-tools"></div></div>
   <div class="login-body"><div class="brand">LINK CORE / SHARED DESKTOP</div><h1>リンク一覧</h1><p>サイトのパスワードを入力すると、共有リンクを閲覧できます。</p>
-    <form id="loginForm" onsubmit="return false"><label for="sitePassword">サイトのパスワード</label><div class="login-row"><span class="lc-pw-wrap"><input id="sitePassword" type="password" autocomplete="current-password" required autofocus><button class="lc-pw-toggle" type="button" aria-pressed="false" aria-label="パスワードを表示">表示</button></span><button id="loginButton" type="submit" disabled>ログイン</button></div><div class="error" id="loginError" role="alert">ログイン画面を準備しています。表示が変わらない場合はページを再読み込みしてください。</div><button class="retry-button hidden" id="loginRetry" type="button"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:5px"><path d="M20 7v5h-5"/><path d="M20 12a8 8 0 1 1-2.3-5.7L20 9"/></svg>再試行</button></form>
+    <form id="loginForm" onsubmit="return false"><label for="sitePassword">サイトのパスワード</label><div class="login-row"><input id="sitePassword" type="password" autocomplete="current-password" required autofocus><button id="loginButton" type="submit" disabled>ログイン</button></div><div class="error" id="loginError" role="alert">ログイン画面を準備しています。表示が変わらない場合はページを再読み込みしてください。</div><button class="retry-button hidden" id="loginRetry" type="button"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:5px"><path d="M20 7v5h-5"/><path d="M20 12a8 8 0 1 1-2.3-5.7L20 9"/></svg>再試行</button></form>
   </div>
 </section>
 <section class="finder-window hidden" id="linksPanel">
@@ -3947,9 +3947,6 @@ html body #linksPanel .finder-content .folder-card:hover{transform:none;border-c
 #loginPanel .login-body{padding:36px 38px 38px!important}
 #loginPanel .login-body h1{font-size:28px!important;letter-spacing:-.02em}
 #loginPanel .login-body p{font-size:13.5px!important}
-#loginPanel .lc-pw-wrap{position:relative;display:block;flex:1;min-width:0}
-#loginPanel .lc-pw-wrap input{width:100%;padding:13px 66px 13px 14px!important;border-radius:11px!important;font-size:15px}
-#loginPanel .login-row .lc-pw-toggle{position:absolute;top:50%;right:8px;transform:translateY(-50%);padding:5px 10px!important;border:1px solid #28516c!important;border-radius:8px!important;background:#0d263d!important;box-shadow:none!important;color:#a9efff!important;font-size:11px!important;font-weight:600}
 #loginPanel .login-row button[type=submit]{min-height:46px;padding:12px 24px!important;border-radius:11px!important;font-size:14px!important;font-weight:700}
 #loginPanel .error:empty{min-height:0;margin:0}
 footer{margin:16px 4px!important;font-size:11px!important}
@@ -4013,17 +4010,6 @@ footer{margin:16px 4px!important;font-size:11px!important}
   var b=e.target.closest&&e.target.closest('[data-clear-search]');
   if(b){clearSearch(true);}
  });
- var pw=document.getElementById('sitePassword'),tg=document.querySelector('.lc-pw-toggle');
- if(pw&&tg){
-  tg.addEventListener('click',function(){
-   var show=pw.type==='password';
-   pw.type=show?'text':'password';
-   tg.textContent=show?'隠す':'表示';
-   tg.setAttribute('aria-pressed',show?'true':'false');
-   tg.setAttribute('aria-label',show?'パスワードを隠す':'パスワードを表示');
-   pw.focus();
-  });
- }
 })();
 </script>
 <script src="./ai-launcher.js"></script>
