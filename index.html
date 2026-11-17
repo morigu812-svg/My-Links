@@ -455,11 +455,11 @@ body.window-resizing,body.window-resizing *{user-select:none!important}
 <section class="finder-window login-window" id="loginPanel">
   <div class="finder-toolbar"><div class="traffic-lights" aria-label="ウィンドウ操作"><span class="traffic-red" aria-hidden="true"></span><span class="traffic-yellow" aria-hidden="true"></span><span class="traffic-green" aria-hidden="true"></span></div><div class="finder-title">My Desktop</div><div class="toolbar-tools"></div></div>
   <div class="login-body"><div class="brand">LINK CORE / SHARED DESKTOP</div><h1>リンク一覧</h1><p>サイトのパスワードを入力すると、共有リンクを閲覧できます。</p>
-    <form id="loginForm" onsubmit="return false"><label for="sitePassword">サイトのパスワード</label><div class="login-row"><input id="sitePassword" type="password" autocomplete="current-password" required autofocus><button id="loginButton" type="submit" disabled>ログイン</button></div><div class="error" id="loginError" role="alert">ログイン画面を準備しています。表示が変わらない場合はページを再読み込みしてください。</div><button class="retry-button hidden" id="loginRetry" type="button"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:5px"><path d="M20 7v5h-5"/><path d="M20 12a8 8 0 1 1-2.3-5.7L20 9"/></svg>再試行</button></form>
+    <form id="loginForm" onsubmit="return false"><label for="sitePassword">サイトのパスワード</label><div class="login-row"><span class="lc-pw-wrap"><input id="sitePassword" type="password" autocomplete="current-password" required autofocus><button class="lc-pw-toggle" type="button" aria-pressed="false" aria-label="パスワードを表示">表示</button></span><button id="loginButton" type="submit" disabled>ログイン</button></div><div class="error" id="loginError" role="alert">ログイン画面を準備しています。表示が変わらない場合はページを再読み込みしてください。</div><button class="retry-button hidden" id="loginRetry" type="button"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:5px"><path d="M20 7v5h-5"/><path d="M20 12a8 8 0 1 1-2.3-5.7L20 9"/></svg>再試行</button></form>
   </div>
 </section>
 <section class="finder-window hidden" id="linksPanel">
-  <div class="finder-toolbar"><div class="traffic-lights" aria-label="ウィンドウ操作"><span class="traffic-red" aria-hidden="true"></span><span class="traffic-yellow" aria-hidden="true"></span><span class="traffic-green" aria-hidden="true"></span></div><div class="finder-title"><span class="folder-glyph">▰</span> My Desktop <span class="toolbar-chevron">›</span></div><div class="toolbar-tools"><span>▤</span><span>☷</span><button class="share-btn" type="button" id="toolbarShareBtn" aria-label="このページを共有する" title="このページを共有する">⤴</button></div><label class="toolbar-search"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="検索" aria-label="リンクを検索"></label></div>
+  <div class="finder-toolbar"><div class="traffic-lights" aria-label="ウィンドウ操作"><span class="traffic-red" aria-hidden="true"></span><span class="traffic-yellow" aria-hidden="true"></span><span class="traffic-green" aria-hidden="true"></span></div><div class="finder-title"><span class="folder-glyph">▰</span> My Desktop <span class="toolbar-chevron">›</span></div><div class="toolbar-tools"><span>▤</span><span>☷</span><button class="share-btn" type="button" id="toolbarShareBtn" aria-label="このページを共有する" title="このページを共有する">⤴</button></div><div class="toolbar-search" role="search"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="検索" aria-label="リンクを検索（/ キーで移動）" autocomplete="off" enterkeyhint="search"><button class="lc-search-clear" type="button" aria-label="検索をクリア" hidden>×</button><kbd aria-hidden="true">/</kbd></div></div>
   <div class="finder-layout"><aside class="sidebar" aria-label="サイドバー">
 <button class="side-item" type="button" data-view="desktop"><span>▣</span> My Desktop</button>
 <div class="side-label">よく使う項目</div>
@@ -688,12 +688,12 @@ function render(){
  }
  const folderChildren=!query&&selectedCategory&&selectedCategory!=='__uncategorized__'?childFolders(selectedCategory,visible):[];
  const currentLinks=visibleLinks();
- const linkCards=currentLinks.map(x=>{const href=/^https?:\/\//i.test(x.url)?x.url:'#';return '<article class="item lc-link-card" data-link-id="'+esc(x.id)+'"><div class="lc-link-info"><div class="lc-link-main"><a class="title" data-open-mode="external" href="'+esc(href)+'" target="_blank" rel="noopener noreferrer">'+esc(x.title)+'</a>'+(x.isNew&&!readNewLinkIds.has(String(x.id))?'<span class="new-label">NEW</span>':'')+'<div class="meta">'+esc((()=>{try{return new URL(x.url).hostname}catch(e){return x.category||''}})())+'</div>'+(x.memo?'<div class="memo">'+esc(x.memo)+'</div>':'')+'</div><span class="lc-link-arrow" aria-hidden="true">↗</span></div></article>';}).join('');
+ const linkCards=currentLinks.map(x=>{const href=/^https?:\/\//i.test(x.url)?x.url:'#';const ini=Array.from(String(x.title||'').trim())[0]||'•';let hh=0;for(const ch of String(x.title||''))hh=(hh*31+ch.charCodeAt(0))%90;return '<article class="item lc-link-card" data-link-id="'+esc(x.id)+'"><div class="lc-link-info"><span class="lc-avatar" aria-hidden="true" style="--h:'+(175+hh)+'">'+esc(ini.toUpperCase())+'</span><div class="lc-link-main"><a class="title" data-open-mode="external" href="'+esc(href)+'" target="_blank" rel="noopener noreferrer">'+esc(x.title)+'</a>'+(x.isNew&&!readNewLinkIds.has(String(x.id))?'<span class="new-label">NEW</span>':'')+'<div class="meta">'+esc((()=>{try{return new URL(x.url).hostname}catch(e){return x.category||''}})())+'</div>'+(x.memo?'<div class="memo">'+esc(x.memo)+'</div>':'')+(query&&folderPath(x.category)?'<span class="lc-cat">'+esc(folderPath(x.category).split('/').join(' › '))+'</span>':'')+'</div><span class="lc-link-arrow" aria-hidden="true">↗</span></div></article>';}).join('');
  const back=query?'':selectedCategory&&selectedCategory!=='__uncategorized__'?'<div class="folder-toolbar"><button type="button" data-folder-back>‹ '+(folderParent(selectedCategory)?'親フォルダーに戻る':'フォルダー一覧に戻る')+'</button><span>My Desktop　›　'+esc(selectedCategory.split('/').join('　›　'))+'</span></div>':(selectedCategory?'<div class="folder-toolbar"><button type="button" data-folder-back>‹ フォルダー一覧に戻る</button><span>My Desktop　›　未分類</span></div>':'');
  const childHtml=folderChildren.map(f=>folderButton(f.name,f.key,f.count)).join('');
- $('count').textContent=folderChildren.length+' フォルダー / '+currentLinks.length+' 件';
+ $('count').textContent=(folderChildren.length?folderChildren.length+' フォルダー / ':'')+currentLinks.length+' 件';
  $('loadStatus').textContent='';
- $('list').innerHTML=back+childHtml+linkCards+(!folderChildren.length&&!currentLinks.length?'<div class="empty">'+(query?'検索条件に一致するリンクがありません。':selectedCategory?'このフォルダーは空です。':'表示できるリンクがありません。')+'</div>':'');
+ $('list').innerHTML=back+childHtml+linkCards+(!folderChildren.length&&!currentLinks.length?'<div class="empty">'+(query?'検索条件に一致するリンクがありません。<button type="button" class="lc-empty-clear" data-clear-search>検索をクリア</button>':selectedCategory?'このフォルダーは空です。':'表示できるリンクがありません。')+'</div>':'');
  
 }
 const chatOverlay=$('chatOverlay'),chatMessages=$('chatMessages'),chatForm=$('chatForm'),chatInput=$('chatInput'),chatSend=$('chatSend');let chatLoading=false,chatLoaded=false;
@@ -3753,5 +3753,189 @@ var qrcode = function() {
   border-color: transparent !important;
 }
 </style>
+<style id="lc-ui-refresh">
+/* LINK CORE UI refresh（2026-11-17）
+   紺 × シアンの基調はそのまま。余白・階層・操作感だけを整える最終レイヤーです。 */
+:root{--lc-accent:#35d9ff;--lc-line:#1d4a63;--lc-line-soft:#163a4f;--lc-ink:#e8f5ff;--lc-sub:#a8bfd4;--lc-dim:#7e9bb2}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{padding-bottom:max(28px,env(safe-area-inset-bottom))!important}
+
+/* ── ウィンドウ ── */
+html body #linksPanel.finder-window,html body #loginPanel.finder-window{border:1px solid #1b5570!important;box-shadow:0 0 0 1px #35d9ff10,0 30px 80px #000a,0 0 60px #00cfff0f!important}
+html body #linksPanel.finder-window,html body #loginPanel.finder-window{border-radius:18px!important}
+/* 元CSSは body と main の余白が二重にかかり、ウィンドウが右へ寄っていた。内側いっぱいに取り、左右を揃える */
+html body #linksPanel.finder-window,html body #loginPanel.finder-window{width:min(1240px,100%);margin-left:auto;margin-right:auto}
+@media(max-width:520px){html body #linksPanel.finder-window,html body #loginPanel.finder-window{border-radius:14px!important}}
+#linksPanel :is(button,a,input):focus-visible,#loginPanel :is(button,a,input):focus-visible{outline:2px solid var(--lc-accent)!important;outline-offset:2px!important}
+
+/* ── ツールバー・検索 ── */
+@media(min-width:761px){
+ #linksPanel .finder-toolbar{height:62px!important;grid-template-columns:120px minmax(0,1fr) minmax(200px,300px) auto!important;grid-template-rows:1fr!important;column-gap:12px}
+ #linksPanel .toolbar-search{grid-column:3;grid-row:1;width:100%}
+ #linksPanel .toolbar-tools{grid-column:4}
+}
+#linksPanel .toolbar-search{position:relative;gap:8px!important;padding:9px 12px!important;border-radius:11px!important;transition:border-color .15s,box-shadow .15s}
+#linksPanel .toolbar-search:focus-within{border-color:var(--lc-accent)!important;box-shadow:0 0 0 3px #35d9ff22!important}
+#linksPanel .toolbar-search input{font-size:13px!important}
+#linksPanel .toolbar-search input::-webkit-search-cancel-button{display:none}
+#linksPanel .toolbar-search kbd{flex:0 0 auto;padding:1px 6px;border:1px solid #28516c;border-radius:5px;background:#0a1b2f;color:#7fa6bd;font-size:10px;font-weight:600;line-height:1.6;font-family:inherit}
+#linksPanel .toolbar-search:focus-within kbd,#linksPanel .toolbar-search.has-value kbd{display:none}
+#linksPanel .lc-search-clear{display:grid;place-items:center;flex:0 0 auto;width:22px;height:22px;padding:0;border:0!important;border-radius:50%;background:#16344a!important;color:#bfefff!important;font-size:14px;line-height:1}
+#linksPanel .lc-search-clear[hidden]{display:none}
+#linksPanel .lc-search-clear:hover{background:#1f4c6a!important;box-shadow:none!important}
+
+/* ── サイドバー ── */
+#linksPanel .sidebar{display:flex;flex-direction:column;gap:2px;padding:16px 10px 18px!important}
+#linksPanel .sidebar .side-label{margin:20px 10px 7px!important;font-size:10px!important;letter-spacing:.16em!important;color:#5fcfe8!important}
+#linksPanel .sidebar .side-item{min-height:38px;gap:10px!important;padding:8px 11px!important;border-radius:10px!important;font-size:13px!important;line-height:1.35;border:1px solid transparent!important;background:transparent!important;box-shadow:none!important;transition:background .15s,color .15s}
+#linksPanel .sidebar .side-item>span:first-child{flex:0 0 auto;width:18px!important;text-align:center}
+#linksPanel .sidebar .side-item:hover{background:#0f263d!important;color:#f0fbff!important}
+#linksPanel .sidebar .side-item.selected{background:linear-gradient(100deg,#103a52,#161c3d)!important;color:#fff!important;font-weight:650;box-shadow:inset 3px 0 0 var(--lc-accent),0 0 18px #00cfff12!important}
+#linksPanel #sideCats{display:flex;flex-direction:column;gap:2px;width:100%}
+#linksPanel .side-folder-mini svg{width:16px;height:14px;vertical-align:-2px;color:#e5b84f}
+#linksPanel #visitorLogout{order:99;margin-top:auto;color:#9fb8cb!important}
+#linksPanel #visitorLogout::before{content:"⎋";flex:0 0 auto;width:18px;text-align:center;color:#35d9ff}
+#linksPanel #visitorLogout:hover{color:#ffc3da!important}
+#linksPanel #visitorLogout:hover::before{color:#ff8cc4}
+
+/* ── 見出し ── */
+#linksPanel .finder-content{padding:28px clamp(18px,3vw,34px) 36px!important}
+#linksPanel .section-heading{margin-bottom:14px!important;padding-bottom:16px;border-bottom:1px solid var(--lc-line)!important}
+#linksPanel .section-heading h2{font-size:clamp(22px,3vw,28px)!important;font-weight:750!important;letter-spacing:-.02em!important;line-height:1.25}
+#linksPanel .section-kicker{display:block;margin-bottom:5px;font-size:10px!important;letter-spacing:.18em!important;color:#5fcfe8!important}
+#linksPanel .section-note{padding:3px 9px;border:1px solid var(--lc-line);border-radius:999px;font-size:9px!important;letter-spacing:.14em;color:#7fa6bd!important}
+#linksPanel .list-heading{padding:6px 0 14px!important;border:0!important;gap:12px!important}
+#linksPanel .result-count{padding:2px 9px;border:1px solid var(--lc-line);border-radius:999px;background:#0a1b2f;color:#b7d8e3!important;font-size:11px!important;font-variant-numeric:tabular-nums}
+#linksPanel #refreshLinks{margin-inline-start:auto!important;min-height:32px;padding:6px 13px!important;border-radius:9px!important;font-size:12px;transition:border-color .15s,background .15s}
+
+/* ── お知らせ・来客数（目立ちすぎないように整理） ── */
+#linksPanel .link-feed-privacy-note{margin:0 0 12px!important;padding:11px 14px!important;border-radius:12px!important;background:#35d9ff0a!important;border:1px solid var(--lc-line)!important;box-shadow:inset 3px 0 #35d9ff88!important}
+#linksPanel .link-feed-privacy-note p{font-size:12.5px!important;font-weight:650!important;margin-bottom:5px!important}
+#linksPanel .link-feed-privacy-note a{font-size:11.5px!important;color:#8fe9ff!important}
+#linksPanel .visitor-counter-strip{gap:8px 18px!important;margin:0 0 16px!important;padding:8px 12px!important;border-radius:12px!important;background:#0a1b2f!important;border:1px solid var(--lc-line-soft)!important;font-size:12px!important}
+#linksPanel .visitor-counter-strip strong{font-size:15px!important}
+#linksPanel .visitor-counter-strip button{min-height:30px;border-radius:8px!important}
+#linksPanel .visitor-counter-strip button:last-of-type{margin-left:auto}
+#linksPanel .status:empty{display:none!important}
+#linksPanel .status:not(:empty){margin-bottom:12px!important;padding:8px 12px!important;font-size:12px}
+html body #linksPanel .workspace{background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important}
+
+/* ── リンクカード ── */
+@media(min-width:680px){#linksPanel #list:has(.lc-link-card){grid-template-columns:repeat(auto-fill,minmax(260px,1fr))!important;gap:14px!important}}
+html body #linksPanel #list .lc-link-card{position:relative;min-height:0!important;border-radius:14px!important;border:1px solid #1f4d66!important;background:linear-gradient(160deg,#0f2038,#0a1527)!important;box-shadow:inset 0 1px #ffffff08!important;transition:border-color .16s,background .16s!important;cursor:pointer}
+html body #linksPanel #list .lc-link-card:hover{border-color:var(--lc-accent)!important;background:linear-gradient(160deg,#122846,#0b1a31)!important;box-shadow:inset 0 1px #ffffff0c!important;transform:none}
+html body #linksPanel #list .lc-link-card:has(.title:focus-visible){border-color:var(--lc-accent)!important;box-shadow:0 0 0 3px #35d9ff26!important}
+@media(hover:none){html body #linksPanel #list .lc-link-card:active{background:#12294a!important;border-color:var(--lc-accent)!important}}
+#linksPanel .lc-link-info{gap:12px!important;padding:14px 15px 15px!important;align-items:flex-start}
+#linksPanel .lc-avatar{flex:0 0 auto;display:grid;place-items:center;width:40px;height:40px;border-radius:12px;font-size:17px;font-weight:800;line-height:1;color:hsl(var(--h,200) 95% 85%);background:linear-gradient(145deg,hsl(var(--h,200) 60% 22%),hsl(calc(var(--h,200) + 28) 55% 14%));border:1px solid hsl(var(--h,200) 65% 40%/.55);user-select:none}
+#linksPanel .lc-link-card .title{display:inline!important;min-height:0!important;font-size:15px!important;font-weight:700!important;line-height:1.45;color:#9cf0ff!important}
+#linksPanel .lc-link-card .title:focus-visible{outline:none!important}
+#linksPanel .lc-link-card .title::after{content:"";position:absolute;inset:0;z-index:1}
+#linksPanel .lc-link-card:hover .title{color:#fff!important;text-decoration:none}
+#linksPanel .lc-link-card .meta{display:block!important;margin-top:4px!important;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:#7e9bb2!important;font-size:11.5px!important;letter-spacing:.01em}
+#linksPanel .lc-link-card .memo{margin-top:8px!important;color:#a8bfd4!important;font-size:12.5px!important;line-height:1.6!important}
+#linksPanel .lc-cat{display:inline-block;max-width:100%;margin-top:9px;padding:2px 8px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;border:1px solid #245777;border-radius:6px;background:#10283e;color:#8ce8ff;font-size:10.5px}
+#linksPanel .lc-link-arrow{opacity:.55;font-size:17px!important;transition:opacity .16s,transform .16s,color .16s}
+#linksPanel .lc-link-card:hover .lc-link-arrow{opacity:1;color:var(--lc-accent)!important;transform:translate(2px,-2px)}
+#linksPanel .lc-link-card .new-label{margin:0 0 0 8px!important;vertical-align:2px}
+
+/* ── フォルダ ── */
+html body #linksPanel .finder-content .folder-card{min-height:122px;border-radius:14px;border:1px solid #1f4d66;background:linear-gradient(160deg,#10243c,#0a1527);transition:border-color .16s,background .16s}
+html body #linksPanel .finder-content .folder-card:hover{transform:none;border-color:var(--lc-accent);background:linear-gradient(160deg,#12294a,#0b1a31);box-shadow:none}
+#linksPanel .folder-card-count{color:#8fb0c4!important;font-size:11px!important}
+#linksPanel .folder-toolbar{align-items:center;flex-wrap:wrap;gap:10px!important;margin-bottom:6px!important;padding-bottom:14px!important}
+#linksPanel .folder-toolbar button{min-height:34px;padding:6px 13px!important;border-radius:9px!important;font-size:12px}
+
+/* ── 空の状態 ── */
+#linksPanel .empty{display:flex;flex-direction:column;align-items:center;gap:12px;padding:48px 20px!important;border-radius:14px!important;font-size:13.5px!important;line-height:1.7}
+#linksPanel .empty::before{content:"⌕";display:grid;place-items:center;width:46px;height:46px;border:1px solid var(--lc-line);border-radius:14px;background:#0a1b2f;color:#35d9ff;font-size:22px}
+#linksPanel .lc-empty-clear{min-height:38px;padding:8px 18px;border-radius:10px;font-size:13px}
+
+/* ── ログイン ── */
+#loginPanel.login-window{max-width:560px}
+#loginPanel .finder-toolbar{height:56px!important;grid-template-rows:1fr!important}
+#loginPanel .traffic-lights,#loginPanel .finder-title,#loginPanel .toolbar-tools{grid-row:1}
+#loginPanel .login-body{padding:36px 38px 38px!important}
+#loginPanel .login-body h1{font-size:28px!important;letter-spacing:-.02em}
+#loginPanel .login-body p{font-size:13.5px!important}
+#loginPanel .lc-pw-wrap{position:relative;display:block;flex:1;min-width:0}
+#loginPanel .lc-pw-wrap input{width:100%;padding:13px 66px 13px 14px!important;border-radius:11px!important;font-size:15px}
+#loginPanel .login-row .lc-pw-toggle{position:absolute;top:50%;right:8px;transform:translateY(-50%);padding:5px 10px!important;border:1px solid #28516c!important;border-radius:8px!important;background:#0d263d!important;box-shadow:none!important;color:#a9efff!important;font-size:11px!important;font-weight:600}
+#loginPanel .login-row button[type=submit]{min-height:46px;padding:12px 24px!important;border-radius:11px!important;font-size:14px!important;font-weight:700}
+#loginPanel .error:empty{min-height:0;margin:0}
+footer{margin:16px 4px!important;font-size:11px!important}
+
+/* ── スマホ：サイドバーを横スクロールのチップ列にして、一覧を広く使う ── */
+@media(max-width:760px){
+ #linksPanel .finder-layout{display:block!important;min-height:0!important}
+ #linksPanel .sidebar{flex-direction:row;align-items:center;gap:8px!important;overflow-x:auto;padding:10px 12px!important;border-right:0!important;border-bottom:1px solid #153b55!important;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+ #linksPanel .sidebar::-webkit-scrollbar{display:none}
+ #linksPanel .sidebar .side-label{display:none}
+ #linksPanel #sideCats{display:contents}
+ #linksPanel .sidebar .side-item{flex:0 0 auto;width:auto!important;min-height:40px;padding:8px 14px!important;border-radius:999px!important;white-space:nowrap;font-size:12.5px!important;box-shadow:inset 0 0 0 1px #1d4a63!important;background:#0a1b2f!important}
+ #linksPanel .sidebar .side-item.selected{box-shadow:inset 0 0 0 1px var(--lc-accent),0 0 14px #00cfff18!important}
+ #linksPanel .sidebar [data-view]{order:1}
+ #linksPanel #sideCats .side-item{order:2;padding-left:14px!important}
+ #linksPanel .sidebar a.side-item,#linksPanel #openChat,#linksPanel #sidePageGuide,#linksPanel #sideShare{order:3}
+ #linksPanel #visitorLogout{order:9;margin-top:0}
+ #linksPanel .sidebar .new-badge{margin-left:4px}
+ #linksPanel .finder-content{padding:18px 14px 28px!important}
+ #linksPanel .section-note{display:none}
+ #linksPanel .finder-toolbar{height:auto!important;grid-template-rows:34px minmax(42px,auto)!important}
+ #linksPanel .toolbar-search{min-height:42px}
+ #linksPanel .toolbar-search kbd{display:none}
+ #linksPanel .lc-link-info{padding:13px 14px!important}
+ #linksPanel .lc-avatar{width:36px;height:36px;font-size:16px}
+ #loginPanel .login-body{padding:28px 20px 30px!important}
+}
+@media(max-width:520px){
+ body{padding-bottom:env(safe-area-inset-bottom)!important}
+ #linksPanel .list-heading{flex-wrap:wrap}
+ #linksPanel #refreshLinks{min-height:38px}
+ #loginPanel .login-row{gap:10px}
+}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}#linksPanel *{transition:none!important}}
+</style>
+<script id="lc-ux-refresh">
+/* LINK CORE 使いやすさの改善：検索のクリア／ショートカット／パスワード表示切替 */
+(function(){
+ var search=document.getElementById('search');
+ var box=search&&search.closest('.toolbar-search');
+ var clear=document.querySelector('.lc-search-clear');
+ function fire(){search.dispatchEvent(new Event('input',{bubbles:true}));}
+ function sync(){var has=!!(search&&search.value);if(clear)clear.hidden=!has;if(box)box.classList.toggle('has-value',has);}
+ function clearSearch(focus){if(!search)return;search.value='';fire();sync();if(focus)search.focus();}
+ if(search){
+  search.addEventListener('input',sync);sync();
+  if(clear)clear.addEventListener('click',function(){clearSearch(true);});
+ }
+ document.addEventListener('keydown',function(e){
+  if(!search||e.defaultPrevented||e.isComposing)return;
+  var t=e.target,typing=t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.tagName==='SELECT'||t.isContentEditable);
+  var panel=document.getElementById('linksPanel');
+  var visible=panel&&!panel.classList.contains('hidden');
+  if(e.key==='Escape'&&t===search&&search.value){e.stopPropagation();clearSearch(false);return;}
+  if(!visible)return;
+  if((e.key==='/'&&!typing&&!e.metaKey&&!e.ctrlKey&&!e.altKey)||((e.key==='k'||e.key==='K')&&(e.metaKey||e.ctrlKey))){
+   e.preventDefault();search.focus();search.select();
+  }
+ },true);
+ document.addEventListener('click',function(e){
+  var b=e.target.closest&&e.target.closest('[data-clear-search]');
+  if(b){clearSearch(true);}
+ });
+ var pw=document.getElementById('sitePassword'),tg=document.querySelector('.lc-pw-toggle');
+ if(pw&&tg){
+  tg.addEventListener('click',function(){
+   var show=pw.type==='password';
+   pw.type=show?'text':'password';
+   tg.textContent=show?'隠す':'表示';
+   tg.setAttribute('aria-pressed',show?'true':'false');
+   tg.setAttribute('aria-label',show?'パスワードを隠す':'パスワードを表示');
+   pw.focus();
+  });
+ }
+})();
+</script>
 <script src="./ai-launcher.js"></script>
 </body></html>
