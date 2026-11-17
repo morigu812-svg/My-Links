@@ -786,7 +786,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
 </style>
 <style id="staff-attachment-styles">
 /* 入力欄を全幅で確保し、操作ボタンを必ず次の行に置く。 */
-#staffChatOverlay #staffChatForm {
+:is(#staffChatOverlay #staffChatForm, #chatOverlay #chatForm) {
   display: flex;
   flex-direction: column;
   flex-wrap: nowrap;
@@ -795,7 +795,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   min-width: 0;
   width: 100%;
 }
-#staffChatOverlay #staffChatForm > textarea {
+:is(#staffChatOverlay #staffChatForm, #chatOverlay #chatForm) > textarea {
   display: block;
   flex: 0 0 auto;
   width: 100%;
@@ -805,7 +805,7 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   box-sizing: border-box;
   resize: vertical;
 }
-#staffChatOverlay #staffChatForm .staff-compose-actions {
+:is(#staffChatOverlay #staffChatForm, #chatOverlay #chatForm) .staff-compose-actions {
   width: 100%;
   min-width: 0;
   display: flex;
@@ -813,13 +813,13 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   flex-wrap: wrap;
   gap: 8px;
 }
-#staffChatOverlay #staffChatForm .staff-compose-actions > button {
+:is(#staffChatOverlay #staffChatForm, #chatOverlay #chatForm) .staff-compose-actions > button {
   flex: 0 0 auto;
   align-self: auto;
   min-height: 42px;
   white-space: nowrap;
 }
-#staffChatOverlay #staffChatForm #staffChatSend {
+:is(#staffChatOverlay #staffChatForm #staffChatSend, #chatOverlay #chatForm #chatSend) {
   margin-left: auto;
   min-width: 76px;
 }
@@ -840,8 +840,8 @@ body:not(.night-mode) .folder-toolbar{color:#a9cce2!important}
   align-self: flex-start;
 }
 @media (max-width: 540px) {
-  #staffChatOverlay #staffChatForm { padding: 10px; }
-  #staffChatOverlay #staffChatForm .staff-compose-actions > button { font-size: 12px; padding: 9px 10px; }
+  :is(#staffChatOverlay #staffChatForm, #chatOverlay #chatForm) { padding: 10px; }
+  :is(#staffChatOverlay #staffChatForm, #chatOverlay #chatForm) .staff-compose-actions > button { font-size: 12px; padding: 9px 10px; }
 }
 
 #staffChatOverlay [hidden] { display:none!important; }
@@ -974,17 +974,22 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
   #staffChatOverlay #staffTalkList { gap: 16px; }
   #staffChatOverlay button.staff-talk-row { padding-inline: 10px; }
 }
-#staffChatOverlay:has(#staffTalkRoom:not([hidden])) > :is(.section-heading, #staffChatStatus, #staffTalkRoom) {
+#staffChatOverlay:has(#staffTalkRoom:not([hidden])) > :is(.section-heading, #staffChatStatus, #staffTalkRoom),
+#chatOverlay > :is(.section-heading, #visitorChatRoom) {
   max-width: 640px;
   margin-inline: auto;
 }
-#finderWindow #staffChatOverlay .staff-message-scroll {
+#finderWindow :is(#staffChatOverlay, #chatOverlay) .staff-message-scroll {
   border: 1px solid #21354c;
   border-radius: 16px;
   background: linear-gradient(165deg, #101c2e, #0b1422 70%);
   scrollbar-width: thin;
   scrollbar-color: #37526b transparent;
 }
+#chatOverlay .click-log-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+#chatOverlay > .section-heading { flex-wrap: wrap; gap: 12px; }
+#chatOverlay #chatRecipient { width: 100%; min-width: 0; margin-top: 4px; }
+#chatOverlay :is(#visitorChatStatus, #chatScreenshotStatus):empty { display: none; }
 .staff-message-list {
   display: flex;
   flex-direction: column;
@@ -1209,11 +1214,26 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
       <div><span class="section-kicker">LINK CORE / CHAT</span><h2>利用者チャット</h2><p>利用者とのメッセージを表示します。</p></div>
       <div class="click-log-actions"><button id="refreshChat" class="btn" type="button">↻ 再読み込み</button><button id="closeChat" class="btn" type="button">リンク一覧に戻る</button></div>
     </div>
-    <div class="click-log-table-wrap chat-table-wrap"><table class="click-log-table">
-      <thead><tr><th scope="col">日時</th><th scope="col">投稿者</th><th scope="col">メッセージ</th></tr></thead>
-      <tbody id="chatMessages"></tbody>
-    </table></div>
-<label class="chat-subtitle" for="chatRecipient">個別チャットID（空欄なら全員）<input id="chatRecipient" type="text" maxlength="67" autocomplete="off" spellcheck="false" style="display:block;width:100%"></label><div class="chat-subtitle"><button type="button" id="chatScreenshot">スクリーンショットを共有</button><input id="chatScreenshotFile" type="file" accept="image/*" hidden><span id="chatScreenshotHint"> 選んだ画像は共通チャットの全員に送信されます。</span><div id="chatScreenshotStatus" role="status"></div></div><form class="chat-compose" id="chatForm"><textarea id="chatInput" maxlength="1000" rows="2" placeholder="利用者への返信を入力…" required></textarea><button id="chatSend" type="submit">返信</button></form></section>
+    <div id="visitorChatRoom">
+      <div id="visitorChatStatus" class="chat-subtitle" role="status"></div>
+      <div class="chat-table-wrap staff-message-scroll" aria-label="利用者チャットの履歴" tabindex="0">
+        <div id="chatMessages" class="staff-message-list"></div>
+      </div>
+      <form class="chat-compose" id="chatForm">
+        <label class="chat-subtitle" for="chatRecipient">個別チャットID（空欄なら全員）
+          <input id="chatRecipient" type="text" maxlength="67" autocomplete="off" spellcheck="false">
+        </label>
+        <textarea id="chatInput" maxlength="1000" rows="4" aria-label="利用者への返信" placeholder="利用者への返信を入力…" required></textarea>
+        <div class="staff-compose-actions">
+          <button id="chatScreenshot" class="staff-file-button" type="button" aria-describedby="chatScreenshotHint">写真を共有</button>
+          <input id="chatScreenshotFile" type="file" accept="image/*" hidden>
+          <button id="chatSend" type="submit">返信</button>
+        </div>
+        <span id="chatScreenshotHint" class="chat-subtitle">選んだ画像は共通チャットの全員に送信されます。</span>
+        <div id="chatScreenshotStatus" role="status"></div>
+      </form>
+    </div>
+  </section>
   <section id="staffChatOverlay" class="click-log-panel chat-main-panel" aria-label="管理者専用チャット">
     <div class="section-heading">
       <div><span class="section-kicker">LINK CORE / CHAT</span><h2 id="staffTalkTitle">トーク一覧</h2></div>
@@ -1710,6 +1730,8 @@ function watchSessionExpiry(deadline, onExpired) {
     $('staffChatOverlay').classList.remove('open');
     $('staffChatNotice').hidden = true;
     $('staffUnreadCount').hidden = true;
+    chatMessages.replaceChildren();
+    visitorChatRenderKey = '';
     $('staffChatMessages').replaceChildren();
     $('staffChatInput').value = '';
     closeIntegratedMemos();
@@ -2087,14 +2109,72 @@ document.getElementById('authSubmit').disabled = false;
   // Shared visitor chat; the server determines the author from the authenticated token.
   const chatOverlay=$('chatOverlay'),chatMessages=$('chatMessages'),chatForm=$('chatForm'),chatInput=$('chatInput'),chatSend=$('chatSend');
   let chatLoading=false,chatLoaded=false,lastAdminChatId='',adminUnreadCount=0;
-  function chatRow(item, author) {
-    const row = document.createElement('tr');
-    const date = new Date(item.createdAt);
-    row.insertCell().textContent = Number.isNaN(date.getTime()) ? '日時不明' : date.toLocaleString('ja-JP');
-    row.insertCell().textContent = author;
-    const message = row.insertCell();
-    message.className = 'chat-text-cell';
-    message.textContent = item.message;
+  function buildChatBubbles(messages, decorate, {groupIncoming = false, showRead = false} = {}) {
+    let previousDay = '';
+    let previousMessage;
+    return messages.flatMap(item => {
+      const date = new Date(item.createdAt || NaN);
+      const validDate = !Number.isNaN(date.getTime());
+      const day = validDate ? date.toLocaleDateString('ja-JP') : '';
+      const newDay = day !== previousDay;
+      const continuation = !!previousMessage && !newDay && (item.own && previousMessage.own ||
+        groupIncoming && !item.own && !previousMessage.own && item.author === previousMessage.author);
+      previousDay = day;
+      previousMessage = item;
+      const separator = newDay && day ? document.createElement('div') : null;
+      if (separator) {
+        separator.className = 'staff-message-day';
+        separator.textContent = date.toLocaleDateString('ja-JP', {month: 'long', day: 'numeric', weekday: 'short'});
+      }
+      const card = document.createElement('article');
+      card.className = item.own ? 'staff-message is-own' : 'staff-message';
+      if (continuation) card.classList.add('is-continuation');
+      if (item.own) {
+        card.setAttribute('aria-label', '自分のメッセージ');
+      } else if (!continuation) {
+        const author = document.createElement('strong');
+        author.className = 'staff-message-author';
+        author.textContent = item.author || '管理者';
+        card.append(author);
+      }
+      const bubble = document.createElement('div');
+      bubble.className = 'staff-message-bubble';
+      if (item.message) {
+        const body = document.createElement('div');
+        body.className = 'staff-message-body';
+        body.textContent = item.message;
+        bubble.append(body);
+      }
+      const line = document.createElement('div');
+      line.className = 'staff-message-line';
+      line.append(bubble);
+      card.append(line);
+      const meta = document.createElement('div');
+      meta.className = 'staff-message-meta';
+      const time = document.createElement('time');
+      time.textContent = '日時不明';
+      if (validDate) {
+        time.dateTime = date.toISOString();
+        time.textContent = date.toLocaleTimeString('ja-JP', {hour: '2-digit', minute: '2-digit'});
+        time.title = date.toLocaleString('ja-JP');
+      }
+      meta.append(time);
+      const read = document.createElement('span');
+      read.textContent = '既読 ' + (item.readCount || 0) + ' 件';
+      if (showRead) meta.append(read);
+      card.append(meta);
+      decorate(item, card, bubble, line);
+      return separator ? [separator, card] : [card];
+    });
+  }
+
+  function decorateVisitorBubble(item, card, bubble) {
+    if (item.private) {
+      const recipient = document.createElement('div');
+      recipient.className = 'staff-message-author';
+      recipient.textContent = '個別返信 → ' + item.recipient;
+      bubble.prepend(recipient);
+    }
     if (item.hasScreenshot) {
       const button = document.createElement('button');
       button.type = 'button';
@@ -2103,7 +2183,7 @@ document.getElementById('authSubmit').disabled = false;
         button.disabled = true;
         try {
           const result = await serverCall('getChatScreenshot', item.id);
-          if (!message.isConnected) return;
+          if (!bubble.isConnected) return;
           const image = document.createElement('img');
           image.src = result.image;
           image.alt = '共有されたスクリーンショット';
@@ -2115,32 +2195,31 @@ document.getElementById('authSubmit').disabled = false;
           button.disabled = false;
         }
       };
-      message.append(document.createElement('br'), button);
+      button.className = 'btn';
+      bubble.append(button);
     }
-    return row;
   }
 
-  function chatTableNotice(body, columns, message) {
-    const row = document.createElement('tr');
-    const cell = row.insertCell();
-    cell.colSpan = columns;
-    cell.className = 'click-log-empty';
-    cell.textContent = message;
-    body.replaceChildren(row);
-  }
-
+  let visitorChatRenderKey = '';
   function renderChatMessages(messages) {
-    if (!messages.length) {
-      chatTableNotice(chatMessages, 3, 'まだメッセージはありません。');
-      return;
-    }
-    chatMessages.replaceChildren(...messages.map(item =>
-      chatRow(item, item.private ? '管理者 → ' + item.recipient : item.author)));
+    const key = JSON.stringify(messages);
+    if (key === visitorChatRenderKey) return;
+    visitorChatRenderKey = key;
     const scrollArea = chatMessages.closest('.chat-table-wrap');
-    scrollArea.scrollTop = scrollArea.scrollHeight;
+    const nearBottom = scrollArea.scrollHeight - scrollArea.scrollTop - scrollArea.clientHeight < 100;
+    if (messages.length) {
+      const items = messages.map(item => ({...item, own: item.private === true || item.author === '管理者'}));
+      chatMessages.replaceChildren(...buildChatBubbles(items, decorateVisitorBubble));
+    } else {
+      const notice = document.createElement('p');
+      notice.className = 'staff-message-notice';
+      notice.textContent = 'まだメッセージはありません。';
+      chatMessages.replaceChildren(notice);
+    }
+    if (nearBottom) scrollArea.scrollTop = scrollArea.scrollHeight;
   }
   function updateAdminChatBadge(){const badge=$('chatUnreadBadge');if(!badge)return;badge.hidden=adminUnreadCount<1;badge.textContent=adminUnreadCount>99?'99+':String(adminUnreadCount);badge.setAttribute('aria-label',adminUnreadCount+'件の未読メッセージ');}
-  async function refreshAdminChat(){if(chatLoading||!adminSession.getItem(ADMIN_TOKEN_KEY))return;const button=$('refreshChat');chatLoading=true;if(button){button.disabled=true;button.classList.add('is-refreshing');button.setAttribute('aria-busy','true');}try{const r=await serverCall('getChatMessages');const messages=Array.isArray(r.messages)?r.messages:[];const latest=messages.length?messages[messages.length-1].id:'';if(chatLoaded&&latest&&lastAdminChatId&&latest!==lastAdminChatId&&!chatOverlay.classList.contains('open')){const previousIndex=messages.findIndex(item=>item.id===lastAdminChatId);adminUnreadCount+=previousIndex>=0?messages.length-previousIndex-1:1;updateAdminChatBadge();}if(latest)lastAdminChatId=latest;renderChatMessages(messages);chatLoaded=true;}catch(e){if(chatOverlay.classList.contains('open'))chatTableNotice(chatMessages, 3, '読み込みに失敗しました：'+(e.message||'通信エラー'));}finally{chatLoading=false;if(button){button.disabled=false;button.classList.remove('is-refreshing');button.removeAttribute('aria-busy');}}}
+  async function refreshAdminChat(){const token=adminSession.getItem(ADMIN_TOKEN_KEY);if(chatLoading||!token)return;const button=$('refreshChat');chatLoading=true;if(button){button.disabled=true;button.classList.add('is-refreshing');button.setAttribute('aria-busy','true');}try{const r=await serverCall('getChatMessages');if(token!==adminSession.getItem(ADMIN_TOKEN_KEY))return;const messages=Array.isArray(r.messages)?r.messages:[];const latest=messages.length?messages[messages.length-1].id:'';if(chatLoaded&&latest&&lastAdminChatId&&latest!==lastAdminChatId&&!chatOverlay.classList.contains('open')){const previousIndex=messages.findIndex(item=>item.id===lastAdminChatId);adminUnreadCount+=previousIndex>=0?messages.length-previousIndex-1:1;updateAdminChatBadge();}if(latest)lastAdminChatId=latest;renderChatMessages(messages);$('visitorChatStatus').textContent='';chatLoaded=true;}catch(e){if(chatOverlay.classList.contains('open'))$('visitorChatStatus').textContent='読み込みに失敗しました：'+(e.message||'通信エラー');}finally{chatLoading=false;if(button){button.disabled=false;button.classList.remove('is-refreshing');button.removeAttribute('aria-busy');}}}
   function hideMainChats() {
     $('chatOverlay').classList.remove('open');
     $('staffChatOverlay').classList.remove('open');
@@ -2802,7 +2881,7 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
       else await serverCall('sendChatMessage', message);
       chatInput.value = '';
       await refreshAdminChat();
-    }catch(error){chatTableNotice(chatMessages, 3, error.message||'送信できませんでした。');}finally{chatSend.disabled=false;chatInput.focus();}});
+    }catch(error){$('visitorChatStatus').textContent=error.message||'送信できませんでした。';}finally{chatSend.disabled=false;chatInput.focus();}});
 
   const staffChat = $('staffChatOverlay');
   const staffMessages = $('staffChatMessages');
@@ -3076,45 +3155,7 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
       const key = JSON.stringify(messages.map(item => [item.id, item.readCount, item.unread, item.own, item.author, item.attachment?.name]));
       if (key !== staffRenderKey) {
         closeStaffMessageActions();
-        let previousDay = '';
-        let previousMessage;
-        const cards = messages.flatMap(item => {
-          const date = new Date(item.createdAt || NaN);
-          const validDate = !Number.isNaN(date.getTime());
-          const day = validDate ? date.toLocaleDateString('ja-JP') : '';
-          const newDay = day !== previousDay;
-          const continuation = !!previousMessage && !newDay && (item.own && previousMessage.own ||
-            staffActiveRoom && !item.own && !previousMessage.own && item.author === previousMessage.author);
-          previousDay = day;
-          previousMessage = item;
-          const separator = newDay && day ? document.createElement('div') : null;
-          if (separator) {
-            separator.className = 'staff-message-day';
-            separator.textContent = date.toLocaleDateString('ja-JP', {month: 'long', day: 'numeric', weekday: 'short'});
-          }
-          const card = document.createElement('article');
-          card.className = item.own ? 'staff-message is-own' : 'staff-message';
-          if (continuation) card.classList.add('is-continuation');
-          if (item.own) {
-            card.setAttribute('aria-label', '自分のメッセージ');
-          } else if (!continuation) {
-            const author = document.createElement('strong');
-            author.className = 'staff-message-author';
-            author.textContent = item.author || '管理者';
-            card.append(author);
-          }
-          const bubble = document.createElement('div');
-          bubble.className = 'staff-message-bubble';
-          if (item.message) {
-            const body = document.createElement('div');
-            body.className = 'staff-message-body';
-            body.textContent = item.message;
-            bubble.append(body);
-          }
-          const line = document.createElement('div');
-          line.className = 'staff-message-line';
-          line.append(bubble);
-          card.append(line);
+        const cards = buildChatBubbles(messages, (item, card, bubble, line) => {
           if (item.attachment) {
             const fileCard = document.createElement('div');
             fileCard.className = 'staff-file-card';
@@ -3163,19 +3204,6 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
             fileCard.append(detail, download);
             bubble.append(fileCard);
           }
-          const meta = document.createElement('div');
-          meta.className = 'staff-message-meta';
-          const time = document.createElement('time');
-          time.textContent = '日時不明';
-          if (validDate) {
-            time.dateTime = date.toISOString();
-            time.textContent = date.toLocaleTimeString('ja-JP', {hour: '2-digit', minute: '2-digit'});
-            time.title = date.toLocaleString('ja-JP');
-          }
-          const read = document.createElement('span');
-          read.textContent = '既読 ' + (item.readCount || 0) + ' 件';
-          meta.append(time, read);
-          card.append(meta);
           const action = document.createElement('div');
           action.className = 'staff-message-actions';
           action.id = 'staff-message-actions-' + item.id;
@@ -3241,8 +3269,7 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
             trigger.addEventListener('click', () => toggleStaffMessageActions(trigger, action));
             line.append(trigger);
           }
-          return separator ? [separator, card] : [card];
-        });
+        }, {groupIncoming: Boolean(staffActiveRoom), showRead: true});
         const scrollArea = staffMessages.closest('.chat-table-wrap');
         const beforeHeight = scrollArea?.scrollHeight || 0;
         const wasNearBottom = !scrollArea ||
