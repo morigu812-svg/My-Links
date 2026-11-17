@@ -1311,7 +1311,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
   <form class="chat-compose" id="staffChatForm">
     <textarea id="staffChatInput" aria-label="管理者へのメッセージ" maxlength="1000" rows="4" placeholder="管理者へのメッセージ（ファイルのみでも送信可）"></textarea>
     <div class="staff-compose-actions">
-      <input id="staffAttachmentInput" type="file" accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.txt,.csv,.docx,.xlsx,.pptx" hidden aria-label="添付ファイルを選択">
+      <input id="staffAttachmentInput" type="file" accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.txt,.csv,.docx,.xlsx,.pptx,.mp4,.mov,.webm,.m4v" hidden aria-label="添付ファイルを選択">
       <button type="button" id="staffAttachmentChoose" class="staff-file-button" aria-label="ファイルを添付">📎 ファイルを添付</button>
       <input id="staffScreenshotInput" type="file" accept="image/*" hidden aria-label="共有するスクリーンショットを選択">
       <button type="button" id="staffScreenshotChoose" class="staff-file-button" aria-describedby="staffScreenshotHint">写真を添付</button>
@@ -1630,7 +1630,8 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
   }
 
   function serverCall(method, ...args) {
-    const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'deleteLink', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'getVisitorCounterStats', 'deleteVisitorCounterBefore20261114', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'deleteVisitorChatMessage', 'getChatScreenshot', 'sendChatMessage', 'sendChatScreenshot', 'getStaffChatMessages', 'getStaffChatAttachment', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendStaffChatAttachment', 'deleteStaffChatMessage', 'sendPrivateChatMessage', 'getClickLogs', 'setClickBrowserName', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
+    const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'deleteLink', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'getVisitorCounterStats', 'deleteVisitorCounterBefore20261114', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'deleteVisitorChatMessage', 'getChatScreenshot', 'sendChatMessage', 'sendChatScreenshot', 'getStaffChatMessages', 'getStaffChatAttachment', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendStaffChatAttachment', 'startStaffChatLargeUpload', 'appendStaffChatLargeUploadChunk',
+        'finishStaffChatLargeUpload', 'getStaffChatAttachmentChunk', 'deleteStaffChatMessage', 'sendPrivateChatMessage', 'getClickLogs', 'setClickBrowserName', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
     if (protectedMethods.includes(method)) {
       const token = adminSession.getItem(ADMIN_TOKEN_KEY) || '';
       // 呼び出し元（埋め込みメモ帳など）が既にトークンを渡している場合は二重追加しない。
@@ -1638,7 +1639,9 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
     }
     const request = waitForBridge().then(() => new Promise((resolve, reject) => {
       const id = (crypto.randomUUID && crypto.randomUUID()) || String(Date.now() + Math.random());
-      const maxWait = ['sendStaffChatAttachment', 'getStaffChatAttachment'].includes(method) ? 60000 : REQUEST_TIMEOUT_MS;
+      const largeFileMethods = ['sendStaffChatAttachment', 'getStaffChatAttachment', 'startStaffChatLargeUpload',
+        'appendStaffChatLargeUploadChunk', 'finishStaffChatLargeUpload', 'getStaffChatAttachmentChunk'];
+      const maxWait = largeFileMethods.includes(method) ? 60000 : REQUEST_TIMEOUT_MS;
       const timer = setTimeout(() => {
         pending.delete(id);
         reject(new Error('GASから' + (maxWait / 1000) + '秒以内に応答がありませんでした。GASの実行ログとデプロイ版を確認してください。'));
@@ -3423,14 +3426,14 @@ $('closeChat').addEventListener('click', closeMainChat);
               if (!currentToken || currentToken !== token) return null;
               const result = await serverCall('getStaffChatAttachment', item.id, ...(staffOwnMailbox ? [staffBrowserId] : []));
               if (currentToken !== adminSession.getItem(ADMIN_TOKEN_KEY)) return null;
-              if (!result?.base64) throw new Error('ファイルを取得できませんでした。');
+              if (!result || (!result.base64 && !result.chunked)) throw new Error('ファイルを取得できませんでした。');
               return result;
             }
             const imageMimes = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
             const preview = imageMimes.includes(item.attachment.mime)
               ? staffImagePreviews.create(item.id, item.attachment.name || '添付画像', async () => {
                 const result = await fetchAttachment();
-                return result && imageMimes.includes(result.mime) ? 'data:' + result.mime + ';base64,' + result.base64 : null;
+                return result?.base64 && imageMimes.includes(result.mime) ? 'data:' + result.mime + ';base64,' + result.base64 : null;
               }) : null;
             const download = document.createElement('button');
             download.type = 'button';
@@ -3444,10 +3447,31 @@ $('closeChat').addEventListener('click', closeMainChat);
               try {
                 const result = await fetchAttachment();
                 if (!result) return;
-                const binary = atob(result.base64);
-                const bytes = new Uint8Array(binary.length);
-                for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-                const blob = new Blob([bytes], {type: 'application/octet-stream'});
+                const chunks = [];
+                if (result.chunked) {
+                  let offset = 0;
+                  while (offset < result.size) {
+                    if (currentToken !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
+                    const part = await serverCall('getStaffChatAttachmentChunk', item.id, offset,
+                      ...(staffOwnMailbox ? [staffBrowserId] : []));
+                    if (!part?.ok || part.offset !== offset || !part.base64 ||
+                        !Number.isSafeInteger(part.nextOffset) || part.nextOffset <= offset ||
+                        part.nextOffset > result.size) throw new Error('動画の取得が途中で止まりました。');
+                    const binary = atob(part.base64);
+                    const bytes = new Uint8Array(binary.length);
+                    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                    if (bytes.length !== part.nextOffset - offset) throw new Error('動画の分割サイズが一致しません。');
+                    chunks.push(bytes);
+                    offset = part.nextOffset;
+                    download.textContent = '取得中 ' + Math.floor(offset / result.size * 100) + '%';
+                  }
+                } else {
+                  const binary = atob(result.base64);
+                  const bytes = new Uint8Array(binary.length);
+                  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                  chunks.push(bytes);
+                }
+                const blob = new Blob(chunks, {type: result.mime || 'application/octet-stream'});
                 const href = URL.createObjectURL(blob);
                 const anchor = document.createElement('a');
                 anchor.href = href;
@@ -3862,14 +3886,16 @@ $('closeChat').addEventListener('click', closeMainChat);
   const staffScreenshotInput = $('staffScreenshotInput');
   const staffScreenshotChoose = $('staffScreenshotChoose');
   const staffAttachmentClear = $('staffAttachmentClear');
-  const STAFF_MAX_FILE_BYTES = 2 * 1024 * 1024;
-  const staffAllowedExtensions = new Set(['png','jpg','jpeg','gif','webp','pdf','txt','csv','docx','xlsx','pptx']);
+  const STAFF_MAX_FILE_BYTES = 40 * 1024 * 1024;
+  const STAFF_INLINE_FILE_BYTES = 2 * 1024 * 1024;
+  const STAFF_UPLOAD_CHUNK_BYTES = 1024 * 1024;
+  const staffAllowedExtensions = new Set(['png','jpg','jpeg','gif','webp','pdf','txt','csv','docx','xlsx','pptx','mp4','mov','webm','m4v']);
   let staffPendingAttachmentRequestId = '';
   function refreshStaffFileSelection() {
     const file = staffAttachmentInput.files[0];
     staffAttachmentInfo.hidden = !file;
     staffAttachmentClear.hidden = !file;
-    staffAttachmentInfo.textContent = file ? `📎 ${file.name} (${(file.size / 1024).toFixed(0)} KB / 上限2 MB)` : '';
+    staffAttachmentInfo.textContent = file ? `📎 ${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MiB / 上限40 MiB)` : '';
   }
   $('staffAttachmentChoose').addEventListener('click', () => staffAttachmentInput.click());
   staffAttachmentInput.addEventListener('change', () => {
@@ -3937,7 +3963,7 @@ $('closeChat').addEventListener('click', closeMainChat);
         return;
       }
       if (file.size < 1 || file.size > STAFF_MAX_FILE_BYTES) {
-        updateChatSendStatus('staffChatSendStatus', '添付ファイルの容量は1バイト〜2 MBにしてください。', true);
+        updateChatSendStatus('staffChatSendStatus', '添付ファイルの容量は1バイト〜40 MiBにしてください。', true);
         return;
       }
     }
@@ -3959,13 +3985,55 @@ $('closeChat').addEventListener('click', closeMainChat);
           name: 'screenshot.jpg', mime: 'image/jpeg', size: atob(base64).length, base64
         }, crypto.randomUUID(), staffBrowserId, ...(staffOwnMailbox ? [recipientId] : []));
       } else if (file) {
-        const base64 = await staffFileAsBase64(file);
         if (!staffPendingAttachmentRequestId) {
           staffPendingAttachmentRequestId = crypto.randomUUID();
         }
-        result = await serverCall('sendStaffChatAttachment', body, {
-          name: file.name, mime: file.type || '', size: file.size, base64
-        }, staffPendingAttachmentRequestId, staffBrowserId, ...(staffOwnMailbox ? [recipientId] : []));
+        const requestId = staffPendingAttachmentRequestId;
+        if (file.size > STAFF_INLINE_FILE_BYTES) {
+          // 大きい動画はFileReaderで丸ごとBase64化せず、Drive APIへ1MiBずつ送る。
+          const start = await serverCall('startStaffChatLargeUpload', body, {
+            name:file.name, mime:file.type || '', size:file.size
+          }, requestId, staffBrowserId, ...(staffOwnMailbox ? [recipientId] : []));
+          if (!start?.ok) throw new Error('動画のアップロード準備を確認できませんでした。');
+          if (start.done) {
+            result = {ok:true, duplicate:true};
+          } else {
+            let offset = Number(start.offset || 0);
+            const chunkSize = Number(start.chunkSize || STAFF_UPLOAD_CHUNK_BYTES);
+            if (!Number.isSafeInteger(offset) || offset < 0 || offset > file.size ||
+                chunkSize !== STAFF_UPLOAD_CHUNK_BYTES) throw new Error('アップロード情報が不正です。');
+            while (offset < file.size) {
+              if (token !== adminSession.getItem(ADMIN_TOKEN_KEY) || !staffChat.classList.contains('open')) return;
+              const encoded = await staffFileAsBase64(file.slice(offset, Math.min(offset + chunkSize, file.size)));
+              let part;
+              // 一時的な通信エラー時も同じチャンクから再開（サーバー側で進捗照合）。
+              for (let attempt = 0; attempt < 3; attempt++) {
+                try {
+                  part = await serverCall('appendStaffChatLargeUploadChunk',
+                    requestId, staffBrowserId, offset, encoded);
+                  break;
+                } catch (error) {
+                  if (attempt === 2) throw error;
+                  updateChatSendStatus('staffChatSendStatus', '通信を再試行中…（' + (attempt + 1) + '/2）');
+                  await new Promise(resolve => setTimeout(resolve, 900 * (attempt + 1)));
+                }
+              }
+              if (!part?.ok || !Number.isSafeInteger(part.offset) ||
+                  part.offset <= offset || part.offset > file.size) {
+                throw new Error('動画のアップロード進捗を確認できませんでした。');
+              }
+              offset = part.offset;
+              updateChatSendStatus('staffChatSendStatus',
+                'アップロード中… ' + Math.floor(offset / file.size * 100) + '%');
+            }
+            result = await serverCall('finishStaffChatLargeUpload', requestId, staffBrowserId);
+          }
+        } else {
+          const base64 = await staffFileAsBase64(file);
+          result = await serverCall('sendStaffChatAttachment', body, {
+            name: file.name, mime: file.type || '', size: file.size, base64
+          }, requestId, staffBrowserId, ...(staffOwnMailbox ? [recipientId] : []));
+        }
       } else {
         const fallback = () => {
           if (target) throw new Error('引用返信にはSupabaseへの接続が必要です。');
