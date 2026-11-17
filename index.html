@@ -722,8 +722,8 @@ function render(){
  $('list').innerHTML=back+childHtml+linkCards+(!folderChildren.length&&!currentLinks.length?'<div class="empty">'+(query?'検索条件に一致するリンクがありません。<button type="button" class="lc-empty-clear" data-clear-search>検索をクリア</button>':selectedCategory?'このフォルダーは空です。':view==='favorites'?(favoritesReady?'リンクカードの ☆ を押すと、ここに表示されます。':''):'表示できるリンクがありません。')+'</div>':'');
  
 }
-const chatOverlay=$('chatOverlay'),chatMessages=$('chatMessages'),chatForm=$('chatForm'),chatInput=$('chatInput'),chatSend=$('chatSend');let chatLoading=false,chatLoaded=false;
-function renderChat(messages){chatMessages.replaceChildren();if(!messages.length){const e=document.createElement('div');e.className='chat-empty';e.textContent='まだメッセージはありません。最初のメッセージを送ってみましょう。';chatMessages.appendChild(e);return;}messages.forEach(item=>{const bubble=document.createElement('article');bubble.className='chat-message'+(item.author==='管理者'?' admin':'');const meta=document.createElement('div');meta.className='chat-message-meta';const author=document.createElement('strong');author.textContent=item.private?'管理者からの個別メッセージ':(item.author==='管理者'?'管理者':'利用者');const time=document.createElement('time');const date=new Date(item.createdAt);time.textContent=isNaN(date.getTime())?'':date.toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});const body=document.createElement('div');body.className='chat-message-body';body.textContent=item.message;if(item.hasScreenshot) showChatImageButton(body,item.id);meta.append(author,time);bubble.append(meta,body);chatMessages.appendChild(bubble);});chatMessages.scrollTop=chatMessages.scrollHeight;}
+const chatOverlay=$('chatOverlay'),chatMessages=$('chatMessages'),chatForm=$('chatForm'),chatInput=$('chatInput'),chatSend=$('chatSend');let chatLoading=false,chatLoaded=false,viewerMessagesKey='';
+function renderChat(messages){const key=JSON.stringify(messages);if(key===viewerMessagesKey)return;viewerMessagesKey=key;chatMessages.replaceChildren();if(!messages.length){const e=document.createElement('div');e.className='chat-empty';e.textContent='まだメッセージはありません。最初のメッセージを送ってみましょう。';chatMessages.appendChild(e);return;}messages.forEach(item=>{const bubble=document.createElement('article');bubble.className='chat-message'+(item.author==='管理者'?' admin':'');const meta=document.createElement('div');meta.className='chat-message-meta';const author=document.createElement('strong');author.textContent=item.private?'管理者からの個別メッセージ':(item.author==='管理者'?'管理者':'利用者');const time=document.createElement('time');const date=new Date(item.createdAt);time.textContent=isNaN(date.getTime())?'':date.toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});const body=document.createElement('div');body.className='chat-message-body';body.textContent=item.message;if(item.hasScreenshot) showChatImageButton(body,item.id);meta.append(author,time);bubble.append(meta,body);chatMessages.appendChild(bubble);});chatMessages.scrollTop=chatMessages.scrollHeight;}
 function isVisitorAuthError(error){return /閲覧にはサイトのパスワード認証が必要|利用者用パスワード|認証が必要/.test(error&&error.message?error.message:String(error||''));}
 let checkingViewerSession = false;
 let viewerSessionCheckAvailable = true;
@@ -787,6 +787,7 @@ function showVisitorLogin(message){
   $('list').replaceChildren();
   $('sideCats').replaceChildren();
   chatMessages.replaceChildren();
+  viewerMessagesKey='';
   $('chatScreenshotStatus').textContent='';
   chatLoaded=false;
   chatOverlay.classList.remove('open');
@@ -815,7 +816,15 @@ async function privateChatSecret() {
   return '';
  }
 }
-async function refreshChat(){if(!visitorToken||chatLoading)return;const button=$('refreshChat');chatLoading=true;button.disabled=true;button.classList.add('is-refreshing');button.setAttribute('aria-busy','true');try{const token=visitorToken;const secret=await privateChatSecret();if(token!==visitorToken)return;const r=await call('getChatMessages',token,secret);if(token!==visitorToken)return;renderChat(Array.isArray(r.messages)?r.messages:[]);chatLoaded=true;}catch(e){if(isVisitorAuthError(e))showVisitorLogin('ログインの有効期限が切れました。もう一度サイトのパスワードを入力してください。');else chatMessages.textContent='読み込みに失敗しました：'+(e.message||'通信エラー');}finally{chatLoading=false;button.disabled=false;button.classList.remove('is-refreshing');button.removeAttribute('aria-busy');}}
+function readViewerChat(token, secret) {
+ const fallback = () => call('getChatMessages', token, secret);
+ return viewerChatRealtime?.read({chat_type:'visitor'}, fallback) ?? fallback();
+}
+function sendViewerChat(message, token) {
+ const fallback = () => call('sendChatMessage', message, token);
+ return viewerChatRealtime?.send('public', message, '', fallback) ?? fallback();
+}
+async function refreshChat(){if(!visitorToken||chatLoading)return;const button=$('refreshChat');chatLoading=true;button.disabled=true;button.classList.add('is-refreshing');button.setAttribute('aria-busy','true');try{const token=visitorToken;const secret=await privateChatSecret();if(token!==visitorToken)return;const r=await readViewerChat(token,secret);if(token!==visitorToken)return;renderChat(Array.isArray(r.messages)?r.messages:[]);chatLoaded=true;}catch(e){if(isVisitorAuthError(e))showVisitorLogin('ログインの有効期限が切れました。もう一度サイトのパスワードを入力してください。');else chatMessages.textContent='読み込みに失敗しました：'+(e.message||'通信エラー');}finally{chatLoading=false;button.disabled=false;button.classList.remove('is-refreshing');button.removeAttribute('aria-busy');}}
 const viewerChatRealtime = window.createChatRealtime?.(
   async () => {
     const token = visitorToken;
@@ -826,18 +835,20 @@ const viewerChatRealtime = window.createChatRealtime?.(
   () => { if (!document.hidden && chatOverlay.classList.contains('open')) void refreshChat(); }
 );
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden) viewerChatRealtime?.stop();
-  else if (visitorToken && chatOverlay.classList.contains('open')) {
+  if (!document.hidden && visitorToken && chatOverlay.classList.contains('open')) {
     viewerChatRealtime?.start();
     void refreshChat();
   }
 });
 setInterval(() => {
-  if (!document.hidden && chatOverlay.classList.contains('open')) void refreshChat();
-}, 20000);
+  if (!document.hidden && chatOverlay.classList.contains('open') && !viewerChatRealtime?.isConnected()) void refreshChat();
+}, 5000);
+setInterval(() => {
+  if (!document.hidden && chatOverlay.classList.contains('open') && viewerChatRealtime?.isConnected()) void refreshChat();
+}, 30000);
 function openChat(){if(!visitorToken){$('loginError').textContent='先に利用者ログインをしてください。';return;}markSideTabAsRead('openChat');chatOverlay.classList.add('open');viewerChatRealtime?.start();void refreshChat();}
 $('openChat').addEventListener('click',openChat);$('refreshChat').addEventListener('click',refreshChat);$('closeChat').addEventListener('click',()=>{chatOverlay.classList.remove('open');viewerChatRealtime?.stop();});
-chatForm.addEventListener('submit',async e=>{e.preventDefault();const message=chatInput.value.trim();if(!message||!visitorToken)return;chatSend.disabled=true;try{await call('sendChatMessage',message,visitorToken);chatInput.value='';await refreshChat();}catch(error){if(isVisitorAuthError(error)){showVisitorLogin('ログインの有効期限が切れました。もう一度サイトのパスワードを入力してください。');}else{const s=document.createElement('div');s.className='chat-status';s.textContent=error.message||'送信できませんでした。';chatMessages.appendChild(s);}}finally{chatSend.disabled=false;if(visitorToken)chatInput.focus();}});
+chatForm.addEventListener('submit',async e=>{e.preventDefault();const message=chatInput.value.trim();if(!message||!visitorToken)return;chatSend.disabled=true;try{await sendViewerChat(message,visitorToken);chatInput.value='';await refreshChat();}catch(error){if(isVisitorAuthError(error)){showVisitorLogin('ログインの有効期限が切れました。もう一度サイトのパスワードを入力してください。');}else{const s=document.createElement('div');s.className='chat-status';s.textContent=error.message||'送信できませんでした。';chatMessages.appendChild(s);}}finally{chatSend.disabled=false;if(visitorToken)chatInput.focus();}});
 
 function showChatImageButton(container, messageId) {
   const button = document.createElement('button');

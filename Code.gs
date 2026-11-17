@@ -2758,23 +2758,39 @@ function getChatRealtimeSession(viewerToken, browserSecret, staffBrowserId) {
   const signingSecret = props.getProperty('LINK_CORE_SUPABASE_JWT_SECRET');
   if (!key || !signingSecret) throw new Error('Supabase Realtimeの設定を確認してください。');
   const topics = ['lc-chat-public'];
+  const directClaims = {};
+  const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, 'chat-writer:' + viewerToken);
+  directClaims.link_core_writer = digest.map(byte => (byte & 255).toString(16).padStart(2, '0')).join('');
   if (isSessionValid_('ADMIN', viewerToken)) {
     topics.push('lc-chat-direct-admin', 'lc-chat-staff-all');
     const staffMailbox = staffChatMailboxId_(staffBrowserId);
-    if (staffMailbox) topics.push('lc-chat-staff-' + staffMailbox);
+    if (staffMailbox) {
+      topics.push('lc-chat-staff-' + staffMailbox);
+      directClaims.link_core_staff_mailbox = staffMailbox;
+      const propsByName = props.getProperties();
+      directClaims.link_core_staff_name = propsByName[STAFF_CHAT_MEMBER_PREFIX + staffMailbox] || '管理者';
+      directClaims.link_core_staff_recipients = Object.keys(propsByName)
+        .filter(key => key.startsWith(STAFF_CHAT_MEMBER_PREFIX))
+        .map(key => key.slice(STAFF_CHAT_MEMBER_PREFIX.length))
+        .filter(id => /^mbx-[0-9a-f]{64}$/.test(id) && id !== staffMailbox)
+        .slice(0, 80);
+    }
   } else {
     const inbox = privateChatBrowserId_(browserSecret);
-    if (inbox) topics.push('lc-chat-direct-' + inbox);
+    if (inbox) {
+      topics.push('lc-chat-direct-' + inbox);
+      directClaims.link_core_visitor_inbox = inbox;
+    }
   }
   const now = Math.floor(Date.now() / 1000);
   const exp = now + 120;
   const encode = value => Utilities.base64EncodeWebSafe(value).replace(/=+$/, '');
   const header = encode(JSON.stringify({alg:'HS256', typ:'JWT'}));
-  const claims = encode(JSON.stringify({role:'authenticated', aud:'authenticated', sub:Utilities.getUuid(),
-    iat:now, exp, link_core_topics:topics}));
+  const claims = encode(JSON.stringify(Object.assign({role:'authenticated', aud:'authenticated', sub:Utilities.getUuid(),
+    iat:now, exp, link_core_topics:topics}, directClaims)));
   const body = header + '.' + claims;
   const signature = encode(Utilities.computeHmacSha256Signature(body, signingSecret));
-  return {enabled:true, url, key, token:body + '.' + signature, topics, expiresAt:exp*1000};
+  return {enabled:true, url, key, token:body + '.' + signature, topics, recipients:directClaims.link_core_staff_recipients || [], direct:true, expiresAt:exp*1000};
 }
 
 /** Run from the Apps Script editor. Rerun until all three reports say done. */

@@ -2257,7 +2257,7 @@ document.getElementById('authSubmit').disabled = false;
     if (nearBottom) scrollArea.scrollTop = scrollArea.scrollHeight;
   }
   function updateAdminChatBadge(){const badge=$('chatUnreadBadge');if(!badge)return;badge.hidden=adminUnreadCount<1;badge.textContent=adminUnreadCount>99?'99+':String(adminUnreadCount);badge.setAttribute('aria-label',adminUnreadCount+'件の未読メッセージ');}
-  async function refreshAdminChat(){const token=adminSession.getItem(ADMIN_TOKEN_KEY);if(chatLoading||!token)return;const revision=visitorChatRevision;const button=$('refreshChat');chatLoading=true;if(button){button.disabled=true;button.classList.add('is-refreshing');button.setAttribute('aria-busy','true');}try{const r=await serverCall('getChatMessages');if(token!==adminSession.getItem(ADMIN_TOKEN_KEY)||revision!==visitorChatRevision)return;const messages=Array.isArray(r.messages)?r.messages:[];const latest=messages.length?messages[messages.length-1].id:'';if(chatLoaded&&latest&&lastAdminChatId&&latest!==lastAdminChatId&&!chatOverlay.classList.contains('open')){const previousIndex=messages.findIndex(item=>item.id===lastAdminChatId);adminUnreadCount+=previousIndex>=0?messages.length-previousIndex-1:1;updateAdminChatBadge();}if(latest)lastAdminChatId=latest;renderChatMessages(messages);$('visitorChatStatus').textContent='';chatLoaded=true;}catch(e){if(chatOverlay.classList.contains('open'))$('visitorChatStatus').textContent='読み込みに失敗しました：'+(e.message||'通信エラー');}finally{chatLoading=false;if(button){button.disabled=false;button.classList.remove('is-refreshing');button.removeAttribute('aria-busy');}}}
+  async function refreshAdminChat(){const token=adminSession.getItem(ADMIN_TOKEN_KEY);if(chatLoading||!token)return;const revision=visitorChatRevision;const button=$('refreshChat');chatLoading=true;if(button){button.disabled=true;button.classList.add('is-refreshing');button.setAttribute('aria-busy','true');}try{const fallback=()=>serverCall('getChatMessages');const r=await (adminChatRealtime?.read({chat_type:'visitor'},fallback)??fallback());if(token!==adminSession.getItem(ADMIN_TOKEN_KEY)||revision!==visitorChatRevision)return;const messages=Array.isArray(r.messages)?r.messages:[];const latest=messages.length?messages[messages.length-1].id:'';if(chatLoaded&&latest&&lastAdminChatId&&latest!==lastAdminChatId&&!chatOverlay.classList.contains('open')){const previousIndex=messages.findIndex(item=>item.id===lastAdminChatId);adminUnreadCount+=previousIndex>=0?messages.length-previousIndex-1:1;updateAdminChatBadge();}if(latest)lastAdminChatId=latest;renderChatMessages(messages);$('visitorChatStatus').textContent='';chatLoaded=true;}catch(e){if(chatOverlay.classList.contains('open'))$('visitorChatStatus').textContent='読み込みに失敗しました：'+(e.message||'通信エラー');}finally{chatLoading=false;if(button){button.disabled=false;button.classList.remove('is-refreshing');button.removeAttribute('aria-busy');}}}
   function hideMainChats() {
     $('chatOverlay').classList.remove('open');
     $('staffChatOverlay').classList.remove('open');
@@ -2915,8 +2915,8 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
 
   chatForm.addEventListener('submit',async e=>{e.preventDefault();const message=chatInput.value.trim();if(!message)return;chatSend.disabled=true;try {
       const recipient = $('chatRecipient').value.trim();
-      if (recipient) await serverCall('sendPrivateChatMessage', message, recipient);
-      else await serverCall('sendChatMessage', message);
+      const fallback = () => recipient ? serverCall('sendPrivateChatMessage', message, recipient) : serverCall('sendChatMessage', message);
+      await (adminChatRealtime?.send(recipient ? 'direct' : 'public', message, recipient, fallback) ?? fallback());
       chatInput.value = '';
       await refreshAdminChat();
     }catch(error){$('visitorChatStatus').textContent=error.message||'送信できませんでした。';}finally{chatSend.disabled=false;chatInput.focus();}});
@@ -3328,7 +3328,13 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
       staffStatus.textContent = messages.length ? '' : 'まだメッセージはありません。';
   }
 
+  const staffRealtimeNames = new Map();
+
   function updateStaffChatHeader(result) {
+    if (Array.isArray(result.members)) {
+      staffRealtimeNames.clear();
+      result.members.forEach(member => staffRealtimeNames.set(member.mailboxId, member.name));
+    }
     if (typeof result.nickname === 'string') updateStaffNickname(result.nickname);
     if (Array.isArray(result.members)) updateStaffRecipientControls(result.members, result.mailboxId);
     const count = result.onlineCount;
@@ -3365,6 +3371,18 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
     }
   }
 
+  async function readStaffRoom(token, options) {
+    const fallback = () => serverCall('getStaffChatMessages', token, staffBrowserId, options);
+    if (!Object.prototype.hasOwnProperty.call(options, 'room') || !staffOwnMailbox || !adminChatRealtime) return fallback();
+    const result = await adminChatRealtime.read({
+      chat_type:'staff', room:options.room, page_size:options.limit, before_cursor:options.beforeRow ?? null
+    }, fallback);
+    for (const item of result.messages || []) {
+      if (item.senderMailbox) item.author = staffRealtimeNames.get(item.senderMailbox) || item.author || '管理者';
+    }
+    return result;
+  }
+
   async function refreshStaffChat(forceFullHistory = false) {
     const token = adminSession.getItem(ADMIN_TOKEN_KEY);
     if (!token || document.hidden) return;
@@ -3378,7 +3396,7 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
     refreshStaffButton.disabled = true;
     try {
       // 閉じている間は本文を一切転送せず、未読件数だけ取得する。
-      const result = await serverCall('getStaffChatMessages', token, staffBrowserId,
+      const result = await readStaffRoom(token,
         !startedOpen ? {mode: 'summary'} : room === null ? {mode: 'conversations'} :
           {room, limit: STAFF_RECENT_BATCH});
       if (token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
@@ -3423,7 +3441,7 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
         staffStatus.textContent = '最新' + newest.length + '件を表示中。古いメッセージを追加で読み込んでいます…';
         let older = [];
         try {
-          const previous = await serverCall('getStaffChatMessages', token, staffBrowserId,
+          const previous = await readStaffRoom(token,
             {room, beforeRow: result.nextCursor, limit: STAFF_MAX_VISIBLE - newest.length});
           if (previous?.room !== room || !Array.isArray(previous.messages)) {
             throw new Error('古い履歴の形式が不正です。');
@@ -3530,8 +3548,8 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
   }
 
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) adminChatRealtime?.stop();
-    else {
+    if (!document.hidden) {
+      void refreshAdminChat();
       void refreshStaffChat();
       if (adminSession.getItem(ADMIN_TOKEN_KEY)) startAdminChatRealtime();
     }
@@ -3551,6 +3569,12 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
       if (adminSession.getItem(ADMIN_TOKEN_KEY) && adminPageRealtimeToken !== adminSession.getItem(ADMIN_TOKEN_KEY)) startAdminChatRealtime();
     }
   }, 15000);
+
+  setInterval(() => {
+    if (document.hidden || !adminSession.getItem(ADMIN_TOKEN_KEY) || adminChatRealtime?.isConnected()) return;
+    if (chatOverlay.classList.contains('open')) void refreshAdminChat();
+    if (staffChat.classList.contains('open')) void refreshStaffChat();
+  }, 5000);
 
   const staffAttachmentInput = $('staffAttachmentInput');
   const staffAttachmentInfo = $('staffAttachmentInfo');
@@ -3657,7 +3681,8 @@ $('refreshChat').addEventListener('click',refreshAdminChat);$('closeChat').addEv
           name: file.name, mime: file.type || '', size: file.size, base64
         }, staffPendingAttachmentRequestId, staffBrowserId, ...(staffOwnMailbox ? [recipientId] : []));
       } else {
-        result = await serverCall('sendStaffChatMessage', body, token, staffBrowserId, recipientId);
+        const fallback = () => serverCall('sendStaffChatMessage', body, token, staffBrowserId, recipientId);
+        result = await (adminChatRealtime?.send('staff', body, recipientId, fallback) ?? fallback());
       }
       if (!result || !result.ok) throw new Error('送信の完了を確認できませんでした。');
       if (token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
