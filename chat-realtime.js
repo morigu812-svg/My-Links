@@ -41,7 +41,8 @@
           (action === 'send' && parameters.chat_type === 'staff' &&
           parameters.destination && !session.recipients?.includes(parameters.destination))) return fallback();
       try {
-        const response = await fetch(session.url + '/rest/v1/rpc/link_core_chat_' + action + '_direct', {
+        const rpc = action === 'read' ? 'read_replies' : parameters.target_id ? 'send_reply' : 'send_direct';
+        const response = await fetch(session.url + '/rest/v1/rpc/link_core_chat_' + rpc, {
           method: 'POST',
           headers: {apikey: session.key, Authorization: 'Bearer ' + session.token, 'Content-Type': 'application/json'},
           body: JSON.stringify(parameters),
@@ -134,9 +135,10 @@
       stop,
       isConnected() { return channels.length > 0 && joined.size === channels.length; },
       read(parameters, fallback) { return chatRequest('read', parameters, fallback); },
-      send(chatType, message, recipient, fallback) {
+      send(chatType, message, recipient, fallback, replyId) {
         return chatRequest('send', {
-          chat_type: chatType, message, destination: recipient, message_id: crypto.randomUUID()
+          chat_type: chatType, message, destination: recipient, message_id: crypto.randomUUID(),
+          ...(replyId ? {target_id: replyId} : {})
         }, fallback);
       }
     };

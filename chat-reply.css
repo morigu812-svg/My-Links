@@ -1,0 +1,39 @@
+.lc-reply-draft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  padding: 5px 8px;
+  border-inline-start: 2px solid #42d9ff;
+  border-radius: 6px;
+  background: #15283e;
+  color: #c9e5f2;
+  font-size: 12px;
+}
+.lc-reply-draft[hidden] { display: none !important; }
+.lc-reply-draft > span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lc-reply-draft > button { flex: 0 0 auto; padding: 2px 8px; }
+.lc-reply-target { position: relative; touch-action: pan-y pinch-zoom; transform: translateX(var(--reply-shift, 0)); }
+.lc-reply-button {
+  position: absolute;
+  inset-inline-end: 3px;
+  inset-block-start: 3px;
+  padding: 2px 5px;
+  font-size: 12px;
+  opacity: 0;
+}
+.lc-reply-target:is(:hover, :focus-within) .lc-reply-button { opacity: 1; }
+.lc-reply-quote {
+  display: grid;
+  gap: 2px;
+  margin: 0 0 5px;
+  padding: 3px 6px;
+  border-inline-start: 2px solid #53b8d4;
+  background: #0720385c;
+  color: #bcd7e7;
+  font-size: 11px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.lc-reply-quote span { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }

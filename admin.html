@@ -1111,6 +1111,8 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
 #finderWindow .link-feed-privacy-note a{display:block;max-width:100%;overflow-wrap:anywhere;word-break:break-word;color:#80e9ff!important;font-size:12px;line-height:1.65;text-decoration:underline;text-underline-offset:3px}
 #finderWindow .link-feed-privacy-note a:focus-visible{outline:2px solid #35d9ff;outline-offset:3px}
 </style>
+<link rel="stylesheet" href="./chat-reply.css">
+<script src="./chat-reply.js"></script>
 <script src="./chat-realtime.js"></script>
 <script src="./chat-screenshot.js?v=1" defer></script>
 <style id="visitor-counter-style">
@@ -1737,6 +1739,8 @@ function watchSessionExpiry(deadline, onExpired) {
     visitorChatRenderKey = '';
     $('staffChatMessages').replaceChildren();
     $('staffChatInput').value = '';
+    adminVisitorReply?.clear();
+    staffReply?.clear();
     closeIntegratedMemos();
     memoFrame.src = 'about:blank';
     document.body.classList.add('auth-locked');
@@ -2172,7 +2176,14 @@ document.getElementById('authSubmit').disabled = false;
     });
   }
 
+  const adminVisitorReply = window.createChatReply?.(chatInput, item => {
+    const field = $('chatRecipient');
+    field.value = item.private ? (item.recipient || '') : '';
+    updateScreenshotButton();
+  });
+
   function decorateVisitorBubble(item, card, bubble, line) {
+    if (adminVisitorReply) window.bindChatReply(bubble, item, adminVisitorReply);
     const remove = document.createElement('button');
     remove.type = 'button';
     remove.className = 'btn danger';
@@ -2884,7 +2895,7 @@ $('closeChat').addEventListener('click', closeMainChat);
       : '選んだ画像は共通チャットの全員に送信されます。';
   }
 
-  chatRecipient.addEventListener('input', updateScreenshotButton);
+  chatRecipient.addEventListener('input', () => { adminVisitorReply?.clear(); updateScreenshotButton(); });
   chatForm.addEventListener('submit', updateScreenshotButton);
   screenshotButton.onclick = () => screenshotInput.click();
   screenshotInput.onchange = async () => {
@@ -2915,8 +2926,13 @@ $('closeChat').addEventListener('click', closeMainChat);
 
   chatForm.addEventListener('submit',async e=>{e.preventDefault();const message=chatInput.value.trim();if(!message)return;chatSend.disabled=true;try {
       const recipient = $('chatRecipient').value.trim();
-      const fallback = () => recipient ? serverCall('sendPrivateChatMessage', message, recipient) : serverCall('sendChatMessage', message);
-      await (adminChatRealtime?.send(recipient ? 'direct' : 'public', message, recipient, fallback) ?? fallback());
+      const target = adminVisitorReply?.target;
+      const fallback = () => {
+        if (target) throw new Error('引用返信にはSupabaseへの接続が必要です。');
+        return recipient ? serverCall('sendPrivateChatMessage', message, recipient) : serverCall('sendChatMessage', message);
+      };
+      await (adminChatRealtime?.send(recipient ? 'direct' : 'public', message, recipient, fallback, target?.id) ?? fallback());
+      if (adminVisitorReply?.target === target) adminVisitorReply?.clear();
       chatInput.value = '';
       await refreshAdminChat();
     }catch(error){$('visitorChatStatus').textContent=error.message||'送信できませんでした。';}finally{chatSend.disabled=false;chatInput.focus();}});
@@ -2925,6 +2941,7 @@ $('closeChat').addEventListener('click', closeMainChat);
   const staffMessages = $('staffChatMessages');
   const staffStatus = $('staffChatStatus');
   const staffInput = $('staffChatInput');
+  const staffReply = window.createChatReply?.(staffInput);
   let staffChatLoading = false;
   const staffRecipientSelect = $('staffChatRecipient');
   const staffRecipientCode = $('staffChatRecipientCode');
@@ -3209,10 +3226,11 @@ $('closeChat').addEventListener('click', closeMainChat);
   }
 
   function renderStaffMessages(messages, token) {
-      const key = JSON.stringify(messages.map(item => [item.id, item.readCount, item.unread, item.own, item.author, item.attachment?.name]));
+      const key = JSON.stringify(messages.map(item => [item.id, item.readCount, item.unread, item.own, item.author, item.reply, item.attachment?.name]));
       if (key !== staffRenderKey) {
         closeStaffMessageActions();
         const cards = buildChatBubbles(messages, (item, card, bubble, line) => {
+          if (staffReply) window.bindChatReply(bubble, item, staffReply);
           if (item.attachment) {
             const fileCard = document.createElement('div');
             fileCard.className = 'staff-file-card';
@@ -3380,6 +3398,7 @@ $('closeChat').addEventListener('click', closeMainChat);
     }, fallback);
     for (const item of result.messages || []) {
       if (item.senderMailbox) item.author = staffRealtimeNames.get(item.senderMailbox) || item.author || '管理者';
+      if (item.reply?.senderMailbox) item.reply.author = staffRealtimeNames.get(item.reply.senderMailbox) || item.reply.author;
     }
     return result;
   }
@@ -3508,6 +3527,7 @@ $('closeChat').addEventListener('click', closeMainChat);
     staffAttachmentInput.value = '';
     staffPendingAttachmentRequestId = '';
     refreshStaffFileSelection();
+    staffReply?.clear();
     staffActiveRoom = room;
     staffTalkApiReady = false;
     staffOpenGeneration++;
@@ -3642,9 +3662,14 @@ $('closeChat').addEventListener('click', closeMainChat);
     const token = adminSession.getItem(ADMIN_TOKEN_KEY);
     if (!token) return;
     const recipientId = staffActiveRoom;
+    const target = staffReply?.target;
     if (recipientId === null || !staffChat.classList.contains('open')) return;
     if (!staffTalkApiReady || (recipientId && !staffOwnMailbox)) {
       staffStatus.textContent = '送信するにはトークの読み込みとGASの再デプロイが必要です。';
+      return;
+    }
+    if (target && (file || screenshot)) {
+      staffStatus.textContent = '引用返信はテキストのみ送信できます。';
       return;
     }
     if (file) {
@@ -3684,12 +3709,16 @@ $('closeChat').addEventListener('click', closeMainChat);
           name: file.name, mime: file.type || '', size: file.size, base64
         }, staffPendingAttachmentRequestId, staffBrowserId, ...(staffOwnMailbox ? [recipientId] : []));
       } else {
-        const fallback = () => serverCall('sendStaffChatMessage', body, token, staffBrowserId, recipientId);
-        result = await (adminChatRealtime?.send('staff', body, recipientId, fallback) ?? fallback());
+        const fallback = () => {
+          if (target) throw new Error('引用返信にはSupabaseへの接続が必要です。');
+          return serverCall('sendStaffChatMessage', body, token, staffBrowserId, recipientId);
+        };
+        result = await (adminChatRealtime?.send('staff', body, recipientId, fallback, target?.id) ?? fallback());
       }
       if (!result || !result.ok) throw new Error('送信の完了を確認できませんでした。');
       if (token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
       if (!screenshot) {
+        if (staffReply?.target === target) staffReply?.clear();
         if (staffInput.value === body) staffInput.value = '';
         if (staffAttachmentInput.files[0] === file) staffAttachmentInput.value = '';
         staffPendingAttachmentRequestId = '';
