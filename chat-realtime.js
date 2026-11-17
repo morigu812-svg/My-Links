@@ -135,6 +135,21 @@
       stop,
       isConnected() { return channels.length > 0 && joined.size === channels.length; },
       read(parameters, fallback) { return chatRequest('read', parameters, fallback); },
+      async visitorDm(parameters) {
+        const current = generation;
+        const session = await getSession();
+        if (current !== generation || !session?.visitorDm) throw new Error('個人トークを使うにはページを開き直してログインしてください。');
+        const response = await fetch(session.url + '/rest/v1/rpc/link_core_visitor_dm', {
+          method: 'POST',
+          headers: {apikey: session.key, Authorization: 'Bearer ' + session.token, 'Content-Type': 'application/json'},
+          body: JSON.stringify(parameters),
+          signal: AbortSignal.timeout(10000)
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data?.message || '個人トークに接続できませんでした。');
+        if (current !== generation) throw new Error('チャット接続が終了しました。');
+        return data;
+      },
       send(chatType, message, recipient, fallback, replyId) {
         return chatRequest('send', {
           chat_type: chatType, message, destination: recipient, message_id: crypto.randomUUID(),

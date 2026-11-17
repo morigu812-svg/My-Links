@@ -1141,6 +1141,8 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
 <link rel="stylesheet" href="./chat-preview.css">
 <script src="./chat-preview.js"></script>
 <script src="./chat-realtime.js"></script>
+<link rel="stylesheet" href="./visitor-direct-chat.css">
+<script src="./visitor-direct-chat.js"></script>
 <script src="./chat-screenshot.js?v=1" defer></script>
 <style id="visitor-counter-style">
 .visitor-counter-strip{display:flex;align-items:center;flex-wrap:wrap;gap:10px 20px;margin:11px 0 13px;padding:11px 14px;border:1px solid rgba(53,217,255,.28);border-radius:10px;background:rgba(14,38,51,.65);font-size:12px;color:#a9c7d4}
@@ -1242,7 +1244,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
   <section id="chatOverlay" class="click-log-panel chat-main-panel" aria-label="利用者との共通チャット">
     <div class="section-heading">
       <div><span class="section-kicker">LINK CORE / CHAT</span><h2>利用者チャット</h2><p>利用者とのメッセージを表示します。</p></div>
-      <div class="click-log-actions"><button id="closeChat" class="btn" type="button">リンク一覧に戻る</button></div>
+      <div class="click-log-actions"><button id="openVisitorDirectAdmin" class="btn" type="button">個人トーク</button><button id="closeChat" class="btn" type="button">リンク一覧に戻る</button></div>
     </div>
     <div id="visitorChatRoom">
       <div id="visitorChatStatus" class="chat-subtitle" role="status"></div>
@@ -1744,6 +1746,7 @@ function watchSessionExpiry(deadline, onExpired) {
 
   let resumeLinkEdit = false;
   function showAdminReauthentication(message) {
+    adminVisitorDirectChat.close();
     adminChatRealtime?.stop();
     $('adminHelp').close();
     $('staffBrowserDialog').close();
@@ -2434,6 +2437,15 @@ document.getElementById('authSubmit').disabled = false;
       time.textContent=isNaN(date.getTime())?'日時不明':date.toLocaleString('ja-JP');
       const title=document.createElement('td');title.textContent=log.title||'（タイトルなし）';
       const browserCell=historyBrowserCell(log, '旧データ（未識別）', 'clickLogStatus', 'clickLogView', refreshClickLogs);
+      if (/^[A-Za-z0-9_-]{8,100}$/.test(log.browserId)) {
+        const direct = document.createElement('button');
+        direct.type = 'button';
+        direct.className = 'btn';
+        direct.textContent = '個人トーク';
+        direct.addEventListener('click', () => adminVisitorDirectChat.open(log.browserId,
+          browserCell.querySelector('.click-browser-name')?.dataset.browserName || log.browserName || ''));
+        browserCell.append(direct);
+      }
       const urlCell=document.createElement('td');urlCell.className='log-url';
       if(log.url.indexOf('https://')===0||log.url.indexOf('http://')===0){const a=document.createElement('a');a.href=log.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent=log.url;urlCell.appendChild(a);}else{urlCell.textContent=log.url||'';}
       const actionCell=document.createElement('td');actionCell.className='click-log-action';
@@ -3772,9 +3784,12 @@ $('closeChat').addEventListener('click', closeMainChat);
     topics => {
       if (document.hidden) return;
       if (topics.some(topic => topic.startsWith('lc-chat-staff-'))) void refreshStaffChat(staffChat.classList.contains('open'));
+      if (topics.includes('lc-chat-direct-admin')) void adminVisitorDirectChat.refresh();
       if (topics.some(topic => !topic.startsWith('lc-chat-staff-'))) void refreshAdminChat();
     }
   );
+  const adminVisitorDirectChat = window.createVisitorDirectChat(params => adminChatRealtime.visitorDm(params), true);
+  $('openVisitorDirectAdmin').addEventListener('click', () => adminVisitorDirectChat.open());
   let adminPageRealtimeToken = '';
   function startAdminChatRealtime() {
     adminPageRealtimeToken = adminSession.getItem(ADMIN_TOKEN_KEY);

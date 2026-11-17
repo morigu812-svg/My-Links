@@ -366,7 +366,7 @@ function clearAuthFailures_(state) {
 }
 
 /** 利用者ページの共有パスワードを検証して閲覧専用トークンを発行する。 */
-function authenticateVisitor(password, browserId) {
+function authenticateVisitor(password, browserId, browserSecret) {
   const generation = sessionGeneration_();
   const rateState = getAuthRateState_('VISITOR');
   checkAuthRateLimit_(rateState);
@@ -379,6 +379,18 @@ function authenticateVisitor(password, browserId) {
   clearAuthFailures_(rateState);
   const token = Utilities.getUuid() + Utilities.getUuid();
   storeSession_('VISITOR', token, generation);
+  if (supabaseChatMode_() === 'supabase' && /^[A-Za-z0-9_-]{8,100}$/.test(String(browserId || ''))) {
+    const inbox = privateChatBrowserId_(browserSecret);
+    if (inbox) {
+      try {
+        const bound = supabaseChatRequest_('post', 'rpc/link_core_bind_visitor_chat', {browser:browserId, inbox_id:inbox});
+        if (bound === true) CacheService.getScriptCache().put('LINK_CORE_VISITOR_DM_' + token, browserId, SESSION_TTL_SECONDS);
+      } catch (_) {
+        console.warn('利用者の個人トークを登録できませんでした。');
+      }
+    }
+  }
+
   // 認証直後のリンク取得を同じ応答にまとめ、ブラウザーとの往復を1回減らす。
   const initialLinks = getLinksForToken_(token, false);
   recordVisitorLogin_(browserId);
@@ -413,7 +425,7 @@ function storeSession_(role, token, generation) {
 
 function logoutCurrentSession(token) {
   requireLinkViewer_(token);
-  CacheService.getScriptCache().removeAll(['LINK_CORE_ADMIN_' + token, 'LINK_CORE_VISITOR_' + token]);
+  CacheService.getScriptCache().removeAll(['LINK_CORE_ADMIN_' + token, 'LINK_CORE_VISITOR_' + token, 'LINK_CORE_VISITOR_DM_' + token]);
   return { ok: true };
 }
 
@@ -1238,7 +1250,7 @@ function getChatMessages(viewerToken, browserSecret) {
   const isAdmin = isSessionValid_('ADMIN', viewerToken);
   const recipient = privateChatBrowserId_(browserSecret);
   if (supabaseChatMode_() === 'supabase') {
-    const params = {kind:'eq.direct', select:'id,recipient,body,created_at', order:'seq.desc', limit:CHAT_MAX_MESSAGES};
+    const params = {kind:'eq.direct', recipient:'like.dm_*', select:'id,recipient,body,created_at', order:'seq.desc', limit:CHAT_MAX_MESSAGES};
     if (!isAdmin && !recipient) return {messages:publicMessages, screenshotsEnabled:true};
     if (!isAdmin) params.recipient = 'eq.' + recipient;
     const directMessages = supabaseChatRows_(params).reverse().map(row => ({
@@ -2793,6 +2805,11 @@ function getChatRealtimeSession(viewerToken, browserSecret, staffBrowserId) {
         .slice(0, 80);
     }
   } else {
+    const browser = CacheService.getScriptCache().get('LINK_CORE_VISITOR_DM_' + viewerToken);
+    if (browser && /^[A-Za-z0-9_-]{8,100}$/.test(browser)) {
+      directClaims.link_core_visitor_browser = browser;
+      topics.push('lc-chat-direct-vb_' + browser);
+    }
     const inbox = privateChatBrowserId_(browserSecret);
     if (inbox) {
       topics.push('lc-chat-direct-' + inbox);
@@ -2807,7 +2824,7 @@ function getChatRealtimeSession(viewerToken, browserSecret, staffBrowserId) {
     iat:now, exp, link_core_topics:topics}, directClaims)));
   const body = header + '.' + claims;
   const signature = encode(Utilities.computeHmacSha256Signature(body, signingSecret));
-  return {enabled:true, url, key, token:body + '.' + signature, topics, recipients:directClaims.link_core_staff_recipients || [], direct:true, expiresAt:exp*1000};
+  return {enabled:true, url, key, token:body + '.' + signature, topics, visitorDm:!!directClaims.link_core_visitor_browser || topics.includes('lc-chat-direct-admin'), recipients:directClaims.link_core_staff_recipients || [], direct:true, expiresAt:exp*1000};
 }
 
 /** Run from the Apps Script editor. Rerun until all three reports say done. */

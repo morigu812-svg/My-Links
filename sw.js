@@ -11,7 +11,7 @@
  */
 'use strict';
 
-var CACHE_VERSION = 'link-core-v47';
+var CACHE_VERSION = 'link-core-v48';
 var STATIC_CACHE = 'link-core-static-' + CACHE_VERSION;
 var DATA_CACHE = 'link-core-data-' + CACHE_VERSION;
 
@@ -29,6 +29,8 @@ var STATIC_ASSETS = [
   './chat-reply.css',
   './chat-preview.js',
   './chat-preview.css',
+  './visitor-direct-chat.js',
+  './visitor-direct-chat.css',
   './linkcore-knowledge.js',
   './memos.html',
   './bridge.html',

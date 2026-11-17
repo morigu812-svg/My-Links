@@ -444,6 +444,8 @@ body.window-resizing,body.window-resizing *{user-select:none!important}
 <link rel="stylesheet" href="./chat-preview.css">
 <script src="./chat-preview.js"></script>
 <script src="./chat-realtime.js"></script>
+<link rel="stylesheet" href="./visitor-direct-chat.css">
+<script src="./visitor-direct-chat.js"></script>
 <script src="./chat-screenshot.js?v=1" defer></script>
 <style id="visitor-counter-style">
 .visitor-counter-strip{display:flex;align-items:center;flex-wrap:wrap;gap:9px 19px;margin:11px 0 13px;padding:10px 13px;border:1px solid rgba(53,217,255,.24);border-radius:10px;background:rgba(12,32,46,.7);font-size:12px;color:#b7d8e3}
@@ -497,7 +499,7 @@ body.window-resizing,body.window-resizing *{user-select:none!important}
 <div class="list loading-skeleton" id="list" role="region" aria-label="リンク一覧" aria-live="polite" aria-busy="true"><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div></div>
 </div></section></div>
 </section>
-<section class="chat-overlay" id="chatOverlay" aria-label="管理者との共通チャット"><div class="chat-head"><strong>LINK CORE / CHAT</strong><div class="chat-head-actions"><button type="button" id="closeChat">閉じる</button></div></div><div class="chat-subtitle">利用者と管理者が参加する共通チャットです。サイトの不具合報告などにもご利用ください。</div><div class="chat-messages" id="chatMessages" aria-live="polite"><div class="chat-status">チャットを開いています…</div></div><label class="chat-subtitle" for="privateChatId">個別チャットID（管理者に共有）<input id="privateChatId" type="text" readonly style="display:block;width:100%"></label><div id="chatScreenshotControls" class="chat-subtitle"><button type="button" id="chatScreenshot">スクリーンショットを共有</button><input id="chatScreenshotFile" type="file" accept="image/*" hidden><span> 選んだ画像はこの共通チャットの参加者に送信されます。</span><div id="chatScreenshotStatus" role="status"></div></div><form class="chat-compose" id="chatForm"><textarea id="chatInput" maxlength="1000" rows="2" placeholder="メッセージを入力…" required></textarea><button id="chatSend" type="submit">送信</button></form></section><footer><a class="admin" href="admin.html">管理者画面</a></footer>
+<section class="chat-overlay" id="chatOverlay" aria-label="管理者との共通チャット"><div class="chat-head"><strong>LINK CORE / CHAT</strong><div class="chat-head-actions"><button type="button" id="openVisitorDirectChat">個人トーク</button><button type="button" id="closeChat">閉じる</button></div></div><div class="chat-subtitle">利用者と管理者が参加する共通チャットです。サイトの不具合報告などにもご利用ください。</div><div class="chat-messages" id="chatMessages" aria-live="polite"><div class="chat-status">チャットを開いています…</div></div><label class="chat-subtitle" for="privateChatId">個別チャットID（管理者に共有）<input id="privateChatId" type="text" readonly style="display:block;width:100%"></label><div id="chatScreenshotControls" class="chat-subtitle"><button type="button" id="chatScreenshot">スクリーンショットを共有</button><input id="chatScreenshotFile" type="file" accept="image/*" hidden><span> 選んだ画像はこの共通チャットの参加者に送信されます。</span><div id="chatScreenshotStatus" role="status"></div></div><form class="chat-compose" id="chatForm"><textarea id="chatInput" maxlength="1000" rows="2" placeholder="メッセージを入力…" required></textarea><button id="chatSend" type="submit">送信</button></form></section><footer><a class="admin" href="admin.html">管理者画面</a></footer>
 </main>
 <iframe id="gasBridge" title="通信" hidden></iframe>
 
@@ -780,6 +782,7 @@ $('visitorLogout').addEventListener('click', async event => {
 });
 
 function showVisitorLogin(message){
+  viewerDirectChat?.close();
   viewerChatRealtime?.stop();
   viewerReply?.clear();
   stopViewerExpiry();
@@ -844,8 +847,13 @@ const viewerChatRealtime = window.createChatRealtime?.(
     if (!token || token !== visitorToken) return {enabled:false};
     return call('getChatRealtimeSession', token, secret, '');
   },
-  () => { if (!document.hidden && chatOverlay.classList.contains('open')) void refreshChat(); }
+  topics => {
+    if (topics.some(topic=>topic.startsWith('lc-chat-direct-vb_'))) void viewerDirectChat?.refresh();
+    if (topics.some(topic=>!topic.startsWith('lc-chat-direct-vb_')) && !document.hidden && chatOverlay.classList.contains('open')) void refreshChat();
+  }
 );
+const viewerDirectChat = window.createVisitorDirectChat(params => viewerChatRealtime.visitorDm(params), false);
+$('openVisitorDirectChat').addEventListener('click', () => viewerDirectChat.open());
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && visitorToken && chatOverlay.classList.contains('open')) {
     viewerChatRealtime?.start();
@@ -1024,7 +1032,7 @@ $('loginForm').addEventListener('submit',async event=>{
  $('loginRetry').classList.add('hidden');
  try{
   const loginStartedAt = Date.now();
-  const auth=await call('authenticateVisitor',password.value,getNoticeBrowserId());
+  const auth=await call('authenticateVisitor', password.value, getNoticeBrowserId(), await privateChatSecret());
   if(!auth||!auth.token)throw new Error('閲覧用トークンを取得できませんでした。');
   applyVisitorLinks(Array.isArray(auth.links)?auth:await call('getLinks',auth.token));
   visitorToken=auth.token;
