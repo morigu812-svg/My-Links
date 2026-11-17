@@ -98,14 +98,15 @@ window.addEventListener('message',event=>{
  }
 });
 if(!embedded)frame.src=GAS_URL+'?mode=bridge';
+const GAS_TIMEOUT_MS = 30000;
 function waitForBridge() {
   if (bridgeWindow && bridgeOrigin) return Promise.resolve();
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('GASとの接続に時間がかかっています。時間をおいて再試行してください。')), 10000);
+    const timer = setTimeout(() => reject(new Error('GASとの接続に時間がかかっています。時間をおいて再試行してください。')), GAS_TIMEOUT_MS);
     bridgeReady.then(() => { clearTimeout(timer); resolve(); });
   });
 }
-function call(method,...args){if(embedded){return new Promise((resolve,reject)=>{const id='memo-'+Date.now()+'-'+(++requestSeq);const timer=setTimeout(()=>{pending.delete(id);reject(new Error('管理者ページとの通信がタイムアウトしました。メモ帳を閉じて開き直してください。'))},15000);pending.set(id,{resolve:v=>{clearTimeout(timer);resolve(v)},reject:e=>{clearTimeout(timer);reject(e)}});window.parent.postMessage({type:'LINK_CORE_MEMO_REQUEST',id,method,args},location.origin)})}return callBridge(method, ...args);
+function call(method,...args){if(embedded){return new Promise((resolve,reject)=>{const id='memo-'+Date.now()+'-'+(++requestSeq);const timer=setTimeout(()=>{pending.delete(id);reject(new Error('管理者ページとの通信がタイムアウトしました。メモ帳を閉じて開き直してください。'))},GAS_TIMEOUT_MS);pending.set(id,{resolve:v=>{clearTimeout(timer);resolve(v)},reject:e=>{clearTimeout(timer);reject(e)}});window.parent.postMessage({type:'LINK_CORE_MEMO_REQUEST',id,method,args},location.origin)})}return callBridge(method, ...args);
 }
 function callBridge(method, ...args) {
   return waitForBridge().then(() => new Promise((resolve, reject) => {
@@ -113,7 +114,7 @@ function callBridge(method, ...args) {
     const timer = setTimeout(() => {
       pending.delete(id);
       reject(new Error('サーバーから応答がありません。時間をおいて再試行してください。'));
-    }, 15000);
+    }, GAS_TIMEOUT_MS);
 
     pending.set(id, {
       resolve: value => { clearTimeout(timer); resolve(value); },

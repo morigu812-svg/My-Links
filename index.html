@@ -551,10 +551,11 @@ window.addEventListener('message',event=>{
 frame.loading='eager';
 frame.setAttribute('fetchpriority','high');
 frame.src=GAS_URL+'?mode=bridge';
+const GAS_TIMEOUT_MS = 30000;
 function waitForBridge() {
   if (bridgeWindow && bridgeOrigin) return Promise.resolve();
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('GASとの接続に時間がかかっています。時間をおいて再試行してください。')), 10000);
+    const timer = setTimeout(() => reject(new Error('GASとの接続に時間がかかっています。時間をおいて再試行してください。')), GAS_TIMEOUT_MS);
     bridgeReady.then(() => { clearTimeout(timer); resolve(); });
   });
 }
@@ -564,7 +565,7 @@ function call(method, ...args) {
     const timer = setTimeout(() => {
       pending.delete(id);
       reject(new Error('サーバーから応答がありません。時間をおいて再試行してください。'));
-    }, 15000);
+    }, GAS_TIMEOUT_MS);
 
     pending.set(id, {
       resolve: value => { clearTimeout(timer); resolve(value); },

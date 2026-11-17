@@ -1616,15 +1616,14 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
   frame.src = GAS_URL + '?mode=bridge';
   document.body.appendChild(frame);
 
-  const READY_TIMEOUT_MS = 10000;
-  const REQUEST_TIMEOUT_MS = 15000;
+  const GAS_TIMEOUT_MS = 30000;
 
   function waitForBridge() {
     if (bridgeWindow && bridgeOrigin) return Promise.resolve();
     return Promise.race([
       ready,
       new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('GASブリッジの準備が10秒以内に完了しませんでした。GASのデプロイURLと公開設定を確認してください。')), READY_TIMEOUT_MS);
+        setTimeout(() => reject(new Error('GASブリッジの準備が' + (GAS_TIMEOUT_MS / 1000) + '秒以内に完了しませんでした。GASのデプロイURLと公開設定を確認してください。')), GAS_TIMEOUT_MS);
       })
     ]);
   }
@@ -1639,13 +1638,10 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
     }
     const request = waitForBridge().then(() => new Promise((resolve, reject) => {
       const id = (crypto.randomUUID && crypto.randomUUID()) || String(Date.now() + Math.random());
-      const largeFileMethods = ['sendStaffChatAttachment', 'getStaffChatAttachment', 'startStaffChatLargeUpload',
-        'appendStaffChatLargeUploadChunk', 'finishStaffChatLargeUpload', 'getStaffChatAttachmentChunk'];
-      const maxWait = largeFileMethods.includes(method) ? 60000 : REQUEST_TIMEOUT_MS;
       const timer = setTimeout(() => {
         pending.delete(id);
-        reject(new Error('GASから' + (maxWait / 1000) + '秒以内に応答がありませんでした。GASの実行ログとデプロイ版を確認してください。'));
-      }, maxWait);
+        reject(new Error('GASから' + (GAS_TIMEOUT_MS / 1000) + '秒以内に応答がありませんでした。GASの実行ログとデプロイ版を確認してください。'));
+      }, GAS_TIMEOUT_MS);
 
       pending.set(id, {
         resolve: value => { clearTimeout(timer); resolve(value); },
@@ -2827,7 +2823,7 @@ document.getElementById('authSubmit').disabled = false;
 
   /* === リンク診断：重複チェック＋リンク切れチェック ===
      サーバー側で URL ごとに死活確認する。診断は読み取り専用で、リンクを変更・削除しない。
-     管理画面は1回の呼び出しが 15 秒でタイムアウトするため、8件ずつに分けて繰り返し呼ぶ。 */
+     管理画面は1回の呼び出しが 30 秒でタイムアウトするため、8件ずつに分けて繰り返し呼ぶ。 */
   const diagnosisPanel=$('diagnosisPanel');
   let diagnosisRunning=false;
   let diagnosisResults=[];
