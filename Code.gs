@@ -1237,6 +1237,16 @@ function getChatMessages(viewerToken, browserSecret) {
   const publicMessages = publicResult.messages;
   const isAdmin = isSessionValid_('ADMIN', viewerToken);
   const recipient = privateChatBrowserId_(browserSecret);
+  if (supabaseChatMode_() === 'supabase') {
+    const params = {kind:'eq.direct', select:'id,recipient,body,created_at', order:'seq.desc', limit:CHAT_MAX_MESSAGES};
+    if (!isAdmin && !recipient) return {messages:publicMessages, screenshotsEnabled:true};
+    if (!isAdmin) params.recipient = 'eq.' + recipient;
+    const directMessages = supabaseChatRows_(params).reverse().map(row => ({
+      id:row.id, author:'管理者', message:row.body, createdAt:row.created_at, private:true, recipient:isAdmin ? row.recipient : ''
+    }));
+    return {messages:publicMessages.concat(directMessages)
+      .sort((a,b)=>Date.parse(a.createdAt)-Date.parse(b.createdAt)).slice(-CHAT_MAX_MESSAGES), screenshotsEnabled:true};
+  }
   if (!isAdmin && !recipient) return {messages: publicMessages,screenshotsEnabled:true};
 
   const sheet = privateChatSheet_(false);
@@ -1283,6 +1293,11 @@ function sendPrivateChatMessage(message, recipient, adminToken) {
   lock.waitLock(10000);
   try {
     requireAdmin_(adminToken);
+    requireChatWritable_();
+    if (supabaseChatMode_() === 'supabase') {
+      supabaseChatInsert_('direct', {body, recipient});
+      return {ok:true};
+    }
     privateChatSheet_(true).appendRow([Utilities.getUuid(), recipient, safeCell_(body), new Date()]);
     return {ok: true};
   } finally {
@@ -1298,6 +1313,11 @@ function deleteVisitorChatMessage(messageId, isPrivate, adminToken) {
   lock.waitLock(10000);
   try {
     requireAdmin_(adminToken);
+    requireChatWritable_();
+    if (supabaseChatMode_() === 'supabase') {
+      supabaseChatDelete_(isPrivate ? 'direct' : 'public', messageId);
+      return {ok:true};
+    }
     const sheet = isPrivate ? privateChatSheet_(false) : ensureChatSheet_();
     const last = sheet ? sheet.getLastRow() : 0;
     if (last >= 2) {
@@ -1319,6 +1339,7 @@ function deleteVisitorChatMessage(messageId, isPrivate, adminToken) {
 
 function getPublicChatMessages_(viewerToken) {
   requireLinkViewer_(viewerToken);
+  if (supabaseChatMode_() === 'supabase') return {messages:supabasePublicMessages_(), screenshotsEnabled:true};
   const cached = readJsonCache_('LINK_CORE_CHAT_MESSAGES_V1');
   if (cached) return cached;
   const sheet = ensureChatSheet_(), last = sheet.getLastRow();
@@ -1363,6 +1384,11 @@ function getChatScreenshot(messageId, viewerToken) {
   if (typeof messageId !== 'string' || !/^[0-9a-f-]{36}$/.test(messageId)) {
     throw new Error('メッセージIDが不正です。');
   }
+  if (supabaseChatMode_() === 'supabase') {
+    const [row] = supabaseChatRows_({kind:'eq.public', id:supabaseChatIdFilter_(messageId), select:'image', limit:1});
+    if (!row?.image) throw new Error('画像が見つかりません。');
+    return {image:row.image};
+  }
   const sheet = ensureChatSheet_();
   const headers = sheet.getRange(1,1,1,sheet.getLastColumn()).getDisplayValues()[0];
   const imageColumns = CHAT_IMAGE_HEADERS.map(header=>headers.indexOf(header)+1);
@@ -1389,6 +1415,12 @@ function postPublicChat_(message, viewerToken, image) {
   const lock=LockService.getScriptLock();lock.waitLock(10000);
   try{
     if(cache.get(rateKey))throw new Error('連続送信はできません。少し待ってから送信してください。');
+    requireChatWritable_();
+    if (supabaseChatMode_() === 'supabase') {
+      supabaseChatInsert_('public', {author:isAdmin ? '管理者' : '利用者', body, image});
+      cache.put(rateKey,'1',3);
+      return {ok:true};
+    }
     const sheet=ensureChatSheet_();
     const headers=sheet.getRange(1,1,1,sheet.getLastColumn()).getDisplayValues()[0];
     if (image) {
@@ -1878,6 +1910,7 @@ function getStaffChatMessages(adminToken, browserId, pageOptions) {
   const metadata = olderPage ? {} : {
     onlineCount, nickname, mailboxId: directory.self, members: directory.members
   };
+  if (supabaseChatMode_() === 'supabase') return supabaseStaffChatMessages_(opts, mailbox, metadata, limit);
   const sheet = staffChatSheet_(false);
   const last = sheet ? sheet.getLastRow() : 0;
   if (opts.mode === 'conversations') {
@@ -1961,6 +1994,13 @@ function markStaffChatRead(ids, browserId, adminToken) {
   lock.waitLock(10000);
   try {
     requireAdmin_(adminToken);
+    requireChatWritable_();
+    if (supabaseChatMode_() === 'supabase') {
+      const messageIds = ids.filter(id => typeof id === 'string' && id.length > 0 && id.length <= 200);
+      if (messageIds.length) supabaseChatRequest_('post', 'rpc/link_core_chat_staff_read',
+        {message_ids:messageIds, mailbox:staffChatMailboxId_(browserId)});
+      return {ok:true};
+    }
     const sheet = staffChatSheet_(false);
     const last = sheet ? sheet.getLastRow() : 0;
     if (last < 2) return {ok: true};
@@ -2006,6 +2046,11 @@ function sendStaffChatMessage(message, adminToken, browserId, recipientId) {
   lock.waitLock(10000);
   try {
     requireAdmin_(adminToken);
+    requireChatWritable_();
+    if (supabaseChatMode_() === 'supabase') {
+      supabaseChatInsert_('staff', {body, sender:staffChatMailboxId_(browserId), recipient});
+      return {ok:true};
+    }
     staffChatSheet_(true).appendRow([
       Utilities.getUuid(), safeCell_(body), new Date(), validStaffBrowserId_(browserId) ? browserId : '', '',
       '', '', '', '', '', recipient
@@ -2090,6 +2135,19 @@ function sendStaffChatAttachment(message, payload, requestId, browserId, recipie
   let uploaded = null;
   try {
     requireAdmin_(adminToken);
+    requireChatWritable_();
+    if (supabaseChatMode_() === 'supabase') {
+      const sender = staffChatMailboxId_(browserId);
+      const [existing] = supabaseChatRows_({kind:'eq.staff', request_id:'eq.'+requestId, select:'sender,recipient', limit:1});
+      if (existing) {
+        if (existing.sender !== sender || existing.recipient !== recipient) throw new Error('送信IDが重複しています。');
+        return {ok:true, duplicate:true};
+      }
+      uploaded = staffAttachmentFolder_().createFile(Utilities.newBlob(attachment.bytes, attachment.mime, attachment.filename));
+      supabaseChatInsert_('staff', {body, sender, recipient, file_id:uploaded.getId(), file_name:attachment.filename,
+        file_mime:attachment.mime, file_size:attachment.size, request_id:requestId});
+      return {ok:true};
+    }
     const sheet = staffChatSheet_(true);
     const last = sheet.getLastRow();
     if (last >= 2) {
@@ -2121,12 +2179,21 @@ function getStaffChatAttachment(messageId, browserOrToken, adminToken) {
   if (adminToken === undefined) adminToken = browserOrToken;
   requireAdmin_(adminToken);
   if (typeof messageId !== 'string' || !/^[0-9a-f-]{36}$/i.test(messageId)) throw new Error('投稿IDが不正です。');
-  const sheet = staffChatSheet_(false);
-  const last = sheet ? sheet.getLastRow() : 0;
-  if (last < 2) throw new Error('添付ファイルは見つかりませんでした。');
-  const rows = sheet.getRange(2, 1, last - 1, Math.min(11, sheet.getMaxColumns())).getValues();
-  const row = rows.find(item => String(item[0]) === messageId);
-  if (!row || !row[5] || !staffChatCanView_(row, browserId)) throw new Error('添付ファイルは見つかりませんでした。');
+  let row;
+  if (supabaseChatMode_() === 'supabase') {
+    const [message] = supabaseChatRows_({kind:'eq.staff', id:supabaseChatIdFilter_(messageId),
+      or:supabaseStaffAccess_(staffChatMailboxId_(browserId)), select:'file_id,file_name,file_mime,file_size', limit:1});
+    if (message?.file_id) row = [,,,,,message.file_id,message.file_name,message.file_mime,message.file_size];
+  } else {
+    const sheet = staffChatSheet_(false);
+    const last = sheet ? sheet.getLastRow() : 0;
+    if (last >= 2) {
+      const rows = sheet.getRange(2, 1, last - 1, Math.min(11, sheet.getMaxColumns())).getValues();
+      const message = rows.find(item => String(item[0]) === messageId);
+      if (message && staffChatCanView_(message, browserId)) row = message;
+    }
+  }
+  if (!row || !row[5]) throw new Error('添付ファイルは見つかりませんでした。');
   const file = DriveApp.getFileById(String(row[5]));
   if (!staffAttachmentFileIsInFolder_(file) || file.isTrashed()) throw new Error('添付ファイルを取得できません。');
   if (file.getSize() > STAFF_ATTACHMENT_MAX_BYTES) throw new Error('添付ファイルが容量上限を超えています。');
@@ -2148,6 +2215,15 @@ function deleteStaffChatMessage(id, browserId, adminToken) {
   lock.waitLock(10000);
   try {
     requireAdmin_(adminToken);
+    requireChatWritable_();
+    if (supabaseChatMode_() === 'supabase') {
+      const [row] = supabaseChatRows_({kind:'eq.staff', id:supabaseChatIdFilter_(id), select:'sender,file_id', limit:1});
+      if (!row) return {ok:true};
+      if (row.sender !== staffChatMailboxId_(browserId)) throw new Error('自分の投稿のみ削除できます。');
+      supabaseChatDelete_('staff', id);
+      trashStaffChatFile_(row.file_id);
+      return {ok:true};
+    }
     const sheet = staffChatSheet_(false);
     const last = sheet ? sheet.getLastRow() : 0;
     if (last < 2) return {ok: true};
@@ -2158,15 +2234,20 @@ function deleteStaffChatMessage(id, browserId, adminToken) {
     if (author !== browserId) throw new Error('自分の投稿のみ削除できます。');
     const attachmentId = String(fileId || '');
     sheet.deleteRow(row);
-    if (attachmentId) {
-      try {
-        const attachmentFile = DriveApp.getFileById(attachmentId);
-        if (staffAttachmentFileIsInFolder_(attachmentFile)) attachmentFile.setTrashed(true);
-      } catch (error) { console.error('投稿削除後のDrive添付削除に失敗:', error); }
-    }
+    trashStaffChatFile_(attachmentId);
     return {ok: true};
   } finally {
     lock.releaseLock();
+  }
+}
+
+function trashStaffChatFile_(attachmentId) {
+  if (!attachmentId) return;
+  try {
+    const file = DriveApp.getFileById(attachmentId);
+    if (staffAttachmentFileIsInFolder_(file)) file.setTrashed(true);
+  } catch (error) {
+    console.error('投稿削除後のDrive添付削除に失敗:', error);
   }
 }
 
@@ -2556,4 +2637,205 @@ function setStaffNickname(browserId, nickname, adminToken) {
   props.setProperty('LINK_CORE_STAFF_NAME_' + browserId, name);
   props.setProperty(STAFF_CHAT_MEMBER_PREFIX + staffChatMailboxId_(browserId), name);
   return {nickname: name};
+}
+
+/* Supabase chat storage. Link data, session validation, and Drive attachments remain in GAS. */
+function supabaseChatMode_() {
+  return PropertiesService.getScriptProperties().getProperty('LINK_CORE_CHAT_BACKEND') || 'sheets';
+}
+
+function requireChatWritable_() {
+  if (supabaseChatMode_() === 'migrating') throw new Error('チャット履歴の移行中です。完了後に再試行してください。');
+}
+
+function supabaseChatConfig_() {
+  const props = PropertiesService.getScriptProperties();
+  const url = String(props.getProperty('LINK_CORE_SUPABASE_URL') || '').replace(/\/$/, '');
+  const credential = props.getProperty('LINK_CORE_SUPABASE_SERVER_KEY');
+  if (!/^https:\/\/[a-z0-9]+\.supabase\.co$/.test(url) || !credential) {
+    throw new Error('Supabaseの接続設定を確認してください。');
+  }
+  return {url, credential, props};
+}
+
+function supabaseChatRequest_(method, path, payload, preference) {
+  const {url, credential} = supabaseChatConfig_();
+  const headers = {apikey: credential};
+  if (!credential.startsWith('sb_secret_')) headers.Authorization = 'Bearer ' + credential;
+  if (preference) headers.Prefer = preference;
+  const options = {method, headers, muteHttpExceptions: true};
+  if (payload !== undefined) {
+    options.contentType = 'application/json';
+    options.payload = JSON.stringify(payload);
+  }
+  const response = UrlFetchApp.fetch(url + '/rest/v1/' + path, options);
+  const status = response.getResponseCode();
+  if (status < 200 || status >= 300) throw new Error('Supabaseチャットへの接続に失敗しました（HTTP ' + status + '）。');
+  const text = response.getContentText();
+  return text ? JSON.parse(text) : null;
+}
+
+function supabaseChatRows_(parameters) {
+  const query = Object.keys(parameters).map(key => encodeURIComponent(key) + '=' + encodeURIComponent(parameters[key])).join('&');
+  return supabaseChatRequest_('get', 'link_core_chat?' + query);
+}
+
+function supabaseChatIdFilter_(id) {
+  return 'eq.' + id;
+}
+
+function supabaseChatInsert_(kind, fields) {
+  supabaseChatRequest_('post', 'link_core_chat', Object.assign({
+    kind, id: Utilities.getUuid(), created_at: new Date().toISOString()
+  }, fields), 'return=minimal');
+}
+
+function supabaseChatDelete_(kind, id) {
+  supabaseChatRequest_('delete', 'link_core_chat?kind=eq.' + kind +
+    '&id=' + encodeURIComponent(supabaseChatIdFilter_(id)), undefined, 'return=minimal');
+}
+
+function supabasePublicMessages_() {
+  return supabaseChatRows_({kind:'eq.public', select:'id,author,body,created_at,has_image', order:'seq.desc', limit:CHAT_MAX_MESSAGES})
+    .reverse().map(row => ({id:row.id, author:row.author, message:row.body, createdAt:row.created_at, hasScreenshot:!!row.has_image}));
+}
+
+function supabaseStaffAccess_(mailbox) {
+  return mailbox ? '(is_direct.eq.false,recipient.eq.' + mailbox + ',sender.eq.' + mailbox + ')' : '(is_direct.eq.false)';
+}
+
+function supabaseStaffChatMessages_(opts, mailbox, metadata, limit) {
+  const roomScoped = Object.prototype.hasOwnProperty.call(opts, 'room');
+  const base = {kind:'eq.staff', order:'seq.desc', or:supabaseStaffAccess_(mailbox)};
+  const summary = opts.mode === 'summary' || opts.mode === 'conversations';
+  if (roomScoped) metadata.room = opts.room;
+  if (summary) {
+    const rows = supabaseChatRows_(Object.assign({}, base, {select:'sender,readers', limit:CHAT_MAX_MESSAGES}));
+    if (opts.mode === 'conversations') {
+      const peers = new Map();
+      if (mailbox) {
+        const props = PropertiesService.getScriptProperties().getProperties();
+        for (let offset = 0; ; offset += 500) {
+          const page = supabaseChatRows_({kind:'eq.staff', is_direct:'eq.true', or:'(sender.eq.'+mailbox+',recipient.eq.'+mailbox+')', order:'seq.desc', select:'sender,recipient', limit:500, offset});
+          page.forEach(row => {
+            const peer = row.sender === mailbox ? row.recipient : row.sender;
+            if (peer && !peers.has(peer)) peers.set(peer, {mailboxId:peer, name:props[STAFF_CHAT_MEMBER_PREFIX+peer] || '管理者'});
+          });
+          if (page.length < 500) break;
+        }
+      }
+      metadata.conversations = Array.from(peers.values());
+    }
+    const unreadCount = mailbox ? rows.filter(row => row.sender !== mailbox && !row.readers.includes(mailbox)).length : 0;
+    return Object.assign({messages:[], nextCursor:null, unreadCount}, metadata);
+  }
+  const query = Object.assign(base, {select:'seq,id,sender,recipient,body,created_at,readers,file_name,file_mime,file_size', limit:limit+1});
+  if (roomScoped) {
+    if (opts.room) query.or = '(and(sender.eq.' + mailbox + ',recipient.eq.' + opts.room +
+      '),and(sender.eq.' + opts.room + ',recipient.eq.' + mailbox + '))';
+    else { delete query.or; query.is_direct = 'eq.false'; }
+  }
+  if (Number.isSafeInteger(opts.beforeRow) && opts.beforeRow >= 2) query.seq = 'lte.' + (opts.beforeRow-1);
+  const rows = supabaseChatRows_(query);
+  const hasMore = rows.length > limit;
+  const page = rows.slice(0, limit);
+  const names = PropertiesService.getScriptProperties().getProperties();
+  const messages = page.slice().reverse().map(row => ({
+    id:row.id, author:names[STAFF_CHAT_MEMBER_PREFIX+row.sender] || '管理者',
+    message:row.body, createdAt:row.created_at, own:!!mailbox && row.sender===mailbox,
+    readCount:row.readers.length, unread:!!mailbox && row.sender!==mailbox && !row.readers.includes(mailbox),
+    private:!!row.recipient, recipientName:names[STAFF_CHAT_MEMBER_PREFIX+row.recipient] || '管理者',
+    attachment:row.file_name ? {name:row.file_name, mime:row.file_mime, size:row.file_size} : null
+  }));
+  return Object.assign({messages, nextCursor:hasMore ? page[page.length-1].seq : null}, metadata);
+}
+
+function getChatRealtimeSession(viewerToken, browserSecret, staffBrowserId) {
+  requireLinkViewer_(viewerToken);
+  if (supabaseChatMode_() !== 'supabase') return {enabled:false};
+  const {url, props} = supabaseChatConfig_();
+  const key = props.getProperty('LINK_CORE_SUPABASE_PUBLISHABLE_KEY');
+  const signingSecret = props.getProperty('LINK_CORE_SUPABASE_JWT_SECRET');
+  if (!key || !signingSecret) throw new Error('Supabase Realtimeの設定を確認してください。');
+  const topics = ['lc-chat-public'];
+  if (isSessionValid_('ADMIN', viewerToken)) {
+    topics.push('lc-chat-direct-admin', 'lc-chat-staff-all');
+    const staffMailbox = staffChatMailboxId_(staffBrowserId);
+    if (staffMailbox) topics.push('lc-chat-staff-' + staffMailbox);
+  } else {
+    const inbox = privateChatBrowserId_(browserSecret);
+    if (inbox) topics.push('lc-chat-direct-' + inbox);
+  }
+  const now = Math.floor(Date.now() / 1000);
+  const exp = now + 120;
+  const encode = value => Utilities.base64EncodeWebSafe(value).replace(/=+$/, '');
+  const header = encode(JSON.stringify({alg:'HS256', typ:'JWT'}));
+  const claims = encode(JSON.stringify({role:'authenticated', aud:'authenticated', sub:Utilities.getUuid(),
+    iat:now, exp, link_core_topics:topics}));
+  const body = header + '.' + claims;
+  const signature = encode(Utilities.computeHmacSha256Signature(body, signingSecret));
+  return {enabled:true, url, key, token:body + '.' + signature, topics, expiresAt:exp*1000};
+}
+
+/** Run from the Apps Script editor. Rerun until all three reports say done. */
+function migrateChatHistoryToSupabase_() {
+  const {props} = supabaseChatConfig_();
+  if (supabaseChatMode_() !== 'migrating') throw new Error('LINK_CORE_CHAT_BACKEND を migrating にしてください。');
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const report = {};
+    for (const [kind, sheet] of [['public', ensureChatSheet_()], ['direct', privateChatSheet_(false)], ['staff', staffChatSheet_(false)]]) {
+      const key = 'LINK_CORE_CHAT_MIGRATION_NEXT_' + kind.toUpperCase();
+      const first = Math.max(2, Number(props.getProperty(key)) || 2);
+      const last = sheet ? sheet.getLastRow() : 0;
+      if (first > last) { report[kind] = {done:true, remaining:0}; continue; }
+      const count = Math.min(kind === 'public' ? 20 : 100, last-first+1);
+      const width = sheet.getLastColumn();
+      const rows = sheet.getRange(first, 1, count, width).getValues();
+      const headers = kind === 'public' ? sheet.getRange(1, 1, 1, width).getDisplayValues()[0] : [];
+      const batch = rows.flatMap((row, offset) => {
+        const get = key => row[headers.indexOf(key)];
+        const id = kind === 'public' ? get('ID') : row[0];
+        if (!id) return [];
+        const created = Date.parse(toIso_(kind === 'public' ? get('送信日時') : row[kind === 'staff' ? 2 : 3]));
+        if (!Number.isFinite(created)) throw new Error(kind + ' の ' + (first + offset) + ' 行目の日時を確認してください。');
+        const entry = {kind, id:String(id), created_at:new Date(created).toISOString()};
+        if (kind === 'public') Object.assign(entry, {author:String(get('投稿者') || '利用者'),
+          body:String(get('メッセージ') || ''),
+          image:CHAT_IMAGE_HEADERS.map((header,i)=>String(get(header)||'').slice(i ? 4 : 0)).join('')});
+        else if (kind === 'direct') Object.assign(entry, {recipient:String(row[1] || ''), body:String(row[2] || '')});
+        else Object.assign(entry, {
+          body:String(row[1] || ''), sender:staffChatMailboxId_(row[3]), recipient:String(row[10] || ''),
+          readers:Array.from(new Set(String(row[4] || '').split(',').map(staffChatMailboxId_).filter(Boolean))),
+          file_id:String(row[5] || ''), file_name:String(row[6] || ''), file_mime:String(row[7] || ''),
+          file_size:Number(row[8]) || 0, request_id:row[9] ? String(row[9]) : null
+        });
+        return [entry];
+      });
+      if (batch.length) supabaseChatRequest_('post', 'rpc/link_core_chat_import', {batch});
+      props.setProperty(key, String(first + count));
+      report[kind] = {done:first+count>last, remaining:last-first-count+1};
+    }
+    console.log(JSON.stringify(report));
+    return report;
+  } finally { lock.releaseLock(); }
+}
+
+function activateSupabaseChat_() {
+  const {props} = supabaseChatConfig_();
+  if (supabaseChatMode_() !== 'migrating') throw new Error('まず移行モードで履歴を取り込んでください。');
+  if (!props.getProperty('LINK_CORE_SUPABASE_PUBLISHABLE_KEY') || !props.getProperty('LINK_CORE_SUPABASE_JWT_SECRET')) {
+    throw new Error('Realtimeの設定が足りません。');
+  }
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    for (const [kind, sheet] of [['public', ensureChatSheet_()], ['direct', privateChatSheet_(false)], ['staff', staffChatSheet_(false)]]) {
+      const next = Number(props.getProperty('LINK_CORE_CHAT_MIGRATION_NEXT_' + kind.toUpperCase())) || 2;
+      if (sheet && next <= sheet.getLastRow()) throw new Error(kind + ' の移行が完了していません。');
+    }
+    supabaseChatRows_({select:'id', limit:1});
+    props.setProperty('LINK_CORE_CHAT_BACKEND', 'supabase');
+  } finally { lock.releaseLock(); }
 }

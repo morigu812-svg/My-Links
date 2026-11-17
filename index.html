@@ -439,6 +439,7 @@ body.window-resizing,body.window-resizing *{user-select:none!important}
 #linksPanel .link-feed-privacy-note a{display:block;max-width:100%;overflow-wrap:anywhere;word-break:break-word;color:#80e9ff!important;font-size:12px;line-height:1.65;text-decoration:underline;text-underline-offset:3px}
 #linksPanel .link-feed-privacy-note a:focus-visible{outline:2px solid #35d9ff;outline-offset:3px}
 </style>
+<script src="./chat-realtime.js"></script>
 <script src="./chat-screenshot.js?v=1" defer></script>
 <style id="visitor-counter-style">
 .visitor-counter-strip{display:flex;align-items:center;flex-wrap:wrap;gap:9px 19px;margin:11px 0 13px;padding:10px 13px;border:1px solid rgba(53,217,255,.24);border-radius:10px;background:rgba(12,32,46,.7);font-size:12px;color:#b7d8e3}
@@ -773,6 +774,7 @@ $('visitorLogout').addEventListener('click', async event => {
 });
 
 function showVisitorLogin(message){
+  viewerChatRealtime?.stop();
   stopViewerExpiry();
   $('visitorLogout').disabled = false;
   visitorToken='';
@@ -814,8 +816,27 @@ async function privateChatSecret() {
  }
 }
 async function refreshChat(){if(!visitorToken||chatLoading)return;const button=$('refreshChat');chatLoading=true;button.disabled=true;button.classList.add('is-refreshing');button.setAttribute('aria-busy','true');try{const token=visitorToken;const secret=await privateChatSecret();if(token!==visitorToken)return;const r=await call('getChatMessages',token,secret);if(token!==visitorToken)return;renderChat(Array.isArray(r.messages)?r.messages:[]);chatLoaded=true;}catch(e){if(isVisitorAuthError(e))showVisitorLogin('ログインの有効期限が切れました。もう一度サイトのパスワードを入力してください。');else chatMessages.textContent='読み込みに失敗しました：'+(e.message||'通信エラー');}finally{chatLoading=false;button.disabled=false;button.classList.remove('is-refreshing');button.removeAttribute('aria-busy');}}
-function openChat(){if(!visitorToken){$('loginError').textContent='先に利用者ログインをしてください。';return;}markSideTabAsRead('openChat');chatOverlay.classList.add('open');if(!chatLoaded)refreshChat();}
-$('openChat').addEventListener('click',openChat);$('refreshChat').addEventListener('click',refreshChat);$('closeChat').addEventListener('click',()=>{chatOverlay.classList.remove('open');});
+const viewerChatRealtime = window.createChatRealtime?.(
+  async () => {
+    const token = visitorToken;
+    const secret = await privateChatSecret();
+    if (!token || token !== visitorToken) return {enabled:false};
+    return call('getChatRealtimeSession', token, secret, '');
+  },
+  () => { if (!document.hidden && chatOverlay.classList.contains('open')) void refreshChat(); }
+);
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) viewerChatRealtime?.stop();
+  else if (visitorToken && chatOverlay.classList.contains('open')) {
+    viewerChatRealtime?.start();
+    void refreshChat();
+  }
+});
+setInterval(() => {
+  if (!document.hidden && chatOverlay.classList.contains('open')) void refreshChat();
+}, 20000);
+function openChat(){if(!visitorToken){$('loginError').textContent='先に利用者ログインをしてください。';return;}markSideTabAsRead('openChat');chatOverlay.classList.add('open');viewerChatRealtime?.start();void refreshChat();}
+$('openChat').addEventListener('click',openChat);$('refreshChat').addEventListener('click',refreshChat);$('closeChat').addEventListener('click',()=>{chatOverlay.classList.remove('open');viewerChatRealtime?.stop();});
 chatForm.addEventListener('submit',async e=>{e.preventDefault();const message=chatInput.value.trim();if(!message||!visitorToken)return;chatSend.disabled=true;try{await call('sendChatMessage',message,visitorToken);chatInput.value='';await refreshChat();}catch(error){if(isVisitorAuthError(error)){showVisitorLogin('ログインの有効期限が切れました。もう一度サイトのパスワードを入力してください。');}else{const s=document.createElement('div');s.className='chat-status';s.textContent=error.message||'送信できませんでした。';chatMessages.appendChild(s);}}finally{chatSend.disabled=false;if(visitorToken)chatInput.focus();}});
 
 function showChatImageButton(container, messageId) {
