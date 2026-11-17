@@ -2183,7 +2183,7 @@ document.getElementById('authSubmit').disabled = false;
   });
 
   function decorateVisitorBubble(item, card, bubble, line) {
-    if (adminVisitorReply) window.bindChatReply(bubble, item, adminVisitorReply);
+    if (adminVisitorReply) window.bindChatReply(bubble, item, adminVisitorReply, true, card);
     const remove = document.createElement('button');
     remove.type = 'button';
     remove.className = 'btn danger';
@@ -3230,7 +3230,7 @@ $('closeChat').addEventListener('click', closeMainChat);
       if (key !== staffRenderKey) {
         closeStaffMessageActions();
         const cards = buildChatBubbles(messages, (item, card, bubble, line) => {
-          if (staffReply) window.bindChatReply(bubble, item, staffReply);
+          if (staffReply) window.bindChatReply(bubble, item, staffReply, true, card);
           if (item.attachment) {
             const fileCard = document.createElement('div');
             fileCard.className = 'staff-file-card';

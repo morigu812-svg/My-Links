@@ -37,3 +37,14 @@
   overflow-wrap: anywhere;
 }
 .lc-reply-quote span { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+
+/* The whole message row accepts gestures while its content keeps its existing width. */
+.staff-message.lc-reply-row { width: 100%; max-width: none; touch-action: pan-y pinch-zoom; }
+.staff-message.lc-reply-row > :is(.staff-message-author, .staff-message-line, .staff-message-meta) {
+  max-width: 85%;
+}
+@media (max-width: 540px) {
+  .staff-message.lc-reply-row > :is(.staff-message-author, .staff-message-line, .staff-message-meta) {
+    max-width: 90%;
+  }
+}

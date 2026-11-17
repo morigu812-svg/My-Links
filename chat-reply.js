@@ -31,7 +31,7 @@
     return (item.message || item.attachment?.name || 'メッセージ').replace(/\s+/g, ' ').slice(0, 95);
   }
 
-  window.bindChatReply = function (bubble, item, composer, canReply = true) {
+  window.bindChatReply = function (bubble, item, composer, canReply = true, gestureArea = bubble) {
     if (item.reply) {
       const quote = document.createElement('blockquote');
       quote.className = 'lc-reply-quote';
@@ -44,6 +44,7 @@
     }
     if (!canReply) return;
     bubble.classList.add('lc-reply-target');
+    if (gestureArea !== bubble) gestureArea.classList.add('lc-reply-row');
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'lc-reply-button';
@@ -54,11 +55,11 @@
 
     let start;
     let suppressTap = false;
-    bubble.addEventListener('pointerdown', event => {
-      if (event.pointerType !== 'touch' || event.target.closest('button,a,input')) return;
+    gestureArea.addEventListener('pointerdown', event => {
+      if (event.pointerType !== 'touch' || !event.isPrimary) return;
       start = {id:event.pointerId, x:event.clientX, y:event.clientY};
     });
-    bubble.addEventListener('pointermove', event => {
+    gestureArea.addEventListener('pointermove', event => {
       if (start?.id !== event.pointerId) return;
       const x = event.clientX - start.x;
       if (Math.abs(event.clientY - start.y) > 24 && Math.abs(event.clientY - start.y) > -x) {
@@ -78,10 +79,10 @@
         setTimeout(() => { suppressTap = false; }, 400);
       }
     }
-    bubble.addEventListener('pointerup',end);
-    bubble.addEventListener('pointercancel',end);
-    bubble.addEventListener('pointerleave',end);
-    bubble.addEventListener('click',event=>{
+    gestureArea.addEventListener('pointerup',end);
+    gestureArea.addEventListener('pointercancel',end);
+    gestureArea.addEventListener('pointerleave',end);
+    gestureArea.addEventListener('click',event=>{
       if (suppressTap) { event.preventDefault(); event.stopPropagation(); }
     }, true);
   };
