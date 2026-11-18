@@ -1150,6 +1150,44 @@ $('refreshLinks').addEventListener('click',async()=>{
      search.value=search.value;
    }
  });
+document.addEventListener('DOMContentLoaded', () => {
+  const dialog = $('linkReportDialog');
+  const form = $('linkReportForm');
+  const status = $('linkReportStatus');
+  const send = $('sendLinkReport');
+
+  $('openLinkReport').addEventListener('click', () => {
+    if (!visitorToken) {
+      showVisitorLogin('先に利用者ログインをしてください。');
+      return;
+    }
+    status.textContent = '';
+    dialog.showModal();
+  });
+  $('closeLinkReport').addEventListener('click', () => dialog.close());
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (send.disabled) return;
+    if (!visitorToken) {
+      dialog.close();
+      showVisitorLogin('もう一度ログインしてください。');
+      return;
+    }
+    send.disabled = true;
+    status.textContent = '送信中…';
+    try {
+      const result = await call('submitLinkReport', $('linkReportUrl').value.trim(), getNoticeBrowserId(), visitorToken);
+      if (!result?.ok) throw new Error('報告の保存を確認できませんでした。');
+      status.textContent = '管理者に報告しました。';
+      form.reset();
+    } catch (error) {
+      status.textContent = '送信失敗：' + (error.message || '通信エラー');
+    } finally {
+      send.disabled = false;
+    }
+  });
+}, { once: true });
+
 })();
 
 </script>
@@ -4072,5 +4110,4 @@ footer{margin:16px 4px!important;font-size:11px!important}
 <script src="./ai-launcher.js"></script>
 <dialog id="linkReportDialog" class="link-report-dialog" aria-labelledby="linkReportTitle"><form id="linkReportForm"><h2 id="linkReportTitle">リンク報告</h2><p>管理者に確認してほしいリンクのURLを送信できます。</p><label for="linkReportUrl">URL</label><input id="linkReportUrl" type="url" inputmode="url" maxlength="2048" required placeholder="https://example.com"><p id="linkReportStatus" role="status" aria-live="polite"></p><div class="link-report-actions"><button type="button" id="closeLinkReport">キャンセル</button><button type="submit" id="sendLinkReport">報告する</button></div></form></dialog>
 <style>.link-report-dialog{width:min(92vw,480px);border:1px solid #267d98;border-radius:14px;background:#0b1727;color:#e7faff;padding:24px;box-shadow:0 24px 70px #000b}.link-report-dialog::backdrop{background:#000b}.link-report-dialog h2{margin:0 0 10px}.link-report-dialog p{color:#aac5d3}.link-report-dialog label{display:block;margin:18px 0 6px}.link-report-dialog input{width:100%;padding:12px;border:1px solid #32728b;border-radius:8px;background:#07101c;color:#fff}.link-report-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}.link-report-actions button{padding:10px 15px;border:1px solid #32728b;border-radius:8px;background:#12334d;color:#dff8ff;cursor:pointer}</style>
-<script>(()=>{const dialog=document.getElementById('linkReportDialog'),form=document.getElementById('linkReportForm'),status=document.getElementById('linkReportStatus'),send=document.getElementById('sendLinkReport');document.getElementById('openLinkReport').addEventListener('click',()=>{if(!visitorToken){document.getElementById('loginError').textContent='先に利用者ログインをしてください。';return;}status.textContent='';dialog.showModal();});document.getElementById('closeLinkReport').addEventListener('click',()=>dialog.close());form.addEventListener('submit',async event=>{event.preventDefault();if(!visitorToken)return;send.disabled=true;status.textContent='送信中…';try{await call('submitLinkReport',document.getElementById('linkReportUrl').value.trim(),getNoticeBrowserId(),visitorToken);status.textContent='管理者に報告しました。';form.reset();setTimeout(()=>{if(dialog.open)dialog.close()},1300);}catch(error){status.textContent='送信失敗：'+(error.message||'通信エラー');}finally{send.disabled=false;}})})();</script>
 <dialog id="chatProfileDialog" class="chat-profile-dialog" aria-labelledby="chatProfileTitle"><form id="chatProfileForm"><h2 id="chatProfileTitle">チャット利用情報</h2><p>学校名とフィルターの種類を入力してください。次回から自動で読み込みます。</p><label>学校名<input id="chatProfileSchool" maxlength="80" required autocomplete="organization"></label><label>フィルターの種類<input id="chatProfileFilter" maxlength="80" required placeholder="例：i-FILTER"></label><p id="chatProfileStatus" role="status"></p><div><button type="button" id="cancelChatProfile">キャンセル</button><button type="submit" id="saveChatProfile">保存して続ける</button></div></form></dialog><style>.chat-profile-dialog{width:min(92vw,480px);border:1px solid #2684a0;border-radius:14px;background:#0b1727;color:#e8f9ff;padding:24px;box-shadow:0 24px 70px #000b}.chat-profile-dialog::backdrop{background:#000c}.chat-profile-dialog p{color:#afcbd8;line-height:1.6}.chat-profile-dialog label{display:block;margin:14px 0;font-weight:700}.chat-profile-dialog input{display:block;width:100%;margin-top:6px;padding:12px;border:1px solid #3c7992;border-radius:8px;background:#07101c;color:#fff}.chat-profile-dialog form>div{display:flex;justify-content:flex-end;gap:10px}.chat-profile-dialog button,.chat-profile-edit{padding:9px 12px;border:1px solid #32728b;border-radius:8px;background:#12334d;color:#dff8ff;cursor:pointer}.chat-profile-edit{display:block;margin:10px 0;font-size:12px}</style></body></html>
