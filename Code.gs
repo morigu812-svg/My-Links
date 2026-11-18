@@ -3216,42 +3216,37 @@ function visitorDirectChatProxy(parameters, viewerToken) {
       throw new Error('メッセージ送信IDが不正です。');
     }
   }
-  // 同じ認証・権限を使うRealtime用の短命JWTをサーバー内で発行。
-  const session = getChatRealtimeSession(viewerToken, '', '');
-  if (!session.enabled || !session.visitorDm) {
-    throw new Error('個人トークの認証情報を確認できません。利用者ページから再ログインしてください。');
+  // GASの認証済みセッションから利用者のブラウザIDを引く。クライアント指定のIDは信用しない。
+  const ownBrowser = isAdmin ? '' : CacheService.getScriptCache().get('LINK_CORE_VISITOR_DM_' + viewerToken);
+  if (!isAdmin && (!ownBrowser || !/^[A-Za-z0-9_-]{8,100}$/.test(ownBrowser))) {
+    throw new Error('個人トークの登録を確認できません。利用者ページから再ログインしてください。');
   }
-  // Supabaseのservice_roleキーもJWT署名秘密鍵もブラウザに渡さない。
-  const body = {operation, browser, message, message_id:messageId, before_cursor:beforeCursor};
-  let response;
-  try {
-    response = UrlFetchApp.fetch(session.url + '/rest/v1/rpc/link_core_visitor_dm', {
-      method:'post',
-      contentType:'application/json',
-      headers:{apikey:session.key, Authorization:'Bearer ' + session.token},
-      payload:JSON.stringify(body),
-      muteHttpExceptions:true
-    });
-  } catch (_) {
-    throw new Error('個人トークのサーバーに接続できません。ネットワーク接続を確認してください。');
+  const peer = isAdmin ? browser : ownBrowser;
+  const base = 'link_core_chat?kind=eq.direct&recipient=eq.' + encodeURIComponent('vb_' + peer);
+  if (operation === 'list') {
+    const rows = supabaseChatRequest_('get', 'link_core_chat?kind=eq.direct&recipient=like.vb_*&select=recipient,body,created_at,seq&order=seq.desc&limit=500');
+    const seen = new Set();
+    return {rooms:rows.filter(row => {if (seen.has(row.recipient)) return false; seen.add(row.recipient); return true;})
+      .map(row => ({browserId:String(row.recipient).slice(3),lastMessage:String(row.body).slice(0,90),createdAt:row.created_at}))};
   }
-  const status = response.getResponseCode();
-  let data = null;
-  try { data = JSON.parse(response.getContentText()); } catch (_) {}
-  if (status < 200 || status >= 300) {
-    if (status === 404) {
-      throw new Error('個人トークのSupabase関数が見つかりません。visitor-direct-chat.sql の適用を確認してください（404）。');
-    }
-    if (status === 401 || status === 403) {
-      throw new Error('個人トークの認証が拒否されました。SupabaseのJWT署名設定とアクセス権限を確認してください（HTTP ' + status + '）。');
-    }
-    const reason = data && typeof data.message === 'string' ? data.message.slice(0, 180) : '';
-    throw new Error(reason || ('個人トークの通信に失敗しました（HTTP ' + status + '）。'));
+  if (operation === 'read') {
+    const query = base + (beforeCursor ? '&seq=lt.' + beforeCursor : '') + '&select=id,author,body,created_at,seq&order=seq.desc&limit=101';
+    const rows = supabaseChatRequest_('get', query);
+    const more = rows.length > 100;
+    const page = rows.slice(0,100);
+    return {messages:page.reverse().map(row=>({id:row.id,author:row.author,message:row.body,createdAt:row.created_at,
+      own:row.author === (isAdmin ? '管理者' : '利用者')})),nextCursor:more ? page[0].seq : null};
   }
-  if (!data || typeof data !== 'object' || Array.isArray(data)) {
-    throw new Error('個人トークの返答形式を確認できません。');
-  }
-  return data;
+  // 管理者から未登録の利用者には送らない。本人の登録はログイン時に行う。
+  const identities = supabaseChatRequest_('get', 'link_core_visitor_chat_identity?browser_id=eq.' + encodeURIComponent(peer) + '&select=browser_id&limit=1');
+  if (!identities.length) throw new Error('この利用者はまだ個人トークに接続していません。利用者ページから再ログインしてください。');
+  const cache = CacheService.getScriptCache();
+  const rateKey = 'LINK_CORE_DM_RATE_' + viewerToken;
+  if (cache.get(rateKey)) throw new Error('少し待ってから再送してください。');
+  cache.put(rateKey, '1', 2);
+  supabaseChatRequest_('post', 'link_core_chat', {kind:'direct',id:messageId,created_at:new Date().toISOString(),
+    author:isAdmin ? '管理者' : '利用者',recipient:'vb_' + peer,body:message});
+  return {ok:true};
 }
 
 /** Run from the Apps Script editor. Rerun until all three reports say done. */
