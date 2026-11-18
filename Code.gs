@@ -367,6 +367,8 @@ function clearAuthFailures_(state) {
 
 /** 利用者ページの共有パスワードを検証して閲覧専用トークンを発行する。 */
 function authenticateVisitor(password, browserId, browserSecret) {
+  if (!/^[A-Za-z0-9_-]{8,100}$/.test(String(browserId || ''))) throw new Error('ブラウザIDを確認できません。');
+  if (isVisitorBanned_(browserId)) throw new Error('このブラウザは利用を停止されています。管理者にお問い合わせください。');
   const generation = sessionGeneration_();
   const rateState = getAuthRateState_('VISITOR');
   checkAuthRateLimit_(rateState);
@@ -379,6 +381,7 @@ function authenticateVisitor(password, browserId, browserSecret) {
   clearAuthFailures_(rateState);
   const token = Utilities.getUuid() + Utilities.getUuid();
   storeSession_('VISITOR', token, generation);
+  CacheService.getScriptCache().put('LINK_CORE_VISITOR_BROWSER_' + token, browserId, SESSION_TTL_SECONDS);
   if (/^[A-Za-z0-9_-]{8,100}$/.test(String(browserId || ''))) {
     CacheService.getScriptCache().put('LINK_CORE_VISITOR_PROFILE_' + token, browserId, SESSION_TTL_SECONDS);
   }
@@ -417,7 +420,25 @@ function isSessionValid_(role, token) {
   const savedGeneration = CacheService.getScriptCache().get('LINK_CORE_' + role + '_' + token);
   if (!savedGeneration) return false;
   const [generation, expiresAt] = savedGeneration.split(':');
-  return Number(expiresAt) > Date.now() && generation === sessionGeneration_();
+  if (!(Number(expiresAt) > Date.now() && generation === sessionGeneration_())) return false;
+  if (role === 'VISITOR') {
+    const browser = CacheService.getScriptCache().get('LINK_CORE_VISITOR_BROWSER_' + token);
+    return !!browser && !isVisitorBanned_(browser);
+  }
+  return true;
+}
+
+function isVisitorBanned_(browserId) {
+  if (!/^[A-Za-z0-9_-]{8,100}$/.test(String(browserId || ''))) return false;
+  return PropertiesService.getScriptProperties().getProperty('LINK_CORE_BAN_' + browserId) === '1';
+}
+function setVisitorBan(browserId, banned, adminToken) {
+  requireAdmin_(adminToken);
+  if (!/^[A-Za-z0-9_-]{8,100}$/.test(String(browserId || '')) || typeof banned !== 'boolean') throw new Error('ブラウザIDまたは設定が不正です。');
+  const props = PropertiesService.getScriptProperties();
+  const key = 'LINK_CORE_BAN_' + browserId;
+  if (banned) props.setProperty(key, '1'); else props.deleteProperty(key);
+  return {ok:true, banned};
 }
 
 function storeSession_(role, token, generation) {
@@ -428,7 +449,7 @@ function storeSession_(role, token, generation) {
 
 function logoutCurrentSession(token) {
   requireLinkViewer_(token);
-  CacheService.getScriptCache().removeAll(['LINK_CORE_ADMIN_' + token, 'LINK_CORE_VISITOR_' + token, 'LINK_CORE_VISITOR_DM_' + token, 'LINK_CORE_VISITOR_PROFILE_' + token]);
+  CacheService.getScriptCache().removeAll(['LINK_CORE_ADMIN_' + token, 'LINK_CORE_VISITOR_' + token, 'LINK_CORE_VISITOR_DM_' + token, 'LINK_CORE_VISITOR_PROFILE_' + token, 'LINK_CORE_VISITOR_BROWSER_' + token]);
   return { ok: true };
 }
 
@@ -1579,6 +1600,7 @@ function recordLinkClick(linkId, browserId, visitorToken) {
     const browser = cleanText_(browserId, 100);
     if (!id) throw new Error('リンクIDがありません。');
     if (!/^[A-Za-z0-9_-]{8,100}$/.test(browser)) throw new Error('ブラウザIDが不正です。');
+    if (CacheService.getScriptCache().get('LINK_CORE_VISITOR_BROWSER_' + visitorToken) !== browser) throw new Error('ブラウザIDが一致しません。');
 
     stage = 'リンク一覧の読み込み';
     // 一覧キャッシュを再利用し、クリックのたびに Links シートを開かない。
@@ -1640,7 +1662,7 @@ function getClickLogs(adminToken) {
   const names = getClickBrowserNames_();
   return {logs: rows.filter(row => row[0] !== '').reverse().map(row => ({
     id: String(row[0] || ''), linkId: String(row[1] || ''), title: String(row[2] || ''),
-    url: String(row[3] || ''), clickedAt: toIso_(row[4]), browserId: String(row[5] || ''), browserName: names.get(String(row[5] || '')) || ''
+    url: String(row[3] || ''), clickedAt: toIso_(row[4]), browserId: String(row[5] || ''), browserName: names.get(String(row[5] || '')) || '', banned:isVisitorBanned_(String(row[5] || ''))
   }))};
 }
 

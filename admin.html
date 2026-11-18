@@ -1143,7 +1143,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
 #clickLogView .click-entry:nth-child(even){background:rgba(35,70,95,.22)}#clickLogView .click-entry:hover{background:rgba(29,91,124,.32)}
 #clickLogView .click-entry-title{font-weight:750;color:#e9f8ff;font-size:14px}#clickLogView .click-entry-time{color:#b4cbd7;font-variant-numeric:tabular-nums;white-space:nowrap}
 #clickLogView .log-browser-id>div{font-size:11px;color:#a8bdcb;overflow-wrap:anywhere;margin-top:5px}#clickLogView .log-browser-id .btn{margin:0 6px 5px 0;padding:6px 9px;font-size:11px}
-#clickLogView .log-url a{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:anywhere;line-height:1.5;text-decoration:underline;text-underline-offset:3px}#clickLogView .click-log-action .btn{padding:7px 9px;font-size:11px}
+#clickLogView .log-url a{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:anywhere;line-height:1.5;text-decoration:underline;text-underline-offset:3px}#clickLogView .click-log-action .btn{padding:7px 9px;font-size:11px;display:block;width:100%;margin-bottom:6px}#clickLogView .click-log-table th:nth-child(5){width:105px}#clickLogView .click-ban-button:not(.danger){border-color:#4cbd9a;color:#b8fce0}
 @media(max-width:900px){#clickLogView .click-log-table-wrap{max-height:none;overflow:visible;border:0;background:transparent}#clickLogView .click-log-table,#clickLogView .click-log-table tbody,#clickLogView .click-entry{display:block;width:100%;min-width:0}#clickLogView .click-log-table thead{display:none}#clickLogView .click-entry{margin:0 0 12px;padding:13px 15px;border:1px solid #31546b;border-radius:12px;background:#0b1b2e;box-shadow:0 5px 18px #0003}#clickLogView .click-entry:nth-child(even){background:#102138}#clickLogView .click-entry td{display:grid;grid-template-columns:96px minmax(0,1fr);gap:8px;align-items:start;width:100%;padding:9px 0;border-bottom:1px solid #203b50}#clickLogView .click-entry td:last-child{border:0}#clickLogView .click-entry td::before{content:attr(data-label);color:#83bacd;font-size:11px;font-weight:750;white-space:nowrap}#clickLogView .click-entry-time{white-space:normal}#clickLogView .click-entry-title{font-size:15px}#clickLogView .click-log-table .click-log-empty{display:block}}
 @media(max-width:430px){#clickLogView .click-entry td{grid-template-columns:76px minmax(0,1fr)}#clickLogView .click-entry{padding:11px}}
 </style>
@@ -1644,7 +1644,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
 
   function serverCall(method, ...args) {
     const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'deleteLink', 'getLinkReports', 'markLinkReportChecked', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'getVisitorCounterStats', 'deleteVisitorCounterBefore20261114', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'deleteVisitorChatMessage', 'getChatScreenshot', 'sendChatMessage', 'sendChatScreenshot', 'getStaffChatMessages', 'getStaffChatAttachment', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendStaffChatAttachment', 'startStaffChatLargeUpload', 'appendStaffChatLargeUploadChunk',
-        'finishStaffChatLargeUpload', 'getStaffChatAttachmentChunk', 'deleteStaffChatMessage', 'sendPrivateChatMessage', 'visitorDirectChatProxy', 'getClickLogs', 'setClickBrowserName', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
+        'finishStaffChatLargeUpload', 'getStaffChatAttachmentChunk', 'deleteStaffChatMessage', 'sendPrivateChatMessage', 'visitorDirectChatProxy', 'getClickLogs', 'setVisitorBan', 'setClickBrowserName', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
     if (protectedMethods.includes(method)) {
       const token = adminSession.getItem(ADMIN_TOKEN_KEY) || '';
       // 呼び出し元（埋め込みメモ帳など）が既にトークンを渡している場合は二重追加しない。
@@ -2474,7 +2474,20 @@ document.getElementById('authSubmit').disabled = false;
         try{const result=await serverCall('deleteClickLog',log.id);if(!result||!result.ok)throw new Error('削除完了の応答がありません。');tr.remove();const remaining=body.querySelectorAll('tr').length;if(!remaining){renderClickLogs([]);}const count=body.querySelectorAll('tr').length;$('clickLogStatus').textContent='履歴を1件削除しました。';}
         catch(error){remove.disabled=false;$('clickLogStatus').textContent='削除に失敗しました：'+(error.message||'通信エラー');}
       });
-      actionCell.appendChild(remove);tr.append(time,title,browserCell,urlCell,actionCell);body.appendChild(tr);
+      actionCell.appendChild(remove);
+      if (/^[A-Za-z0-9_-]{8,100}$/.test(log.browserId)) {
+        const ban=document.createElement('button');ban.type='button';ban.className='btn click-ban-button'+(log.banned?'':' danger');ban.textContent=log.banned?'BAN解除':'BAN';
+        ban.setAttribute('aria-label',(log.banned?'BAN解除':'BAN')+'：ブラウザID '+log.browserId);
+        ban.addEventListener('click',async()=>{
+          const blocked=!log.banned;
+          if(!confirm('ブラウザID '+log.browserId+' を'+(blocked?'BANしますか？ このブラウザのログイン済みセッションも無効になります。':'BAN解除しますか？')))return;
+          ban.disabled=true;
+          try{await serverCall('setVisitorBan',log.browserId,blocked);clickLogsLoaded=false;await refreshClickLogs();}
+          catch(error){$('clickLogStatus').textContent='BAN設定に失敗しました：'+(error.message||'通信エラー');ban.disabled=false;}
+        });
+        actionCell.append(ban);
+      }
+      tr.append(time,title,browserCell,urlCell,actionCell);body.appendChild(tr);
     });
   }
   async function refreshClickLogs(){
