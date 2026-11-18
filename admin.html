@@ -1160,7 +1160,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
 <script src="./chat-realtime.js?v=staff-direct-pilot"></script>
 <link rel="stylesheet" href="./visitor-direct-chat.css">
 <script src="./visitor-direct-chat.js"></script>
-<script src="./chat-screenshot.js?v=1" defer></script>
+<script src="./chat-screenshot.js?v=clipboard1" defer></script>
 <style id="visitor-counter-style">
 .visitor-counter-strip{display:flex;align-items:center;flex-wrap:wrap;gap:10px 20px;margin:11px 0 13px;padding:11px 14px;border:1px solid rgba(53,217,255,.28);border-radius:10px;background:rgba(14,38,51,.65);font-size:12px;color:#a9c7d4}
 .visitor-counter-strip strong{color:#82eaff;font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;margin-left:5px}
@@ -3096,9 +3096,21 @@ $('closeChat').addEventListener('click', closeMainChat);
   chatRecipient.addEventListener('input', () => { adminVisitorReply?.clear(); updateScreenshotButton(); });
   chatForm.addEventListener('submit', updateScreenshotButton);
   screenshotButton.onclick = () => screenshotInput.click();
-  screenshotInput.onchange = async () => {
+  screenshotInput.onchange = () => {
     const file = screenshotInput.files[0];
     screenshotInput.value = '';
+    void sendChatImage(file);
+  };
+  chatInput.addEventListener('paste', event => {
+    const file = pastedChatImage(event);
+    if (!file) return;
+    if (screenshotButton.disabled) {
+      screenshotStatus.textContent = chatRecipient.value.trim() ? '個別チャットIDが指定されているため、共通チャットには送信しません。' : '画像を送信中です。';
+      return;
+    }
+    if (window.confirm('この写真を共通チャットの全員に送信しますか？')) void sendChatImage(file);
+  });
+  async function sendChatImage(file) {
     const token = adminSession.getItem(ADMIN_TOKEN_KEY);
     if (!file || !token || chatRecipient.value.trim() || screenshotSending) return;
     screenshotSending = true;
@@ -4070,6 +4082,13 @@ $('closeChat').addEventListener('click', closeMainChat);
     if (image && staffPhotoRoomGeneration === staffOpenGeneration && staffChat.classList.contains('open')) {
       void sendStaffChatPost(image);
     }
+  });
+
+  staffInput.addEventListener('paste', event => {
+    const file = pastedChatImage(event);
+    if (!file || !staffChat.classList.contains('open') || staffActiveRoom === null || $('staffChatSend').disabled) return;
+    const destination = staffActiveRoom ? 'この個人トーク' : '管理者の全体トーク';
+    if (window.confirm('この写真を' + destination + 'に送信しますか？')) void sendStaffChatPost(file);
   });
 
   async function sendStaffChatPost(screenshot = null) {

@@ -26,3 +26,13 @@ async function encodeChatScreenshot(file) {
     URL.revokeObjectURL(url);
   }
 }
+
+function pastedChatImage(event) {
+  const clipboard = event.clipboardData;
+  if (!clipboard) return null;
+  const file = Array.from(clipboard.files || []).find(file => file.type.startsWith('image/')) ||
+    Array.from(clipboard.items || []).find(item => item.kind === 'file' && item.type.startsWith('image/'))?.getAsFile();
+  if (!file) return null;
+  event.preventDefault();
+  return file;
+}
