@@ -1643,7 +1643,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
   }
 
   function serverCall(method, ...args) {
-    const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'deleteLink', 'getLinkReports', 'markLinkReportChecked', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'getVisitorCounterStats', 'deleteVisitorCounterBefore20261114', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getAdminVisitorChatRead', 'markAdminVisitorChatRead', 'getChatMessages', 'deleteVisitorChatMessage', 'getChatScreenshot', 'sendChatMessage', 'sendChatScreenshot', 'getStaffChatMessages', 'getStaffChatAttachment', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendStaffChatAttachment', 'startStaffChatLargeUpload', 'appendStaffChatLargeUploadChunk',
+    const protectedMethods = ['sendChatReply', 'getChatRealtimeSession', 'getLinks', 'getOfficialLinks', 'saveLink', 'deleteLink', 'getLinkReports', 'markLinkReportChecked', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'getVisitorCounterStats', 'deleteVisitorCounterBefore20261114', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getAdminVisitorChatRead', 'markAdminVisitorChatRead', 'getChatMessages', 'deleteVisitorChatMessage', 'getChatScreenshot', 'sendChatMessage', 'sendChatScreenshot', 'getStaffChatMessages', 'getStaffChatAttachment', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendStaffChatAttachment', 'startStaffChatLargeUpload', 'appendStaffChatLargeUploadChunk',
         'finishStaffChatLargeUpload', 'getStaffChatAttachmentChunk', 'deleteStaffChatMessage', 'sendPrivateChatMessage', 'visitorDirectChatProxy', 'getClickLogs', 'setVisitorBan', 'setClickBrowserName', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
     if (protectedMethods.includes(method)) {
       const token = adminSession.getItem(ADMIN_TOKEN_KEY) || '';
@@ -3103,7 +3103,7 @@ $('closeChat').addEventListener('click', closeMainChat);
     try {
       const recipient = $('chatRecipient').value.trim();
       const fallback = () => {
-        if (target) throw new Error('引用返信にはSupabaseへの接続が必要です。');
+        if (target) return serverCall('sendChatReply', message, recipient ? 'direct' : 'public', recipient, target.id, '');
         return recipient ? serverCall('sendPrivateChatMessage', message, recipient) : serverCall('sendChatMessage', message);
       };
       await (adminChatRealtime?.send(recipient ? 'direct' : 'public', message, recipient, fallback, target?.id) ?? fallback());
@@ -3893,7 +3893,7 @@ $('closeChat').addEventListener('click', closeMainChat);
   const adminChatRealtime = window.createChatRealtime?.(
     () => {
       const token = adminSession.getItem(ADMIN_TOKEN_KEY);
-      return token ? serverCall('getChatRealtimeSession', 'visitorDirectChatProxy', token, '', staffBrowserId) : {enabled:false};
+      return token ? serverCall('getChatRealtimeSession', token, '', staffBrowserId) : {enabled:false};
     },
     topics => {
       if (document.hidden) return;
@@ -4092,7 +4092,7 @@ $('closeChat').addEventListener('click', closeMainChat);
         }
       } else {
         const fallback = () => {
-          if (target) throw new Error('引用返信にはSupabaseへの接続が必要です。');
+          if (target) return serverCall('sendChatReply', body, 'staff', recipientId, target.id, staffBrowserId);
           return serverCall('sendStaffChatMessage', body, token, staffBrowserId, recipientId);
         };
         result = await (adminChatRealtime?.send('staff', body, recipientId, fallback, target?.id) ?? fallback());

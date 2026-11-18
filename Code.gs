@@ -1482,6 +1482,42 @@ function sendChatMessage(message, viewerToken) {
   return postPublicChat_(message, viewerToken, '');
 }
 
+function sendChatReply(message, chatType, destination, targetId, browserId, viewerToken) {
+  requireLinkViewer_(viewerToken);
+  if (supabaseChatMode_() !== 'supabase') throw new Error('引用返信はチャットの移行完了後に利用できます。');
+  const body = cleanText_(message, CHAT_MAX_LENGTH);
+  if (!body || /[\u0000-\u0008\u000B\u000C\u000E-\u001F]/.test(body)) throw new Error('メッセージを確認してください。');
+  if (typeof targetId !== 'string' || !/^[0-9a-f-]{36}$/i.test(targetId)) throw new Error('返信先が不正です。');
+  const isAdmin = isSessionValid_('ADMIN', viewerToken);
+  if (!['public','direct','staff'].includes(chatType) || (chatType !== 'public' && !isAdmin)) throw new Error('返信先の権限がありません。');
+  let recipient = '';
+  let sender = '';
+  if (chatType === 'direct') {
+    if (!/^dm_[0-9a-f]{64}$/.test(String(destination || ''))) throw new Error('宛先が不正です。');
+    recipient = destination;
+  } else if (chatType === 'staff') {
+    sender = staffChatMailboxId_(browserId);
+    if (!sender) throw new Error('管理者ブラウザIDが不正です。');
+    recipient = staffChatPrivateRecipient_(destination, browserId);
+  } else if (destination) throw new Error('公開チャットに宛先は指定できません。');
+  const rate = CacheService.getScriptCache(), rateKey='LINK_CORE_REPLY_RATE_'+viewerToken;
+  if (rate.get(rateKey)) throw new Error('少し待ってから再送してください。');
+  const lock = LockService.getScriptLock();lock.waitLock(10000);
+  try {
+    requireLinkViewer_(viewerToken);
+    const targets = supabaseChatRows_({kind:'eq.'+chatType,id:'eq.'+targetId,select:'sender,recipient',limit:1});
+    const target=targets[0];
+    if (!target || (chatType!=='staff' && target.recipient!==recipient) ||
+        (chatType==='staff' && !((!recipient && !target.recipient) ||
+          (recipient && ((target.sender===sender && target.recipient===recipient) ||
+            (target.sender===recipient && target.recipient===sender)))))) throw new Error('返信先のメッセージが見つかりません。');
+    requireChatWritable_();
+    supabaseChatInsert_(chatType,{author:isAdmin?'管理者':'利用者',body,recipient,sender,reply_to:targetId});
+    rate.put(rateKey,'1',3);
+    return {ok:true};
+  }finally{lock.releaseLock();}
+}
+
 function visitorChatProfileSheet_() {
   const id = PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY);
   if (!id) throw new Error('スプレッドシートIDが未設定です。');
@@ -3159,8 +3195,12 @@ function supabaseChatDelete_(kind, id) {
 }
 
 function supabasePublicMessages_() {
-  return supabaseChatRows_({kind:'eq.public', select:'id,author,body,created_at,has_image', order:'seq.desc', limit:CHAT_MAX_MESSAGES})
-    .reverse().map(row => ({id:row.id, author:row.author, message:row.body, createdAt:row.created_at, hasScreenshot:!!row.has_image}));
+  const rows = supabaseChatRows_({kind:'eq.public', select:'id,author,body,created_at,has_image,reply_to', order:'seq.desc', limit:CHAT_MAX_MESSAGES});
+  const targets = new Map(rows.map(row => [row.id, row]));
+  return rows.reverse().map(row => ({id:row.id, author:row.author, message:row.body,
+    createdAt:row.created_at, hasScreenshot:!!row.has_image,
+    reply:targets.has(row.reply_to) ? {author:targets.get(row.reply_to).author || '利用者',
+      message:String(targets.get(row.reply_to).body || 'メッセージ').slice(0,120)} : undefined}));
 }
 
 function supabaseStaffAccess_(mailbox) {
@@ -3192,7 +3232,7 @@ function supabaseStaffChatMessages_(opts, mailbox, metadata, limit) {
     const unreadCount = mailbox ? rows.filter(row => row.sender !== mailbox && !row.readers.includes(mailbox)).length : 0;
     return Object.assign({messages:[], nextCursor:null, unreadCount}, metadata);
   }
-  const query = Object.assign(base, {select:'seq,id,sender,recipient,body,created_at,readers,file_name,file_mime,file_size', limit:limit+1});
+  const query = Object.assign(base, {select:'seq,id,sender,recipient,body,created_at,readers,file_name,file_mime,file_size,reply_to', limit:limit+1});
   if (roomScoped) {
     if (opts.room) query.or = '(and(sender.eq.' + mailbox + ',recipient.eq.' + opts.room +
       '),and(sender.eq.' + opts.room + ',recipient.eq.' + mailbox + '))';
@@ -3203,10 +3243,14 @@ function supabaseStaffChatMessages_(opts, mailbox, metadata, limit) {
   const hasMore = rows.length > limit;
   const page = rows.slice(0, limit);
   const names = PropertiesService.getScriptProperties().getProperties();
+  const targets = new Map(page.map(row => [row.id, row]));
   const messages = page.slice().reverse().map(row => ({
     id:row.id, author:names[STAFF_CHAT_MEMBER_PREFIX+row.sender] || '管理者',
     message:row.body, createdAt:row.created_at, own:!!mailbox && row.sender===mailbox,
     readCount:row.readers.length, unread:!!mailbox && row.sender!==mailbox && !row.readers.includes(mailbox),
+    reply:targets.has(row.reply_to) ? {author:names[STAFF_CHAT_MEMBER_PREFIX+targets.get(row.reply_to).sender] || '管理者',
+      senderMailbox:targets.get(row.reply_to).sender,
+      message:String(targets.get(row.reply_to).body || targets.get(row.reply_to).file_name || 'メッセージ').slice(0,120)} : undefined,
     peerRead:roomScoped && !!opts.room && row.sender===mailbox && row.recipient===opts.room
       ? row.readers.includes(opts.room) : null,
     private:!!row.recipient, recipientName:names[STAFF_CHAT_MEMBER_PREFIX+row.recipient] || '管理者',

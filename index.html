@@ -837,7 +837,7 @@ function readViewerChat(token, secret) {
 function sendViewerChat(message, token) {
  const target = viewerReply?.target;
  const fallback = () => {
-  if (target) throw new Error('引用返信にはSupabaseへの接続が必要です。');
+  if (target) return call('sendChatReply', message, 'public', '', target.id, '', token);
   return call('sendChatMessage', message, token);
  };
  return viewerChatRealtime?.send('public', message, '', fallback, target?.id) ?? fallback();
