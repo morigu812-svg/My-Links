@@ -1841,15 +1841,13 @@ function watchSessionExpiry(deadline, onExpired) {
         const {data, error} = await client.auth.signInWithPassword({
           email: $('authEmail').value.trim(), password: authField.value
         });
-        if (error) {
-          const message = {
-            invalid_credentials: 'Supabaseで設定したメールアドレスとパスワードを確認してください。',
-            email_not_confirmed: 'Supabaseでメールアドレスの確認が必要です。',
-            hook_timeout: 'Supabaseの認証フックがタイムアウトしました。'
-          }[error.code];
-          const reference = error.code || error.status || error.name || 'unknown';
-          throw new Error((message || 'Supabaseログインに失敗しました。') + '（' + reference + '）');
+        if (error?.name === 'AuthRetryableFetchError') {
+          const status = Number(error.status);
+          if (status >= 500) throw new Error('Supabaseの認証APIが応答エラーを返しました（HTTP ' + status + '）。');
+          const detail = String(error.message || '').match(/Load failed|Failed to fetch|NetworkError|AbortError/i)?.[0];
+          throw new Error('Supabaseの認証APIからHTTP応答を受け取れませんでした' + (detail ? '（' + detail + '）' : '') + '。');
         }
+        if (error) throw new Error('Supabaseログインに失敗しました（' + (error.code || error.status || error.name) + '）。');
         if (!data.session) throw new Error('Supabaseからログイン情報を受け取れませんでした。');
         authResult = await serverCall('authenticateAdminWithSupabase', data.session.access_token);
       } else {
