@@ -1134,6 +1134,19 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
 .staff-file-card .staff-file-size { display:block; color:var(--muted); font-size:11px; }
 .staff-file-card button { flex:0 0 auto; }
 </style>
+<style id="click-history-readable-style">
+#clickLogView .click-log-table-wrap{border-color:#28526a;background:#071321;max-height:min(68vh,820px)}
+#clickLogView .click-log-table{table-layout:fixed;min-width:0;font-size:13px}
+#clickLogView .click-log-table th{z-index:1;letter-spacing:.04em;font-size:11px;background:#10253a;border-bottom:1px solid #34768e}
+#clickLogView .click-log-table th:nth-child(1){width:165px}#clickLogView .click-log-table th:nth-child(2){width:23%}#clickLogView .click-log-table th:nth-child(3){width:25%}#clickLogView .click-log-table th:nth-child(5){width:82px}
+#clickLogView .click-log-table td{padding:15px 12px;border-color:#254054;line-height:1.55;overflow-wrap:anywhere}
+#clickLogView .click-entry:nth-child(even){background:rgba(35,70,95,.22)}#clickLogView .click-entry:hover{background:rgba(29,91,124,.32)}
+#clickLogView .click-entry-title{font-weight:750;color:#e9f8ff;font-size:14px}#clickLogView .click-entry-time{color:#b4cbd7;font-variant-numeric:tabular-nums;white-space:nowrap}
+#clickLogView .log-browser-id>div{font-size:11px;color:#a8bdcb;overflow-wrap:anywhere;margin-top:5px}#clickLogView .log-browser-id .btn{margin:0 6px 5px 0;padding:6px 9px;font-size:11px}
+#clickLogView .log-url a{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:anywhere;line-height:1.5;text-decoration:underline;text-underline-offset:3px}#clickLogView .click-log-action .btn{padding:7px 9px;font-size:11px}
+@media(max-width:900px){#clickLogView .click-log-table-wrap{max-height:none;overflow:visible;border:0;background:transparent}#clickLogView .click-log-table,#clickLogView .click-log-table tbody,#clickLogView .click-entry{display:block;width:100%;min-width:0}#clickLogView .click-log-table thead{display:none}#clickLogView .click-entry{margin:0 0 12px;padding:13px 15px;border:1px solid #31546b;border-radius:12px;background:#0b1b2e;box-shadow:0 5px 18px #0003}#clickLogView .click-entry:nth-child(even){background:#102138}#clickLogView .click-entry td{display:grid;grid-template-columns:96px minmax(0,1fr);gap:8px;align-items:start;width:100%;padding:9px 0;border-bottom:1px solid #203b50}#clickLogView .click-entry td:last-child{border:0}#clickLogView .click-entry td::before{content:attr(data-label);color:#83bacd;font-size:11px;font-weight:750;white-space:nowrap}#clickLogView .click-entry-time{white-space:normal}#clickLogView .click-entry-title{font-size:15px}#clickLogView .click-log-table .click-log-empty{display:block}}
+@media(max-width:430px){#clickLogView .click-entry td{grid-template-columns:76px minmax(0,1fr)}#clickLogView .click-entry{padding:11px}}
+</style>
 <style id="link-feed-privacy-note-style">
 #finderWindow .link-feed-privacy-note{margin:0 0 14px;padding:12px 14px;border:1px solid rgba(53,217,255,.34);border-radius:10px;background:rgba(15,40,64,.65);box-shadow:inset 3px 0 rgba(53,217,255,.55)}
 #finderWindow .link-feed-privacy-note p{margin:0 0 7px;color:#e6f5ff!important;font-size:13px;line-height:1.6;font-weight:700}
@@ -1335,7 +1348,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
     <div id="noticeReadAdminBox" class="click-log-status-card"><strong>お知らせ既読数</strong><span id="noticeReadAdminCount">未取得</span><button id="refreshNoticeReadCount" class="btn" type="button">↻ 更新</button></div>
     <div class="click-log-table-wrap"><table class="click-log-table">
       <thead><tr><th>クリック日時</th><th>リンク名</th><th>ブラウザID</th><th>URL</th><th>操作</th></tr></thead>
-      <tbody id="clickLogRows"><tr><td colspan="4">まだ履歴はありません。</td></tr></tbody>
+      <tbody id="clickLogRows"><tr><td colspan="5">まだ履歴はありません。</td></tr></tbody>
     </table></div>
     </div>
     <div id="otherHistoryView" hidden>
@@ -2438,10 +2451,10 @@ document.getElementById('authSubmit').disabled = false;
     const body=$('clickLogRows');body.replaceChildren();
     if(!logs.length){const tr=document.createElement('tr');const td=document.createElement('td');td.colSpan=5;td.className='click-log-empty';td.textContent='まだクリック履歴はありません。';tr.appendChild(td);body.appendChild(tr);return;}
     logs.forEach(log=>{
-      const tr=document.createElement('tr');const time=document.createElement('td');const date=new Date(log.clickedAt);
-      time.textContent=isNaN(date.getTime())?'日時不明':date.toLocaleString('ja-JP');
-      const title=document.createElement('td');title.textContent=log.title||'（タイトルなし）';
-      const browserCell=historyBrowserCell(log, '旧データ（未識別）', 'clickLogStatus', 'clickLogView', refreshClickLogs);
+      const tr=document.createElement('tr');tr.className='click-entry';const time=document.createElement('td');time.dataset.label='クリック日時';const date=new Date(log.clickedAt);
+      time.textContent=isNaN(date.getTime())?'日時不明':date.toLocaleString('ja-JP',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});time.className='click-entry-time';
+      const title=document.createElement('td');title.dataset.label='リンク名';title.className='click-entry-title';title.textContent=log.title||'（タイトルなし）';
+      const browserCell=historyBrowserCell(log, '旧データ（未識別）', 'clickLogStatus', 'clickLogView', refreshClickLogs);browserCell.dataset.label='ブラウザ';
       if (/^[A-Za-z0-9_-]{8,100}$/.test(log.browserId)) {
         const direct = document.createElement('button');
         direct.type = 'button';
@@ -2451,9 +2464,9 @@ document.getElementById('authSubmit').disabled = false;
           browserCell.querySelector('.click-browser-name')?.dataset.browserName || log.browserName || ''));
         browserCell.append(direct);
       }
-      const urlCell=document.createElement('td');urlCell.className='log-url';
+      const urlCell=document.createElement('td');urlCell.className='log-url';urlCell.dataset.label='URL';
       if(log.url.indexOf('https://')===0||log.url.indexOf('http://')===0){const a=document.createElement('a');a.href=log.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent=log.url;urlCell.appendChild(a);}else{urlCell.textContent=log.url||'';}
-      const actionCell=document.createElement('td');actionCell.className='click-log-action';
+      const actionCell=document.createElement('td');actionCell.className='click-log-action';actionCell.dataset.label='操作';
       const remove=document.createElement('button');remove.type='button';remove.className='btn danger click-log-delete-one';remove.textContent='削除';remove.addEventListener('click',async()=>{
         if(!confirm('「'+(log.title||'（タイトルなし）')+'」のクリック履歴を1件削除しますか？'))return;
         remove.disabled=true;
