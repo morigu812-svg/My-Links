@@ -29,3 +29,12 @@
 .visitor-dm textarea { flex: 1; min-width: 0; font-size: 16px; }
 .visitor-dm [data-status] { margin: 0; font-size: 12px; color: #b1c7dc; }
 .visitor-dm [data-status]:empty { display: none; }
+
+/* 管理者の個人トークは管理者専用チャットと同じメイン画面で表示する。 */
+.visitor-dm-main[open]{position:relative;inset:auto;display:flex;width:100%;max-width:none;max-height:none;min-height:calc(100vh - 190px);margin:0;padding:25px 27px;border:0;border-radius:0;background:transparent!important;box-shadow:none;color:#e8f0fa;gap:14px}
+.visitor-dm-main:not(.open){display:none!important}
+.visitor-dm-main header{padding:0 0 15px;border-bottom:1px solid #2b4c60}.visitor-dm-main header::before{content:'LINK CORE / CHAT';display:block;color:#59d7ef;font-size:11px;font-weight:800;letter-spacing:.1em}.visitor-dm-main h2{flex:1;font-size:25px}.visitor-dm-main header button,.visitor-dm-main [data-back]{border:1px solid #3b6984;border-radius:8px;background:#142b42;color:#d9f7ff;padding:8px 13px;cursor:pointer}
+.visitor-dm-main .visitor-dm-list{display:grid;align-content:start;gap:9px;overflow:visible}.visitor-dm-main .visitor-dm-list button{padding:16px;border:1px solid #315770;border-radius:11px;background:#102038;color:#e8f8ff;cursor:pointer}.visitor-dm-main .visitor-dm-list button:hover{border-color:#46c8e7;background:#15334c}
+.visitor-dm-main .visitor-dm-thread{flex:1;min-height:360px;max-height:min(65vh,760px);padding:16px;border:1px solid #294b63;border-radius:16px;background:linear-gradient(165deg,#101c2e,#0b1422 70%)}.visitor-dm-main .visitor-dm-thread>div{gap:12px}.visitor-dm-main .visitor-dm-message>div{padding:10px 14px;border:1px solid #34516d;border-radius:13px;font-size:14px;line-height:1.6}.visitor-dm-main .visitor-dm-message.own>div{border-color:#2786a0;background:#16435c}.visitor-dm-main .visitor-dm-message time{padding:0 3px}
+.visitor-dm-main form{padding:14px;border:1px solid #294b63;border-radius:13px;background:#0d1c2e}.visitor-dm-main textarea{padding:12px;min-height:80px;border:1px solid #355b73;border-radius:9px;background:#081521;color:#f0fbff;resize:vertical}.visitor-dm-main form button{padding:11px 18px;border:1px solid #36a6c8;border-radius:9px;background:#15516d;color:#f3fcff;cursor:pointer}
+@media(max-width:760px){.visitor-dm-main[open]{min-height:calc(100vh - 130px);padding:16px 11px}.visitor-dm-main h2{font-size:20px}.visitor-dm-main .visitor-dm-thread{min-height:280px;max-height:58vh;padding:10px}.visitor-dm-main form{padding:10px}}

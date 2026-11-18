@@ -1,7 +1,7 @@
 (() => {
-  window.createVisitorDirectChat = function (request, isAdmin) {
+  window.createVisitorDirectChat = function (request, isAdmin, layout = {}) {
     const panel = document.createElement('dialog');
-    panel.className = 'visitor-dm';
+    panel.className = 'visitor-dm' + (layout.main ? ' visitor-dm-main click-log-panel chat-main-panel' : '');
     panel.setAttribute('aria-labelledby', 'visitorDmTitle');
     panel.innerHTML = `
       <header><h2 id="visitorDmTitle">個人トーク</h2><button type="button" data-close>閉じる</button></header>
@@ -16,7 +16,7 @@
         <button type="submit">送信</button>
       </form>
       <p data-status role="status"></p>`;
-    document.body.append(panel);
+    (layout.main ? layout.container : document.body).append(panel);
     const find = selector => panel.querySelector(selector);
     const title = find('h2');
     const rooms = find('[data-rooms]');
@@ -134,11 +134,11 @@
       form.hidden = isList;
       older.hidden = true;
       status.textContent = '読み込み中…';
-      if (!panel.open) panel.showModal();
+      if (!panel.open) { if (layout.main) { layout.onOpen?.(panel); panel.show(); } else panel.showModal(); }
       void refresh();
     }
 
-    find('[data-close]').addEventListener('click', () => panel.close());
+    find('[data-close]').addEventListener('click', () => { panel.close(); layout.onClose?.(); });
     back.addEventListener('click', () => open());
     panel.addEventListener('close', () => { generation++; renderedRooms=''; history.replaceChildren(); rooms.replaceChildren(); input.value=''; });
     older.addEventListener('click', async () => {

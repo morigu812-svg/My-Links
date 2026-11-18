@@ -2383,6 +2383,7 @@ document.getElementById('authSubmit').disabled = false;
   function hideMainChats() {
     $('chatOverlay').classList.remove('open');
     $('staffChatOverlay').classList.remove('open');
+    adminVisitorDirectChat?.close();
   }
   function openMainChat(panel, title) {
     leaveClickLogs();
@@ -3868,7 +3869,7 @@ $('closeChat').addEventListener('click', closeMainChat);
       if (topics.some(topic => !topic.startsWith('lc-chat-staff-'))) void refreshAdminChat();
     }
   );
-  const adminVisitorDirectChat = window.createVisitorDirectChat(params => serverCall('visitorDirectChatProxy', params), true);
+  const adminVisitorDirectChat = window.createVisitorDirectChat(params => serverCall('visitorDirectChatProxy', params), true, {main:true,container:document.querySelector('.finder-content'),onOpen:panel=>openMainChat(panel,'個人トーク'),onClose:closeMainChat});
   $('openVisitorDirectAdmin').addEventListener('click', () => adminVisitorDirectChat.open());
   let adminPageRealtimeToken = '';
   function startAdminChatRealtime() {
