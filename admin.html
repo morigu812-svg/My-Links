@@ -1157,7 +1157,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
 <script src="./chat-reply.js"></script>
 <link rel="stylesheet" href="./chat-preview.css">
 <script src="./chat-preview.js"></script>
-<script src="./chat-realtime.js"></script>
+<script src="./chat-realtime.js?v=staff-direct-pilot"></script>
 <link rel="stylesheet" href="./visitor-direct-chat.css">
 <script src="./visitor-direct-chat.js"></script>
 <script src="./chat-screenshot.js?v=1" defer></script>
@@ -3667,7 +3667,20 @@ $('closeChat').addEventListener('click', closeMainChat);
     }
   }
 
+  const staffDirectPilot = new URLSearchParams(location.search).get('staffDirect') === '1';
+
   async function readStaffRoom(token, options) {
+    if (staffDirectPilot && Object.prototype.hasOwnProperty.call(options, 'room')) {
+      if (!adminChatRealtime) throw new Error('チャット接続を準備できませんでした。');
+      const result = await adminChatRealtime.read({
+        chat_type:'staff', room:options.room, page_size:options.limit, before_cursor:options.beforeRow ?? null
+      });
+      for (const item of result.messages || []) {
+        if (item.senderMailbox) item.author = staffRealtimeNames.get(item.senderMailbox) || item.author;
+        if (item.reply?.senderMailbox) item.reply.author = staffRealtimeNames.get(item.reply.senderMailbox) || item.reply.author;
+      }
+      return result;
+    }
     const fallback = () => serverCall('getStaffChatMessages', token, staffBrowserId, options);
     if (!Object.prototype.hasOwnProperty.call(options, 'room') || !staffOwnMailbox || !adminChatRealtime) return fallback();
     const result = await adminChatRealtime.read({
@@ -4106,6 +4119,9 @@ $('closeChat').addEventListener('click', closeMainChat);
             name: file.name, mime: file.type || '', size: file.size, base64
           }, requestId, staffBrowserId, ...(staffOwnMailbox ? [recipientId] : []));
         }
+      } else if (staffDirectPilot) {
+        if (!adminChatRealtime) throw new Error('チャット接続を準備できませんでした。');
+        result = await adminChatRealtime.send('staff', body, recipientId, undefined, target?.id);
       } else {
         const fallback = request => {
           if (target) return serverCall('sendChatReply', body, 'staff', recipientId, target.id, staffBrowserId, request?.message_id || crypto.randomUUID());

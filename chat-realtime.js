@@ -30,16 +30,18 @@
 
     async function chatRequest(action, parameters, fallback) {
       const current = generation;
+      const directOnly = !fallback;
       let session;
       try { session = await getSession(); }
       catch (error) {
-        if (current !== generation) throw error;
+        if (current !== generation || directOnly) throw error;
         return fallback(parameters);
       }
       if (current !== generation) throw new Error('チャット接続が終了しました。');
-      if (!session?.direct || (action === 'send' && !verifiedDirect && !parameters.target_id) ||
+      if (directOnly && !session?.direct) throw new Error('Supabaseのチャット接続を開始できませんでした。');
+      if (!directOnly && (!session?.direct || (action === 'send' && !verifiedDirect && !parameters.target_id) ||
           (action === 'send' && parameters.chat_type === 'staff' &&
-          parameters.destination && !session.recipients?.includes(parameters.destination))) return fallback(parameters);
+          parameters.destination && !session.recipients?.includes(parameters.destination)))) return fallback(parameters);
       try {
         const rpc = action === 'read' ? 'read_replies' : parameters.target_id ? 'send_reply' : 'send_direct';
         const response = await fetch(session.url + '/rest/v1/rpc/link_core_chat_' + rpc, {
@@ -53,6 +55,12 @@
         if (current === generation && action === 'read') verifiedDirect = true;
         return data;
       } catch (error) {
+        if (directOnly) {
+          if (error instanceof TypeError || ['AbortError', 'TimeoutError'].includes(error.name)) {
+            throw new Error('Supabaseに直接接続できませんでした。通信環境を確認してください。');
+          }
+          throw error;
+        }
         // Reads can retry via GAS. A timed-out send may already be committed.
         if (current === generation && action === 'read') {
           verifiedDirect = false;
