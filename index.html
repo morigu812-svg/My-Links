@@ -316,7 +316,7 @@ body.window-resizing,body.window-resizing *{user-select:none!important}
 
 .finder-toolbar{cursor:default}
 /* Finder-style category folders */
-.folder-icon{width:54px;height:44px;color:#e5b84f;filter:drop-shadow(0 3px 7px rgba(0,0,0,.25))}.finder-content .folder-card{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;min-height:132px;padding:14px 10px;border:1px solid #28536b;border-radius:12px;background:linear-gradient(145deg,rgba(17,39,61,.92),rgba(13,19,39,.96));color:#e8b94f;cursor:pointer;transition:transform .16s,border-color .16s,box-shadow .16s}.folder-card:hover{transform:translateY(-2px);border-color:#4edfff;box-shadow:0 0 18px rgba(0,217,255,.16)}.folder-card-name{max-width:100%;overflow-wrap:anywhere;color:#e9f8ff;font-size:13px;font-weight:750}.folder-card-count{color:#8caabd;font-size:10px}.side-folder-mini{width:18px!important;height:16px;flex:none}.side-folder-mini .folder-icon{width:18px;height:15px;filter:none;color:#d9ad4c}.folder-toolbar{grid-column:1/-1;display:flex;align-items:center;gap:12px;margin:0 0 5px;padding:0 0 12px;border-bottom:1px solid #1a3e54;color:#8eacc0;font-size:11px}.folder-toolbar button{padding:6px 10px;border:1px solid #28536b;border-radius:7px;background:#10283b;color:#bcefff;cursor:pointer}
+.folder-icon{width:54px;height:44px;color:#e5b84f;filter:drop-shadow(0 3px 7px rgba(0,0,0,.25))}.finder-content .folder-card{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;min-height:132px;padding:14px 10px;border:1px solid #28536b;border-radius:12px;background:linear-gradient(145deg,rgba(17,39,61,.92),rgba(13,19,39,.96));color:#e8b94f;cursor:pointer;transition:transform .16s,border-color .16s,box-shadow .16s}.folder-card:hover{transform:translateY(-2px);border-color:#4edfff;box-shadow:0 0 18px rgba(0,217,255,.16)}.folder-card .new-label{margin:0!important;flex:none}.side-item .new-badge{margin-left:auto}.folder-card-name{max-width:100%;overflow-wrap:anywhere;color:#e9f8ff;font-size:13px;font-weight:750}.folder-card-count{color:#8caabd;font-size:10px}.side-folder-mini{width:18px!important;height:16px;flex:none}.side-folder-mini .folder-icon{width:18px;height:15px;filter:none;color:#d9ad4c}.folder-toolbar{grid-column:1/-1;display:flex;align-items:center;gap:12px;margin:0 0 5px;padding:0 0 12px;border-bottom:1px solid #1a3e54;color:#8eacc0;font-size:11px}.folder-toolbar button{padding:6px 10px;border:1px solid #28536b;border-radius:7px;background:#10283b;color:#bcefff;cursor:pointer}
 
 .lc-link-card{display:flex!important;flex-direction:row!important}
 .lc-link-info{width:100%}
@@ -668,6 +668,11 @@ function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&l
 function folderParts(path){return String(path||'').split('/').map(part=>part.trim()).filter(Boolean)}
 function folderParent(path){const parts=folderParts(path);parts.pop();return parts.join('/')}
 function folderPath(path) { return folderParts(path).join('/'); }
+function hasNewInFolder(key, sourceLinks) {
+ return sourceLinks.some(link => link.isNew && !readNewLinkIds.has(String(link.id)) &&
+  (key === '__uncategorized__' ? !folderPath(link.category) :
+   folderPath(link.category) === key || folderPath(link.category).startsWith(key + '/')));
+}
 function childFolders(path, sourceLinks) {
   const prefix = path ? path + '/' : '';
   const counts = new Map();
@@ -694,18 +699,19 @@ function visibleLinks(){
  else if(view==='recent')items=items.slice().sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
  return items;
 }
-let renderedCategories, renderedCategory;
+let renderedCategories, renderedCategory, renderedNewLinkCount;
 function render(){
  $('list').setAttribute('aria-busy','false');
  $('list').classList.remove('loading-skeleton');
  const folderIcon="<svg class=\"folder-icon\" viewBox=\"0 0 64 52\" aria-hidden=\"true\"><path d=\"M4 10a5 5 0 0 1 5-5h17l7 7h22a5 5 0 0 1 5 5v4H4z\" fill=\"currentColor\" opacity=\".72\"/><path d=\"M4 17a5 5 0 0 1 5-5h46a5 5 0 0 1 5 5v27a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z\" fill=\"currentColor\"/><path d=\"M4 22h56\" stroke=\"#fff\" stroke-opacity=\".35\" stroke-width=\"2\"/></svg>";
- const folderButton=(name,key,count)=>'<button type="button" class="folder-card" data-open-folder="'+esc(key)+'">'+folderIcon+'<span class="folder-card-name">'+esc(name)+'</span><span class="folder-card-count">'+count+' 個のリンク</span></button>';
+ const folderButton=(name,key,count)=>'<button type="button" class="folder-card" data-open-folder="'+esc(key)+'">'+folderIcon+'<span class="folder-card-name">'+esc(name)+'</span>'+(hasNewInFolder(key,visible)?'<span class="new-label">NEW</span>':'')+'<span class="folder-card-count">'+count+' 個のリンク</span></button>';
  const visible=links;
- if (renderedCategories !== categories || renderedCategory !== selectedCategory) {
-  const catButtons=Array.from(new Set(categories.map(folderPath).filter(Boolean))).map(cat=>{const depth=Math.max(0,folderParts(cat).length-1);const label=folderParts(cat).slice(-1)[0]||cat;return '<button type="button" class="side-item '+(selectedCategory===cat?'selected':'')+'" style="padding-left:'+(10+depth*12)+'px" data-category="'+esc(cat)+'"><span class="side-folder-mini">'+folderIcon+'</span> '+esc(label)+'</button>';}).join('');
+ if (renderedCategories !== categories || renderedCategory !== selectedCategory || renderedNewLinkCount !== readNewLinkIds.size) {
+  const catButtons=Array.from(new Set(categories.map(folderPath).filter(Boolean))).map(cat=>{const depth=Math.max(0,folderParts(cat).length-1);const label=folderParts(cat).slice(-1)[0]||cat;return '<button type="button" class="side-item '+(selectedCategory===cat?'selected':'')+'" style="padding-left:'+(10+depth*12)+'px" data-category="'+esc(cat)+'"><span class="side-folder-mini">'+folderIcon+'</span> '+esc(label)+(hasNewInFolder(cat,visible)?'<span class="new-badge">NEW</span>':'')+'</button>';}).join('');
   $('sideCats').innerHTML=catButtons||'<div style="padding:4px 10px;color:#999;font-size:11px">フォルダがありません</div>';
   renderedCategories = categories;
   renderedCategory = selectedCategory;
+  renderedNewLinkCount = readNewLinkIds.size;
  }
  document.querySelectorAll('[data-view]').forEach(btn=>btn.classList.toggle('selected',!selectedCategory&&btn.dataset.view===view));
  const titles={desktop:'My Desktop',all:'すべてのリンク',favorites:'お気に入り',recent:'最近追加した項目'};
@@ -994,6 +1000,7 @@ $('list').addEventListener('click',event=>{
   markNewLinkAsRead(link);
   const badge=card.querySelector('.new-label');
   if(badge)badge.remove();
+  setTimeout(render,0);
  }
  if(clickLogPending.has(String(link.id)))return;
  clickLogPending.add(String(link.id));
