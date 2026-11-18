@@ -2425,7 +2425,7 @@ document.getElementById('authSubmit').disabled = false;
   }
   function openAdminChat(){if(!adminSession.getItem(ADMIN_TOKEN_KEY)){alert('先に管理者ログインをしてください。');return;}openMainChat(chatOverlay, '利用者チャット');void loadVisitorChatRead().then(()=>{updateVisitorChatUnread(lastVisitorChatMessages);void refreshAdminChat()}).catch(error=>{$('visitorChatStatus').textContent='既読の取得に失敗しました：'+error.message});}
   $('sideChat').addEventListener('click',openAdminChat);
-  $('visitorChatNotice').addEventListener('click', openAdminChat);
+  $('visitorChatNotice').addEventListener('click', () => adminVisitorDirectChat.open());
   const clickLogPanel=$('clickLogPanel');
   let clickLogsLoaded=false,clickLogsLoading=false,clickBrowserNameSaving=false;
   function historyBrowserCell(log, missingLabel, statusId, viewId, refresh) {
