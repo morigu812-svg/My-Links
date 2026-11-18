@@ -3102,8 +3102,8 @@ $('closeChat').addEventListener('click', closeMainChat);
     updateChatSendStatus('visitorChatSendStatus', target ? '返信を送信中…' : '送信中…');
     try {
       const recipient = $('chatRecipient').value.trim();
-      const fallback = () => {
-        if (target) return serverCall('sendChatReply', message, recipient ? 'direct' : 'public', recipient, target.id, '');
+      const fallback = request => {
+        if (target) return serverCall('sendChatReply', message, recipient ? 'direct' : 'public', recipient, target.id, '', request?.message_id || crypto.randomUUID());
         return recipient ? serverCall('sendPrivateChatMessage', message, recipient) : serverCall('sendChatMessage', message);
       };
       await (adminChatRealtime?.send(recipient ? 'direct' : 'public', message, recipient, fallback, target?.id) ?? fallback());
@@ -4103,8 +4103,8 @@ $('closeChat').addEventListener('click', closeMainChat);
           }, requestId, staffBrowserId, ...(staffOwnMailbox ? [recipientId] : []));
         }
       } else {
-        const fallback = () => {
-          if (target) return serverCall('sendChatReply', body, 'staff', recipientId, target.id, staffBrowserId);
+        const fallback = request => {
+          if (target) return serverCall('sendChatReply', body, 'staff', recipientId, target.id, staffBrowserId, request?.message_id || crypto.randomUUID());
           return serverCall('sendStaffChatMessage', body, token, staffBrowserId, recipientId);
         };
         result = await (adminChatRealtime?.send('staff', body, recipientId, fallback, target?.id) ?? fallback());

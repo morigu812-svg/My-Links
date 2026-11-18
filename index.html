@@ -836,8 +836,8 @@ function readViewerChat(token, secret) {
 }
 function sendViewerChat(message, token) {
  const target = viewerReply?.target;
- const fallback = () => {
-  if (target) return call('sendChatReply', message, 'public', '', target.id, '', token);
+ const fallback = request => {
+  if (target) return call('sendChatReply', message, 'public', '', target.id, '', request?.message_id || crypto.randomUUID(), token);
   return call('sendChatMessage', message, token);
  };
  return viewerChatRealtime?.send('public', message, '', fallback, target?.id) ?? fallback();

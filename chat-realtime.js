@@ -34,12 +34,12 @@
       try { session = await getSession(); }
       catch (error) {
         if (current !== generation) throw error;
-        return fallback();
+        return fallback(parameters);
       }
       if (current !== generation) throw new Error('チャット接続が終了しました。');
       if (!session?.direct || (action === 'send' && !verifiedDirect && !parameters.target_id) ||
           (action === 'send' && parameters.chat_type === 'staff' &&
-          parameters.destination && !session.recipients?.includes(parameters.destination))) return fallback();
+          parameters.destination && !session.recipients?.includes(parameters.destination))) return fallback(parameters);
       try {
         const rpc = action === 'read' ? 'read_replies' : parameters.target_id ? 'send_reply' : 'send_direct';
         const response = await fetch(session.url + '/rest/v1/rpc/link_core_chat_' + rpc, {
@@ -56,7 +56,11 @@
         // Reads can retry via GAS. A timed-out send may already be committed.
         if (current === generation && action === 'read') {
           verifiedDirect = false;
-          return fallback();
+          return fallback(parameters);
+        }
+        if (current === generation && action === 'send' && parameters.target_id &&
+            (error instanceof TypeError || error.name === 'AbortError' || error.name === 'TimeoutError')) {
+          return fallback(parameters);
         }
         throw error;
       }

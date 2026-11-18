@@ -1482,12 +1482,13 @@ function sendChatMessage(message, viewerToken) {
   return postPublicChat_(message, viewerToken, '');
 }
 
-function sendChatReply(message, chatType, destination, targetId, browserId, viewerToken) {
+function sendChatReply(message, chatType, destination, targetId, browserId, messageId, viewerToken) {
   requireLinkViewer_(viewerToken);
   if (supabaseChatMode_() !== 'supabase') throw new Error('引用返信はチャットの移行完了後に利用できます。');
   const body = cleanText_(message, CHAT_MAX_LENGTH);
   if (!body || /[\u0000-\u0008\u000B\u000C\u000E-\u001F]/.test(body)) throw new Error('メッセージを確認してください。');
   if (typeof targetId !== 'string' || !/^[0-9a-f-]{36}$/i.test(targetId)) throw new Error('返信先が不正です。');
+  if (typeof messageId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(messageId)) throw new Error('送信IDが不正です。');
   const isAdmin = isSessionValid_('ADMIN', viewerToken);
   if (!['public','direct','staff'].includes(chatType) || (chatType !== 'public' && !isAdmin)) throw new Error('返信先の権限がありません。');
   let recipient = '';
@@ -1505,6 +1506,14 @@ function sendChatReply(message, chatType, destination, targetId, browserId, view
   const lock = LockService.getScriptLock();lock.waitLock(10000);
   try {
     requireLinkViewer_(viewerToken);
+    // 通信が切れた直後に直接送信が完了していても、同じIDで二重投稿しない。
+    const existing = supabaseChatRows_({kind:'eq.'+chatType,id:'eq.'+messageId,
+      select:'body,recipient,sender,reply_to',limit:1})[0];
+    if (existing) {
+      if (existing.body===body && existing.recipient===recipient && existing.reply_to===targetId &&
+          (chatType!=='staff' || existing.sender===sender)) return {ok:true};
+      throw new Error('送信IDが既に使われています。');
+    }
     const targets = supabaseChatRows_({kind:'eq.'+chatType,id:'eq.'+targetId,select:'sender,recipient',limit:1});
     const target=targets[0];
     if (!target || (chatType!=='staff' && target.recipient!==recipient) ||
@@ -1512,7 +1521,15 @@ function sendChatReply(message, chatType, destination, targetId, browserId, view
           (recipient && ((target.sender===sender && target.recipient===recipient) ||
             (target.sender===recipient && target.recipient===sender)))))) throw new Error('返信先のメッセージが見つかりません。');
     requireChatWritable_();
-    supabaseChatInsert_(chatType,{author:isAdmin?'管理者':'利用者',body,recipient,sender,reply_to:targetId});
+    try {
+      supabaseChatRequest_('post','link_core_chat',{kind:chatType,id:messageId,
+        created_at:new Date().toISOString(),author:isAdmin?'管理者':'利用者',body,recipient,sender,reply_to:targetId},'return=minimal');
+    } catch (error) {
+      const committed = supabaseChatRows_({kind:'eq.'+chatType,id:'eq.'+messageId,
+        select:'body,recipient,sender,reply_to',limit:1})[0];
+      if (!committed || committed.body!==body || committed.recipient!==recipient ||
+          committed.reply_to!==targetId || (chatType==='staff' && committed.sender!==sender)) throw error;
+    }
     rate.put(rateKey,'1',3);
     return {ok:true};
   }finally{lock.releaseLock();}
