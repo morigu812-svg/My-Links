@@ -492,6 +492,52 @@ function requireAdmin_(token) {
   }
 }
 
+const LINK_REPORT_SHEET = 'LinkReports';
+function linkReportSheet_(create) {
+  const id = PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY);
+  if (!id) throw new Error('スプレッドシートIDが未設定です。');
+  const ss = SpreadsheetApp.openById(id);
+  let sheet = ss.getSheetByName(LINK_REPORT_SHEET);
+  if (!sheet && create) sheet = ss.insertSheet(LINK_REPORT_SHEET);
+  if (sheet && !sheet.getLastRow()) sheet.appendRow(['ID', '報告日時', 'URL', 'ブラウザID', '確認日時']);
+  return sheet;
+}
+function submitLinkReport(url, browserId, visitorToken) {
+  if (!isSessionValid_('VISITOR', visitorToken)) throw new Error('利用者ログインが必要です。');
+  const value = String(url || '').trim();
+  if (value.length > 2048 || !/^https?:\/\//i.test(value)) throw new Error('http:// または https:// のURLを入力してください。');
+  if (!/^https?:\/\/[^\s/@?#]+(?:[/?#]|$)/i.test(value) || /[\s\u0000-\u001f]/.test(value)) {
+    throw new Error('URLの形式が正しくありません。');
+  }
+  const browser = /^[A-Za-z0-9_-]{8,100}$/.test(String(browserId || '')) ? String(browserId) : '';
+  const lock = LockService.getScriptLock(); lock.waitLock(10000);
+  try { linkReportSheet_(true).appendRow([Utilities.getUuid(), new Date(), safeCell_(value), safeCell_(browser), '']); }
+  finally { lock.releaseLock(); }
+  return {ok:true};
+}
+function getLinkReports(adminToken) {
+  requireAdmin_(adminToken);
+  const sheet = linkReportSheet_(false);
+  if (!sheet || sheet.getLastRow() < 2) return {reports:[], unread:0};
+  const last = sheet.getLastRow();
+  const rows = sheet.getRange(2, 1, last - 1, 5).getValues();
+  return {unread:rows.filter(row=>row[0] && !row[4]).length,
+    reports:rows.slice(-200).reverse().filter(row=>row[0]).map(row=>({id:String(row[0]), date:toIso_(row[1]), url:String(row[2]), browserId:String(row[3]), checked:!!row[4]}))};
+}
+function markLinkReportChecked(id, adminToken) {
+  requireAdmin_(adminToken);
+  if (!/^[0-9a-f-]{36}$/i.test(String(id || ''))) throw new Error('報告IDが不正です。');
+  const lock = LockService.getScriptLock(); lock.waitLock(10000);
+  try {
+    const sheet = linkReportSheet_(false);
+    if (!sheet) throw new Error('報告が見つかりません。');
+    const found = sheet.getRange(2, 1, Math.max(1, sheet.getLastRow()-1), 1).createTextFinder(id).matchEntireCell(true).findNext();
+    if (!found) throw new Error('報告が見つかりません。');
+    sheet.getRange(found.getRow(), 5).setValue(new Date());
+    return {ok:true};
+  } finally { lock.releaseLock(); }
+}
+
 /**
  * 画面表示用に全リンクを返す。
  */

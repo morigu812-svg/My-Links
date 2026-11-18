@@ -1205,6 +1205,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
       <details class="sidebar-log-folder">
         <summary class="side-item"><span class="side-folder-mini" aria-hidden="true"><svg class="folder-icon" viewBox="0 0 64 52" aria-hidden="true"><path d="M4 10a5 5 0 0 1 5-5h17l7 7h22a5 5 0 0 1 5 5v4H4z" fill="currentColor" opacity=".72"/><path d="M4 17a5 5 0 0 1 5-5h46a5 5 0 0 1 5 5v27a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z" fill="currentColor"/><path d="M4 22h56" stroke="#fff" stroke-opacity=".35" stroke-width="2"/></svg></span> ログ <span class="log-folder-chevron" aria-hidden="true">›</span></summary>
         <div class="sidebar-log-items">
+          <button class="side-item" type="button" id="sideLinkReports"><span>⚑</span> リンク報告 <span id="linkReportBadge" class="new-badge" hidden></span></button>
           <button class="side-item" type="button" id="sideLinkOperations"><span>◷</span> リンク操作履歴</button>
           <button class="side-item" type="button" id="sideVisitorLogins"><span>◷</span> 利用者ログイン履歴</button>
           <button class="side-item" type="button" id="sideVisitorCounter"><span>▥</span> 来客数カウンター</button>
@@ -1629,7 +1630,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
   }
 
   function serverCall(method, ...args) {
-    const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'deleteLink', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'getVisitorCounterStats', 'deleteVisitorCounterBefore20261114', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'deleteVisitorChatMessage', 'getChatScreenshot', 'sendChatMessage', 'sendChatScreenshot', 'getStaffChatMessages', 'getStaffChatAttachment', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendStaffChatAttachment', 'startStaffChatLargeUpload', 'appendStaffChatLargeUploadChunk',
+    const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'deleteLink', 'getLinkReports', 'markLinkReportChecked', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'getVisitorCounterStats', 'deleteVisitorCounterBefore20261114', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'deleteVisitorChatMessage', 'getChatScreenshot', 'sendChatMessage', 'sendChatScreenshot', 'getStaffChatMessages', 'getStaffChatAttachment', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendStaffChatAttachment', 'startStaffChatLargeUpload', 'appendStaffChatLargeUploadChunk',
         'finishStaffChatLargeUpload', 'getStaffChatAttachmentChunk', 'deleteStaffChatMessage', 'sendPrivateChatMessage', 'visitorDirectChatProxy', 'getClickLogs', 'setClickBrowserName', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
     if (protectedMethods.includes(method)) {
       const token = adminSession.getItem(ADMIN_TOKEN_KEY) || '';
@@ -1832,6 +1833,7 @@ function watchSessionExpiry(deadline, onExpired) {
     if (authGate) authGate.classList.add('is-hidden');
     authField.value = '';
     refreshStaffChat();
+    void refreshLinkReportBadge();
     startAdminChatRealtime();
     void refreshAdminChat();
     void refreshStaffPresence();
@@ -2509,6 +2511,7 @@ document.getElementById('authSubmit').disabled = false;
   }
   $('adminVisitorCounterRefresh').addEventListener('click', () => { void refreshAdminVisitorCounter(); });
   const otherHistories = [
+  {key:'linkReports', side:'sideLinkReports', api:'getLinkReports', title:'リンク報告', description:'利用者から届いたリンクです。確認すると通知件数が減ります。', columns:['日時','URL','ブラウザID','状態']},
   {
     "key": "linkOperations",
     "side": "sideLinkOperations",
@@ -2558,12 +2561,16 @@ document.getElementById('authSubmit').disabled = false;
       const result = await serverCall(history.api);
       if (request !== historyRequest || token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
       const isCounter = history.key === 'visitorCounter';
-      const logs = isCounter ? (Array.isArray(result.days) ? result.days : []) : (Array.isArray(result.logs) ? result.logs : []);
+      const logs = isCounter ? (Array.isArray(result.days) ? result.days : []) : (history.key === 'linkReports' ? (result.reports || []) : (result.logs || []));
       const rows = logs.map(log => {
         const row = document.createElement('tr');
         const cells = isCounter ? [log.date, Number(log.count || 0).toLocaleString('ja-JP') + '人'] : [new Date(log.date).toLocaleString('ja-JP')];
         if (history.key === 'linkOperations') cells.push(log.action, log.title || log.linkId);
+        if (history.key === 'linkReports') cells.push(log.url, log.browserId || '未記録');
         cells.forEach(value => { row.insertCell().textContent = value; });
+        if (history.key === 'linkReports') {
+          const button=document.createElement('button');button.className='btn';button.type='button';button.textContent=log.checked?'確認済み':'確認する';button.disabled=!!log.checked;button.addEventListener('click',async()=>{button.disabled=true;try{await serverCall('markLinkReportChecked',log.id);await refreshOtherHistory();void refreshLinkReportBadge();}catch(error){$('otherHistoryStatus').textContent='確認に失敗しました：'+error.message;button.disabled=false;}});row.insertCell().append(button);
+        }
         if (history.key === 'visitorLogins') {
           row.append(historyBrowserCell(log, '未記録', 'otherHistoryStatus', 'otherHistoryView', refreshOtherHistory));
           const remove = document.createElement('button');
@@ -2644,6 +2651,12 @@ document.getElementById('authSubmit').disabled = false;
     }
   });
 
+  async function refreshLinkReportBadge(){
+    if(!adminSession.getItem(ADMIN_TOKEN_KEY))return;
+    try{const result=await serverCall('getLinkReports');const badge=$('linkReportBadge');const count=Number(result.unread)||0;badge.textContent=String(count);badge.hidden=!count;}catch(error){console.warn('リンク報告を確認できませんでした',error);}
+  }
+  setInterval(()=>{if(!document.hidden)void refreshLinkReportBadge()},30000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)void refreshLinkReportBadge()});
   $('deleteVisitorLoginLogs').addEventListener('click', event => removeVisitorLogins(event.currentTarget));
   $('refreshOtherHistory').addEventListener('click', refreshOtherHistory);
   otherHistories.forEach(history => {

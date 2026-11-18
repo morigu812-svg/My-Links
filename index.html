@@ -476,6 +476,7 @@ body.window-resizing,body.window-resizing *{user-select:none!important}
 <div class="side-label">クイックアクセス</div>
 <a class="side-item" href="./ai.html?from=viewer" style="text-decoration:none"><span>✧</span> AIチャット <span class="new-badge">NEW</span></a>
 <button class="side-item" type="button" id="visitorLogout">ログアウト</button>
+<button class="side-item" type="button" id="openLinkReport"><span>⚑</span> リンク報告</button>
 <button class="side-item chat-launch" type="button" id="openChat"><span>✉</span> 管理者チャット <span class="new-badge">NEW</span></button>
 <button class="side-item" type="button" id="sidePageGuide"><span aria-hidden="true">ⓘ</span> このページの仕組み</button>
 <button class="side-item" type="button" id="sideShare"><span>⤴</span> このページを共有</button>
@@ -4031,4 +4032,7 @@ footer{margin:16px 4px!important;font-size:11px!important}
 })();
 </script>
 <script src="./ai-launcher.js"></script>
+<dialog id="linkReportDialog" class="link-report-dialog" aria-labelledby="linkReportTitle"><form id="linkReportForm"><h2 id="linkReportTitle">リンク報告</h2><p>管理者に確認してほしいリンクのURLを送信できます。</p><label for="linkReportUrl">URL</label><input id="linkReportUrl" type="url" inputmode="url" maxlength="2048" required placeholder="https://example.com"><p id="linkReportStatus" role="status" aria-live="polite"></p><div class="link-report-actions"><button type="button" id="closeLinkReport">キャンセル</button><button type="submit" id="sendLinkReport">報告する</button></div></form></dialog>
+<style>.link-report-dialog{width:min(92vw,480px);border:1px solid #267d98;border-radius:14px;background:#0b1727;color:#e7faff;padding:24px;box-shadow:0 24px 70px #000b}.link-report-dialog::backdrop{background:#000b}.link-report-dialog h2{margin:0 0 10px}.link-report-dialog p{color:#aac5d3}.link-report-dialog label{display:block;margin:18px 0 6px}.link-report-dialog input{width:100%;padding:12px;border:1px solid #32728b;border-radius:8px;background:#07101c;color:#fff}.link-report-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}.link-report-actions button{padding:10px 15px;border:1px solid #32728b;border-radius:8px;background:#12334d;color:#dff8ff;cursor:pointer}</style>
+<script>(()=>{const dialog=document.getElementById('linkReportDialog'),form=document.getElementById('linkReportForm'),status=document.getElementById('linkReportStatus'),send=document.getElementById('sendLinkReport');document.getElementById('openLinkReport').addEventListener('click',()=>{if(!visitorToken){document.getElementById('loginError').textContent='先に利用者ログインをしてください。';return;}status.textContent='';dialog.showModal();});document.getElementById('closeLinkReport').addEventListener('click',()=>dialog.close());form.addEventListener('submit',async event=>{event.preventDefault();if(!visitorToken)return;send.disabled=true;status.textContent='送信中…';try{await call('submitLinkReport',document.getElementById('linkReportUrl').value.trim(),getNoticeBrowserId(),visitorToken);status.textContent='管理者に報告しました。';form.reset();setTimeout(()=>{if(dialog.open)dialog.close()},1300);}catch(error){status.textContent='送信失敗：'+(error.message||'通信エラー');}finally{send.disabled=false;}})})();</script>
 </body></html>
