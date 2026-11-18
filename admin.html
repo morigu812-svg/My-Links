@@ -2425,7 +2425,7 @@ document.getElementById('authSubmit').disabled = false;
   }
   function openAdminChat(){if(!adminSession.getItem(ADMIN_TOKEN_KEY)){alert('先に管理者ログインをしてください。');return;}openMainChat(chatOverlay, '利用者チャット');void loadVisitorChatRead().then(()=>{updateVisitorChatUnread(lastVisitorChatMessages);void refreshAdminChat()}).catch(error=>{$('visitorChatStatus').textContent='既読の取得に失敗しました：'+error.message});}
   $('sideChat').addEventListener('click',openAdminChat);
-  $('visitorChatNotice').addEventListener('click', () => adminVisitorDirectChat.open());
+  $('visitorChatNotice').addEventListener('click', openAdminChat);
   const clickLogPanel=$('clickLogPanel');
   let clickLogsLoaded=false,clickLogsLoading=false,clickBrowserNameSaving=false;
   function historyBrowserCell(log, missingLabel, statusId, viewId, refresh) {
@@ -3317,6 +3317,8 @@ $('closeChat').addEventListener('click', closeMainChat);
   });
   $('staffBrowserUnlink').addEventListener('click', () => saveStaffBrowserLink(''));
 
+  let staffNoticeRoom = null;
+  let staffNoticeName = '';
   function updateStaffUnread(count, open) {
     const badge = $('staffUnreadCount');
     badge.textContent = String(count);
@@ -3716,6 +3718,9 @@ $('closeChat').addEventListener('click', closeMainChat);
         const count = Number.isInteger(result.unreadCount)
           ? result.unreadCount
           : (Array.isArray(result.messages) ? result.messages.filter(message => message.unread).length : 0);
+        staffNoticeRoom = count && (result.latestUnreadRoom === '' || staffMailboxPattern.test(result.latestUnreadRoom))
+          ? result.latestUnreadRoom : null;
+        staffNoticeName = result.members?.find(member => member.mailboxId === staffNoticeRoom)?.name || '';
         updateStaffUnread(count, open);
         // 閉じた状態のリクエスト中に開かれた場合は、最新20件を改めて取得する。
         if (open) staffRefreshRequestedWhileLoading = true;
@@ -3889,7 +3894,14 @@ $('closeChat').addEventListener('click', closeMainChat);
     $('staffChatNotice').hidden = true;
     showStaffTalk(null, '', true);
   });
-  $('staffChatNotice').addEventListener('click', () => $('sideStaffChat').click());
+  $('staffChatNotice').addEventListener('click', () => {
+    if (staffNoticeRoom === null) { $('sideStaffChat').click(); return; }
+    if (!adminSession.getItem(ADMIN_TOKEN_KEY) || $('staffChatSend').disabled) return;
+    const room = staffNoticeRoom;
+    openMainChat(staffChat, '管理者専用チャット');
+    $('staffChatNotice').hidden = true;
+    showStaffTalk(room, staffNoticeName, true);
+  });
   const adminChatRealtime = window.createChatRealtime?.(
     () => {
       const token = adminSession.getItem(ADMIN_TOKEN_KEY);

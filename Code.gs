@@ -2137,14 +2137,18 @@ function getStaffChatMessages(adminToken, browserId, pageOptions) {
       ? sheet.getRange(first, 11, count, 1).getValues()
       : Array.from({length:count}, () => ['']);
     let unreadCount = 0;
+    let latestUnreadRoom = null;
     for (let i = 0; i < identities.length; i++) {
       const author = String(identities[i][0] || '');
       const readers = String(identities[i][1] || '').split(',').filter(Boolean);
       const recipient = String(recipients[i][0] || '');
       const canView = !recipient || (browserValid && (author === browserId || recipient === mailbox));
-      if (canView && browserValid && author !== browserId && !readers.includes(browserId)) unreadCount++;
+      if (canView && browserValid && author !== browserId && !readers.includes(browserId)) {
+        unreadCount++;
+        latestUnreadRoom = recipient || '';
+      }
     }
-    return Object.assign({messages:[], nextCursor:null, unreadCount},metadata);
+    return Object.assign({messages:[], nextCursor:null, unreadCount, latestUnreadRoom},metadata);
   }
 
   let cursor = olderPage ? Math.min(last, opts.beforeRow) : last;
@@ -3213,7 +3217,7 @@ function supabaseStaffChatMessages_(opts, mailbox, metadata, limit) {
   const summary = opts.mode === 'summary' || opts.mode === 'conversations';
   if (roomScoped) metadata.room = opts.room;
   if (summary) {
-    const rows = supabaseChatRows_(Object.assign({}, base, {select:'sender,readers', limit:CHAT_MAX_MESSAGES}));
+    const rows = supabaseChatRows_(Object.assign({}, base, {select:'sender,recipient,readers', limit:CHAT_MAX_MESSAGES}));
     if (opts.mode === 'conversations') {
       const peers = new Map();
       if (mailbox) {
@@ -3229,8 +3233,9 @@ function supabaseStaffChatMessages_(opts, mailbox, metadata, limit) {
       }
       metadata.conversations = Array.from(peers.values());
     }
-    const unreadCount = mailbox ? rows.filter(row => row.sender !== mailbox && !row.readers.includes(mailbox)).length : 0;
-    return Object.assign({messages:[], nextCursor:null, unreadCount}, metadata);
+    const unread = mailbox ? rows.filter(row => row.sender !== mailbox && !row.readers.includes(mailbox)) : [];
+    return Object.assign({messages:[], nextCursor:null, unreadCount:unread.length,
+      latestUnreadRoom:unread.length ? (unread[0].recipient || '') : null}, metadata);
   }
   const query = Object.assign(base, {select:'seq,id,sender,recipient,body,created_at,readers,file_name,file_mime,file_size,reply_to', limit:limit+1});
   if (roomScoped) {
