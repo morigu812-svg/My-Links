@@ -516,6 +516,36 @@ function requireAdmin_(token) {
   }
 }
 
+function visitorChatReadSheet_() {
+  const spreadsheetId = PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY);
+  if (!spreadsheetId) throw new Error('スプレッドシートIDが未設定です。');
+  const ss = SpreadsheetApp.openById(spreadsheetId);
+  const sheet = ss.getSheetByName('AdminVisitorChatRead') || ss.insertSheet('AdminVisitorChatRead');
+  if (!sheet.getLastRow()) sheet.appendRow(['管理者ブラウザID','メッセージID','既読日時']);
+  return sheet;
+}
+function getAdminVisitorChatRead(browserId, adminToken) {
+  requireAdmin_(adminToken);
+  if (!/^staff-[0-9a-f]{32}$/.test(String(browserId || ''))) throw new Error('管理者ブラウザIDが不正です。');
+  const sheet = visitorChatReadSheet_();
+  const last = sheet.getLastRow();
+  if (last < 2) return {ids:[]};
+  return {ids:sheet.getRange(2,1,last-1,2).getDisplayValues().filter(row=>row[0]===browserId).map(row=>row[1]).slice(-1000)};
+}
+function markAdminVisitorChatRead(browserId, ids, adminToken) {
+  requireAdmin_(adminToken);
+  if (!/^staff-[0-9a-f]{32}$/.test(String(browserId || '')) || !Array.isArray(ids) || ids.length>200 ||
+      ids.some(id=>typeof id!=='string' || !/^[0-9a-f-]{36}$/i.test(id))) throw new Error('既読情報が不正です。');
+  const lock = LockService.getScriptLock();lock.waitLock(10000);
+  try {
+    const sheet = visitorChatReadSheet_();const last=sheet.getLastRow();
+    const saved = new Set(last<2?[]:sheet.getRange(2,1,last-1,2).getDisplayValues().filter(row=>row[0]===browserId).map(row=>row[1]));
+    const added = [...new Set(ids)].filter(id=>!saved.has(id));
+    if (added.length) sheet.getRange(last+1,1,added.length,3).setValues(added.map(id=>[browserId,id,new Date()]));
+    return {ok:true,ids:[...saved,...added].slice(-1000)};
+  } finally {lock.releaseLock();}
+}
+
 const LINK_REPORT_SHEET = 'LinkReports';
 function linkReportSheet_(create) {
   const id = PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY);

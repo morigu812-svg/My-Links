@@ -1643,7 +1643,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
   }
 
   function serverCall(method, ...args) {
-    const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'deleteLink', 'getLinkReports', 'markLinkReportChecked', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'getVisitorCounterStats', 'deleteVisitorCounterBefore20261114', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getChatMessages', 'deleteVisitorChatMessage', 'getChatScreenshot', 'sendChatMessage', 'sendChatScreenshot', 'getStaffChatMessages', 'getStaffChatAttachment', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendStaffChatAttachment', 'startStaffChatLargeUpload', 'appendStaffChatLargeUploadChunk',
+    const protectedMethods = ['getLinks', 'getOfficialLinks', 'saveLink', 'deleteLink', 'getLinkReports', 'markLinkReportChecked', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'getVisitorCounterStats', 'deleteVisitorCounterBefore20261114', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getAdminVisitorChatRead', 'markAdminVisitorChatRead', 'getChatMessages', 'deleteVisitorChatMessage', 'getChatScreenshot', 'sendChatMessage', 'sendChatScreenshot', 'getStaffChatMessages', 'getStaffChatAttachment', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendStaffChatAttachment', 'startStaffChatLargeUpload', 'appendStaffChatLargeUploadChunk',
         'finishStaffChatLargeUpload', 'getStaffChatAttachmentChunk', 'deleteStaffChatMessage', 'sendPrivateChatMessage', 'visitorDirectChatProxy', 'getClickLogs', 'setVisitorBan', 'setClickBrowserName', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
     if (protectedMethods.includes(method)) {
       const token = adminSession.getItem(ADMIN_TOKEN_KEY) || '';
@@ -2179,6 +2179,24 @@ document.getElementById('authSubmit').disabled = false;
   let chatLoading = false, adminUnreadCount = 0;
   const VISITOR_CHAT_READ_KEY = 'linkCoreAdminVisitorChatReadV1';
   let readVisitorChatIds;
+  let visitorChatReadLoading;
+  async function loadVisitorChatRead(){
+    if(readVisitorChatIds)return;
+    if(visitorChatReadLoading)return visitorChatReadLoading;
+    visitorChatReadLoading=(async()=>{
+      const token=adminSession.getItem(ADMIN_TOKEN_KEY);
+      const result=await serverCall('getAdminVisitorChatRead',staffBrowserId);
+      if(token!==adminSession.getItem(ADMIN_TOKEN_KEY))return;
+      readVisitorChatIds=new Set(Array.isArray(result.ids)?result.ids:[]);
+      let legacy=[];
+      try{legacy=JSON.parse(adminSession.getItem(VISITOR_CHAT_READ_KEY)||'[]')}catch(_){}
+      if(Array.isArray(legacy)){
+        const missing=legacy.filter(id=>typeof id==='string'&&!readVisitorChatIds.has(id)).slice(-200);
+        if(missing.length){const saved=await serverCall('markAdminVisitorChatRead',staffBrowserId,missing);readVisitorChatIds=new Set(saved.ids||[]);}
+      }
+    })().finally(()=>{visitorChatReadLoading=null});
+    return visitorChatReadLoading;
+  }
   let lastVisitorChatMessages = [];
   function buildChatBubbles(messages, decorate, {groupIncoming = false, showRead = false} = {}) {
     let previousDay = '';
@@ -2340,20 +2358,21 @@ document.getElementById('authSubmit').disabled = false;
   }
 
   function updateVisitorChatUnread(messages) {
-    if (!readVisitorChatIds) {
-      let saved;
-      try { saved = JSON.parse(adminSession.getItem(VISITOR_CHAT_READ_KEY) || '[]'); } catch (_) {}
-      readVisitorChatIds = new Set(Array.isArray(saved) ? saved : []);
-    }
+    if (!readVisitorChatIds) return;
     const incoming = messages.filter(item => item.id && !item.private && item.author !== '管理者');
     if (chatOverlay.classList.contains('open') && !document.hidden &&
         !chatMessages.contains(openStaffMessageActions?.trigger)) {
-      const previousSize = readVisitorChatIds.size;
-      incoming.forEach(item => readVisitorChatIds.add(item.id));
-      if (readVisitorChatIds.size !== previousSize) {
-        const ids = Array.from(readVisitorChatIds).slice(-1000);
-        readVisitorChatIds = new Set(ids);
-        adminSession.setItem(VISITOR_CHAT_READ_KEY, JSON.stringify(ids));
+      const missing = incoming.map(item=>item.id).filter(id=>!readVisitorChatIds.has(id));
+      if(missing.length){
+        missing.forEach(id=>readVisitorChatIds.add(id));
+        void serverCall('markAdminVisitorChatRead',staffBrowserId,missing.slice(-200)).then(result=>{
+          readVisitorChatIds=new Set(result.ids||[]);
+        }).catch(error=>{
+          missing.forEach(id=>readVisitorChatIds.delete(id));
+          console.warn('利用者チャットの既読を保存できませんでした',error);
+          adminUnreadCount=incoming.filter(item=>!readVisitorChatIds.has(item.id)).length;
+          updateAdminChatBadge();
+        });
       }
     }
     adminUnreadCount = incoming.filter(item => !readVisitorChatIds.has(item.id)).length;
@@ -2366,6 +2385,7 @@ document.getElementById('authSubmit').disabled = false;
     const revision = visitorChatRevision;
     chatLoading = true;
     try {
+      await loadVisitorChatRead();
       const fallback = () => serverCall('getChatMessages');
       const result = await (adminChatRealtime?.read({chat_type:'visitor'}, fallback) ?? fallback());
       if (token !== adminSession.getItem(ADMIN_TOKEN_KEY) || revision !== visitorChatRevision) return;
@@ -2403,7 +2423,7 @@ document.getElementById('authSubmit').disabled = false;
     hideMainChats();
     document.querySelector('[data-view="all"]').click();
   }
-  function openAdminChat(){if(!adminSession.getItem(ADMIN_TOKEN_KEY)){alert('先に管理者ログインをしてください。');return;}openMainChat(chatOverlay, '利用者チャット');updateVisitorChatUnread(lastVisitorChatMessages);void refreshAdminChat();}
+  function openAdminChat(){if(!adminSession.getItem(ADMIN_TOKEN_KEY)){alert('先に管理者ログインをしてください。');return;}openMainChat(chatOverlay, '利用者チャット');void loadVisitorChatRead().then(()=>{updateVisitorChatUnread(lastVisitorChatMessages);void refreshAdminChat()}).catch(error=>{$('visitorChatStatus').textContent='既読の取得に失敗しました：'+error.message});}
   $('sideChat').addEventListener('click',openAdminChat);
   $('visitorChatNotice').addEventListener('click', openAdminChat);
   const clickLogPanel=$('clickLogPanel');
