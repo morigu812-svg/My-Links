@@ -1175,6 +1175,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
     <div class="auth-mark">LINK CORE / PRIVATE ACCESS</div>
     <h1 id="authTitle">管理者ログイン</h1>
     <p id="authDescription">リンクの追加・編集・削除を行うには管理者パスワードが必要です。</p>
+    <div id="authEmailGroup" hidden><label for="authEmail">メールアドレス</label><input id="authEmail" type="email" autocomplete="username"></div>
     <label id="passwordLabel" for="authPassword">管理者パスワード</label>
     <input id="authPassword" type="password" autocomplete="current-password" required autofocus>
     <div id="confirmPasswordGroup" hidden>
@@ -1554,6 +1555,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
   const ready = new Promise(resolve => { markReady = resolve; });
 
   const AUTH_KEY = 'myLinksUnlocked';
+  const staffAuthPilot = new URLSearchParams(location.search).get('staffAuth') === '1';
   const ADMIN_TOKEN_KEY = 'linkCoreAdminToken';
 
   // ストレージが制限されている場合も、開いているページ内で認証を使えるようにする。
@@ -1732,6 +1734,14 @@ function watchSessionExpiry(deadline, onExpired) {
   });
 
   const savedExpiry = Number(adminSession.getItem(ADMIN_EXPIRY_KEY));
+  if (staffAuthPilot) {
+    adminSession.removeItem(AUTH_KEY);
+    adminSession.removeItem(ADMIN_TOKEN_KEY);
+    $('authEmailGroup').hidden = false;
+    $('authEmail').required = true;
+    $('authDescription').textContent = 'Supabaseに登録したメールアドレスとパスワードを入力してください。';
+    $('passwordLabel').textContent = 'パスワード';
+  }
   if (adminSession.getItem(ADMIN_TOKEN_KEY) && savedExpiry <= Date.now()) {
     adminSession.removeItem(ADMIN_TOKEN_KEY);
     adminSession.removeItem(AUTH_KEY);
@@ -1783,6 +1793,8 @@ function watchSessionExpiry(deadline, onExpired) {
     }
     adminSession.removeItem(ADMIN_TOKEN_KEY);
     adminSession.removeItem(AUTH_KEY);
+    staffAuthRealtime?.stop();
+    if (staffAuthClient) void staffAuthClient.then(client => client.auth.signOut({scope:'local'})).catch(console.warn);
     chatOverlay.classList.remove('open');
     $('staffChatOverlay').classList.remove('open');
     $('staffChatNotice').hidden = true;
@@ -1813,7 +1825,7 @@ function watchSessionExpiry(deadline, onExpired) {
 
   authForm.addEventListener('submit', async event => {
     event.preventDefault();
-    if (authField.value === 'MoriLinks') {
+    if (!staffAuthPilot && authField.value === 'MoriLinks') {
       location.assign('https://ea-deta.onrender.com/');
       return;
     }
@@ -1824,7 +1836,16 @@ function watchSessionExpiry(deadline, onExpired) {
     const loginStartedAtEpoch = Date.now();
     let authResult;
     try {
-      authResult = await serverCall('authenticateAdmin', authField.value, true);
+      if (staffAuthPilot) {
+        const client = await getStaffAuthClient();
+        const {data, error} = await client.auth.signInWithPassword({
+          email: $('authEmail').value.trim(), password: authField.value
+        });
+        if (error || !data.session) throw new Error('メールアドレスとパスワードを確認してください。');
+        authResult = await serverCall('authenticateAdminWithSupabase', data.session.access_token);
+      } else {
+        authResult = await serverCall('authenticateAdmin', authField.value, true);
+      }
       if (!authResult || !authResult.token) throw new Error('認証トークンを受け取れませんでした。');
       const expiry = loginStartedAtEpoch + Math.min(authResult.expiresIn || 1800, 1800) * 1000;
       adminSession.setItem(ADMIN_EXPIRY_KEY, String(expiry));
@@ -3669,58 +3690,22 @@ $('closeChat').addEventListener('click', closeMainChat);
 
   const staffDirectPilot = new URLSearchParams(location.search).get('staffDirect') === '1';
 
-  const staffAuthPilot = new URLSearchParams(location.search).get('staffAuth') === '1';
   const staffAuthUrl = 'https://bskmgytpfhmjhrclcohf.supabase.co';
   const staffAuthKey = 'sb_publishable_uSQ9b6y_QL9GQ9gCa8CTMQ_AGs4jRG8';
   let staffAuthClient;
-  let staffSignIn;
-
-  async function getStaffAuthSession() {
-    staffAuthClient ||= import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.91.0/+esm')
+  function getStaffAuthClient() {
+    return staffAuthClient ||= import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.91.0/+esm')
       .then(({createClient}) => createClient(staffAuthUrl, staffAuthKey, {
         auth: {persistSession:false, detectSessionInUrl:false}
       }));
-    const client = await staffAuthClient;
-    const {data} = await client.auth.getSession();
-    const session = data.session || await (staffSignIn ||= promptStaffSignIn(client).finally(() => { staffSignIn = null; }));
-    return {direct:true, url:staffAuthUrl, key:staffAuthKey, token:session.access_token,
-      expiresAt:session.expires_at * 1000};
   }
 
-  function promptStaffSignIn(client) {
-    return new Promise((resolve, reject) => {
-      const dialog = document.createElement('dialog');
-      dialog.className = 'modal';
-      dialog.innerHTML = '<form><h2>管理者チャットにログイン</h2>' +
-        '<label>メールアドレス <input type="email" autocomplete="username" required></label>' +
-        '<label>パスワード <input type="password" autocomplete="current-password" required></label>' +
-        '<p role="status"></p><button type="submit">ログイン</button> <button type="button">閉じる</button></form>';
-      document.body.append(dialog);
-      const form = dialog.querySelector('form');
-      const [email, password] = form.querySelectorAll('input');
-      const submit = form.querySelector('[type=submit]');
-      form.querySelector('[type=button]').onclick = () => dialog.close();
-      dialog.addEventListener('close', () => {
-        dialog.remove();
-        reject(new Error('チャットのログインをキャンセルしました。'));
-      }, {once:true});
-      form.onsubmit = async event => {
-        event.preventDefault();
-        submit.disabled = true;
-        try {
-          const {data, error} = await client.auth.signInWithPassword({email:email.value.trim(), password:password.value});
-          if (error || !data.session) throw new Error('チャットのメールアドレスとパスワードを確認してください。');
-          if (!dialog.open) { await client.auth.signOut({scope:'local'}); return; }
-          resolve(data.session);
-          dialog.close();
-        } catch (error) {
-          form.querySelector('[role=status]').textContent = error.message;
-        } finally {
-          submit.disabled = false;
-        }
-      };
-      dialog.showModal();
-    });
+  async function getStaffAuthSession() {
+    const {data} = await (await getStaffAuthClient()).auth.getSession();
+    const session = data.session;
+    if (!session) throw new Error('管理者画面を再読み込みしてログインしてください。');
+    return {direct:true, url:staffAuthUrl, key:staffAuthKey, token:session.access_token,
+      expiresAt:session.expires_at * 1000};
   }
 
   const staffAuthRealtime = staffAuthPilot ? window.createChatRealtime?.(getStaffAuthSession, () => {}) : null;

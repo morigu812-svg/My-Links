@@ -477,6 +477,33 @@ function requireLinkViewer_(token) {
   throw new Error('閲覧にはサイトのパスワード認証が必要です。');
 }
 
+function authenticateAdminWithSupabase(accessToken) {
+  const generation = sessionGeneration_();
+  const rateState = getAuthRateState_('ADMIN');
+  checkAuthRateLimit_(rateState);
+  if (typeof accessToken !== 'string' || accessToken.length > 16384 ||
+      !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(accessToken)) {
+    throw new Error('Supabaseのログイン情報が不正です。');
+  }
+  const {url, props} = supabaseChatConfig_();
+  const key = props.getProperty('LINK_CORE_SUPABASE_PUBLISHABLE_KEY');
+  if (!key) throw new Error('Supabaseの公開キーが未設定です。');
+  const response = UrlFetchApp.fetch(url + '/rest/v1/rpc/link_core_check_staff_login', {
+    method:'post', headers:{apikey:key, Authorization:'Bearer ' + accessToken},
+    contentType:'application/json', payload:'{}', muteHttpExceptions:true
+  });
+  const status = response.getResponseCode();
+  if (status === 401 || status === 403 || (status === 200 && response.getContentText() !== 'true')) {
+    recordAuthFailure_(rateState);
+    throw new Error('管理者権限を確認できません。アカウント登録とAuth Hooksの設定を確認してください。');
+  }
+  if (status !== 200) throw new Error('Supabaseの管理者認証に接続できませんでした。');
+  clearAuthFailures_(rateState);
+  const token = Utilities.getUuid() + Utilities.getUuid();
+  storeSession_('ADMIN', token, generation);
+  return {ok:true, token, expiresIn:SESSION_TTL_SECONDS};
+}
+
 function authenticateAdmin(password, includeLinks) {
   const generation = sessionGeneration_();
   const rateState = getAuthRateState_('ADMIN');
