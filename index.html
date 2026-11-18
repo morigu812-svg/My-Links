@@ -500,7 +500,7 @@ body.window-resizing,body.window-resizing *{user-select:none!important}
 <div class="list loading-skeleton" id="list" role="region" aria-label="リンク一覧" aria-live="polite" aria-busy="true"><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div></div>
 </div></section></div>
 </section>
-<section class="chat-overlay" id="chatOverlay" aria-label="管理者との共通チャット"><div class="chat-head"><strong>LINK CORE / CHAT</strong><div class="chat-head-actions"><button type="button" id="openVisitorDirectChat">個人トーク</button><button type="button" id="closeChat">閉じる</button></div></div><div class="chat-subtitle">利用者と管理者が参加する共通チャットです。サイトの不具合報告などにもご利用ください。</div><div class="chat-messages" id="chatMessages" aria-live="polite"><div class="chat-status">チャットを開いています…</div></div><label class="chat-subtitle" for="privateChatId">個別チャットID（管理者に共有）<input id="privateChatId" type="text" readonly style="display:block;width:100%"></label><div id="chatScreenshotControls" class="chat-subtitle"><button type="button" id="chatScreenshot">スクリーンショットを共有</button><input id="chatScreenshotFile" type="file" accept="image/*" hidden><span> 選んだ画像はこの共通チャットの参加者に送信されます。</span><div id="chatScreenshotStatus" role="status"></div></div><form class="chat-compose" id="chatForm"><textarea id="chatInput" maxlength="1000" rows="2" placeholder="メッセージを入力…" required></textarea><button id="chatSend" type="submit">送信</button></form></section><footer><a class="admin" href="admin.html">管理者画面</a></footer>
+<section class="chat-overlay" id="chatOverlay" aria-label="管理者との共通チャット"><div class="chat-head"><strong>LINK CORE / CHAT</strong><div class="chat-head-actions"><button type="button" id="openVisitorDirectChat">個人トーク</button><button type="button" id="closeChat">閉じる</button></div></div><div class="chat-subtitle">利用者と管理者が参加する共通チャットです。サイトの不具合報告などにもご利用ください。</div><div class="chat-messages" id="chatMessages" aria-live="polite"><div class="chat-status">チャットを開いています…</div></div><label class="chat-subtitle" for="privateChatId">個別チャットID（管理者に共有）<input id="privateChatId" type="text" readonly style="display:block;width:100%"></label><div id="chatScreenshotControls" class="chat-subtitle"><button type="button" id="chatScreenshot">スクリーンショットを共有</button><input id="chatScreenshotFile" type="file" accept="image/*" hidden><span> 選んだ画像はこの共通チャットの参加者に送信されます。</span><div id="chatScreenshotStatus" role="status"></div></div><button type="button" id="editChatProfile" class="chat-profile-edit">学校名・フィルターの種類を変更</button><form class="chat-compose" id="chatForm"><textarea id="chatInput" maxlength="1000" rows="2" placeholder="メッセージを入力…" required></textarea><button id="chatSend" type="submit">送信</button></form></section><footer><a class="admin" href="admin.html">管理者画面</a></footer>
 </main>
 <iframe id="gasBridge" title="通信" hidden></iframe>
 
@@ -790,6 +790,7 @@ function showVisitorLogin(message){
   stopViewerExpiry();
   $('visitorLogout').disabled = false;
   visitorToken='';
+  visitorChatProfile=null;
   links=[];
   categories=[];
   favoriteIds=new Set();
@@ -868,9 +869,38 @@ setInterval(() => {
 setInterval(() => {
   if (!document.hidden && chatOverlay.classList.contains('open') && viewerChatRealtime?.isConnected()) void refreshChat();
 }, 30000);
-function openChat(){if(!visitorToken){$('loginError').textContent='先に利用者ログインをしてください。';return;}markSideTabAsRead('openChat');chatOverlay.classList.add('open');viewerChatRealtime?.start();void refreshChat();}
+let visitorChatProfile=null;
+async function ensureVisitorChatProfile(edit=false){
+ if(!visitorToken)return false;
+ const token=visitorToken;
+ try{
+  if(!visitorChatProfile){visitorChatProfile=await call('getVisitorChatProfile',getNoticeBrowserId(),token);}
+  if(token!==visitorToken)return false;
+  if(!edit&&visitorChatProfile.school&&visitorChatProfile.filter)return true;
+  $('chatProfileSchool').value=visitorChatProfile.school||'';
+  $('chatProfileFilter').value=visitorChatProfile.filter||'';
+  $('chatProfileStatus').textContent='';
+  const dialog=$('chatProfileDialog');dialog.showModal();
+  return await new Promise(resolve=>{
+   const form=$('chatProfileForm');
+   const cancel=$('cancelChatProfile');
+   const submit=async event=>{
+    event.preventDefault();const button=$('saveChatProfile');button.disabled=true;$('chatProfileStatus').textContent='保存中…';
+    try{const result=await call('saveVisitorChatProfile',getNoticeBrowserId(),$('chatProfileSchool').value,$('chatProfileFilter').value,token);if(token!==visitorToken)throw new Error('ログインし直してください。');visitorChatProfile=result;dialog.close();resolve(true);}
+    catch(error){$('chatProfileStatus').textContent=error.message||'保存できませんでした。';}
+    finally{button.disabled=false;}
+   };
+   const closed=()=>{cleanup();resolve(false)};
+   function cleanup(){form.removeEventListener('submit',submit);dialog.removeEventListener('close',closed);cancel.removeEventListener('click',cancelClick)}
+   function cancelClick(){dialog.close()}
+   form.addEventListener('submit',submit);dialog.addEventListener('close',closed,{once:true});cancel.addEventListener('click',cancelClick);
+  });
+ }catch(error){alert('チャット情報を取得できませんでした：'+(error.message||'通信エラー'));return false;}
+}
+async function openChat(){if(!visitorToken){$('loginError').textContent='先に利用者ログインをしてください。';return;}if(!await ensureVisitorChatProfile())return;markSideTabAsRead('openChat');chatOverlay.classList.add('open');viewerChatRealtime?.start();void refreshChat();}
+$('editChatProfile').addEventListener('click',()=>{void ensureVisitorChatProfile(true)});
 $('openChat').addEventListener('click',openChat);$('closeChat').addEventListener('click',()=>{chatOverlay.classList.remove('open');viewerChatRealtime?.stop();});
-chatForm.addEventListener('submit',async e=>{e.preventDefault();const message=chatInput.value.trim();if(!message||!visitorToken)return;chatSend.disabled=true;try{const target=viewerReply?.target;await sendViewerChat(message,visitorToken);if(viewerReply?.target===target)viewerReply?.clear();chatInput.value='';await refreshChat();}catch(error){if(isVisitorAuthError(error)){showVisitorLogin('ログインの有効期限が切れました。もう一度サイトのパスワードを入力してください。');}else{const s=document.createElement('div');s.className='chat-status';s.textContent=error.message||'送信できませんでした。';chatMessages.appendChild(s);}}finally{chatSend.disabled=false;if(visitorToken)chatInput.focus();}});
+chatForm.addEventListener('submit',async e=>{e.preventDefault();const message=chatInput.value.trim();if(!message||!visitorToken)return;if(!await ensureVisitorChatProfile())return;chatSend.disabled=true;try{const target=viewerReply?.target;const prefix='【学校名：'+visitorChatProfile.school+'／フィルター：'+visitorChatProfile.filter+'】\n';if(prefix.length+message.length>1000)throw new Error('学校名とフィルター情報を含めて1000文字以内にしてください。');await sendViewerChat(prefix+message,visitorToken);if(viewerReply?.target===target)viewerReply?.clear();chatInput.value='';await refreshChat();}catch(error){if(isVisitorAuthError(error)){showVisitorLogin('ログインの有効期限が切れました。もう一度サイトのパスワードを入力してください。');}else{const s=document.createElement('div');s.className='chat-status';s.textContent=error.message||'送信できませんでした。';chatMessages.appendChild(s);}}finally{chatSend.disabled=false;if(visitorToken)chatInput.focus();}});
 
 function showChatImageButton(container, messageId) {
   const preview = viewerChatPreviews.create(messageId, '共有されたスクリーンショット', async () => {
@@ -1038,6 +1068,7 @@ $('loginForm').addEventListener('submit',async event=>{
   if(!auth||!auth.token)throw new Error('閲覧用トークンを取得できませんでした。');
   applyVisitorLinks(Array.isArray(auth.links)?auth:await call('getLinks',auth.token));
   visitorToken=auth.token;
+  visitorChatProfile=null;
   stopViewerExpiry = watchSessionExpiry(loginStartedAt + Math.min(auth.expiresIn || 1800, 1800) * 1000, () => {
     showVisitorLogin();
     location.reload();
@@ -4035,4 +4066,4 @@ footer{margin:16px 4px!important;font-size:11px!important}
 <dialog id="linkReportDialog" class="link-report-dialog" aria-labelledby="linkReportTitle"><form id="linkReportForm"><h2 id="linkReportTitle">リンク報告</h2><p>管理者に確認してほしいリンクのURLを送信できます。</p><label for="linkReportUrl">URL</label><input id="linkReportUrl" type="url" inputmode="url" maxlength="2048" required placeholder="https://example.com"><p id="linkReportStatus" role="status" aria-live="polite"></p><div class="link-report-actions"><button type="button" id="closeLinkReport">キャンセル</button><button type="submit" id="sendLinkReport">報告する</button></div></form></dialog>
 <style>.link-report-dialog{width:min(92vw,480px);border:1px solid #267d98;border-radius:14px;background:#0b1727;color:#e7faff;padding:24px;box-shadow:0 24px 70px #000b}.link-report-dialog::backdrop{background:#000b}.link-report-dialog h2{margin:0 0 10px}.link-report-dialog p{color:#aac5d3}.link-report-dialog label{display:block;margin:18px 0 6px}.link-report-dialog input{width:100%;padding:12px;border:1px solid #32728b;border-radius:8px;background:#07101c;color:#fff}.link-report-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}.link-report-actions button{padding:10px 15px;border:1px solid #32728b;border-radius:8px;background:#12334d;color:#dff8ff;cursor:pointer}</style>
 <script>(()=>{const dialog=document.getElementById('linkReportDialog'),form=document.getElementById('linkReportForm'),status=document.getElementById('linkReportStatus'),send=document.getElementById('sendLinkReport');document.getElementById('openLinkReport').addEventListener('click',()=>{if(!visitorToken){document.getElementById('loginError').textContent='先に利用者ログインをしてください。';return;}status.textContent='';dialog.showModal();});document.getElementById('closeLinkReport').addEventListener('click',()=>dialog.close());form.addEventListener('submit',async event=>{event.preventDefault();if(!visitorToken)return;send.disabled=true;status.textContent='送信中…';try{await call('submitLinkReport',document.getElementById('linkReportUrl').value.trim(),getNoticeBrowserId(),visitorToken);status.textContent='管理者に報告しました。';form.reset();setTimeout(()=>{if(dialog.open)dialog.close()},1300);}catch(error){status.textContent='送信失敗：'+(error.message||'通信エラー');}finally{send.disabled=false;}})})();</script>
-</body></html>
+<dialog id="chatProfileDialog" class="chat-profile-dialog" aria-labelledby="chatProfileTitle"><form id="chatProfileForm"><h2 id="chatProfileTitle">チャット利用情報</h2><p>学校名とフィルターの種類を入力してください。次回から自動で読み込みます。</p><label>学校名<input id="chatProfileSchool" maxlength="80" required autocomplete="organization"></label><label>フィルターの種類<input id="chatProfileFilter" maxlength="80" required placeholder="例：i-FILTER"></label><p id="chatProfileStatus" role="status"></p><div><button type="button" id="cancelChatProfile">キャンセル</button><button type="submit" id="saveChatProfile">保存して続ける</button></div></form></dialog><style>.chat-profile-dialog{width:min(92vw,480px);border:1px solid #2684a0;border-radius:14px;background:#0b1727;color:#e8f9ff;padding:24px;box-shadow:0 24px 70px #000b}.chat-profile-dialog::backdrop{background:#000c}.chat-profile-dialog p{color:#afcbd8;line-height:1.6}.chat-profile-dialog label{display:block;margin:14px 0;font-weight:700}.chat-profile-dialog input{display:block;width:100%;margin-top:6px;padding:12px;border:1px solid #3c7992;border-radius:8px;background:#07101c;color:#fff}.chat-profile-dialog form>div{display:flex;justify-content:flex-end;gap:10px}.chat-profile-dialog button,.chat-profile-edit{padding:9px 12px;border:1px solid #32728b;border-radius:8px;background:#12334d;color:#dff8ff;cursor:pointer}.chat-profile-edit{display:block;margin:10px 0;font-size:12px}</style></body></html>

@@ -379,6 +379,9 @@ function authenticateVisitor(password, browserId, browserSecret) {
   clearAuthFailures_(rateState);
   const token = Utilities.getUuid() + Utilities.getUuid();
   storeSession_('VISITOR', token, generation);
+  if (/^[A-Za-z0-9_-]{8,100}$/.test(String(browserId || ''))) {
+    CacheService.getScriptCache().put('LINK_CORE_VISITOR_PROFILE_' + token, browserId, SESSION_TTL_SECONDS);
+  }
   if (supabaseChatMode_() === 'supabase' && /^[A-Za-z0-9_-]{8,100}$/.test(String(browserId || ''))) {
     const inbox = privateChatBrowserId_(browserSecret);
     if (inbox) {
@@ -425,7 +428,7 @@ function storeSession_(role, token, generation) {
 
 function logoutCurrentSession(token) {
   requireLinkViewer_(token);
-  CacheService.getScriptCache().removeAll(['LINK_CORE_ADMIN_' + token, 'LINK_CORE_VISITOR_' + token, 'LINK_CORE_VISITOR_DM_' + token]);
+  CacheService.getScriptCache().removeAll(['LINK_CORE_ADMIN_' + token, 'LINK_CORE_VISITOR_' + token, 'LINK_CORE_VISITOR_DM_' + token, 'LINK_CORE_VISITOR_PROFILE_' + token]);
   return { ok: true };
 }
 
@@ -1426,6 +1429,43 @@ function getPublicChatMessages_(viewerToken) {
 }
 function sendChatMessage(message, viewerToken) {
   return postPublicChat_(message, viewerToken, '');
+}
+
+function visitorChatProfileSheet_() {
+  const id = PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY);
+  if (!id) throw new Error('スプレッドシートIDが未設定です。');
+  const ss = SpreadsheetApp.openById(id);
+  const sheet = ss.getSheetByName('VisitorChatProfiles') || ss.insertSheet('VisitorChatProfiles');
+  if (!sheet.getLastRow()) sheet.appendRow(['ブラウザID', '学校名', 'フィルターの種類', '更新日時']);
+  return sheet;
+}
+function getVisitorChatProfile(browserId, visitorToken) {
+  if (!isSessionValid_('VISITOR', visitorToken)) throw new Error('利用者ログインが必要です。');
+  if (!/^[A-Za-z0-9_-]{8,100}$/.test(String(browserId || ''))) throw new Error('ブラウザIDが不正です。');
+  if (CacheService.getScriptCache().get('LINK_CORE_VISITOR_PROFILE_' + visitorToken) !== browserId) throw new Error('ブラウザIDを確認できません。再ログインしてください。');
+  const sheet = visitorChatProfileSheet_();
+  const last = sheet.getLastRow();
+  if (last < 2) return {school:'', filter:''};
+  const found = sheet.getRange(2,1,last-1,1).createTextFinder(browserId).matchEntireCell(true).findNext();
+  if (!found) return {school:'', filter:''};
+  const row = sheet.getRange(found.getRow(),2,1,2).getDisplayValues()[0];
+  return {school:row[0], filter:row[1]};
+}
+function saveVisitorChatProfile(browserId, school, filter, visitorToken) {
+  if (!isSessionValid_('VISITOR', visitorToken)) throw new Error('利用者ログインが必要です。');
+  if (!/^[A-Za-z0-9_-]{8,100}$/.test(String(browserId || ''))) throw new Error('ブラウザIDが不正です。');
+  if (CacheService.getScriptCache().get('LINK_CORE_VISITOR_PROFILE_' + visitorToken) !== browserId) throw new Error('ブラウザIDを確認できません。再ログインしてください。');
+  const name = cleanText_(school,80), kind = cleanText_(filter,80);
+  if (!name || !kind || /[\u0000-\u001f]/.test(name+kind)) throw new Error('学校名とフィルターの種類を入力してください。');
+  const lock = LockService.getScriptLock(); lock.waitLock(10000);
+  try {
+    const sheet = visitorChatProfileSheet_();
+    const last = sheet.getLastRow();
+    const found = last < 2 ? null : sheet.getRange(2,1,last-1,1).createTextFinder(browserId).matchEntireCell(true).findNext();
+    const row = found ? found.getRow() : last+1;
+    sheet.getRange(row,1,1,4).setValues([[browserId,safeCell_(name),safeCell_(kind),new Date()]]);
+    return {school:name,filter:kind};
+  } finally { lock.releaseLock(); }
 }
 
 function sendChatScreenshot(image, viewerToken) {
