@@ -3127,9 +3127,33 @@ function getVisitorLoginLogs(adminToken) {
     }
     if (!sheet.getRange(1, 3).getValue()) sheet.getRange(1, 3).setValue('履歴ID');
     const names = getClickBrowserNames_();
+    const daysByBrowser = new Map();
+    const dayNumber = value => {
+      const date = new Date(value);
+      if (!Number.isFinite(date.getTime())) return null;
+      return Math.floor(Date.parse(Utilities.formatDate(date, 'Asia/Tokyo', 'yyyy-MM-dd') + 'T00:00:00Z') / 86400000);
+    };
+    const today = dayNumber(new Date());
+    sheet.getRange(2, 1, last - 1, 2).getValues().forEach(([date, browser]) => {
+      if (!date || !browser) return;
+      const day = dayNumber(date);
+      if (day === null || day > today) return;
+      const key = String(browser);
+      if (!daysByBrowser.has(key)) daysByBrowser.set(key, new Set());
+      daysByBrowser.get(key).add(day);
+    });
+    const streaks = new Map();
+    daysByBrowser.forEach((days, browser) => {
+      let cursor = days.has(today) ? today : today - 1;
+      let streak = 0;
+      while (days.has(cursor)) { streak++; cursor--; }
+      streaks.set(browser, streak);
+    });
     return {logs: rows.reverse().filter(row => row[0]).map(([date, browserId, id]) => ({
       date: toIso_(date), browserId: String(browserId || ''), id: String(id),
-      browserName: names.get(String(browserId || '')) || ''
+      browserName: names.get(String(browserId || '')) || '',
+      loginStreak: streaks.get(String(browserId || '')) || 0,
+      regularVisitor: (streaks.get(String(browserId || '')) || 0) >= 3
     }))};
   } finally {
     lock.releaseLock();
