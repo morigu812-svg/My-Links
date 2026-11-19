@@ -705,6 +705,9 @@ function visibleLinks(){
 }
 let renderedCategories, renderedCategory, renderedNewLinkCount;
 function render(){
+ document.querySelector('#linksPanel .workspace').hidden = false;
+ const personalPanel = document.querySelector('#linksPanel .visitor-dm-main');
+ if (personalPanel?.open) { personalPanel.classList.remove('open'); personalPanel.close(); }
  $('list').setAttribute('aria-busy','false');
  $('list').classList.remove('loading-skeleton');
  const folderIcon="<svg class=\"folder-icon\" viewBox=\"0 0 64 52\" aria-hidden=\"true\"><path d=\"M4 10a5 5 0 0 1 5-5h17l7 7h22a5 5 0 0 1 5 5v4H4z\" fill=\"currentColor\" opacity=\".72\"/><path d=\"M4 17a5 5 0 0 1 5-5h46a5 5 0 0 1 5 5v27a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z\" fill=\"currentColor\"/><path d=\"M4 22h56\" stroke=\"#fff\" stroke-opacity=\".35\" stroke-width=\"2\"/></svg>";
@@ -890,7 +893,20 @@ function markVisitorDmRead(messages) {
  try { localStorage.setItem('linkCoreVisitorDmRead:' + visitorDmNoticeBrowser, JSON.stringify(Array.from(visitorDmReadIds).slice(-2000))); } catch (_) {}
  visitorDmNotice.hidden = true;
 }
-const viewerDirectChat = window.createVisitorDirectChat(params => call('visitorDirectChatProxy', params, visitorToken), false, {onRead:markVisitorDmRead});
+const viewerDirectChat = window.createVisitorDirectChat(params => call('visitorDirectChatProxy', params, visitorToken), false, {
+ main:true,
+ container:document.querySelector('#linksPanel .finder-content'),
+ onRead:markVisitorDmRead,
+ onOpen:panel => {
+  chatOverlay.classList.remove('open');
+  document.querySelector('#linksPanel .workspace').hidden = true;
+  panel.classList.add('open');
+ },
+ onClose:() => {
+  document.querySelector('#linksPanel .workspace').hidden = false;
+  document.querySelector('#linksPanel .visitor-dm-main')?.classList.remove('open');
+ }
+});
 visitorDmNotice.addEventListener('click', () => {
  if (!visitorToken) return;
  viewerDirectChat.open();
@@ -965,7 +981,11 @@ async function ensureVisitorChatProfile(edit=false){
   });
  }catch(error){alert('チャット情報を取得できませんでした：'+(error.message||'通信エラー'));return false;}
 }
-async function openChat(){if(!visitorToken){$('loginError').textContent='先に利用者ログインをしてください。';return;}if(!await ensureVisitorChatProfile())return;markSideTabAsRead('openChat');chatOverlay.classList.add('open');viewerChatRealtime?.start();void refreshChat();}
+async function openChat(){
+ const personalPanel = document.querySelector('#linksPanel .visitor-dm-main');
+ if (personalPanel?.open) { personalPanel.classList.remove('open'); personalPanel.close(); }
+ document.querySelector('#linksPanel .workspace').hidden = false;
+if(!visitorToken){$('loginError').textContent='先に利用者ログインをしてください。';return;}if(!await ensureVisitorChatProfile())return;markSideTabAsRead('openChat');chatOverlay.classList.add('open');viewerChatRealtime?.start();void refreshChat();}
 $('editChatProfile').addEventListener('click',()=>{void ensureVisitorChatProfile(true)});
 $('openChat').addEventListener('click',openChat);$('closeChat').addEventListener('click',()=>{chatOverlay.classList.remove('open');viewerChatRealtime?.stop();});
 chatForm.addEventListener('submit',async e=>{e.preventDefault();const message=chatInput.value.trim();if(!message||!visitorToken)return;if(!await ensureVisitorChatProfile())return;chatSend.disabled=true;try{const target=viewerReply?.target;const prefix='【学校名：'+visitorChatProfile.school+'／フィルター：'+visitorChatProfile.filter+'】\n';if(prefix.length+message.length>1000)throw new Error('学校名とフィルター情報を含めて1000文字以内にしてください。');await sendViewerChat(prefix+message,visitorToken);if(viewerReply?.target===target)viewerReply?.clear();chatInput.value='';await refreshChat();}catch(error){if(isVisitorAuthError(error)){showVisitorLogin('ログインの有効期限が切れました。もう一度サイトのパスワードを入力してください。');}else{const s=document.createElement('div');s.className='chat-status';s.textContent=error.message||'送信できませんでした。';chatMessages.appendChild(s);}}finally{chatSend.disabled=false;if(visitorToken)chatInput.focus();}});
@@ -4324,4 +4344,5 @@ footer{margin:16px 4px!important;font-size:11px!important}
 #linksPanel .visitor-chat-folder-items .side-item{white-space:normal!important;width:100%!important;text-align:left}
 #linksPanel .visitor-chat-folder summary:focus-visible{outline:2px solid #43d9ff;outline-offset:2px}
 </style>
+<style>#linksPanel .workspace[hidden]{display:none!important}#linksPanel .visitor-dm-main[open]{box-sizing:border-box;position:relative!important;inset:auto!important;width:100%!important;max-width:100%!important;margin:0!important}#linksPanel .visitor-dm-main form[hidden],#linksPanel .visitor-dm-main [hidden]{display:none!important}</style>
 </body></html>
