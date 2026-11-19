@@ -581,6 +581,56 @@ function markAdminVisitorChatRead(browserId, ids, adminToken) {
 }
 
 const LINK_REPORT_SHEET = 'LinkReports';
+function banAppealSheet_(create) {
+  const id = PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY);
+  if (!id) throw new Error('スプレッドシートIDが未設定です。');
+  const spreadsheet = SpreadsheetApp.openById(id);
+  let sheet = spreadsheet.getSheetByName('BAN異議申し立て');
+  if (!sheet && create) sheet = spreadsheet.insertSheet('BAN異議申し立て');
+  if (sheet && create && !sheet.getLastRow()) sheet.appendRow(['受信日時', 'ブラウザID', '理由']);
+  return sheet;
+}
+
+function submitBanAppeal(browserId, text) {
+  const message = typeof text === 'string' ? text.trim() : '';
+  if (!message || message.length > 1000) throw new Error('理由を1〜1000文字で入力してください。');
+  if (!isVisitorBanned_(browserId)) throw new Error('利用停止中のブラウザから送信してください。');
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    if (!isVisitorBanned_(browserId)) throw new Error('利用停止は解除されています。ページを更新してください。');
+    const sheet = banAppealSheet_(true);
+    const last = sheet.getLastRow();
+    if (last > 1) {
+      const entries = sheet.getRange(2, 2, last - 1, 1).createTextFinder(browserId).matchEntireCell(true).matchCase(true).findAll();
+      const latest = entries.reduce((highest, entry) => Math.max(highest, entry.getRow()), 0);
+      if (latest && Date.now() - new Date(sheet.getRange(latest, 1).getValue()).getTime() < 86400000) {
+        throw new Error('このブラウザからは送信済みです。次の送信は24時間後にできます。');
+      }
+    }
+    sheet.appendRow([new Date(), safeCell_(String(browserId)), safeCell_(message)]);
+    SpreadsheetApp.flush();
+    return {ok: true};
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function getBanAppeals(adminToken) {
+  requireAdmin_(adminToken);
+  const sheet = banAppealSheet_(false);
+  const last = sheet ? sheet.getLastRow() : 0;
+  if (last < 2) return {logs: []};
+  const count = Math.min(last - 1, 200);
+  return {logs: sheet.getRange(last - count + 1, 1, count, 3).getValues().reverse()
+    .map(([date, browserId, message]) => ({
+      date: toIso_(date),
+      browserId: String(browserId),
+      message: String(message),
+      banned: isVisitorBanned_(String(browserId))
+    }))};
+}
+
 function linkReportSheet_(create) {
   const id = PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY);
   if (!id) throw new Error('スプレッドシートIDが未設定です。');

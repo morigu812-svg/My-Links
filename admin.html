@@ -1219,6 +1219,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
       <details class="sidebar-log-folder">
         <summary class="side-item"><span class="side-folder-mini" aria-hidden="true"><svg class="folder-icon" viewBox="0 0 64 52" aria-hidden="true"><path d="M4 10a5 5 0 0 1 5-5h17l7 7h22a5 5 0 0 1 5 5v4H4z" fill="currentColor" opacity=".72"/><path d="M4 17a5 5 0 0 1 5-5h46a5 5 0 0 1 5 5v27a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z" fill="currentColor"/><path d="M4 22h56" stroke="#fff" stroke-opacity=".35" stroke-width="2"/></svg></span> ログ <span class="log-folder-chevron" aria-hidden="true">›</span></summary>
         <div class="sidebar-log-items">
+          <button class="side-item" type="button" id="sideBanAppeals"><span aria-hidden="true">⚑</span> 異議申し立て</button>
           <button class="side-item" type="button" id="sideLinkReports"><span>⚑</span> リンク報告 <span id="linkReportBadge" class="new-badge" hidden></span></button>
           <button class="side-item" type="button" id="sideLinkOperations"><span>◷</span> リンク操作履歴</button>
           <button class="side-item" type="button" id="sideVisitorLogins"><span>◷</span> 利用者ログイン履歴</button>
@@ -1647,7 +1648,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
   }
 
   function serverCall(method, ...args) {
-    const protectedMethods = ['sendChatReply', 'getChatRealtimeSession', 'getLinks', 'getOfficialLinks', 'saveLink', 'deleteLink', 'getLinkReports', 'markLinkReportChecked', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'getVisitorCounterStats', 'deleteVisitorCounterBefore20261114', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getAdminVisitorChatRead', 'markAdminVisitorChatRead', 'getChatMessages', 'deleteVisitorChatMessage', 'getChatScreenshot', 'sendChatMessage', 'sendChatScreenshot', 'getStaffChatMessages', 'getStaffChatAttachment', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendStaffChatAttachment', 'startStaffChatLargeUpload', 'appendStaffChatLargeUploadChunk',
+    const protectedMethods = ['getBanAppeals', 'sendChatReply', 'getChatRealtimeSession', 'getLinks', 'getOfficialLinks', 'saveLink', 'deleteLink', 'getLinkReports', 'markLinkReportChecked', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'getVisitorCounterStats', 'deleteVisitorCounterBefore20261114', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getAdminVisitorChatRead', 'markAdminVisitorChatRead', 'getChatMessages', 'deleteVisitorChatMessage', 'getChatScreenshot', 'sendChatMessage', 'sendChatScreenshot', 'getStaffChatMessages', 'getStaffChatAttachment', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendStaffChatAttachment', 'startStaffChatLargeUpload', 'appendStaffChatLargeUploadChunk',
         'finishStaffChatLargeUpload', 'getStaffChatAttachmentChunk', 'deleteStaffChatMessage', 'sendPrivateChatMessage', 'visitorDirectChatProxy', 'getClickLogs', 'setVisitorBan', 'setClickBrowserName', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
     if (protectedMethods.includes(method)) {
       const token = adminSession.getItem(ADMIN_TOKEN_KEY) || '';
@@ -2615,6 +2616,7 @@ document.getElementById('authSubmit').disabled = false;
   }
   $('adminVisitorCounterRefresh').addEventListener('click', () => { void refreshAdminVisitorCounter(); });
   const otherHistories = [
+  {key:'banAppeals', side:'sideBanAppeals', api:'getBanAppeals', title:'異議申し立て', description:'利用停止の見直しを希望する利用者から届いた申し立てです（直近200件）。', columns:['受信日時','ブラウザID','理由','現在の状態']},
   {key:'linkReports', side:'sideLinkReports', api:'getLinkReports', title:'リンク報告', description:'利用者から届いたリンクです。確認すると通知件数が減ります。', columns:['日時','URL','ブラウザID','状態']},
   {
     "key": "linkOperations",
@@ -2669,6 +2671,10 @@ document.getElementById('authSubmit').disabled = false;
       const rows = logs.map(log => {
         const row = document.createElement('tr');
         const cells = isCounter ? [log.date, Number(log.count || 0).toLocaleString('ja-JP') + '人'] : [new Date(log.date).toLocaleString('ja-JP')];
+        if (history.key === 'banAppeals') {
+          cells.push(log.browserId, log.message, log.banned ? '利用停止中' : '利用停止なし');
+          row.classList.add('ban-appeal-row');
+        }
         if (history.key === 'linkOperations') cells.push(log.action, log.title || log.linkId);
         if (history.key === 'linkReports') cells.push(log.url, log.browserId || '未記録');
         cells.forEach(value => { row.insertCell().textContent = value; });
@@ -7351,5 +7357,6 @@ var qrcode = function() {
 @media(max-width:760px){#clickLogView .click-history-tools label{min-width:140px}#clickLogView .click-log-table-wrap{max-height:none;overflow:visible;border:0}#clickLogView .click-entry{margin-bottom:12px;border:1px solid #2a5068!important;border-radius:12px;background:#0d2033}#clickLogView .click-entry td{min-width:0!important;max-width:none!important;padding:10px!important;overflow-wrap:anywhere}#clickLogView .click-log-action .btn{min-height:44px}}
 </style>
 <style>#visitorPersonalNotice{display:block;width:100%;padding:15px 18px;border:1px solid #38b7da;border-radius:12px;background:#10283e;color:#e6f8ff;text-align:left;cursor:pointer;line-height:1.6}#visitorPersonalNotice[hidden]{display:none!important}</style>
+<style>.ban-appeal-row td{overflow-wrap:anywhere}.ban-appeal-row td:nth-child(3){white-space:pre-wrap;min-width:14em}</style>
 </body>
 </html>

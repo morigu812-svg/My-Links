@@ -479,6 +479,16 @@ body.window-resizing,body.window-resizing *{user-select:none!important}
       <div><p>心当たりがなければ、ブラウザIDを添えて管理者にお問い合わせください。</p><code id="visitorBanBrowserId"></code></div>
       <button type="button" id="visitorBanRetry">利用状況を再確認</button>
     </footer>
+    <details class="ban-appeal">
+      <summary>管理者に異議申し立て</summary>
+      <form id="visitorBanAppealForm">
+        <label for="visitorBanAppealMessage">見直しを希望する理由</label>
+        <textarea id="visitorBanAppealMessage" rows="4" maxlength="1000" required></textarea>
+        <p>理由とブラウザIDを管理者に送ります。同じブラウザからの送信は24時間に1回です。</p>
+        <button type="submit">異議申し立てを送信</button>
+        <p id="visitorBanAppealStatus" role="status"></p>
+      </form>
+    </details>
   </div>
 </section>
 <section class="finder-window login-window" id="loginPanel">
@@ -1234,6 +1244,28 @@ $('loginForm').addEventListener('submit',async event=>{
   $('loginRetry').classList.toggle('hidden',!password.value);
   password.focus();
  }finally{button.disabled=false;}
+});
+$('visitorBanAppealForm').addEventListener('submit', async event => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const button = form.querySelector('button[type="submit"]');
+  const message = $('visitorBanAppealMessage');
+  const status = $('visitorBanAppealStatus');
+  if (button.disabled) return;
+  button.disabled = true;
+  status.textContent = '送信中…';
+  try {
+    const result = await call('submitBanAppeal', getNoticeBrowserId(), message.value);
+    if (!result?.ok) throw new Error('送信を確認できませんでした。');
+    form.reset();
+    status.textContent = '管理者に異議申し立てを届けました。';
+  } catch (error) {
+    status.textContent = String(error.message || '').startsWith('不正なリクエストです。')
+      ? '現在、異議申し立てを受け付けられません。'
+      : error.message || '送信できませんでした。';
+  } finally {
+    button.disabled = false;
+  }
 });
 $('visitorBanRetry').addEventListener('click', () => location.reload());
 async function checkVisitorBanStatus() {
@@ -4407,6 +4439,13 @@ html body #linksPanel .finder-content>#chatOverlay.open{position:relative!import
 @media(max-width:760px){html body #linksPanel .finder-content>#chatOverlay.open{min-height:0!important;padding-bottom:env(safe-area-inset-bottom)!important}#linksPanel #chatOverlay .chat-messages{max-height:48dvh;min-height:220px}}
 </style>
 <style id="visitor-ban-style">
+#visitorBanPanel .ban-appeal{border-top:1px solid #604134;padding:18px clamp(20px,4vw,48px) 22px;background:#201718}
+#visitorBanPanel .ban-appeal summary{cursor:pointer;color:#ffb49b;font-weight:700;padding:8px 0}
+#visitorBanPanel .ban-appeal form{display:grid;gap:10px;margin-top:10px}
+#visitorBanPanel .ban-appeal textarea{width:100%;box-sizing:border-box;padding:12px;border:1px solid #795444;border-radius:9px;background:#171315;color:#fff5e9;resize:vertical;font:inherit}
+#visitorBanPanel .ban-appeal p{margin:0;color:#e2cbc0;font-size:13px}
+#visitorBanPanel .ban-appeal [role=status]:empty{display:none}
+#visitorBanPanel .ban-appeal button{justify-self:start;min-height:44px;padding:8px 14px;border:1px solid #ff9b78;border-radius:9px;background:#ff9b78;color:#211211;font-weight:800;cursor:pointer}
 #visitorBanPanel[hidden]{display:none!important}
 #visitorBanPanel{min-height:calc(100dvh - 32px);display:grid;place-items:center;padding:clamp(10px,4vw,44px);box-sizing:border-box;color:#fff5e9;color-scheme:dark;font-family:system-ui,sans-serif}
 #visitorBanPanel .ban-frame{width:min(100%,1020px);min-width:0;box-sizing:border-box;border:1px solid #604134;border-radius:22px;overflow:hidden;background:radial-gradient(ellipse at 90% 20%,#452217 0%,transparent 45%),#171315;box-shadow:0 24px 80px #0009}
