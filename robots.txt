@@ -1,0 +1,4 @@
+User-agent: *
+Disallow:
+
+Sitemap: https://my-links-phdf.onrender.com/sitemap.xml
