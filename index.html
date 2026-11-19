@@ -4123,4 +4123,47 @@ footer{margin:16px 4px!important;font-size:11px!important}
 <script src="./ai-launcher.js"></script>
 <dialog id="linkReportDialog" class="link-report-dialog" aria-labelledby="linkReportTitle"><form id="linkReportForm"><h2 id="linkReportTitle">リンク報告</h2><p>管理者に確認してほしいリンクのURLを送信できます。</p><label for="linkReportUrl">URL</label><input id="linkReportUrl" type="url" inputmode="url" maxlength="2048" required placeholder="https://example.com"><p id="linkReportStatus" role="status" aria-live="polite"></p><div class="link-report-actions"><button type="button" id="closeLinkReport">キャンセル</button><button type="submit" id="sendLinkReport">報告する</button></div></form></dialog>
 <style>.link-report-dialog{width:min(92vw,480px);border:1px solid #267d98;border-radius:14px;background:#0b1727;color:#e7faff;padding:24px;box-shadow:0 24px 70px #000b}.link-report-dialog::backdrop{background:#000b}.link-report-dialog h2{margin:0 0 10px}.link-report-dialog p{color:#aac5d3}.link-report-dialog label{display:block;margin:18px 0 6px}.link-report-dialog input{width:100%;padding:12px;border:1px solid #32728b;border-radius:8px;background:#07101c;color:#fff}.link-report-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}.link-report-actions button{padding:10px 15px;border:1px solid #32728b;border-radius:8px;background:#12334d;color:#dff8ff;cursor:pointer}</style>
-<dialog id="chatProfileDialog" class="chat-profile-dialog" aria-labelledby="chatProfileTitle"><form id="chatProfileForm"><h2 id="chatProfileTitle">チャット利用情報</h2><p>学校名とフィルターの種類を入力してください。次回から自動で読み込みます。</p><label>学校名<input id="chatProfileSchool" maxlength="80" required autocomplete="organization"></label><label>フィルターの種類<input id="chatProfileFilter" maxlength="80" required placeholder="例：i-FILTER"></label><p id="chatProfileStatus" role="status"></p><div><button type="button" id="cancelChatProfile">キャンセル</button><button type="submit" id="saveChatProfile">保存して続ける</button></div></form></dialog><style>.chat-profile-dialog{width:min(92vw,480px);border:1px solid #2684a0;border-radius:14px;background:#0b1727;color:#e8f9ff;padding:24px;box-shadow:0 24px 70px #000b}.chat-profile-dialog::backdrop{background:#000c}.chat-profile-dialog p{color:#afcbd8;line-height:1.6}.chat-profile-dialog label{display:block;margin:14px 0;font-weight:700}.chat-profile-dialog input{display:block;width:100%;margin-top:6px;padding:12px;border:1px solid #3c7992;border-radius:8px;background:#07101c;color:#fff}.chat-profile-dialog form>div{display:flex;justify-content:flex-end;gap:10px}.chat-profile-dialog button,.chat-profile-edit{padding:9px 12px;border:1px solid #32728b;border-radius:8px;background:#12334d;color:#dff8ff;cursor:pointer}.chat-profile-edit{display:block;margin:10px 0;font-size:12px}</style></body></html>
+<dialog id="chatProfileDialog" class="chat-profile-dialog" aria-labelledby="chatProfileTitle"><form id="chatProfileForm"><h2 id="chatProfileTitle">チャット利用情報</h2><p>学校名とフィルターの種類を入力してください。次回から自動で読み込みます。</p><label>学校名<input id="chatProfileSchool" maxlength="80" required autocomplete="organization"></label><label>フィルターの種類<input id="chatProfileFilter" maxlength="80" required placeholder="例：i-FILTER"></label><p id="chatProfileStatus" role="status"></p><div><button type="button" id="cancelChatProfile">キャンセル</button><button type="submit" id="saveChatProfile">保存して続ける</button></div></form></dialog><style>.chat-profile-dialog{width:min(92vw,480px);border:1px solid #2684a0;border-radius:14px;background:#0b1727;color:#e8f9ff;padding:24px;box-shadow:0 24px 70px #000b}.chat-profile-dialog::backdrop{background:#000c}.chat-profile-dialog p{color:#afcbd8;line-height:1.6}.chat-profile-dialog label{display:block;margin:14px 0;font-weight:700}.chat-profile-dialog input{display:block;width:100%;margin-top:6px;padding:12px;border:1px solid #3c7992;border-radius:8px;background:#07101c;color:#fff}.chat-profile-dialog form>div{display:flex;justify-content:flex-end;gap:10px}.chat-profile-dialog button,.chat-profile-edit{padding:9px 12px;border:1px solid #32728b;border-radius:8px;background:#12334d;color:#dff8ff;cursor:pointer}.chat-profile-edit{display:block;margin:10px 0;font-size:12px}</style>
+<style id="mobile-usability">
+@media (max-width:760px) {
+  html {scroll-padding-top:12px}
+  html body {padding:8px 6px calc(12px + env(safe-area-inset-bottom))!important;overflow-x:hidden}
+  html body .finder-window {width:100%!important;max-width:100%!important;margin:0!important;min-width:0!important;border-radius:14px!important}
+  html body .finder-layout {min-width:0!important}
+  html body .finder-content {min-width:0!important;padding:16px 12px 24px!important}
+  html body .sidebar {max-width:100%!important;box-sizing:border-box}
+  html body .sidebar .side-item {min-height:44px!important;touch-action:manipulation}
+  html body :is(input,textarea,select) {font-size:16px!important;max-width:100%;box-sizing:border-box}
+  html body :is(button,.btn,.side-item) {touch-action:manipulation}
+  html body .finder-content button {min-height:44px}
+  html body #list {grid-template-columns:minmax(0,1fr)!important;gap:12px!important}
+  html body #list:has(>.folder-card):not(:has(.lc-link-card)) {grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  html body .folder-card {min-width:0;min-height:120px!important}
+  html body .folder-toolbar {flex-wrap:wrap;overflow-wrap:anywhere}
+  html body .section-heading {gap:10px}
+  html body .section-heading h2 {font-size:25px!important;overflow-wrap:anywhere}
+  html body .lc-link-card {min-width:0!important}
+  html body .lc-link-card .title {line-height:1.5!important;overflow-wrap:anywhere}
+  html body .lc-link-actions {display:flex;flex-wrap:wrap;gap:8px}
+  html body .lc-link-actions button {min-width:64px}
+  html body dialog {box-sizing:border-box;max-width:calc(100vw - 16px)!important;max-height:calc(100dvh - 24px)!important;overflow-y:auto;overscroll-behavior:contain}
+  html body .chat-overlay.open {position:fixed!important;inset:0!important;width:100%!important;max-width:none!important;height:100dvh!important;max-height:100dvh!important;margin:0!important;border-radius:0!important;box-sizing:border-box;padding:12px 12px calc(12px + env(safe-area-inset-bottom))!important;overflow-y:auto;z-index:10000}
+  html body .chat-head {flex-wrap:wrap;gap:8px}
+  html body .chat-messages {min-height:150px;overflow-y:auto;overscroll-behavior:contain}
+  html body .chat-compose {min-width:0;gap:8px;flex-wrap:wrap}
+  html body .chat-compose textarea {width:100%!important;min-height:76px;max-height:160px}
+  html body .chat-compose button {min-height:44px}
+  html body .chat-main-panel {min-width:0!important;max-width:100%!important}
+  html body .chat-table-wrap {min-height:180px!important;max-height:52dvh!important;overflow:auto!important;overscroll-behavior:contain}
+  html body .staff-message-bubble {max-width:100%;overflow-wrap:anywhere}
+  html body .visitor-dm {max-width:100%!important;box-sizing:border-box}
+  html body .visitor-dm-thread {max-height:52dvh;overflow:auto;overscroll-behavior:contain}
+  html body .visitor-page-link {position:static!important;display:inline-flex;margin:14px 6px;min-height:44px;align-items:center}
+  html body .resize-handle {display:none!important}
+}
+@media (max-width:360px) {
+  html body #list:has(>.folder-card):not(:has(.lc-link-card)) {grid-template-columns:minmax(0,1fr)!important}
+}
+</style>
+
+</body></html>

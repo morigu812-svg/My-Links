@@ -7116,5 +7116,48 @@ var qrcode = function() {
 }
 </style>
 <script src="./ai-launcher.js"></script>
+
+<style id="mobile-usability">
+@media (max-width:760px) {
+  html {scroll-padding-top:12px}
+  html body {padding:8px 6px calc(12px + env(safe-area-inset-bottom))!important;overflow-x:hidden}
+  html body .finder-window {width:100%!important;max-width:100%!important;margin:0!important;min-width:0!important;border-radius:14px!important}
+  html body .finder-layout {min-width:0!important}
+  html body .finder-content {min-width:0!important;padding:16px 12px 24px!important}
+  html body .sidebar {max-width:100%!important;box-sizing:border-box}
+  html body .sidebar .side-item {min-height:44px!important;touch-action:manipulation}
+  html body :is(input,textarea,select) {font-size:16px!important;max-width:100%;box-sizing:border-box}
+  html body :is(button,.btn,.side-item) {touch-action:manipulation}
+  html body .finder-content button {min-height:44px}
+  html body #list {grid-template-columns:minmax(0,1fr)!important;gap:12px!important}
+  html body #list:has(>.folder-card):not(:has(.lc-link-card)) {grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  html body .folder-card {min-width:0;min-height:120px!important}
+  html body .folder-toolbar {flex-wrap:wrap;overflow-wrap:anywhere}
+  html body .section-heading {gap:10px}
+  html body .section-heading h2 {font-size:25px!important;overflow-wrap:anywhere}
+  html body .lc-link-card {min-width:0!important}
+  html body .lc-link-card .title {line-height:1.5!important;overflow-wrap:anywhere}
+  html body .lc-link-actions {display:flex;flex-wrap:wrap;gap:8px}
+  html body .lc-link-actions button {min-width:64px}
+  html body dialog {box-sizing:border-box;max-width:calc(100vw - 16px)!important;max-height:calc(100dvh - 24px)!important;overflow-y:auto;overscroll-behavior:contain}
+  html body .chat-overlay.open {position:fixed!important;inset:0!important;width:100%!important;max-width:none!important;height:100dvh!important;max-height:100dvh!important;margin:0!important;border-radius:0!important;box-sizing:border-box;padding:12px 12px calc(12px + env(safe-area-inset-bottom))!important;overflow-y:auto;z-index:10000}
+  html body .chat-head {flex-wrap:wrap;gap:8px}
+  html body .chat-messages {min-height:150px;overflow-y:auto;overscroll-behavior:contain}
+  html body .chat-compose {min-width:0;gap:8px;flex-wrap:wrap}
+  html body .chat-compose textarea {width:100%!important;min-height:76px;max-height:160px}
+  html body .chat-compose button {min-height:44px}
+  html body .chat-main-panel {min-width:0!important;max-width:100%!important}
+  html body .chat-table-wrap {min-height:180px!important;max-height:52dvh!important;overflow:auto!important;overscroll-behavior:contain}
+  html body .staff-message-bubble {max-width:100%;overflow-wrap:anywhere}
+  html body .visitor-dm {max-width:100%!important;box-sizing:border-box}
+  html body .visitor-dm-thread {max-height:52dvh;overflow:auto;overscroll-behavior:contain}
+  html body .visitor-page-link {position:static!important;display:inline-flex;margin:14px 6px;min-height:44px;align-items:center}
+  html body .resize-handle {display:none!important}
+}
+@media (max-width:360px) {
+  html body #list:has(>.folder-card):not(:has(.lc-link-card)) {grid-template-columns:minmax(0,1fr)!important}
+}
+</style>
+
 </body>
 </html>
