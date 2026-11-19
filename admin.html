@@ -1344,6 +1344,8 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
       <div><span class="section-kicker">LINK CORE / ACTIVITY LOG</span><h2>クリック履歴</h2><p>利用者ページでクリックされたリンクの記録です（直近500件）。</p></div>
       <div class="click-log-actions"><button id="refreshClickLogs" class="btn" type="button">↻ 再読み込み</button><button id="deleteClickLogs" class="btn danger" type="button">履歴をすべて削除</button></div>
     </div>
+    <div class="click-history-tools"><label>履歴を検索<input id="clickHistorySearch" type="search" placeholder="リンク名・URL・ブラウザ名・ID"></label><label>期間<select id="clickHistoryPeriod"><option value="all">すべて</option><option value="today">今日（日本時間）</option><option value="week">直近7日（日本時間）</option></select></label></div>
+    <div id="clickHistorySummary" class="click-history-summary" role="status"></div>
     <div id="clickLogStatus" role="status" aria-live="polite"></div>
     <div id="noticeReadAdminBox" class="click-log-status-card"><strong>お知らせ既読数</strong><span id="noticeReadAdminCount">未取得</span><button id="refreshNoticeReadCount" class="btn" type="button">↻ 更新</button></div>
     <div class="click-log-table-wrap"><table class="click-log-table">
@@ -2499,9 +2501,31 @@ document.getElementById('authSubmit').disabled = false;
   }
     return browserCell;
   }
-  function renderClickLogs(logs){
+  let clickHistoryLogs = [];
+  function updateClickHistory() {
+    const query = $('clickHistorySearch').value.trim().toLocaleLowerCase();
+    const period = $('clickHistoryPeriod').value;
+    const japanDay = value => {
+      const date = new Date(value);
+      return Number.isFinite(date.getTime()) ? Math.floor((date.getTime() + 9 * 3600000) / 86400000) : null;
+    };
+    const today = japanDay(Date.now());
+    const visible = clickHistoryLogs.filter(log => {
+      const day = japanDay(log.clickedAt);
+      const matchesPeriod = period === 'all' || (day !== null && day <= today && day >= today - (period === 'week' ? 6 : 0));
+      return matchesPeriod && [log.title,log.url,log.browserName,log.browserId].some(value => String(value || '').toLocaleLowerCase().includes(query));
+    });
+    renderClickLogs(visible, false);
+    const browsers = new Set(visible.map(log => log.browserId).filter(Boolean));
+    const links = new Set(visible.map(log => log.url).filter(Boolean));
+    $('clickHistorySummary').textContent = visible.length + '件のクリック ／ ' + browsers.size + 'ブラウザ ／ ' + links.size + 'リンク';
+  }
+  $('clickHistorySearch').addEventListener('input', updateClickHistory);
+  $('clickHistoryPeriod').addEventListener('change', updateClickHistory);
+  function renderClickLogs(logs, remember = true){
+    if (remember) { clickHistoryLogs = logs; updateClickHistory(); return; }
     const body=$('clickLogRows');body.replaceChildren();
-    if(!logs.length){const tr=document.createElement('tr');const td=document.createElement('td');td.colSpan=5;td.className='click-log-empty';td.textContent='まだクリック履歴はありません。';tr.appendChild(td);body.appendChild(tr);return;}
+    if(!logs.length){const tr=document.createElement('tr');const td=document.createElement('td');td.colSpan=5;td.className='click-log-empty';td.textContent=clickHistoryLogs.length?'条件に一致する履歴はありません。':'まだクリック履歴はありません。';tr.appendChild(td);body.appendChild(tr);return;}
     logs.forEach(log=>{
       const tr=document.createElement('tr');tr.className='click-entry';const time=document.createElement('td');time.dataset.label='クリック日時';const date=new Date(log.clickedAt);
       time.textContent=isNaN(date.getTime())?'日時不明':date.toLocaleString('ja-JP',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});time.className='click-entry-time';
@@ -2517,12 +2541,12 @@ document.getElementById('authSubmit').disabled = false;
         browserCell.append(direct);
       }
       const urlCell=document.createElement('td');urlCell.className='log-url';urlCell.dataset.label='URL';
-      if(log.url.indexOf('https://')===0||log.url.indexOf('http://')===0){const a=document.createElement('a');a.href=log.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent=log.url;urlCell.appendChild(a);}else{urlCell.textContent=log.url||'';}
+      if(String(log.url || '').indexOf('https://')===0||String(log.url || '').indexOf('http://')===0){const a=document.createElement('a');a.href=log.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent=log.url;urlCell.appendChild(a);}else{urlCell.textContent=log.url||'';}
       const actionCell=document.createElement('td');actionCell.className='click-log-action';actionCell.dataset.label='操作';
       const remove=document.createElement('button');remove.type='button';remove.className='btn danger click-log-delete-one';remove.textContent='削除';remove.addEventListener('click',async()=>{
         if(!confirm('「'+(log.title||'（タイトルなし）')+'」のクリック履歴を1件削除しますか？'))return;
         remove.disabled=true;
-        try{const result=await serverCall('deleteClickLog',log.id);if(!result||!result.ok)throw new Error('削除完了の応答がありません。');tr.remove();const remaining=body.querySelectorAll('tr').length;if(!remaining){renderClickLogs([]);}const count=body.querySelectorAll('tr').length;$('clickLogStatus').textContent='履歴を1件削除しました。';}
+        try{const result=await serverCall('deleteClickLog',log.id);if(!result||!result.ok)throw new Error('削除完了の応答がありません。');clickHistoryLogs=clickHistoryLogs.filter(item=>item.id!==log.id);updateClickHistory();$('clickLogStatus').textContent='履歴を1件削除しました。';}
         catch(error){remove.disabled=false;$('clickLogStatus').textContent='削除に失敗しました：'+(error.message||'通信エラー');}
       });
       actionCell.appendChild(remove);
@@ -7249,5 +7273,22 @@ var qrcode = function() {
 </script>
 
 <style>.regular-visitor-label{display:inline-flex;align-items:center;margin:5px 8px;padding:3px 9px;border:1px solid #b193ff;border-radius:999px;background:#352453;color:#eee2ff;font-size:12px;font-weight:700;white-space:nowrap}</style>
+<style id="click-history-readability">
+#clickLogView .click-history-tools{display:flex;gap:12px;flex-wrap:wrap;margin:18px 0 12px}
+#clickLogView .click-history-tools label{display:grid;gap:7px;color:#bdd6e5;font-size:12px;flex:1;min-width:180px}
+#clickLogView .click-history-tools input,#clickLogView .click-history-tools select{padding:12px;border:1px solid #315870;border-radius:10px;background:#0b1b2d;color:#ecf8ff;width:100%;box-sizing:border-box;min-height:44px}
+#clickHistorySummary{padding:12px 15px;margin-bottom:14px;background:#10283e;border:1px solid #234f68;border-radius:10px;color:#bcecff;font-size:13px}
+#clickLogView .click-log-table-wrap{max-height:65dvh;overflow:auto;border-radius:12px;border:1px solid #244a62}
+#clickLogView thead th{position:sticky;top:0;z-index:1;background:#11283c;color:#cde7f5;font-size:12px}
+#clickLogView .click-entry td{padding:15px 12px!important;vertical-align:top;border-bottom:1px solid #234052}
+#clickLogView .click-entry:nth-child(even){background:#102034}
+#clickLogView .click-entry:hover{background:#163149}
+#clickLogView .click-entry-title{font-weight:700;color:#e7f8ff!important;min-width:140px}
+#clickLogView .click-entry-time{font-variant-numeric:tabular-nums;color:#b2ccde!important;font-size:12px;line-height:1.8}
+#clickLogView .log-url{max-width:260px;overflow-wrap:anywhere;font-size:12px}
+#clickLogView .log-url a{color:#87cce9}
+#clickLogView .click-log-action .btn{margin:3px;min-height:36px}
+@media(max-width:760px){#clickLogView .click-history-tools label{min-width:140px}#clickLogView .click-log-table-wrap{max-height:none;overflow:visible;border:0}#clickLogView .click-entry{margin-bottom:12px;border:1px solid #2a5068!important;border-radius:12px;background:#0d2033}#clickLogView .click-entry td{min-width:0!important;max-width:none!important;padding:10px!important;overflow-wrap:anywhere}#clickLogView .click-log-action .btn{min-height:44px}}
+</style>
 </body>
 </html>
