@@ -476,7 +476,12 @@ body.window-resizing,body.window-resizing *{user-select:none!important}
 <div class="side-label">クイックアクセス</div>
 <button class="side-item" type="button" id="visitorLogout">ログアウト</button>
 <button class="side-item" type="button" id="openLinkReport"><span>⚑</span> リンク報告</button>
-<button class="side-item chat-launch" type="button" id="openChat"><span>✉</span> 管理者チャット <span class="new-badge">NEW</span></button>
+<details class="visitor-chat-folder" open>
+<summary><span aria-hidden="true">▰</span> チャット</summary>
+<div class="visitor-chat-folder-items">
+<button class="side-item chat-launch" type="button" id="openChat"><span aria-hidden="true">☷</span> みんなのチャット</button>
+<button class="side-item" type="button" id="openPrivateChat"><span aria-hidden="true">✉</span> 管理者に相談</button>
+</div></details>
 <button class="side-item" type="button" id="sidePageGuide"><span aria-hidden="true">ⓘ</span> このページの仕組み</button>
 <button class="side-item" type="button" id="sideShare"><span>⤴</span> このページを共有</button>
 
@@ -499,7 +504,7 @@ body.window-resizing,body.window-resizing *{user-select:none!important}
 <div class="list loading-skeleton" id="list" role="region" aria-label="リンク一覧" aria-live="polite" aria-busy="true"><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div></div>
 </div></section></div>
 </section>
-<section class="chat-overlay" id="chatOverlay" aria-label="管理者との共通チャット"><div class="chat-head"><strong>LINK CORE / CHAT</strong><div class="chat-head-actions"><button type="button" id="openVisitorDirectChat">個人トーク</button><button type="button" id="closeChat">閉じる</button></div></div><div class="chat-subtitle">利用者と管理者が参加する共通チャットです。サイトの不具合報告などにもご利用ください。</div><div class="chat-messages" id="chatMessages" aria-live="polite"><div class="chat-status">チャットを開いています…</div></div><label class="chat-subtitle" for="privateChatId">個別チャットID（管理者に共有）<input id="privateChatId" type="text" readonly style="display:block;width:100%"></label><div id="chatScreenshotControls" class="chat-subtitle"><button type="button" id="chatScreenshot">スクリーンショットを共有</button><input id="chatScreenshotFile" type="file" accept="image/*" hidden><span> 選んだ画像はこの共通チャットの参加者に送信されます。</span><div id="chatScreenshotStatus" role="status"></div></div><button type="button" id="editChatProfile" class="chat-profile-edit">学校名・フィルターの種類を変更</button><form class="chat-compose" id="chatForm"><textarea id="chatInput" maxlength="1000" rows="2" placeholder="メッセージを入力…" required></textarea><button id="chatSend" type="submit">送信</button></form></section><footer><a class="admin" href="admin.html">管理者画面</a></footer>
+<section class="chat-overlay" id="chatOverlay" aria-label="みんなのチャット"><div class="chat-head"><strong>みんなのチャット</strong><div class="chat-head-actions"><button type="button" id="openVisitorDirectChat">個人トーク</button><button type="button" id="closeChat">閉じる</button></div></div><div class="chat-subtitle">利用者と管理者が参加する共通チャットです。サイトの不具合報告などにもご利用ください。</div><div class="chat-messages" id="chatMessages" aria-live="polite"><div class="chat-status">チャットを開いています…</div></div><label class="chat-subtitle" for="privateChatId">個別チャットID（管理者に共有）<input id="privateChatId" type="text" readonly style="display:block;width:100%"></label><div id="chatScreenshotControls" class="chat-subtitle"><button type="button" id="chatScreenshot">スクリーンショットを共有</button><input id="chatScreenshotFile" type="file" accept="image/*" hidden><span> 選んだ画像はこの共通チャットの参加者に送信されます。</span><div id="chatScreenshotStatus" role="status"></div></div><button type="button" id="editChatProfile" class="chat-profile-edit">学校名・フィルターの種類を変更</button><form class="chat-compose" id="chatForm"><textarea id="chatInput" maxlength="1000" rows="2" placeholder="メッセージを入力…" required></textarea><button id="chatSend" type="submit">送信</button></form></section><footer><a class="admin" href="admin.html">管理者画面</a></footer>
 </main>
 <iframe id="gasBridge" title="通信" hidden></iframe>
 
@@ -914,7 +919,12 @@ document.addEventListener('visibilitychange', () => {
  if (!document.hidden) void checkVisitorDmNotice();
 });
 
-$('openVisitorDirectChat').addEventListener('click', () => viewerDirectChat.open());
+function openVisitorPrivateChat() {
+ if (!visitorToken) { showVisitorLogin('先に利用者ログインをしてください。'); return; }
+ viewerDirectChat.open();
+}
+$('openVisitorDirectChat').addEventListener('click', openVisitorPrivateChat);
+$('openPrivateChat').addEventListener('click', openVisitorPrivateChat);
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && visitorToken && chatOverlay.classList.contains('open')) {
     viewerChatRealtime?.start();
@@ -4303,4 +4313,15 @@ footer{margin:16px 4px!important;font-size:11px!important}
 </script>
 
 <style>.visitor-dm-notification{position:fixed;top:calc(16px + env(safe-area-inset-top));right:16px;z-index:10025;max-width:min(380px,calc(100vw - 32px));padding:16px 20px;border:1px solid #3abada;border-radius:14px;background:#10253a;color:#e6f8ff;box-shadow:0 10px 35px #0008;text-align:left;font-size:14px;line-height:1.6;cursor:pointer}.visitor-dm-notification[hidden]{display:none!important}</style>
+<style id="visitor-chat-folder-style">
+#linksPanel .visitor-chat-folder{width:100%;min-width:0;box-sizing:border-box;margin:6px 0;color:#d8efff}
+#linksPanel .visitor-chat-folder summary{display:flex;align-items:center;gap:10px;cursor:pointer;list-style:none;padding:12px 13px;min-height:44px;box-sizing:border-box;border-radius:10px;background:#10253a;color:#d8efff;font-size:14px;font-weight:650}
+#linksPanel .visitor-chat-folder summary::-webkit-details-marker{display:none}
+#linksPanel .visitor-chat-folder summary::after{content:'›';margin-left:auto;transform:rotate(0deg)}
+#linksPanel .visitor-chat-folder[open] summary::after{transform:rotate(90deg)}
+#linksPanel .visitor-chat-folder summary>span{filter:grayscale(1) brightness(1.5);color:#49d5ff}
+#linksPanel .visitor-chat-folder-items{padding:4px 0 4px 12px;border-left:1px solid #23495e;margin:4px 0 0 17px}
+#linksPanel .visitor-chat-folder-items .side-item{white-space:normal!important;width:100%!important;text-align:left}
+#linksPanel .visitor-chat-folder summary:focus-visible{outline:2px solid #43d9ff;outline-offset:2px}
+</style>
 </body></html>
