@@ -7159,5 +7159,89 @@ var qrcode = function() {
 }
 </style>
 
+
+<style id="mobile-sidebar-drawer">
+.mobile-menu-toggle,.mobile-menu-backdrop,.mobile-menu-close{display:none}
+@media(max-width:760px){
+ .mobile-menu-toggle{display:inline-flex;align-items:center;justify-content:center;position:fixed;left:12px;top:calc(10px + env(safe-area-inset-top));width:44px;height:44px;z-index:10020;border:1px solid #28536b;border-radius:12px;background:#0b1b30;color:#e5f8ff;font-size:24px;cursor:pointer}
+ body.mobile-menu-available{padding-top:calc(64px + env(safe-area-inset-top))!important}
+ body.mobile-menu-open{overflow:hidden!important}
+ body.mobile-menu-open .mobile-menu-backdrop{display:block;position:fixed;inset:0;z-index:10030;background:#0009}
+ html body .finder-window .sidebar{display:flex!important;position:fixed!important;inset:0 auto 0 0!important;width:min(86vw,320px)!important;max-width:320px!important;height:100dvh!important;max-height:100dvh!important;margin:0!important;padding:calc(66px + env(safe-area-inset-top)) 14px calc(20px + env(safe-area-inset-bottom))!important;flex-direction:column!important;align-items:stretch!important;gap:5px!important;overflow-x:hidden!important;overflow-y:auto!important;background:#091525!important;border:0!important;border-right:1px solid #24465f!important;box-sizing:border-box!important;z-index:10040!important;transform:translateX(-102%);visibility:hidden;transition:transform .2s ease,visibility .2s;overscroll-behavior:contain}
+ html body.mobile-menu-open .finder-window .sidebar{transform:translateX(0);visibility:visible}
+ html body .finder-window .sidebar .side-item{display:flex!important;flex:0 0 auto!important;width:100%!important;min-height:46px!important;padding:11px 13px!important;order:0!important;border-radius:10px!important;white-space:normal!important;text-align:left;font-size:14px!important;box-sizing:border-box}
+ html body .finder-window .sidebar .side-label{display:block!important;margin:14px 10px 5px!important;font-size:11px!important;color:#92b4c9!important}
+ html body .finder-window .sidebar #sideCats,html body .finder-window .sidebar .side-cats{display:flex!important;flex-direction:column!important;gap:4px!important;flex:none!important}
+ html body .sidebar .mobile-menu-close{display:flex;position:absolute;top:calc(12px + env(safe-area-inset-top));right:12px;width:42px;height:42px;align-items:center;justify-content:center;border:1px solid #28536b;border-radius:10px;background:#102238;color:#e5f8ff;font-size:24px;cursor:pointer}
+}
+@media(prefers-reduced-motion:reduce){html body .finder-window .sidebar{transition:none!important}}
+</style>
+<script id="mobile-sidebar-controls">
+(() => {
+  const sidebar = document.querySelector('.sidebar');
+  const panel = sidebar?.closest('.finder-window');
+  if (!sidebar || !panel) return;
+  sidebar.id ||= 'mobileSidebar';
+  const toggle = document.createElement('button');
+  toggle.type = 'button';
+  toggle.className = 'mobile-menu-toggle';
+  toggle.textContent = '☰';
+  toggle.setAttribute('aria-label', 'メニューを開く');
+  toggle.setAttribute('aria-controls', sidebar.id);
+  toggle.setAttribute('aria-expanded', 'false');
+  const backdrop = document.createElement('div');
+  backdrop.className = 'mobile-menu-backdrop';
+  backdrop.setAttribute('aria-hidden', 'true');
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'mobile-menu-close';
+  close.textContent = '×';
+  close.setAttribute('aria-label', 'メニューを閉じる');
+  sidebar.prepend(close);
+  document.body.append(toggle, backdrop);
+  const mobile = matchMedia('(max-width:760px)');
+  let open = false;
+  function setOpen(value, restoreFocus = false) {
+    open = value;
+    if (document.body.classList.contains('mobile-menu-open') !== value) document.body.classList.toggle('mobile-menu-open', value);
+    toggle.setAttribute('aria-expanded', String(value));
+    if (mobile.matches) sidebar.inert = !value;
+    if (value) close.focus();
+    else if (restoreFocus) toggle.focus();
+  }
+  function sync() {
+    const available = mobile.matches && !panel.classList.contains('hidden') &&
+      !document.body.classList.contains('auth-locked');
+    toggle.hidden = !available;
+    toggle.style.display = available ? '' : 'none';
+    if (document.body.classList.contains('mobile-menu-available') !== available) document.body.classList.toggle('mobile-menu-available', available);
+    if (!available) setOpen(false);
+    sidebar.inert = mobile.matches && !open;
+  }
+  toggle.addEventListener('click', () => setOpen(!open, true));
+  close.addEventListener('click', () => setOpen(false, true));
+  backdrop.addEventListener('click', () => setOpen(false, true));
+  sidebar.addEventListener('click', event => {
+    if (event.target.closest('.side-item')) setOpen(false);
+  });
+  document.addEventListener('keydown', event => {
+    if (!open) return;
+    if (event.key === 'Escape') { event.preventDefault(); setOpen(false, true); }
+    if (event.key === 'Tab') {
+      const items = Array.from(sidebar.querySelectorAll('button,a[href],input,select,textarea,[tabindex="0"]'))
+        .filter(item => !item.disabled && item.getClientRects().length);
+      const first = items[0], last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    }
+  });
+  mobile.addEventListener('change', sync);
+  const observer = new MutationObserver(sync);
+  observer.observe(panel, {attributes:true, attributeFilter:['class']});
+  observer.observe(document.body, {attributes:true, attributeFilter:['class']});
+  sync();
+})();
+</script>
+
 </body>
 </html>
