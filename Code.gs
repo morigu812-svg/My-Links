@@ -2246,7 +2246,7 @@ function getStaffChatMessages(adminToken, browserId, pageOptions) {
       const canView = !recipient || (browserValid && (author === browserId || recipient === mailbox));
       if (canView && browserValid && author !== browserId && !readers.includes(browserId)) {
         unreadCount++;
-        latestUnreadRoom = recipient || '';
+        latestUnreadRoom = recipient ? (staffChatMailboxId_(author) || null) : '';
       }
     }
     return Object.assign({messages:[], nextCursor:null, unreadCount, latestUnreadRoom},metadata);
@@ -3360,7 +3360,7 @@ function supabaseStaffChatMessages_(opts, mailbox, metadata, limit) {
     }
     const unread = mailbox ? rows.filter(row => row.sender !== mailbox && !row.readers.includes(mailbox)) : [];
     return Object.assign({messages:[], nextCursor:null, unreadCount:unread.length,
-      latestUnreadRoom:unread.length ? (unread[0].recipient || '') : null}, metadata);
+      latestUnreadRoom:unread.length ? (unread[0].recipient ? unread[0].sender || null : '') : null}, metadata);
   }
   const query = Object.assign(base, {select:'seq,id,sender,recipient,body,created_at,readers,file_name,file_mime,file_size,reply_to', limit:limit+1});
   if (roomScoped) {

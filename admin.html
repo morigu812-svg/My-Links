@@ -4012,7 +4012,10 @@ $('closeChat').addEventListener('click', closeMainChat);
     showStaffTalk(null, '', true);
   });
   $('staffChatNotice').addEventListener('click', () => {
-    if (staffNoticeRoom === null) { $('sideStaffChat').click(); return; }
+    if (staffNoticeRoom === null || (staffNoticeRoom && staffNoticeRoom === staffOwnMailbox)) {
+      $('sideStaffChat').click();
+      return;
+    }
     if (!adminSession.getItem(ADMIN_TOKEN_KEY) || $('staffChatSend').disabled) return;
     const room = staffNoticeRoom;
     openMainChat(staffChat, '管理者専用チャット');
