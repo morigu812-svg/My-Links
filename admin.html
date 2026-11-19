@@ -1212,6 +1212,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
         <summary class="side-item"><span class="side-folder-mini" aria-hidden="true"><svg class="folder-icon" viewBox="0 0 64 52" aria-hidden="true"><path d="M4 10a5 5 0 0 1 5-5h17l7 7h22a5 5 0 0 1 5 5v4H4z" fill="currentColor" opacity=".72"/><path d="M4 17a5 5 0 0 1 5-5h46a5 5 0 0 1 5 5v27a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z" fill="currentColor"/><path d="M4 22h56" stroke="#fff" stroke-opacity=".35" stroke-width="2"/></svg></span> チャット <span class="log-folder-chevron" aria-hidden="true">›</span></summary>
         <div class="sidebar-log-items">
           <button class="side-item" type="button" id="sideStaffChat"><span>✉</span> 管理者専用チャット <span id="staffUnreadCount" class="new-badge" hidden></span></button>
+          <button class="side-item" type="button" id="sideVisitorPersonalChat"><span aria-hidden="true">✉</span> 利用者個人チャット</button>
           <button class="side-item" type="button" id="sideChat"><span>✉</span> 利用者チャット <span class="new-badge" id="chatUnreadBadge" hidden></span></button>
         </div>
       </details>
@@ -4078,7 +4079,12 @@ $('closeChat').addEventListener('click', closeMainChat);
   }
   setInterval(() => { void checkVisitorPersonalChat(); },15000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) void checkVisitorPersonalChat(); });
-  $('openVisitorDirectAdmin').addEventListener('click', () => adminVisitorDirectChat.open());
+  function openVisitorPersonalChatList() {
+    if (!adminSession.getItem(ADMIN_TOKEN_KEY)) return;
+    adminVisitorDirectChat.open();
+  }
+  $('openVisitorDirectAdmin').addEventListener('click', openVisitorPersonalChatList);
+  $('sideVisitorPersonalChat').addEventListener('click', openVisitorPersonalChatList);
   let adminPageRealtimeToken = '';
   function startAdminChatRealtime() {
     adminPageRealtimeToken = adminSession.getItem(ADMIN_TOKEN_KEY);
