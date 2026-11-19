@@ -3433,10 +3433,15 @@ function visitorDirectChatProxy(parameters, viewerToken) {
   const peer = isAdmin ? browser : ownBrowser;
   const base = 'link_core_chat?kind=eq.direct&recipient=eq.' + encodeURIComponent('vb_' + peer);
   if (operation === 'list') {
-    const rows = supabaseChatRequest_('get', 'link_core_chat?kind=eq.direct&recipient=like.vb_*&select=recipient,body,created_at,seq&order=seq.desc&limit=500');
+    const rows = supabaseChatRequest_('get', 'link_core_chat?kind=eq.direct&recipient=like.vb_*&select=id,author,recipient,body,created_at,seq&order=seq.desc&limit=500');
     const seen = new Set();
-    return {rooms:rows.filter(row => {if (seen.has(row.recipient)) return false; seen.add(row.recipient); return true;})
-      .map(row => ({browserId:String(row.recipient).slice(3),lastMessage:String(row.body).slice(0,90),createdAt:row.created_at}))};
+    return {
+      rooms:rows.filter(row => {if (seen.has(row.recipient)) return false; seen.add(row.recipient); return true;})
+        .map(row => ({browserId:String(row.recipient).slice(3),lastMessage:String(row.body).slice(0,90),createdAt:row.created_at})),
+      incoming:rows.filter(row => row.author !== '管理者').map(row => ({
+        id:row.id, browserId:String(row.recipient).slice(3), createdAt:row.created_at
+      }))
+    };
   }
   if (operation === 'read') {
     const query = base + (beforeCursor ? '&seq=lt.' + beforeCursor : '') + '&select=id,author,body,created_at,seq&order=seq.desc&limit=101';

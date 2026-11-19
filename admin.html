@@ -1159,7 +1159,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
 <script src="./chat-preview.js"></script>
 <script src="./chat-realtime.js?v=staff-direct-pilot"></script>
 <link rel="stylesheet" href="./visitor-direct-chat.css">
-<script src="./visitor-direct-chat.js"></script>
+<script src="./visitor-direct-chat.js?v=admin-notice2"></script>
 <script src="./chat-screenshot.js?v=clipboard1" defer></script>
 <style id="visitor-counter-style">
 .visitor-counter-strip{display:flex;align-items:center;flex-wrap:wrap;gap:10px 20px;margin:11px 0 13px;padding:11px 14px;border:1px solid rgba(53,217,255,.28);border-radius:10px;background:rgba(14,38,51,.65);font-size:12px;color:#a9c7d4}
@@ -1875,6 +1875,7 @@ function watchSessionExpiry(deadline, onExpired) {
     if (authGate) authGate.classList.add('is-hidden');
     authField.value = '';
     refreshStaffChat();
+    void checkVisitorPersonalChat();
     void refreshLinkReportBadge();
     startAdminChatRealtime();
     void refreshAdminChat();
@@ -4023,7 +4024,60 @@ $('closeChat').addEventListener('click', closeMainChat);
       if (topics.some(topic => !topic.startsWith('lc-chat-staff-'))) void refreshAdminChat();
     }
   );
-  const adminVisitorDirectChat = window.createVisitorDirectChat(params => serverCall('visitorDirectChatProxy', params), true, {main:true,container:document.querySelector('.finder-content'),onOpen:panel=>openMainChat(panel,'個人トーク'),onClose:closeMainChat});
+  const adminVisitorDirectChat = window.createVisitorDirectChat(params => serverCall('visitorDirectChatProxy', params), true, {main:true,container:document.querySelector('.finder-content'),onOpen:panel=>openMainChat(panel,'個人トーク'),onClose:closeMainChat,onRead:markVisitorPersonalRead});
+  const personalChatNotice = document.createElement('button');
+  personalChatNotice.type = 'button';
+  personalChatNotice.id = 'visitorPersonalNotice';
+  personalChatNotice.hidden = true;
+  personalChatNotice.setAttribute('aria-live','polite');
+  $('adminChatNotices').prepend(personalChatNotice);
+  let personalChatUnread = [];
+  let personalChatChecking = false;
+  async function markVisitorPersonalRead(messages) {
+    const ids = messages.filter(item => !item.own).map(item => String(item.id));
+    if (!ids.length) return;
+    const token = adminSession.getItem(ADMIN_TOKEN_KEY);
+    try {
+      await loadVisitorChatRead();
+      if (token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
+      const missing = ids.filter(id => !readVisitorChatIds.has(id));
+      if (missing.length) {
+        const result = await serverCall('markAdminVisitorChatRead',staffBrowserId,missing.slice(-200));
+        if (token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
+        readVisitorChatIds = new Set(result.ids || []);
+      }
+      personalChatUnread = personalChatUnread.filter(item => !ids.includes(item.id));
+      updatePersonalChatNotice();
+    } catch (_) {}
+  }
+  function updatePersonalChatNotice() {
+    personalChatNotice.hidden = !personalChatUnread.length || !adminSession.getItem(ADMIN_TOKEN_KEY);
+    personalChatNotice.textContent = '利用者から個人チャット · 未読 ' + personalChatUnread.length + '件';
+  }
+  personalChatNotice.addEventListener('click', () => {
+    const latest = personalChatUnread[0];
+    if (!latest || !adminSession.getItem(ADMIN_TOKEN_KEY)) return;
+    adminVisitorDirectChat.open(latest.browserId);
+  });
+  async function checkVisitorPersonalChat() {
+    const token = adminSession.getItem(ADMIN_TOKEN_KEY);
+    if (!token || document.hidden) { personalChatNotice.hidden = true; return; }
+    if (personalChatChecking) return;
+    personalChatChecking = true;
+    try {
+      await loadVisitorChatRead();
+      const result = await serverCall('visitorDirectChatProxy',{operation:'list'});
+      if (token !== adminSession.getItem(ADMIN_TOKEN_KEY) || document.hidden) return;
+      personalChatUnread = (result.incoming || []).filter(item =>
+        /^[A-Za-z0-9_-]{8,100}$/.test(item.browserId) && !readVisitorChatIds.has(String(item.id)));
+      updatePersonalChatNotice();
+      if (personalChatUnread.length) void adminVisitorDirectChat.refresh();
+    } catch (_) {
+      // 次回の定期確認で再試行する。
+    } finally { personalChatChecking = false; }
+  }
+  setInterval(() => { void checkVisitorPersonalChat(); },15000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) void checkVisitorPersonalChat(); });
   $('openVisitorDirectAdmin').addEventListener('click', () => adminVisitorDirectChat.open());
   let adminPageRealtimeToken = '';
   function startAdminChatRealtime() {
@@ -7290,5 +7344,6 @@ var qrcode = function() {
 #clickLogView .click-log-action .btn{margin:3px;min-height:36px}
 @media(max-width:760px){#clickLogView .click-history-tools label{min-width:140px}#clickLogView .click-log-table-wrap{max-height:none;overflow:visible;border:0}#clickLogView .click-entry{margin-bottom:12px;border:1px solid #2a5068!important;border-radius:12px;background:#0d2033}#clickLogView .click-entry td{min-width:0!important;max-width:none!important;padding:10px!important;overflow-wrap:anywhere}#clickLogView .click-log-action .btn{min-height:44px}}
 </style>
+<style>#visitorPersonalNotice{display:block;width:100%;padding:15px 18px;border:1px solid #38b7da;border-radius:12px;background:#10283e;color:#e6f8ff;text-align:left;cursor:pointer;line-height:1.6}#visitorPersonalNotice[hidden]{display:none!important}</style>
 </body>
 </html>
