@@ -588,6 +588,7 @@ function call(method, ...args) {
 const $=id=>document.getElementById(id);
 let clickNoticeTimer=0;
 function showClickLogNotice(message,isError){
+ if (!isError) return;
  const box=$('clickLogNotice');if(!box)return;
  box.classList.toggle('error',!!isError);box.innerHTML='';
  const heading=document.createElement('strong');heading.textContent=isError?'クリック履歴を保存できませんでした':'クリック履歴';
@@ -1099,7 +1100,7 @@ $('list').addEventListener('click',event=>{
  if(clickLogPending.has(String(link.id)))return;
  clickLogPending.add(String(link.id));
  call('recordLinkClick',link.id,getNoticeBrowserId(),visitorToken)
-  .then(result=>{if(result&&result.ok)showClickLogNotice('「'+link.title+'」のクリック履歴を保存しました。',false);else throw new Error('GASから保存完了の応答がありませんでした。');})
+  .then(result=>{if(!result||!result.ok)throw new Error('GASから保存完了の応答がありませんでした。');})
   .catch(error=>{
     const message=error&&error.message?error.message:String(error||'不明なエラー');
     console.error('[LINK CORE] click log failed', {linkId:link.id,title:link.title,error});
