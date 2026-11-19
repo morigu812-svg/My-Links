@@ -1351,8 +1351,8 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
     <div id="clickLogStatus" role="status" aria-live="polite"></div>
     <div id="noticeReadAdminBox" class="click-log-status-card"><strong>お知らせ既読数</strong><span id="noticeReadAdminCount">未取得</span><button id="refreshNoticeReadCount" class="btn" type="button">↻ 更新</button></div>
     <div class="click-log-table-wrap"><table class="click-log-table">
-      <thead><tr><th>クリック日時</th><th>リンク名</th><th>ブラウザID</th><th>URL</th><th>操作</th></tr></thead>
-      <tbody id="clickLogRows"><tr><td colspan="5">まだ履歴はありません。</td></tr></tbody>
+      <thead><tr><th scope="col">リンク</th><th scope="col">利用者・ブラウザID</th><th scope="col">日時（日本時間）</th><th scope="col">操作</th></tr></thead>
+      <tbody id="clickLogRows"><tr><td colspan="4">まだ履歴はありません。</td></tr></tbody>
     </table></div>
     </div>
     <div id="otherHistoryView" hidden>
@@ -2525,15 +2525,72 @@ document.getElementById('authSubmit').disabled = false;
   }
   $('clickHistorySearch').addEventListener('input', updateClickHistory);
   $('clickHistoryPeriod').addEventListener('change', updateClickHistory);
+  const clickHistoryDateFormat = new Intl.DateTimeFormat('ja-JP', {timeZone:'Asia/Tokyo', year:'numeric', month:'2-digit', day:'2-digit'});
+  const clickHistoryTimeFormat = new Intl.DateTimeFormat('ja-JP', {timeZone:'Asia/Tokyo', hour:'2-digit', minute:'2-digit', hourCycle:'h23'});
   function renderClickLogs(logs, remember = true){
     if (remember) { clickHistoryLogs = logs; updateClickHistory(); return; }
     const body=$('clickLogRows');body.replaceChildren();
-    if(!logs.length){const tr=document.createElement('tr');const td=document.createElement('td');td.colSpan=5;td.className='click-log-empty';td.textContent=clickHistoryLogs.length?'条件に一致する履歴はありません。':'まだクリック履歴はありません。';tr.appendChild(td);body.appendChild(tr);return;}
+    if(!logs.length){const tr=document.createElement('tr');const td=document.createElement('td');td.colSpan=4;td.className='click-log-empty';td.textContent=clickHistoryLogs.length?'条件に一致する履歴はありません。':'まだクリック履歴はありません。';tr.appendChild(td);body.appendChild(tr);return;}
     logs.forEach(log=>{
       const tr=document.createElement('tr');tr.className='click-entry';const time=document.createElement('td');time.dataset.label='クリック日時';const date=new Date(log.clickedAt);
-      time.textContent=isNaN(date.getTime())?'日時不明':date.toLocaleString('ja-JP',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});time.className='click-entry-time';
-      const title=document.createElement('td');title.dataset.label='リンク名';title.className='click-entry-title';title.textContent=log.title||'（タイトルなし）';
-      const browserCell=historyBrowserCell(log, '旧データ（未識別）', 'clickLogStatus', 'clickLogView', refreshClickLogs);browserCell.dataset.label='ブラウザ';
+      time.className = 'click-entry-time';
+      if (Number.isNaN(date.getTime())) {
+        time.textContent = '日時不明';
+      } else {
+        const day = document.createElement('span');
+        day.textContent = clickHistoryDateFormat.format(date);
+        const clock = document.createElement('time');
+        clock.dateTime = date.toISOString();
+        clock.textContent = clickHistoryTimeFormat.format(date);
+        time.append(day, clock);
+      }
+      const title = document.createElement('td');
+      title.dataset.label = 'リンク';
+      title.className = 'click-entry-title';
+      const titleText = log.title || '（タイトルなし）';
+      let url;
+      try {
+        const parsed = new URL(log.url || '');
+        if (parsed.protocol === 'https:' || parsed.protocol === 'http:') url = parsed;
+      } catch (_) {}
+      const titleGroup = document.createElement('div');
+      const titleName = document.createElement(url ? 'a' : 'span');
+      titleName.textContent = titleText;
+      if (url) {
+        titleName.href = url.href;
+        titleName.target = '_blank';
+        titleName.rel = 'noopener noreferrer';
+        titleName.title = url.href;
+      }
+      titleGroup.append(titleName);
+      if (url) {
+        const domain = document.createElement('small');
+        domain.textContent = url.hostname;
+        titleGroup.append(domain);
+      }
+      title.append(titleGroup);
+      const browserCell=historyBrowserCell(log, '旧データ（未識別）', 'clickLogStatus', 'clickLogView', refreshClickLogs);browserCell.dataset.label='利用者';
+      if (log.banned) {
+        const badge = document.createElement('span');
+        badge.className = 'click-history-banned';
+        badge.textContent = '利用停止中';
+        browserCell.append(badge);
+      }
+      const actionCell = document.createElement('td');
+      actionCell.className = 'click-log-action';
+      actionCell.dataset.label = '操作';
+      const actionMenu = document.createElement('details');
+      const actionLabel = document.createElement('summary');
+      actionLabel.textContent = '詳細・操作';
+      actionLabel.setAttribute('aria-label', titleText + 'の詳細・操作');
+      actionMenu.append(actionLabel);
+      if (log.url) {
+        const fullUrl = document.createElement('div');
+        fullUrl.className = 'click-history-full-url';
+        fullUrl.textContent = log.url;
+        actionMenu.append(fullUrl);
+      }
+      actionCell.append(actionMenu);
       if (/^[A-Za-z0-9_-]{8,100}$/.test(log.browserId)) {
         const direct = document.createElement('button');
         direct.type = 'button';
@@ -2541,18 +2598,15 @@ document.getElementById('authSubmit').disabled = false;
         direct.textContent = '個人トーク';
         direct.addEventListener('click', () => adminVisitorDirectChat.open(log.browserId,
           browserCell.querySelector('.click-browser-name')?.dataset.browserName || log.browserName || ''));
-        browserCell.append(direct);
+        actionMenu.append(direct);
       }
-      const urlCell=document.createElement('td');urlCell.className='log-url';urlCell.dataset.label='URL';
-      if(String(log.url || '').indexOf('https://')===0||String(log.url || '').indexOf('http://')===0){const a=document.createElement('a');a.href=log.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent=log.url;urlCell.appendChild(a);}else{urlCell.textContent=log.url||'';}
-      const actionCell=document.createElement('td');actionCell.className='click-log-action';actionCell.dataset.label='操作';
       const remove=document.createElement('button');remove.type='button';remove.className='btn danger click-log-delete-one';remove.textContent='削除';remove.addEventListener('click',async()=>{
         if(!confirm('「'+(log.title||'（タイトルなし）')+'」のクリック履歴を1件削除しますか？'))return;
         remove.disabled=true;
         try{const result=await serverCall('deleteClickLog',log.id);if(!result||!result.ok)throw new Error('削除完了の応答がありません。');clickHistoryLogs=clickHistoryLogs.filter(item=>item.id!==log.id);updateClickHistory();$('clickLogStatus').textContent='履歴を1件削除しました。';}
         catch(error){remove.disabled=false;$('clickLogStatus').textContent='削除に失敗しました：'+(error.message||'通信エラー');}
       });
-      actionCell.appendChild(remove);
+      actionMenu.append(remove);
       if (/^[A-Za-z0-9_-]{8,100}$/.test(log.browserId)) {
         const ban=document.createElement('button');ban.type='button';ban.className='btn click-ban-button'+(log.banned?'':' danger');ban.textContent=log.banned?'BAN解除':'BAN';
         ban.setAttribute('aria-label',(log.banned?'BAN解除':'BAN')+'：ブラウザID '+log.browserId);
@@ -2563,9 +2617,9 @@ document.getElementById('authSubmit').disabled = false;
           try{await serverCall('setVisitorBan',log.browserId,blocked);clickLogsLoaded=false;await refreshClickLogs();}
           catch(error){$('clickLogStatus').textContent='BAN設定に失敗しました：'+(error.message||'通信エラー');ban.disabled=false;}
         });
-        actionCell.append(ban);
+        actionMenu.append(ban);
       }
-      tr.append(time,title,browserCell,urlCell,actionCell);body.appendChild(tr);
+      tr.append(title,browserCell,time,actionCell);body.appendChild(tr);
     });
   }
   async function refreshClickLogs(){
@@ -7361,5 +7415,23 @@ var qrcode = function() {
 </style>
 <style>#visitorPersonalNotice{display:block;width:100%;padding:15px 18px;border:1px solid #38b7da;border-radius:12px;background:#10283e;color:#e6f8ff;text-align:left;cursor:pointer;line-height:1.6}#visitorPersonalNotice[hidden]{display:none!important}</style>
 <style>.ban-appeal-row td{overflow-wrap:anywhere}.ban-appeal-row td:nth-child(3){white-space:pre-wrap;min-width:14em}</style>
+<style>
+#clickLogView .click-log-table{table-layout:fixed}
+#clickLogView .click-log-table th:nth-child(1){width:34%}
+#clickLogView .click-log-table th:nth-child(2){width:27%}
+#clickLogView .click-log-table th:nth-child(3){width:17%}
+#clickLogView .click-log-table th:nth-child(4){width:22%}
+#clickLogView .click-entry-title a{color:#ecf8ff;text-decoration:underline;text-underline-offset:3px;overflow-wrap:anywhere}
+#clickLogView .click-entry-title small,#clickLogView .click-entry-time :is(span,time){display:block}
+#clickLogView .click-entry-title small,#clickLogView .click-history-full-url{color:#a8bfd4;font-size:12px;overflow-wrap:anywhere}
+#clickLogView .click-entry-time time{font-size:15px;font-weight:700;color:#e7f8ff}
+#clickLogView .click-history-banned{display:table;margin-top:7px;color:#ffd1d1;background:#4a252d;padding:3px 8px;border-radius:6px;font-size:12px}
+#clickLogView .click-log-action details{min-width:0}
+#clickLogView .click-log-action summary{cursor:pointer;padding:8px;border:1px solid #315870;border-radius:8px;color:#e0f3ff;text-align:left}
+#clickLogView .click-history-full-url{margin:9px 0;text-align:left;white-space:normal}
+#clickLogView .click-log-action details .btn{width:100%;margin:6px 0 0}
+#clickLogView .log-browser-id{overflow-wrap:anywhere}
+@media(max-width:900px){#clickLogView .click-log-action{justify-items:stretch}#clickLogView .click-log-action summary{padding:12px 8px}}
+</style>
 </body>
 </html>
