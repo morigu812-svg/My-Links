@@ -1349,7 +1349,6 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
     <div class="click-history-tools"><label>履歴を検索<input id="clickHistorySearch" type="search" placeholder="リンク名・URL・ブラウザ名・ID"></label><label>期間<select id="clickHistoryPeriod"><option value="all">すべて</option><option value="today">今日（日本時間）</option><option value="week">直近7日（日本時間）</option></select></label></div>
     <div id="clickHistorySummary" class="click-history-summary" role="status"></div>
     <div id="clickLogStatus" role="status" aria-live="polite"></div>
-    <div id="noticeReadAdminBox" class="click-log-status-card"><strong>お知らせ既読数</strong><span id="noticeReadAdminCount">未取得</span><button id="refreshNoticeReadCount" class="btn" type="button">↻ 更新</button></div>
     <div class="click-log-table-wrap"><table class="click-log-table">
       <thead><tr><th scope="col">リンク</th><th scope="col">利用者・ブラウザID</th><th scope="col">日時（日本時間）</th><th scope="col">操作</th></tr></thead>
       <tbody id="clickLogRows"><tr><td colspan="4">まだ履歴はありません。</td></tr></tbody>
@@ -1649,7 +1648,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
 
   function serverCall(method, ...args) {
     const protectedMethods = ['getBanAppeals', 'sendChatReply', 'getChatRealtimeSession', 'getLinks', 'getOfficialLinks', 'saveLink', 'deleteLink', 'getLinkReports', 'markLinkReportChecked', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'getVisitorCounterStats', 'deleteVisitorCounterBefore20261114', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getAdminVisitorChatRead', 'markAdminVisitorChatRead', 'getChatMessages', 'deleteVisitorChatMessage', 'getChatScreenshot', 'sendChatMessage', 'sendChatScreenshot', 'getStaffChatMessages', 'getStaffChatAttachment', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendStaffChatAttachment', 'startStaffChatLargeUpload', 'appendStaffChatLargeUploadChunk',
-        'finishStaffChatLargeUpload', 'getStaffChatAttachmentChunk', 'deleteStaffChatMessage', 'sendPrivateChatMessage', 'visitorDirectChatProxy', 'getClickLogs', 'setVisitorBan', 'setClickBrowserName', 'deleteClickLogs', 'deleteClickLog', 'getNoticeReadCount', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
+        'finishStaffChatLargeUpload', 'getStaffChatAttachmentChunk', 'deleteStaffChatMessage', 'sendPrivateChatMessage', 'visitorDirectChatProxy', 'getClickLogs', 'setVisitorBan', 'setClickBrowserName', 'deleteClickLogs', 'deleteClickLog', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
     if (protectedMethods.includes(method)) {
       const token = adminSession.getItem(ADMIN_TOKEN_KEY) || '';
       // 呼び出し元（埋め込みメモ帳など）が既にトークンを渡している場合は二重追加しない。
@@ -2849,14 +2848,6 @@ document.getElementById('authSubmit').disabled = false;
       refreshOtherHistory();
     });
   });
-  async function refreshNoticeReadCount(){
-    const output=$('noticeReadAdminCount'),button=$('refreshNoticeReadCount');
-    if(button)button.disabled=true;
-    try{const result=await serverCall('getNoticeReadCount','link-fix-20261104');output.textContent='既読 '+Number(result.count||0)+'件';}
-    catch(error){output.textContent='取得失敗：'+(error.message||'通信エラー');}
-    finally{if(button)button.disabled=false;}
-  }
-  $('refreshNoticeReadCount').addEventListener('click',refreshNoticeReadCount);
   $('refreshClickLogs').addEventListener('click',refreshClickLogs);
   $('deleteClickLogs').addEventListener('click',async()=>{
     if(!adminSession.getItem(ADMIN_TOKEN_KEY)){alert('先に管理者ログインをしてください。');return;}
