@@ -469,6 +469,17 @@ body.window-resizing,body.window-resizing *{user-select:none!important}
       </div>
       <div class="ban-seal" aria-hidden="true"><strong>BAN</strong><span>ACCESS REVOKED</span></div>
     </div>
+    <div class="ban-noise" aria-label="閉店のお知らせ">
+      <div class="ban-tape"><span>立入不可</span><span>閉店中</span><span>リンクもチャットもお休み</span><span>再入場は解除後</span></div>
+      <ul class="ban-taunts">
+        <li><strong>更新ボタン、今日も皆勤賞。</strong><span>何回押しても、解除がなければこの画面におかえりなさい。</span></li>
+        <li><strong>裏メニュー？</strong><span>本日の品ぞろえは「閉店のお知らせ」一択です。</span></li>
+        <li><strong>読み込み、もう終わってます。</strong><span>この画面が出るところまでが本日のフルコースです。</span></li>
+        <li><strong>チャットも一緒に閉店中。</strong><span>「ちょっと見るだけ」も営業時間外です。</span></li>
+        <li><strong>更新連打で解除チャレンジ。</strong><span>残念、解除を決めるのは管理者です。</span></li>
+        <li><strong>続きは解除されてから。</strong><span>それまでは、閉店の看板が今日の主役です。</span></li>
+      </ul>
+    </div>
     <div class="ban-lines">
       <p><strong>今は何が使えない？</strong><span>利用制限が解除されるまで、リンク一覧やチャットは利用できません。</span></p>
       <p><strong>判断を見直してほしいときは</strong><span>下のフォームから異議申し立てができます。直前に何をしていたかなど、分かる範囲で書いてください。</span></p>
@@ -4437,6 +4448,17 @@ html body #linksPanel .finder-content>#chatOverlay.open{position:relative!import
 @media(max-width:760px){html body #linksPanel .finder-content>#chatOverlay.open{min-height:0!important;padding-bottom:env(safe-area-inset-bottom)!important}#linksPanel #chatOverlay .chat-messages{max-height:48dvh;min-height:220px}}
 </style>
 <style id="visitor-ban-style">
+#visitorBanPanel .ban-noise{margin:0 clamp(20px,4vw,48px) 26px}
+#visitorBanPanel .ban-tape{display:flex;flex-wrap:wrap;gap:6px;padding:9px;border:1px solid #805841;border-radius:8px;background:repeating-linear-gradient(135deg,#3e2a20 0 9px,#241918 9px 18px)}
+#visitorBanPanel .ban-tape span{padding:4px 8px;background:#1a1112;color:#ffbb9f;font-size:12px;font-weight:800}
+#visitorBanPanel .ban-taunts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0 0;padding:0;list-style:none}
+#visitorBanPanel .ban-taunts li{padding:13px;border:1px dashed #9b5c48;border-radius:7px;background:#2d1c1b;overflow-wrap:anywhere}
+#visitorBanPanel .ban-taunts li:nth-child(even){background:#261c24;border-color:#80536e}
+#visitorBanPanel .ban-taunts strong,#visitorBanPanel .ban-taunts span{display:block;line-height:1.6}
+#visitorBanPanel .ban-taunts strong{color:#ffc0a3;font-size:14px}
+#visitorBanPanel .ban-taunts span{color:#ead3cc;font-size:12px;margin-top:4px}
+@media(max-width:700px){#visitorBanPanel .ban-taunts{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:360px){#visitorBanPanel .ban-taunts{grid-template-columns:1fr}}
 #visitorBanPanel .ban-appeal{border-top:1px solid #604134;padding:18px clamp(20px,4vw,48px) 22px;background:#201718}
 #visitorBanPanel .ban-appeal summary{cursor:pointer;color:#ffb49b;font-weight:700;padding:8px 0}
 #visitorBanPanel .ban-appeal form{display:grid;gap:10px;margin-top:10px}
