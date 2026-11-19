@@ -461,22 +461,21 @@ body.window-resizing,body.window-resizing *{user-select:none!important}
 <div class="click-log-notice" id="clickLogNotice" role="status" aria-live="polite"></div>
 <section id="visitorBanPanel" aria-labelledby="visitorBanTitle" hidden>
   <div class="ban-frame">
-    <header class="ban-header"><span>MY LINKS / ACCESS CONTROL</span><span class="ban-status">● ACCESS DENIED</span></header>
+    <header class="ban-header"><span>MY LINKS / ACCESS CONTROL</span><span class="ban-status">● 利用制限中</span></header>
     <div class="ban-hero">
       <div>
-        <p class="ban-kicker">SESSION TERMINATED</p>
+        
         <h1 id="visitorBanTitle" tabindex="-1">本日の営業は<br>終了しました。</h1>
-        <p class="ban-description">このブラウザからの利用を停止しました。</p>
       </div>
       <div class="ban-seal" aria-hidden="true"><strong>BAN</strong><span>ACCESS REVOKED</span></div>
     </div>
     <div class="ban-lines">
-      <p><strong>更新ボタンは無罪です。</strong><span>押しても、解除の権限までは手に入りません。</span></p>
-      <p><strong>裏メニューはありません。</strong><span>お出しできるのは、この画面だけです。</span></p>
-      <p><strong>ロード待ちではありません。</strong><span>この画面は、もう完成しています。</span></p>
+      <p><strong>今は何が使えない？</strong><span>利用制限が解除されるまで、リンク一覧やチャットは利用できません。</span></p>
+      <p><strong>判断を見直してほしいときは</strong><span>下のフォームから異議申し立てができます。直前に何をしていたかなど、分かる範囲で書いてください。</span></p>
+      <p><strong>送信するとどうなる？</strong><span>管理者が申し立ての内容を確認できます。送信しても利用制限は自動では解除されません。</span></p>
     </div>
     <footer class="ban-footer">
-      <div><p>心当たりがなければ、ブラウザIDを添えて管理者にお問い合わせください。</p><code id="visitorBanBrowserId"></code></div>
+      <p>管理者から解除の案内があったら、「利用状況を再確認」を押してください。</p>
       <button type="button" id="visitorBanRetry">利用状況を再確認</button>
     </footer>
     <details class="ban-appeal">
@@ -484,7 +483,7 @@ body.window-resizing,body.window-resizing *{user-select:none!important}
       <form id="visitorBanAppealForm">
         <label for="visitorBanAppealMessage">見直しを希望する理由</label>
         <textarea id="visitorBanAppealMessage" rows="4" maxlength="1000" required></textarea>
-        <p>理由とブラウザIDを管理者に送ります。同じブラウザからの送信は24時間に1回です。</p>
+        <p>理由は1,000文字まで入力できます。同じブラウザから再送するには、前回の送信から24時間空けてください。</p>
         <button type="submit">異議申し立てを送信</button>
         <p id="visitorBanAppealStatus" role="status"></p>
       </form>
@@ -840,7 +839,6 @@ function showVisitorBan() {
   showVisitorLogin('このブラウザは利用を停止されています。');
   $('loginPanel').classList.add('hidden');
   visitorDmNotice.hidden = true;
-  $('visitorBanBrowserId').textContent = getNoticeBrowserId();
   $('visitorBanPanel').hidden = false;
   $('visitorBanTitle').focus();
 }
@@ -1258,7 +1256,7 @@ $('visitorBanAppealForm').addEventListener('submit', async event => {
     const result = await call('submitBanAppeal', getNoticeBrowserId(), message.value);
     if (!result?.ok) throw new Error('送信を確認できませんでした。');
     form.reset();
-    status.textContent = '管理者に異議申し立てを届けました。';
+    status.textContent = '異議申し立てを受け付けました。管理者が内容を確認できる状態になりました。';
   } catch (error) {
     status.textContent = String(error.message || '').startsWith('不正なリクエストです。')
       ? '現在、異議申し立てを受け付けられません。'
