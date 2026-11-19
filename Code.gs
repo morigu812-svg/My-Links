@@ -453,7 +453,10 @@ function logoutCurrentSession(token) {
   return { ok: true };
 }
 
-function checkViewerSession(token) {
+function checkViewerSession(token, browserId) {
+  if (token === '' && typeof browserId === 'string') {
+    return {ok: true, banned: isVisitorBanned_(browserId)};
+  }
   requireLinkViewer_(token);
   return { ok: true };
 }
@@ -474,6 +477,10 @@ function requireLinkViewer_(token) {
   if (typeof token === 'string' && token &&
       (isSessionValid_('ADMIN', token) ||
        isSessionValid_('VISITOR', token))) return;
+  if (typeof token === 'string' && /^[0-9a-f-]{72}$/i.test(token)) {
+    const browser = CacheService.getScriptCache().get('LINK_CORE_VISITOR_BROWSER_' + token);
+    if (isVisitorBanned_(browser)) throw new Error('このブラウザは利用を停止されています。管理者にお問い合わせください。');
+  }
   throw new Error('閲覧にはサイトのパスワード認証が必要です。');
 }
 

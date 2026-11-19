@@ -459,6 +459,28 @@ body.window-resizing,body.window-resizing *{user-select:none!important}
 <body>
 <main class="wrap">
 <div class="click-log-notice" id="clickLogNotice" role="status" aria-live="polite"></div>
+<section id="visitorBanPanel" aria-labelledby="visitorBanTitle" hidden>
+  <div class="ban-frame">
+    <header class="ban-header"><span>MY LINKS / ACCESS CONTROL</span><span class="ban-status">● ACCESS DENIED</span></header>
+    <div class="ban-hero">
+      <div>
+        <p class="ban-kicker">SESSION TERMINATED</p>
+        <h1 id="visitorBanTitle" tabindex="-1">本日の営業は<br>終了しました。</h1>
+        <p class="ban-description">このブラウザからの利用を停止しました。</p>
+      </div>
+      <div class="ban-seal" aria-hidden="true"><strong>BAN</strong><span>ACCESS REVOKED</span></div>
+    </div>
+    <div class="ban-lines">
+      <p><strong>更新ボタンは無罪です。</strong><span>押しても、解除の権限までは手に入りません。</span></p>
+      <p><strong>裏メニューはありません。</strong><span>お出しできるのは、この画面だけです。</span></p>
+      <p><strong>ロード待ちではありません。</strong><span>この画面は、もう完成しています。</span></p>
+    </div>
+    <footer class="ban-footer">
+      <div><p>心当たりがなければ、ブラウザIDを添えて管理者にお問い合わせください。</p><code id="visitorBanBrowserId"></code></div>
+      <button type="button" id="visitorBanRetry">利用状況を再確認</button>
+    </footer>
+  </div>
+</section>
 <section class="finder-window login-window" id="loginPanel">
   <div class="finder-toolbar"><div class="traffic-lights" aria-label="ウィンドウ操作"><span class="traffic-red" aria-hidden="true"></span><span class="traffic-yellow" aria-hidden="true"></span><span class="traffic-green" aria-hidden="true"></span></div><div class="finder-title">My Desktop</div><div class="toolbar-tools"></div></div>
   <div class="login-body"><div class="brand">LINK CORE / SHARED DESKTOP</div><h1>リンク一覧</h1><p>サイトのパスワードを入力すると、共有リンクを閲覧できます。</p>
@@ -750,7 +772,10 @@ document.querySelector('#linksPanel .finder-content').append(chatOverlay);
 const viewerChatPreviews = window.createChatImagePreviews();
 const viewerReply = window.createChatReply?.(chatInput);
 function renderChat(messages){const key=JSON.stringify(messages);if(key===viewerMessagesKey)return;viewerMessagesKey=key;viewerChatPreviews.keep(messages.filter(item=>item.hasScreenshot).map(item=>item.id));const atBottom=chatMessages.scrollHeight-chatMessages.scrollTop-chatMessages.clientHeight<80;chatMessages.replaceChildren();if(!messages.length){const e=document.createElement('div');e.className='chat-empty';e.textContent='まだメッセージはありません。最初のメッセージを送ってみましょう。';chatMessages.appendChild(e);return;}messages.forEach(item=>{const bubble=document.createElement('article');bubble.className='chat-message'+(item.author==='管理者'?' admin':'');const meta=document.createElement('div');meta.className='chat-message-meta';const author=document.createElement('strong');author.textContent=item.private?'管理者からの個別メッセージ':(item.author==='管理者'?'管理者':'利用者');const time=document.createElement('time');const date=new Date(item.createdAt);time.textContent=isNaN(date.getTime())?'':date.toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});const body=document.createElement('div');body.className='chat-message-body';body.textContent=item.message;if(item.hasScreenshot) showChatImageButton(body,item.id);meta.append(author,time);bubble.append(meta,body);if(viewerReply)window.bindChatReply(bubble,item,viewerReply,!item.private);chatMessages.appendChild(bubble);});if(atBottom)chatMessages.scrollTop=chatMessages.scrollHeight;}
-function isVisitorAuthError(error){return /閲覧にはサイトのパスワード認証が必要|利用者用パスワード|認証が必要/.test(error&&error.message?error.message:String(error||''));}
+function isVisitorBanError(error) {
+  return /このブラウザは利用を停止されています/.test(String(error?.message || error || ''));
+}
+function isVisitorAuthError(error){return isVisitorBanError(error) || /閲覧にはサイトのパスワード認証が必要|利用者用パスワード|認証が必要/.test(error&&error.message?error.message:String(error||''));}
 let checkingViewerSession = false;
 let viewerSessionCheckAvailable = true;
 
@@ -762,7 +787,8 @@ async function checkActiveViewerSession() {
     await call('checkViewerSession', token);
   } catch (error) {
     if (token !== visitorToken) return;
-    if (isVisitorAuthError(error)) showVisitorLogin();
+    if (isVisitorBanError(error)) showVisitorBan();
+    else if (isVisitorAuthError(error)) showVisitorLogin();
     if (/不正なリクエスト/.test(error.message)) viewerSessionCheckAvailable = false;
   } finally {
     checkingViewerSession = false;
@@ -799,7 +825,17 @@ $('visitorLogout').addEventListener('click', async event => {
   finally { location.reload(); }
 });
 
+function showVisitorBan() {
+  if (!$('visitorBanPanel').hidden) return;
+  showVisitorLogin('このブラウザは利用を停止されています。');
+  $('loginPanel').classList.add('hidden');
+  visitorDmNotice.hidden = true;
+  $('visitorBanBrowserId').textContent = getNoticeBrowserId();
+  $('visitorBanPanel').hidden = false;
+  $('visitorBanTitle').focus();
+}
 function showVisitorLogin(message){
+  if (!$('visitorBanPanel').hidden) return;
   viewerDirectChat?.close();
   viewerChatRealtime?.stop();
   viewerReply?.clear();
@@ -828,6 +864,7 @@ function showVisitorLogin(message){
   $('loginRetry').classList.add('hidden');
   $('loginError').textContent=message||'ログインの有効期限が切れました。もう一度サイトのパスワードを入力してください。';
   $('sitePassword').focus();
+  if (message !== 'ログアウトしました。') void checkVisitorBanStatus();
 }
 async function privateChatSecret() {
  const storageKey = 'linkCorePrivateChatSecretV1';
@@ -1189,6 +1226,7 @@ $('loginForm').addEventListener('submit',async event=>{
   void refreshVisitorCounter();
   void loadVisitorFavorites(visitorToken);
  }catch(error){
+  if (isVisitorBanError(error)) { showVisitorBan(); return; }
   visitorToken='';
   $('linksPanel').classList.add('hidden');
   $('loginPanel').classList.remove('hidden');
@@ -1197,6 +1235,17 @@ $('loginForm').addEventListener('submit',async event=>{
   password.focus();
  }finally{button.disabled=false;}
 });
+$('visitorBanRetry').addEventListener('click', () => location.reload());
+async function checkVisitorBanStatus() {
+  if (visitorToken || !$('visitorBanPanel').hidden) return;
+  try {
+    const status = await call('checkViewerSession', '', getNoticeBrowserId());
+    if (status?.banned && !visitorToken) showVisitorBan();
+  } catch (_) {
+    // Older GAS deployments still detect bans on login.
+  }
+}
+void checkVisitorBanStatus();
 document.getElementById('loginButton').disabled = false;
   document.getElementById('loginError').textContent = '';
   $('loginRetry').addEventListener('click',()=>$('loginForm').requestSubmit());
@@ -4356,5 +4405,28 @@ html body #linksPanel .finder-content>#chatOverlay.open{position:relative!import
 #linksPanel #chatOverlay .chat-compose{padding:14px 0;background:transparent}
 #linksPanel #chatOverlay button{min-height:40px}
 @media(max-width:760px){html body #linksPanel .finder-content>#chatOverlay.open{min-height:0!important;padding-bottom:env(safe-area-inset-bottom)!important}#linksPanel #chatOverlay .chat-messages{max-height:48dvh;min-height:220px}}
+</style>
+<style id="visitor-ban-style">
+#visitorBanPanel[hidden]{display:none!important}
+#visitorBanPanel{min-height:calc(100dvh - 32px);display:grid;place-items:center;padding:clamp(10px,4vw,44px);box-sizing:border-box;color:#fff5e9;color-scheme:dark;font-family:system-ui,sans-serif}
+#visitorBanPanel .ban-frame{width:min(100%,1020px);min-width:0;box-sizing:border-box;border:1px solid #604134;border-radius:22px;overflow:hidden;background:radial-gradient(ellipse at 90% 20%,#452217 0%,transparent 45%),#171315;box-shadow:0 24px 80px #0009}
+#visitorBanPanel .ban-header,#visitorBanPanel .ban-footer{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;padding:20px clamp(20px,4vw,48px)}
+#visitorBanPanel .ban-header{border-bottom:1px solid #604134;font:700 12px ui-monospace,monospace;letter-spacing:.11em}
+#visitorBanPanel .ban-status,#visitorBanPanel .ban-kicker{color:#ff9b78}
+#visitorBanPanel .ban-hero{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:24px;padding:clamp(24px,6vw,64px) clamp(20px,4vw,48px)}
+#visitorBanPanel .ban-kicker{font:700 13px ui-monospace,monospace;letter-spacing:.16em}
+#visitorBanPanel h1{font-size:clamp(32px,6vw,66px);line-height:1.12;letter-spacing:-.045em;margin:13px 0 18px;color:#fff5e9}
+#visitorBanPanel .ban-description,#visitorBanPanel .ban-footer p{color:#e2cbc0;line-height:1.7;margin:0}
+#visitorBanPanel .ban-seal{display:grid;place-content:center;justify-items:center;width:clamp(110px,22vw,240px);aspect-ratio:1;border:3px double #f4815b;border-radius:50%;color:#ff9b78;background:repeating-linear-gradient(-45deg,transparent 0 8px,#ff8b6315 8px 9px);transform:rotate(-12deg)}
+#visitorBanPanel .ban-seal strong{font:900 clamp(36px,9vw,94px)/1 ui-monospace,monospace;letter-spacing:-.1em;padding-right:.1em}
+#visitorBanPanel .ban-seal span{font:700 clamp(8px,1.25vw,12px) ui-monospace,monospace;letter-spacing:.1em;margin-top:9px}
+#visitorBanPanel .ban-lines{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:0 clamp(20px,4vw,48px) 26px}
+#visitorBanPanel .ban-lines p{margin:0;padding:16px;border:1px solid #604134;border-radius:12px;background:#ffffff06}
+#visitorBanPanel .ban-lines :is(strong,span){display:block;line-height:1.55}
+#visitorBanPanel .ban-lines span{font-size:13px;color:#e2cbc0;margin-top:6px}
+#visitorBanPanel .ban-footer{border-top:1px solid #604134;background:#100d0e;margin:0!important;text-align:left;font-size:13px!important}
+#visitorBanPanel .ban-footer code{display:block;margin-top:8px;color:#ffb49b;overflow-wrap:anywhere;user-select:all}
+#visitorBanPanel .ban-footer button{min-height:44px;padding:8px 14px;border:1px solid #ff9b78;border-radius:9px;background:#ff9b78;color:#211211;font-weight:800;cursor:pointer}
+@media(max-width:620px){#visitorBanPanel .ban-lines{grid-template-columns:1fr}#visitorBanPanel .ban-hero{gap:12px}#visitorBanPanel .ban-seal{width:clamp(80px,21vw,125px)}}
 </style>
 </body></html>
