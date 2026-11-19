@@ -100,6 +100,7 @@
           const response = await request({operation:'read',browser});
           if (!panel.open || current !== generation) return;
           latestMessages = response.messages;
+          if (!document.hidden) layout.onRead?.(latestMessages);
           if (!oldMessages.length) nextCursor = response.nextCursor;
           older.hidden = !nextCursor;
           render();

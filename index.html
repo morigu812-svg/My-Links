@@ -445,7 +445,7 @@ body.window-resizing,body.window-resizing *{user-select:none!important}
 <script src="./chat-preview.js"></script>
 <script src="./chat-realtime.js"></script>
 <link rel="stylesheet" href="./visitor-direct-chat.css">
-<script src="./visitor-direct-chat.js"></script>
+<script src="./visitor-direct-chat.js?v=visitor-notice1"></script>
 <script src="./chat-screenshot.js?v=clipboard1" defer></script>
 <style id="visitor-counter-style">
 .visitor-counter-strip{display:flex;align-items:center;flex-wrap:wrap;gap:9px 19px;margin:11px 0 13px;padding:10px 13px;border:1px solid rgba(53,217,255,.24);border-radius:10px;background:rgba(12,32,46,.7);font-size:12px;color:#b7d8e3}
@@ -860,7 +860,60 @@ const viewerChatRealtime = window.createChatRealtime?.(
     if (topics.some(topic=>!topic.startsWith('lc-chat-direct-vb_')) && !document.hidden && chatOverlay.classList.contains('open')) void refreshChat();
   }
 );
-const viewerDirectChat = window.createVisitorDirectChat(params => call('visitorDirectChatProxy', params, visitorToken), false);
+const visitorDmNotice = document.createElement('button');
+visitorDmNotice.type = 'button';
+visitorDmNotice.className = 'visitor-dm-notification';
+visitorDmNotice.hidden = true;
+visitorDmNotice.setAttribute('aria-live', 'polite');
+document.body.append(visitorDmNotice);
+let visitorDmReadIds = new Set();
+let visitorDmNoticeBrowser = '';
+let visitorDmChecking = false;
+function prepareVisitorDmRead() {
+ const browser = getNoticeBrowserId();
+ if (browser === visitorDmNoticeBrowser) return;
+ visitorDmNoticeBrowser = browser;
+ try {
+  const saved = JSON.parse(localStorage.getItem('linkCoreVisitorDmRead:' + browser) || '[]');
+  visitorDmReadIds = new Set(Array.isArray(saved) ? saved.map(String) : []);
+ } catch (_) { visitorDmReadIds = new Set(); }
+}
+function markVisitorDmRead(messages) {
+ if (!visitorToken) return;
+ prepareVisitorDmRead();
+ messages.filter(item => !item.own).forEach(item => visitorDmReadIds.add(String(item.id)));
+ try { localStorage.setItem('linkCoreVisitorDmRead:' + visitorDmNoticeBrowser, JSON.stringify(Array.from(visitorDmReadIds).slice(-2000))); } catch (_) {}
+ visitorDmNotice.hidden = true;
+}
+const viewerDirectChat = window.createVisitorDirectChat(params => call('visitorDirectChatProxy', params, visitorToken), false, {onRead:markVisitorDmRead});
+visitorDmNotice.addEventListener('click', () => {
+ if (!visitorToken) return;
+ viewerDirectChat.open();
+ visitorDmNotice.hidden = true;
+});
+async function checkVisitorDmNotice() {
+ if (!visitorToken || document.hidden) { visitorDmNotice.hidden = true; return; }
+ if (visitorDmChecking) return;
+ const token = visitorToken;
+ visitorDmChecking = true;
+ try {
+  prepareVisitorDmRead();
+  const result = await call('visitorDirectChatProxy', {operation:'read',browser:''}, token);
+  if (token !== visitorToken || document.hidden) return;
+  const incoming = (result.messages || []).filter(item => !item.own);
+  const count = incoming.filter(item => !visitorDmReadIds.has(String(item.id))).length;
+  visitorDmNotice.textContent = '管理者から個人チャットが届いています · 未読 ' + count + '件';
+  visitorDmNotice.hidden = count === 0;
+  if (count) void viewerDirectChat.refresh();
+ } catch (_) {
+  // 通知確認の失敗は、次回の確認で再試行する。
+ } finally { visitorDmChecking = false; }
+}
+setInterval(() => { void checkVisitorDmNotice(); }, 15000);
+document.addEventListener('visibilitychange', () => {
+ if (!document.hidden) void checkVisitorDmNotice();
+});
+
 $('openVisitorDirectChat').addEventListener('click', () => viewerDirectChat.open());
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && visitorToken && chatOverlay.classList.contains('open')) {
@@ -1086,6 +1139,7 @@ $('loginForm').addEventListener('submit',async event=>{
   if(!auth||!auth.token)throw new Error('閲覧用トークンを取得できませんでした。');
   applyVisitorLinks(Array.isArray(auth.links)?auth:await call('getLinks',auth.token));
   visitorToken=auth.token;
+  void checkVisitorDmNotice();
   visitorChatProfile=null;
   stopViewerExpiry = watchSessionExpiry(loginStartedAt + Math.min(auth.expiresIn || 1800, 1800) * 1000, () => {
     showVisitorLogin();
@@ -4248,4 +4302,5 @@ footer{margin:16px 4px!important;font-size:11px!important}
 })();
 </script>
 
+<style>.visitor-dm-notification{position:fixed;top:calc(16px + env(safe-area-inset-top));right:16px;z-index:10025;max-width:min(380px,calc(100vw - 32px));padding:16px 20px;border:1px solid #3abada;border-radius:14px;background:#10253a;color:#e6f8ff;box-shadow:0 10px 35px #0008;text-align:left;font-size:14px;line-height:1.6;cursor:pointer}.visitor-dm-notification[hidden]{display:none!important}</style>
 </body></html>
