@@ -1138,30 +1138,6 @@ $('refreshLinks').addEventListener('click',async()=>{
  }finally{button.disabled=false;}
 });
 
-})();
-
-/* Dismiss search focus when the user taps anywhere outside the search control (including iOS Safari). */
-(function(){
- const search=document.getElementById('search');
- if(!search)return;
- function dismissOutside(event){
-   const target=event.target;
-   if(target===search || (target && target.closest && target.closest('.toolbar-search')))return;
-   if(document.activeElement===search || search.matches(':focus')){
-     search.blur();
-     search.setAttribute('inputmode','none');
-     requestAnimationFrame(()=>search.removeAttribute('inputmode'));
-   }
- }
- document.addEventListener('pointerdown',dismissOutside,true);
- document.addEventListener('touchstart',dismissOutside,{capture:true,passive:true});
- document.addEventListener('click',dismissOutside,true);
- search.addEventListener('keydown',event=>{
-   if(event.key==='Escape'){
-     search.blur();
-     search.value=search.value;
-   }
- });
 document.addEventListener('DOMContentLoaded', () => {
   const dialog = $('linkReportDialog');
   const form = $('linkReportForm');
@@ -1199,6 +1175,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 }, { once: true });
+})();
+
+/* Dismiss search focus when the user taps anywhere outside the search control (including iOS Safari). */
+(function(){
+ const search=document.getElementById('search');
+ if(!search)return;
+ function dismissOutside(event){
+   const target=event.target;
+   if(target===search || (target && target.closest && target.closest('.toolbar-search')))return;
+   if(document.activeElement===search || search.matches(':focus')){
+     search.blur();
+     search.setAttribute('inputmode','none');
+     requestAnimationFrame(()=>search.removeAttribute('inputmode'));
+   }
+ }
+ document.addEventListener('pointerdown',dismissOutside,true);
+ document.addEventListener('touchstart',dismissOutside,{capture:true,passive:true});
+ document.addEventListener('click',dismissOutside,true);
+ search.addEventListener('keydown',event=>{
+   if(event.key==='Escape'){
+     search.blur();
+     search.value=search.value;
+   }
+ });
+
 
 })();
 
