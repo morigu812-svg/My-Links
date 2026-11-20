@@ -451,8 +451,8 @@ body.window-resizing,body.window-resizing *{user-select:none!important}
 <link rel="stylesheet" href="./chat-preview.css">
 <script src="./chat-preview.js"></script>
 <script src="./chat-realtime.js"></script>
-<link rel="stylesheet" href="./visitor-direct-chat.css">
-<script src="./visitor-direct-chat.js?v=auto-required-reply2"></script>
+<link rel="stylesheet" href="./visitor-direct-chat.css?v=shared-controls1">
+<script src="./visitor-direct-chat.js?v=shared-controls1"></script>
 <script src="./chat-screenshot.js?v=clipboard1" defer></script>
 <style id="visitor-counter-style">
 .visitor-counter-strip{display:flex;align-items:center;flex-wrap:wrap;gap:9px 19px;margin:11px 0 13px;padding:10px 13px;border:1px solid rgba(53,217,255,.24);border-radius:10px;background:rgba(12,32,46,.7);font-size:12px;color:#b7d8e3}
@@ -968,11 +968,12 @@ let visitorReplyLocked = false;
 const replyGateBanner = document.createElement('section');
 replyGateBanner.setAttribute('role','status');
 replyGateBanner.hidden = true;
-replyGateBanner.style.cssText = 'padding:16px;background:#12273b;color:#e5f5ff;border-bottom:1px solid #36bada';
+replyGateBanner.className = 'visitor-reply-gate';
 const replyGateText = document.createElement('p');
 replyGateText.textContent = '管理者から返信必須のメッセージがあります。チャットの入力欄に返信を入力して送信してください。すべてに返信すると、リンクを閲覧できます。';
 const replyGateButton = document.createElement('button');
 replyGateButton.type = 'button';
+replyGateButton.className = 'btn primary';
 replyGateButton.textContent = '管理者とのチャットを開く';
 replyGateButton.addEventListener('click', () => viewerDirectChat.open());
 replyGateBanner.append(replyGateText, replyGateButton);

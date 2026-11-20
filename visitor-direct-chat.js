@@ -4,16 +4,16 @@
     panel.className = 'visitor-dm' + (layout.main ? ' visitor-dm-main click-log-panel chat-main-panel' : '');
     panel.setAttribute('aria-labelledby', 'visitorDmTitle');
     panel.innerHTML = `
-      <header><h2 id="visitorDmTitle">個人トーク</h2><button type="button" data-close>閉じる</button></header>
-      <button type="button" data-back hidden>トーク一覧に戻る</button>
+      <header><h2 id="visitorDmTitle">個人トーク</h2><button type="button" class="btn" data-close>閉じる</button></header>
+      <button type="button" class="btn" data-back hidden>トーク一覧に戻る</button>
       <div class="visitor-dm-list" data-rooms hidden></div>
       <div class="visitor-dm-thread" data-thread hidden>
-        <button type="button" data-older hidden>以前のメッセージを表示</button>
+        <button type="button" class="btn" data-older hidden>以前のメッセージを表示</button>
         <div data-messages></div>
       </div>
       <form data-form hidden>
         <textarea placeholder="メッセージを入力…" aria-label="メッセージ" maxlength="1000" rows="2" required></textarea>
-        <button type="submit">送信</button>
+        <button type="submit" class="btn primary">送信</button>
       </form>
       <p data-status role="status"></p>`;
     (layout.main ? layout.container : document.body).append(panel);
@@ -41,6 +41,9 @@
     let sendError = '';
     let replyTo = null;
     const replyStatus = document.createElement('p');
+    replyStatus.className = 'visitor-dm-reply-context';
+    replyStatus.setAttribute('role', 'status');
+    replyStatus.hidden = true;
     form.before(replyStatus);
 
 
@@ -53,7 +56,6 @@
       replyStatus.textContent = target
         ? '返信が必要です（残り' + pending.length + '件）。下に入力して「返信を送信」を押してください。\n返信先：' + target.message
         : '';
-      replyStatus.style.cssText = 'white-space:pre-wrap;padding:12px;border-left:3px solid #38cce9;background:#12273b;color:#e5f5ff;max-height:160px;overflow:auto';
       input.placeholder = target ? '上のメッセージへの返信を入力…' : 'メッセージを入力…';
       send.textContent = target ? '返信を送信' : '送信';
     }
@@ -83,7 +85,7 @@
         card.append(body, time);
         if (isAdmin && item.own) {
           const label = document.createElement('label');
-          label.style.cssText = 'display:flex;align-items:center;gap:8px;color:#dceeff;margin-top:10px';
+          label.className = 'visitor-dm-required-toggle';
           const toggle = document.createElement('input');
           toggle.type = 'checkbox';
           toggle.checked = !!item.replyRequired;
@@ -101,7 +103,7 @@
         if (!isAdmin && item.replyRequired) {
           const badge = document.createElement('p');
           badge.textContent = item.id === replyTo ? 'このメッセージへの返信を入力してください' : '返信待ち';
-          badge.style.cssText = 'color:#80e4ff;font-weight:600;margin:10px 0 0';
+          badge.className = 'visitor-dm-required-badge';
           card.append(badge);
         }
         return [card];

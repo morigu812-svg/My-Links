@@ -38,3 +38,168 @@
 .visitor-dm-main .visitor-dm-thread{flex:1;min-height:360px;max-height:min(65vh,760px);padding:16px;border:1px solid #294b63;border-radius:16px;background:linear-gradient(165deg,#101c2e,#0b1422 70%)}.visitor-dm-main .visitor-dm-thread>div{gap:12px}.visitor-dm-main .visitor-dm-message>div{padding:10px 14px;border:1px solid #34516d;border-radius:13px;font-size:14px;line-height:1.6}.visitor-dm-main .visitor-dm-message.own>div{border-color:#2786a0;background:#16435c}.visitor-dm-main .visitor-dm-message time{padding:0 3px}
 .visitor-dm-main form{padding:14px;border:1px solid #294b63;border-radius:13px;background:#0d1c2e}.visitor-dm-main textarea{padding:12px;min-height:80px;border:1px solid #355b73;border-radius:9px;background:#081521;color:#f0fbff;resize:vertical}.visitor-dm-main form button{padding:11px 18px;border:1px solid #36a6c8;border-radius:9px;background:#15516d;color:#f3fcff;cursor:pointer}
 @media(max-width:760px){.visitor-dm-main[open]{min-height:calc(100vh - 130px);padding:16px 11px}.visitor-dm-main h2{font-size:20px}.visitor-dm-main .visitor-dm-thread{min-height:280px;max-height:58vh;padding:10px}.visitor-dm-main form{padding:10px}}
+
+
+/* Shared controls for visitor and administrator personal chats.
+   Scope explicit styles here so legacy page button rules cannot change them. */
+html body .visitor-dm button,
+html body .visitor-reply-gate button {
+  box-sizing:border-box;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  min-height:44px;
+  margin:0;
+  padding:10px 15px;
+  border:1px solid #286582 !important;
+  border-radius:9px;
+  background:#0d263d !important;
+  color:#d9f7ff !important;
+  font:inherit;
+  font-size:14px;
+  font-weight:650;
+  line-height:1.5;
+  text-align:center;
+  text-decoration:none;
+  cursor:pointer;
+  box-shadow:none !important;
+  transform:none !important;
+  transition:background .16s,border-color .16s;
+}
+html body .visitor-dm button:hover:not(:disabled),
+html body .visitor-reply-gate button:hover:not(:disabled) {
+  background:#12334d !important;
+  border-color:#35d9ff !important;
+}
+html body .visitor-dm button:focus-visible,
+html body .visitor-reply-gate button:focus-visible,
+html body .visitor-dm textarea:focus-visible,
+html body .visitor-dm input[type=checkbox]:focus-visible {
+  outline:2px solid #35d9ff !important;
+  outline-offset:3px;
+}
+html body .visitor-dm button:disabled {
+  opacity:.55;
+  cursor:wait;
+}
+html body .visitor-dm form button[type=submit],
+html body .visitor-reply-gate button.primary {
+  flex-shrink:0;
+  border-color:#35d9ff !important;
+  background:linear-gradient(135deg,#087fa9,#273f9b) !important;
+  color:#fff !important;
+  font-weight:700;
+}
+html body .visitor-dm form button[type=submit]:hover:not(:disabled),
+html body .visitor-reply-gate button.primary:hover:not(:disabled) {
+  background:linear-gradient(135deg,#0992bd,#354eb2) !important;
+}
+html body .visitor-dm header {
+  align-items:center;
+  flex-wrap:wrap;
+  column-gap:14px;
+  row-gap:10px;
+}
+html body .visitor-dm-main header::before {flex-basis:100%}
+html body .visitor-dm header h2 {min-width:0;line-height:1.4}
+html body .visitor-dm header button {margin-left:auto}
+html body .visitor-dm [data-back],
+html body .visitor-dm [data-older] {align-self:flex-start}
+html body .visitor-dm form {
+  display:flex;
+  flex-wrap:wrap;
+  align-items:flex-end;
+  gap:12px;
+  padding:12px;
+  border:1px solid #286582;
+  border-radius:12px;
+  background:#091426;
+}
+html body .visitor-dm textarea {
+  box-sizing:border-box;
+  flex:1 1 240px;
+  width:100%;
+  min-width:0;
+  min-height:88px;
+  max-height:220px;
+  padding:12px 14px;
+  border:1px solid #28516c !important;
+  border-radius:9px;
+  background:#060e1d !important;
+  color:#e8f5ff !important;
+  font:inherit;
+  font-size:16px;
+  line-height:1.6;
+  resize:vertical;
+}
+html body .visitor-dm textarea::placeholder {color:#8ca8bf !important}
+html body .visitor-dm .visitor-dm-list button {
+  display:grid;
+  justify-content:stretch;
+  gap:6px;
+  width:100%;
+  padding:16px;
+  text-align:left;
+}
+html body .visitor-dm-reply-context,
+html body .visitor-reply-gate {
+  box-sizing:border-box;
+  padding:14px 16px;
+  border:1px solid #286582;
+  border-left:3px solid #35d9ff;
+  border-radius:10px;
+  background:#102239;
+  color:#e5f5ff;
+  font:inherit;
+  font-size:14px;
+  line-height:1.7;
+  overflow-wrap:anywhere;
+}
+html body .visitor-dm-reply-context {
+  margin:0;
+  max-height:180px;
+  overflow:auto;
+  white-space:pre-wrap;
+}
+html body .visitor-reply-gate {margin:16px}
+html body .visitor-reply-gate p {margin:0 0 12px}
+html body .visitor-dm .visitor-dm-required-toggle {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-top:8px;
+  color:#dceeff;
+  font-size:13px;
+  line-height:1.6;
+}
+html body .visitor-dm .visitor-dm-required-toggle input {
+  width:18px;
+  height:18px;
+  accent-color:#35d9ff;
+}
+html body .visitor-dm .visitor-dm-required-badge {
+  justify-self:start;
+  margin:6px 0 0;
+  padding:4px 9px;
+  border:1px solid #286582;
+  border-radius:6px;
+  background:#102c42;
+  color:#9de8ff;
+  font-size:12px;
+  font-weight:650;
+  line-height:1.5;
+}
+@media(max-width:600px) {
+  html body .visitor-dm-main header h2 {font-size:20px}
+  html body .visitor-dm form {gap:10px;padding:10px}
+  html body .visitor-dm textarea {flex-basis:100%;min-height:96px}
+  html body .visitor-dm form button[type=submit] {min-width:112px;margin-left:auto}
+  html body .visitor-reply-gate {margin:12px}
+  html body .visitor-reply-gate button {width:100%}
+  html body .visitor-dm-message {max-width:94%}
+}
+@media(prefers-reduced-motion:reduce) {
+  html body .visitor-dm button,
+  html body .visitor-reply-gate button {transition:none}
+}
