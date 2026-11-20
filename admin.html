@@ -2699,8 +2699,8 @@ document.getElementById('authSubmit').disabled = false;
   }
   $('adminVisitorCounterRefresh').addEventListener('click', () => { void refreshAdminVisitorCounter(); });
   const otherHistories = [
-  {key:'onlineVisitors',side:'sideOnlineVisitors',api:'getOnlineVisitors',title:'オンラインの利用者',description:'利用者ページを表示中のブラウザです。30秒ごとに更新し、90秒通信がない場合はオフラインになります。同じブラウザの複数タブは1人として数えます。',columns:['利用者・ブラウザID','最終接続（日本時間）','状態']},
-  {key:'banVisitors', side:'sideBanVisitors', api:'getBanVisitors', title:'BAN操作', description:'利用者をブラウザIDごとに表示します。BAN中のブラウザは先頭に並びます。', columns:['利用者・ブラウザID','最終ログイン','BAN状態','操作']},
+  {key:'onlineVisitors',side:'sideOnlineVisitors',api:'getOnlineVisitors',title:'オンラインの利用者',description:'利用者ページを表示中のブラウザです。30秒ごとに更新し、90秒通信がない場合はオフラインになります。同じブラウザの複数タブは1人として数えます。',columns:['利用者・ブラウザID','学校名','フィルターの種類','最終接続（日本時間）','状態']},
+  {key:'banVisitors', side:'sideBanVisitors', api:'getBanVisitors', title:'BAN操作', description:'利用者をブラウザIDごとに表示します。BAN中のブラウザは先頭に並びます。', columns:['利用者・ブラウザID','学校名','フィルターの種類','最終ログイン','BAN状態','操作']},
   {key:'banAppeals', side:'sideBanAppeals', api:'getBanAppeals', title:'異議申し立て', description:'利用停止の見直しを希望する利用者から届いた申し立てです（直近200件）。', columns:['受信日時','ブラウザID','理由','現在の状態','操作']},
   {key:'linkReports', side:'sideLinkReports', api:'getLinkReports', title:'リンク報告', description:'利用者から届いたリンクです。確認すると通知件数が減ります。', columns:['日時','URL','ブラウザID','状態']},
   {
@@ -2787,12 +2787,16 @@ document.getElementById('authSubmit').disabled = false;
         const row = document.createElement('tr');
         if (history.key === 'onlineVisitors') {
           row.append(historyBrowserCell(log, '未記録', 'otherHistoryStatus', 'otherHistoryView', refreshOtherHistory));
+          row.insertCell().textContent = log.school || '未登録';
+          row.insertCell().textContent = log.filter || '未登録';
           row.insertCell().textContent = new Date(log.lastSeen).toLocaleString('ja-JP', {timeZone:'Asia/Tokyo'});
           row.insertCell().textContent = '● オンライン';
           return row;
         }
         if (history.key === 'banVisitors') {
           row.append(historyBrowserCell(log, '未記録', 'otherHistoryStatus', 'otherHistoryView', refreshOtherHistory));
+          row.insertCell().textContent = log.school || '未登録';
+          row.insertCell().textContent = log.filter || '未登録';
           row.insertCell().textContent = log.lastLogin ? new Date(log.lastLogin).toLocaleString('ja-JP', {timeZone:'Asia/Tokyo'}) : '記録なし';
           row.insertCell().textContent = log.banned ? 'BAN中' : '未BAN';
           addHistoryBanButton(row.insertCell(), log, history);

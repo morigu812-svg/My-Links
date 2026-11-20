@@ -448,13 +448,15 @@ function getBanVisitors(adminToken) {
   const visitors = new Map();
   const prefix = 'LINK_CORE_BAN_';
   const settings = props.getProperties();
-  const names = getClickBrowserNames_();
+  const names = getClickBrowserNames_(spreadsheet);
+  const profiles = visitorChatProfilesByBrowser_(spreadsheet);
 
   function record(id, date, signedIn) {
     const browserId = String(id || '');
     if (!/^[A-Za-z0-9_-]{8,100}$/.test(browserId)) return;
     const visitor = visitors.get(browserId) || {
       browserId, browserName: names.get(browserId) || '', lastLogin: '', lastActivity: '',
+      school:profiles.get(browserId)?.school || '', filter:profiles.get(browserId)?.filter || '',
       banned: settings[prefix + browserId] === '1'
     };
     const timestamp = date ? new Date(date) : null;
@@ -3783,8 +3785,24 @@ function visitorOnlineSnapshot_(token, browser, active, includeNames) {
       .sort((a,b) => b.lastSeen.localeCompare(a.lastSeen));
   } finally { lock.releaseLock(); }
   if (!includeNames) return {count:visitors.length};
-  const names = getClickBrowserNames_();
+  const spreadsheet = SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY));
+  const names = getClickBrowserNames_(spreadsheet);
+  const profiles = visitorChatProfilesByBrowser_(spreadsheet);
   return {count:visitors.length,logs:visitors.map(item => ({
-    browserId:item.browserId,browserName:names.get(item.browserId) || '',lastSeen:item.lastSeen
+    browserId:item.browserId,browserName:names.get(item.browserId) || '',lastSeen:item.lastSeen,
+    school:profiles.get(item.browserId)?.school || '',filter:profiles.get(item.browserId)?.filter || ''
   }))};
+}
+
+/** Admin-only callers join saved chat profiles by browser ID in one sheet read. */
+function visitorChatProfilesByBrowser_(spreadsheet) {
+  const sheet = spreadsheet.getSheetByName('VisitorChatProfiles');
+  const last = sheet ? sheet.getLastRow() : 0;
+  const profiles = new Map();
+  if (last < 2) return profiles;
+  sheet.getRange(2, 1, last - 1, 3).getDisplayValues().forEach(row => {
+    const id = String(row[0] || '');
+    if (/^[A-Za-z0-9_-]{8,100}$/.test(id)) profiles.set(id, {school:String(row[1] || ''), filter:String(row[2] || '')});
+  });
+  return profiles;
 }
