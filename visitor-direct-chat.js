@@ -88,6 +88,10 @@
             const button = document.createElement('button');
             button.type = 'button';
             const name = document.createElement('strong');
+            if (typeof room.browserName === 'string') {
+              if (room.browserName) names.set(room.browserId, room.browserName);
+              else names.delete(room.browserId);
+            }
             name.textContent = names.get(room.browserId) || room.browserId;
             const description = document.createElement('span');
             description.textContent = room.lastMessage;
@@ -99,6 +103,11 @@
         } else {
           const response = await request({operation:'read',browser});
           if (!panel.open || current !== generation) return;
+          if (isAdmin && typeof response.browserName === 'string') {
+            if (response.browserName) names.set(browser, response.browserName);
+            else names.delete(browser);
+            title.textContent = (response.browserName || browser) + 'との個人トーク';
+          }
           latestMessages = response.messages;
           if (!document.hidden) layout.onRead?.(latestMessages);
           if (!oldMessages.length) nextCursor = response.nextCursor;

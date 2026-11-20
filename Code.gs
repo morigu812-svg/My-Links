@@ -3537,9 +3537,10 @@ function visitorDirectChatProxy(parameters, viewerToken) {
   if (operation === 'list') {
     const rows = supabaseChatRequest_('get', 'link_core_chat?kind=eq.direct&recipient=like.vb_*&select=id,author,recipient,body,created_at,seq&order=seq.desc&limit=500');
     const seen = new Set();
+    const names = getClickBrowserNames_();
     return {
       rooms:rows.filter(row => {if (seen.has(row.recipient)) return false; seen.add(row.recipient); return true;})
-        .map(row => ({browserId:String(row.recipient).slice(3),lastMessage:String(row.body).slice(0,90),createdAt:row.created_at})),
+        .map(row => ({browserId:String(row.recipient).slice(3),browserName:names.get(String(row.recipient).slice(3)) || '',lastMessage:String(row.body).slice(0,90),createdAt:row.created_at})),
       incoming:rows.filter(row => row.author !== '管理者').map(row => ({
         id:row.id, browserId:String(row.recipient).slice(3), createdAt:row.created_at
       }))
@@ -3550,7 +3551,7 @@ function visitorDirectChatProxy(parameters, viewerToken) {
     const rows = supabaseChatRequest_('get', query);
     const more = rows.length > 100;
     const page = rows.slice(0,100);
-    return {messages:page.reverse().map(row=>({id:row.id,author:row.author,message:row.body,createdAt:row.created_at,
+    return {browserName:isAdmin ? getClickBrowserNames_().get(peer) || '' : undefined,messages:page.reverse().map(row=>({id:row.id,author:row.author,message:row.body,createdAt:row.created_at,
       own:row.author === (isAdmin ? '管理者' : '利用者')})),nextCursor:more ? page[0].seq : null};
   }
   // 管理者から未登録の利用者には送らない。本人の登録はログイン時に行う。
