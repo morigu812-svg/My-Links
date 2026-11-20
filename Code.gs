@@ -404,7 +404,7 @@ function authenticateVisitor(password, browserId, browserSecret) {
   recordVisitorCounter_(browserId);
   return {
     ok: true, token: token, expiresIn: SESSION_TTL_SECONDS,
-    links: initialLinks.links, categories: initialLinks.categories
+    links: initialLinks.links, categories: initialLinks.categories, replyRequired:!!initialLinks.replyRequired
   };
 }
 
@@ -728,6 +728,7 @@ function getLinksForToken_(viewerToken, knownIsAdmin, performanceData) {
     ? knownIsAdmin
     : isSessionValid_('ADMIN', viewerToken);
 
+  if (!isAdmin && visitorReplyGate_(viewerToken)) return {links:[], categories:[], replyRequired:true};
   const cacheStartedAt = Date.now();
   let result = readChunkedJsonCache_('LINK_CORE_LINKS_ALL_V2');
   if (performanceData) {
@@ -1204,6 +1205,7 @@ function invalidateOfficialLinksCache_() {
 }
 function getOfficialLinks(viewerToken) {
   requireLinkViewer_(viewerToken);
+  if (!isSessionValid_('ADMIN', viewerToken) && visitorReplyGate_(viewerToken)) return {links:[], replyRequired:true};
   const cached = readJsonCache_('LINK_CORE_OFFICIAL_LINKS_V1');
   if (cached) return cached;
   const sheet = ensureOfficialSheet_();
@@ -3509,7 +3511,7 @@ function visitorDirectChatProxy(parameters, viewerToken) {
     throw new Error('個人トークのリクエストが不正です。');
   }
   const operation = parameters.operation;
-  if (!['list', 'read', 'send'].includes(operation)) {
+  if (!['list', 'read', 'send', 'requireReply'].includes(operation)) {
     throw new Error('個人トークの操作を確認してください。');
   }
   const isAdmin = isSessionValid_('ADMIN', viewerToken);
@@ -3545,6 +3547,22 @@ function visitorDirectChatProxy(parameters, viewerToken) {
   }
   const peer = isAdmin ? browser : ownBrowser;
   const base = 'link_core_chat?kind=eq.direct&recipient=eq.' + encodeURIComponent('vb_' + peer);
+  if (operation === 'requireReply') {
+    if (!isAdmin) throw new Error('管理者専用の操作です。');
+    if (typeof parameters.required !== 'boolean' || typeof parameters.message_id !== 'string' ||
+        !/^[0-9a-f-]{36}$/i.test(parameters.message_id)) throw new Error('返信必須の指定が不正です。');
+    const lock = LockService.getScriptLock();
+    lock.waitLock(10000);
+    try {
+      const target = supabaseChatRequest_('get', base + '&id=eq.' + encodeURIComponent(parameters.message_id) + '&select=id,author&limit=1');
+      if (!target.length || target[0].author !== '管理者') throw new Error('管理者のメッセージを選んでください。');
+      const pending = visitorRequiredReplies_(peer).filter(id => id !== parameters.message_id);
+      if (parameters.required) pending.push(parameters.message_id);
+      if (pending.length > 50) throw new Error('返信必須は同時に50件まで設定できます。');
+      PropertiesService.getScriptProperties().setProperty('LINK_CORE_REQUIRED_REPLY_' + peer, JSON.stringify(pending));
+      return {ok:true};
+    } finally { lock.releaseLock(); }
+  }
   if (operation === 'list') {
     const rows = supabaseChatRequest_('get', 'link_core_chat?kind=eq.direct&recipient=like.vb_*&select=id,author,recipient,body,created_at,seq&order=seq.desc&limit=500');
     const seen = new Set();
@@ -3558,12 +3576,20 @@ function visitorDirectChatProxy(parameters, viewerToken) {
     };
   }
   if (operation === 'read') {
+    const pending = visitorRequiredReplies_(peer);
     const query = base + (beforeCursor ? '&seq=lt.' + beforeCursor : '') + '&select=id,author,body,created_at,seq&order=seq.desc&limit=101';
     const rows = supabaseChatRequest_('get', query);
     const more = rows.length > 100;
     const page = rows.slice(0,100);
-    return {browserName:isAdmin ? getClickBrowserNames_().get(peer) || '' : undefined,messages:page.reverse().map(row=>({id:row.id,author:row.author,message:row.body,createdAt:row.created_at,
-      own:row.author === (isAdmin ? '管理者' : '利用者')})),nextCursor:more ? page[0].seq : null};
+    // Required messages must remain reachable even when older than the latest page.
+    const requiredRows = pending.length ? supabaseChatRequest_('get', base + '&id=in.(' + pending.join(',') + ')&select=id,author,body,created_at,seq&order=seq.asc') : [];
+    const present = new Set(page.map(row => row.id));
+    const messages = page.slice().reverse();
+    requiredRows.forEach(row => { if (!present.has(row.id)) messages.unshift(row); });
+    messages.sort((a,b) => a.seq - b.seq);
+    return {replyRequired:pending.length > 0,requiredReplyIds:pending,browserName:isAdmin ? getClickBrowserNames_().get(peer) || '' : undefined,
+      messages:messages.map(row=>({id:row.id,author:row.author,message:row.body,createdAt:row.created_at,
+      replyRequired:pending.includes(row.id),own:row.author === (isAdmin ? '管理者' : '利用者')})),nextCursor:more ? page[page.length-1].seq : null};
   }
   // 管理者から未登録の利用者には送らない。本人の登録はログイン時に行う。
   const identities = supabaseChatRequest_('get', 'link_core_visitor_chat_identity?browser_id=eq.' + encodeURIComponent(peer) + '&select=browser_id&limit=1');
@@ -3572,9 +3598,20 @@ function visitorDirectChatProxy(parameters, viewerToken) {
   const rateKey = 'LINK_CORE_DM_RATE_' + viewerToken;
   if (cache.get(rateKey)) throw new Error('少し待ってから再送してください。');
   cache.put(rateKey, '1', 2);
-  supabaseChatRequest_('post', 'link_core_chat', {kind:'direct',id:messageId,created_at:new Date().toISOString(),
-    author:isAdmin ? '管理者' : '利用者',recipient:'vb_' + peer,body:message});
-  return {ok:true};
+  const replyTo = parameters.reply_to;
+  if (replyTo != null && (typeof replyTo !== 'string' || !/^[0-9a-f-]{36}$/i.test(replyTo))) throw new Error('返信先が不正です。');
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const pending = visitorRequiredReplies_(peer);
+    if (!isAdmin && replyTo && !pending.includes(replyTo)) throw new Error('返信必須の状態が変わりました。読み込み直してください。');
+    supabaseChatRequest_('post', 'link_core_chat', {kind:'direct',id:messageId,created_at:new Date().toISOString(),
+      author:isAdmin ? '管理者' : '利用者',recipient:'vb_' + peer,body:message});
+    if (!isAdmin && replyTo) {
+      PropertiesService.getScriptProperties().setProperty('LINK_CORE_REQUIRED_REPLY_' + peer, JSON.stringify(pending.filter(id => id !== replyTo)));
+    }
+    return {ok:true};
+  } finally { lock.releaseLock(); }
 }
 
 /** Run from the Apps Script editor. Rerun until all three reports say done. */
@@ -3638,4 +3675,15 @@ function activateSupabaseChat_() {
     supabaseChatRows_({select:'id', limit:1});
     props.setProperty('LINK_CORE_CHAT_BACKEND', 'supabase');
   } finally { lock.releaseLock(); }
+}
+
+/** Pending required replies are durable and bound to the authenticated browser. */
+function visitorRequiredReplies_(browser) {
+  if (!/^[A-Za-z0-9_-]{8,100}$/.test(String(browser || ''))) return [];
+  const raw = PropertiesService.getScriptProperties().getProperty('LINK_CORE_REQUIRED_REPLY_' + browser);
+  return raw ? JSON.parse(raw) : [];
+}
+function visitorReplyGate_(token) {
+  const browser = CacheService.getScriptCache().get('LINK_CORE_VISITOR_BROWSER_' + token);
+  return visitorRequiredReplies_(browser).length > 0;
 }

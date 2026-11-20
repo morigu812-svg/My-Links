@@ -39,6 +39,9 @@
     let renderedRooms = '';
     let sending = false;
     let sendError = '';
+    let replyTo = null;
+    const replyStatus = document.createElement('p');
+    form.before(replyStatus);
 
     function render(keepScroll = false) {
       const messages = [...oldMessages, ...latestMessages];
@@ -62,6 +65,34 @@
           time.textContent = date.toLocaleString('ja-JP', {month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
         }
         card.append(body, time);
+        if (isAdmin && item.own) {
+          const label = document.createElement('label');
+          label.style.cssText = 'display:flex;align-items:center;gap:8px;color:#dceeff;margin-top:10px';
+          const toggle = document.createElement('input');
+          toggle.type = 'checkbox';
+          toggle.checked = !!item.replyRequired;
+          label.append(toggle, document.createTextNode(' 返信必須'));
+          toggle.addEventListener('change', async () => {
+            toggle.disabled = true;
+            try {
+              await request({operation:'requireReply',browser,message_id:item.id,required:toggle.checked});
+              await refresh();
+            } catch (error) { toggle.checked = !!item.replyRequired; status.textContent = error.message; }
+            finally { toggle.disabled = false; }
+          });
+          card.append(label);
+        }
+        if (!isAdmin && item.replyRequired) {
+          const reply = document.createElement('button');
+          reply.type = 'button';
+          reply.textContent = '返信必須 · このメッセージに返信';
+          reply.addEventListener('click', () => {
+            replyTo = item.id;
+            replyStatus.textContent = '返信先：' + item.message.slice(0,100);
+            input.focus();
+          });
+          card.append(reply);
+        }
         return [card];
       });
       history.replaceChildren(...cards);
@@ -108,7 +139,11 @@
             else names.delete(browser);
             title.textContent = (response.browserName || browser) + 'との個人トーク';
           }
+          const requiredIds = new Set(response.requiredReplyIds || []);
+          oldMessages = oldMessages.map(item => ({...item, replyRequired:requiredIds.has(item.id)}));
           latestMessages = response.messages;
+          if (replyTo && !latestMessages.some(item => item.id === replyTo && item.replyRequired)) { replyTo = null; replyStatus.textContent = ''; }
+          layout.onGate?.(!!response.replyRequired);
           if (!document.hidden) layout.onRead?.(latestMessages);
           if (!oldMessages.length) nextCursor = response.nextCursor;
           older.hidden = !nextCursor;
@@ -135,6 +170,7 @@
       sendError = '';
       history.replaceChildren();
       input.value = '';
+      replyTo = null; replyStatus.textContent = '';
       const isList = browser === null;
       title.textContent = isList ? '利用者との個人トーク' :
         isAdmin ? (names.get(browser) || browser) + 'との個人トーク' : '管理者との個人トーク';
@@ -176,9 +212,10 @@
       sendError = '';
       status.textContent = '送信中…';
       try {
-        await request({operation:'send',browser,message,message_id:crypto.randomUUID()});
+        await request({operation:'send',browser,message,message_id:crypto.randomUUID(),reply_to:replyTo});
         if (current !== generation) return;
         if (input.value.trim() === message) input.value = '';
+        replyTo = null; replyStatus.textContent = '';
         status.textContent = '';
       } catch (error) {
         if (current === generation) {
