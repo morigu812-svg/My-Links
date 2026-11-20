@@ -3256,52 +3256,69 @@ function recordVisitorLogin_(browserId) {
 
 function getVisitorLoginLogs(adminToken) {
   requireAdmin_(adminToken);
+  const properties = PropertiesService.getScriptProperties().getProperties();
+  const spreadsheetId = properties[SPREADSHEET_PROPERTY];
+  if (!spreadsheetId) throw new Error('スプレッドシートIDが未設定です。');
+  const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
   const lock = LockService.getScriptLock();
+  let rows, history;
   lock.waitLock(10000);
   try {
-    const sheet = visitorLoginLogSheet_();
+    const sheet = spreadsheet.getSheetByName('VisitorLoginLogs');
     const last = sheet ? sheet.getLastRow() : 0;
     if (last < 2) return {logs: []};
     const first = Math.max(2, last - 199);
-    const rows = sheet.getRange(first, 1, last - first + 1, 3).getValues();
+    rows = sheet.getRange(first, 1, last - first + 1, 3).getValues();
+    // Only legacy rows need repair. Normal reads do not write to the sheet.
     if (rows.some(row => row[0] && !row[2])) {
       rows.forEach(row => { if (row[0] && !row[2]) row[2] = Utilities.getUuid(); });
       sheet.getRange(first, 3, rows.length, 1).setValues(rows.map(row => [row[2]]));
+      sheet.getRange(1, 3).setValue('履歴ID');
     }
-    if (!sheet.getRange(1, 3).getValue()) sheet.getRange(1, 3).setValue('履歴ID');
-    const names = getClickBrowserNames_();
-    const daysByBrowser = new Map();
-    const dayNumber = value => {
-      const date = new Date(value);
-      if (!Number.isFinite(date.getTime())) return null;
-      return Math.floor(Date.parse(Utilities.formatDate(date, 'Asia/Tokyo', 'yyyy-MM-dd') + 'T00:00:00Z') / 86400000);
-    };
-    const today = dayNumber(new Date());
-    sheet.getRange(2, 1, last - 1, 2).getValues().forEach(([date, browser]) => {
-      if (!date || !browser) return;
-      const day = dayNumber(date);
-      if (day === null || day > today) return;
-      const key = String(browser);
-      if (!daysByBrowser.has(key)) daysByBrowser.set(key, new Set());
-      daysByBrowser.get(key).add(day);
-    });
-    const streaks = new Map();
-    daysByBrowser.forEach((days, browser) => {
-      let cursor = days.has(today) ? today : today - 1;
-      let streak = 0;
-      while (days.has(cursor)) { streak++; cursor--; }
-      streaks.set(browser, streak);
-    });
-    return {logs: rows.reverse().filter(row => row[0]).map(([date, browserId, id]) => ({
-      date: toIso_(date), browserId: String(browserId || ''), id: String(id),
-      browserName: names.get(String(browserId || '')) || '',
-      banned: isVisitorBanned_(String(browserId || '')),
-      loginStreak: streaks.get(String(browserId || '')) || 0,
-      regularVisitor: (streaks.get(String(browserId || '')) || 0) >= 3
-    }))};
+    // Keep all dates for an exact streak, but reuse the page when it is complete.
+    history = first === 2 ? rows : sheet.getRange(2, 1, last - 1, 2).getValues();
   } finally {
     lock.releaseLock();
   }
+  const names = getClickBrowserNames_(spreadsheet);
+  const browsers = new Set(rows.filter(row => row[0]).map(row => String(row[1] || '')));
+  const streaks = visitorLoginStreaks_(history, browsers, Date.now());
+  return {logs: rows.slice().reverse().filter(row => row[0]).map(([date, browserId, id]) => {
+    const browser = String(browserId || '');
+    const streak = streaks.get(browser) || 0;
+    return {
+      date:toIso_(date), browserId:browser, id:String(id),
+      browserName:names.get(browser) || '',
+      banned:/^[A-Za-z0-9_-]{8,100}$/.test(browser) && properties['LINK_CORE_BAN_' + browser] === '1',
+      loginStreak:streak, regularVisitor:streak >= 3
+    };
+  })};
+}
+
+/** JST has a fixed UTC+9 offset. No remote date formatting is needed per row. */
+function visitorLoginStreaks_(history, browsers, now) {
+  const dayNumber = value => {
+    const timestamp = value instanceof Date ? value.getTime() : new Date(value).getTime();
+    return Number.isFinite(timestamp) ? Math.floor((timestamp + 9 * 3600000) / 86400000) : null;
+  };
+  const today = dayNumber(now);
+  const daysByBrowser = new Map();
+  history.forEach(([date, browser]) => {
+    const key = String(browser || '');
+    if (!date || !key || !browsers.has(key)) return;
+    const day = dayNumber(date);
+    if (day === null || day > today) return;
+    if (!daysByBrowser.has(key)) daysByBrowser.set(key, new Set());
+    daysByBrowser.get(key).add(day);
+  });
+  const streaks = new Map();
+  daysByBrowser.forEach((days, browser) => {
+    let cursor = days.has(today) ? today : today - 1;
+    let streak = 0;
+    while (days.has(cursor)) { streak++; cursor--; }
+    streaks.set(browser, streak);
+  });
+  return streaks;
 }
 
 function visitorLoginLogSheet_() {
