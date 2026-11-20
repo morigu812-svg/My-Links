@@ -3505,7 +3505,7 @@ function visitorDirectChatProxy(parameters, viewerToken) {
     throw new Error('個人トークのリクエストが不正です。');
   }
   const operation = parameters.operation;
-  if (!['list', 'read', 'send', 'requireReply'].includes(operation)) {
+  if (!['list', 'read', 'send', 'requireReply', 'markRead'].includes(operation)) {
     throw new Error('個人トークの操作を確認してください。');
   }
   const isAdmin = isSessionValid_('ADMIN', viewerToken);
@@ -3541,6 +3541,30 @@ function visitorDirectChatProxy(parameters, viewerToken) {
   }
   const peer = isAdmin ? browser : ownBrowser;
   const base = 'link_core_chat?kind=eq.direct&recipient=eq.' + encodeURIComponent('vb_' + peer);
+  if (operation === 'markRead') {
+    const ids = parameters.message_ids;
+    if (!Array.isArray(ids) || ids.length < 1 || ids.length > 100 ||
+        ids.some(id => typeof id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))) {
+      throw new Error('既読にするメッセージの指定が不正です。');
+    }
+    const targets = supabaseChatRequest_('get', base + '&id=in.(' + Array.from(new Set(ids)).join(',') + ')&select=id,author,readers');
+    const incoming = targets.filter(row => row.author === (isAdmin ? '利用者' : '管理者'));
+    const reader = isAdmin ? 'dm_admin' : 'dm_visitor';
+    const groups = new Map();
+    incoming.forEach(row => {
+      const readers = Array.isArray(row.readers) ? row.readers : [];
+      if (readers.includes(reader)) return;
+      const values = Array.from(new Set([...readers,reader])).sort();
+      const key = JSON.stringify(values);
+      if (!groups.has(key)) groups.set(key, {readers:values,ids:[]});
+      groups.get(key).ids.push(row.id);
+    });
+    groups.forEach(group => {
+      // Merge existing receipts; retries and simultaneous readers keep their markers.
+      supabaseChatRequest_('patch', base + '&id=in.(' + group.ids.join(',') + ')', {readers:group.readers});
+    });
+    return {ok:true,ids:incoming.map(row => row.id)};
+  }
   if (operation === 'requireReply') {
     if (!isAdmin) throw new Error('管理者専用の操作です。');
     if (typeof parameters.required !== 'boolean' || typeof parameters.message_id !== 'string' ||
@@ -3571,19 +3595,34 @@ function visitorDirectChatProxy(parameters, viewerToken) {
   }
   if (operation === 'read') {
     const pending = visitorRequiredReplies_(peer);
-    const query = base + (beforeCursor ? '&seq=lt.' + beforeCursor : '') + '&select=id,author,body,created_at,seq&order=seq.desc&limit=101';
+    const query = base + (beforeCursor ? '&seq=lt.' + beforeCursor : '') + '&select=id,author,body,created_at,seq,readers&order=seq.desc&limit=101';
     const rows = supabaseChatRequest_('get', query);
     const more = rows.length > 100;
     const page = rows.slice(0,100);
     // Required messages must remain reachable even when older than the latest page.
-    const requiredRows = pending.length ? supabaseChatRequest_('get', base + '&id=in.(' + pending.join(',') + ')&select=id,author,body,created_at,seq&order=seq.asc') : [];
+    const requiredRows = pending.length ? supabaseChatRequest_('get', base + '&id=in.(' + pending.join(',') + ')&select=id,author,body,created_at,seq,readers&order=seq.asc') : [];
     const present = new Set(page.map(row => row.id));
     const messages = page.slice().reverse();
     requiredRows.forEach(row => { if (!present.has(row.id)) messages.unshift(row); });
     messages.sort((a,b) => a.seq - b.seq);
-    return {replyRequired:pending.length > 0,requiredReplyIds:pending,browserName:isAdmin ? getClickBrowserNames_().get(peer) || '' : undefined,
+    const visibleIds = parameters.receipt_ids || [];
+    if (!Array.isArray(visibleIds) || visibleIds.length > 100 ||
+        visibleIds.some(id => typeof id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))) {
+      throw new Error('既読確認の対象が不正です。');
+    }
+    const displayed = new Set(messages.map(row => row.id));
+    const extraIds = Array.from(new Set(visibleIds)).filter(id => !displayed.has(id));
+    const receipts = extraIds.length ? supabaseChatRequest_('get', base + '&id=in.(' + extraIds.join(',') + ')&select=id,readers') : [];
+
+    return {receipts:receipts.map(row => ({id:row.id,
+      readByPeer:Array.isArray(row.readers) && row.readers.includes(isAdmin ? 'dm_visitor' : 'dm_admin'),
+      readByMe:Array.isArray(row.readers) && row.readers.includes(isAdmin ? 'dm_admin' : 'dm_visitor')})),
+      replyRequired:pending.length > 0,requiredReplyIds:pending,browserName:isAdmin ? getClickBrowserNames_().get(peer) || '' : undefined,
       messages:messages.map(row=>({id:row.id,author:row.author,message:row.body,createdAt:row.created_at,
-      replyRequired:pending.includes(row.id),own:row.author === (isAdmin ? '管理者' : '利用者')})),nextCursor:more ? page[page.length-1].seq : null};
+      replyRequired:pending.includes(row.id),
+      readByPeer:Array.isArray(row.readers) && row.readers.includes(isAdmin ? 'dm_visitor' : 'dm_admin'),
+      readByMe:Array.isArray(row.readers) && row.readers.includes(isAdmin ? 'dm_admin' : 'dm_visitor'),
+      own:row.author === (isAdmin ? '管理者' : '利用者')})),nextCursor:more ? page[page.length-1].seq : null};
   }
   // 管理者から未登録の利用者には送らない。本人の登録はログイン時に行う。
   const identities = supabaseChatRequest_('get', 'link_core_visitor_chat_identity?browser_id=eq.' + encodeURIComponent(peer) + '&select=browser_id&limit=1');

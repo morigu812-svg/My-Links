@@ -47,6 +47,50 @@
     form.before(replyStatus);
 
 
+
+    let readTimer = null;
+    let markingRead = false;
+    const visibleMessages = new Set();
+    const readObserver = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        const id = entry.target.dataset.messageId;
+        if (entry.isIntersecting) visibleMessages.add(id);
+        else visibleMessages.delete(id);
+      });
+      scheduleRead();
+    }, {root:thread, threshold:0});
+    function scheduleRead() {
+      clearTimeout(readTimer);
+      readTimer = setTimeout(() => { void markVisibleRead(); }, 250);
+    }
+    async function markVisibleRead() {
+      if (!panel.open || browser === null || document.hidden || markingRead || !panel.getClientRects().length) return;
+      const bounds = thread.getBoundingClientRect();
+      const incoming = new Map([...oldMessages,...latestMessages].filter(item => !item.own && !item.readByMe).map(item => [item.id,item]));
+      const ids = [...history.querySelectorAll('[data-message-id]')].filter(card => {
+        const rect = card.getBoundingClientRect();
+        return visibleMessages.has(card.dataset.messageId) && incoming.has(card.dataset.messageId) &&
+          rect.bottom > Math.max(bounds.top,0) && rect.top < Math.min(bounds.bottom,innerHeight) &&
+          rect.right > Math.max(bounds.left,0) && rect.left < Math.min(bounds.right,innerWidth);
+      }).map(card => card.dataset.messageId).slice(0,100);
+      if (!ids.length) return;
+      const current = generation, target = browser;
+      markingRead = true;
+      try {
+        const result = await request({operation:'markRead',browser:target,message_ids:ids});
+        if (!panel.open || current !== generation) return;
+        const saved = new Set(result.ids || []);
+        const update = item => saved.has(item.id) ? {...item,readByMe:true} : item;
+        oldMessages = oldMessages.map(update);
+        latestMessages = latestMessages.map(update);
+      } catch (_) {
+        // Retry visible messages on the next poll without changing their state.
+      } finally { markingRead = false; }
+    }
+    thread.addEventListener('scroll', scheduleRead, {passive:true});
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) scheduleRead(); });
+    window.addEventListener('resize', scheduleRead);
+
     function prepareRequiredReply(messages) {
       if (isAdmin) return;
       const pending = messages.filter(item => !item.own && item.replyRequired);
@@ -69,11 +113,14 @@
       const previousHeight = thread.scrollHeight;
       const atBottom = previousHeight - thread.scrollTop - thread.clientHeight < 80;
       const seen = new Set();
+      readObserver.disconnect();
+      visibleMessages.clear();
       const cards = messages.flatMap(item => {
         if (seen.has(item.id)) return [];
         seen.add(item.id);
         const card = document.createElement('article');
         card.className = 'visitor-dm-message' + (item.own ? ' own' : '');
+        card.dataset.messageId = item.id;
         const body = document.createElement('div');
         body.textContent = item.message;
         const time = document.createElement('time');
@@ -83,6 +130,12 @@
           time.textContent = date.toLocaleString('ja-JP', {month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
         }
         card.append(body, time);
+        if (item.own) {
+          const receipt = document.createElement('span');
+          receipt.className = 'visitor-dm-read-receipt';
+          receipt.textContent = item.readByPeer ? '既読' : '未読';
+          card.append(receipt);
+        }
         if (isAdmin && item.own) {
           const label = document.createElement('label');
           label.className = 'visitor-dm-required-toggle';
@@ -109,9 +162,20 @@
         return [card];
       });
       history.replaceChildren(...cards);
+      cards.forEach(card => readObserver.observe(card));
+      scheduleRead();
       if (!cards.length) history.textContent = 'メッセージはまだありません。';
       if (keepScroll) thread.scrollTop += thread.scrollHeight - previousHeight;
       else if (atBottom) thread.scrollTop = thread.scrollHeight;
+    }
+
+
+    function visibleReceiptIds() {
+      const bounds = thread.getBoundingClientRect();
+      return [...history.querySelectorAll('[data-message-id]')].filter(card => {
+        const rect = card.getBoundingClientRect();
+        return rect.bottom > Math.max(bounds.top,0) && rect.top < Math.min(bounds.bottom,innerHeight);
+      }).map(card => card.dataset.messageId).slice(0,100);
     }
 
     async function refresh() {
@@ -145,7 +209,7 @@
           }));
           if (!response.rooms.length) rooms.textContent = 'クリック履歴の「個人トーク」から相手を選べます。';
         } else {
-          const response = await request({operation:'read',browser});
+          const response = await request({operation:'read',browser,receipt_ids:visibleReceiptIds()});
           if (!panel.open || current !== generation) return;
           if (isAdmin && typeof response.browserName === 'string') {
             if (response.browserName) names.set(browser, response.browserName);
@@ -153,7 +217,8 @@
             title.textContent = (response.browserName || browser) + 'との個人トーク';
           }
           const requiredIds = new Set(response.requiredReplyIds || []);
-          oldMessages = oldMessages.map(item => ({...item, replyRequired:requiredIds.has(item.id)}));
+          const receipts = new Map((response.receipts || []).map(item => [item.id,item]));
+          oldMessages = oldMessages.map(item => ({...item, ...receipts.get(item.id), replyRequired:requiredIds.has(item.id)}));
           latestMessages = response.messages;
           if (replyTo && !latestMessages.some(item => item.id === replyTo && item.replyRequired)) { replyTo = null; replyStatus.textContent = ''; }
           layout.onGate?.(!!response.replyRequired);
@@ -161,6 +226,7 @@
           if (!oldMessages.length) nextCursor = response.nextCursor;
           older.hidden = !nextCursor;
           render();
+          scheduleRead();
         }
         if (!sending) status.textContent = sendError;
       } catch (error) {
@@ -176,6 +242,7 @@
       if (target && name) names.set(target, name);
       browser = isAdmin ? (target || null) : '';
       generation++;
+      readObserver.disconnect(); visibleMessages.clear(); clearTimeout(readTimer);
       nextCursor = null;
       oldMessages = [];
       latestMessages = [];
@@ -200,7 +267,7 @@
 
     find('[data-close]').addEventListener('click', () => { panel.close(); layout.onClose?.(); });
     back.addEventListener('click', () => open());
-    panel.addEventListener('close', () => { generation++; renderedRooms=''; history.replaceChildren(); rooms.replaceChildren(); input.value=''; });
+    panel.addEventListener('close', () => { readObserver.disconnect(); visibleMessages.clear(); clearTimeout(readTimer); generation++; renderedRooms=''; history.replaceChildren(); rooms.replaceChildren(); input.value=''; });
     older.addEventListener('click', async () => {
       if (older.disabled || !nextCursor || browser === null) return;
       const current = generation;

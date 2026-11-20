@@ -203,3 +203,10 @@ html body .visitor-dm .visitor-dm-required-badge {
   html body .visitor-dm button,
   html body .visitor-reply-gate button {transition:none}
 }
+
+html body .visitor-dm .visitor-dm-read-receipt {
+  color:#8faabd;
+  font-size:11px;
+  line-height:1.4;
+  padding:0 3px;
+}
