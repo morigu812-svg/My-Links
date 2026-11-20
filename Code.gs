@@ -441,6 +441,50 @@ function setVisitorBan(browserId, banned, adminToken) {
   return {ok:true, banned};
 }
 
+function getBanVisitors(adminToken) {
+  requireAdmin_(adminToken);
+  const props = PropertiesService.getScriptProperties();
+  const spreadsheet = SpreadsheetApp.openById(props.getProperty(SPREADSHEET_PROPERTY));
+  const visitors = new Map();
+  const prefix = 'LINK_CORE_BAN_';
+  const settings = props.getProperties();
+  const names = getClickBrowserNames_();
+
+  function record(id, date, signedIn) {
+    const browserId = String(id || '');
+    if (!/^[A-Za-z0-9_-]{8,100}$/.test(browserId)) return;
+    const visitor = visitors.get(browserId) || {
+      browserId, browserName: names.get(browserId) || '', lastLogin: '', lastActivity: '',
+      banned: settings[prefix + browserId] === '1'
+    };
+    const timestamp = date ? new Date(date) : null;
+    if (timestamp && Number.isFinite(timestamp.getTime())) {
+      const day = timestamp.toISOString();
+      if (day > visitor.lastActivity) visitor.lastActivity = day;
+      if (signedIn && day > visitor.lastLogin) visitor.lastLogin = day;
+    }
+    visitors.set(browserId, visitor);
+  }
+
+  function readHistory(sheetName, dateColumn, idColumn, signedIn) {
+    const sheet = spreadsheet.getSheetByName(sheetName);
+    if (!sheet || sheet.getLastRow() < 2 || sheet.getLastColumn() < idColumn) return;
+    const rows = sheet.getRange(2, dateColumn, sheet.getLastRow() - 1, idColumn - dateColumn + 1).getValues();
+    rows.forEach(row => record(row[idColumn - dateColumn], row[0], signedIn));
+  }
+
+  readHistory('VisitorLoginLogs', 1, 2, true);
+  readHistory(CLICK_LOG_SHEET_NAME, 5, 6, false);
+  readHistory('BAN異議申し立て', 1, 2, false);
+  Object.keys(settings).forEach(key => {
+    if (key.startsWith(prefix) && settings[key] === '1') record(key.slice(prefix.length));
+  });
+  return {logs: Array.from(visitors.values()).sort((a, b) =>
+    Number(b.banned) - Number(a.banned) ||
+    b.lastActivity.localeCompare(a.lastActivity) || a.browserId.localeCompare(b.browserId)
+  )};
+}
+
 function storeSession_(role, token, generation) {
   const expiresAt = Date.now() + SESSION_TTL_SECONDS * 1000;
   CacheService.getScriptCache().put('LINK_CORE_' + role + '_' + token,
@@ -3209,6 +3253,7 @@ function getVisitorLoginLogs(adminToken) {
     return {logs: rows.reverse().filter(row => row[0]).map(([date, browserId, id]) => ({
       date: toIso_(date), browserId: String(browserId || ''), id: String(id),
       browserName: names.get(String(browserId || '')) || '',
+      banned: isVisitorBanned_(String(browserId || '')),
       loginStreak: streaks.get(String(browserId || '')) || 0,
       regularVisitor: (streaks.get(String(browserId || '')) || 0) >= 3
     }))};

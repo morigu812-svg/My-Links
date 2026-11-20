@@ -1219,6 +1219,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
       <details class="sidebar-log-folder">
         <summary class="side-item"><span class="side-folder-mini" aria-hidden="true"><svg class="folder-icon" viewBox="0 0 64 52" aria-hidden="true"><path d="M4 10a5 5 0 0 1 5-5h17l7 7h22a5 5 0 0 1 5 5v4H4z" fill="currentColor" opacity=".72"/><path d="M4 17a5 5 0 0 1 5-5h46a5 5 0 0 1 5 5v27a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z" fill="currentColor"/><path d="M4 22h56" stroke="#fff" stroke-opacity=".35" stroke-width="2"/></svg></span> ログ <span class="log-folder-chevron" aria-hidden="true">›</span></summary>
         <div class="sidebar-log-items">
+          <button class="side-item" type="button" id="sideBanVisitors"><span aria-hidden="true">⊘</span> BAN操作</button>
           <button class="side-item" type="button" id="sideBanAppeals"><span aria-hidden="true">⚑</span> 異議申し立て</button>
           <button class="side-item" type="button" id="sideLinkReports"><span>⚑</span> リンク報告 <span id="linkReportBadge" class="new-badge" hidden></span></button>
           <button class="side-item" type="button" id="sideLinkOperations"><span>◷</span> リンク操作履歴</button>
@@ -1647,7 +1648,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
   }
 
   function serverCall(method, ...args) {
-    const protectedMethods = ['getBanAppeals', 'sendChatReply', 'getChatRealtimeSession', 'getLinks', 'getOfficialLinks', 'saveLink', 'deleteLink', 'getLinkReports', 'markLinkReportChecked', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'getVisitorCounterStats', 'deleteVisitorCounterBefore20261114', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getAdminVisitorChatRead', 'markAdminVisitorChatRead', 'getChatMessages', 'deleteVisitorChatMessage', 'getChatScreenshot', 'sendChatMessage', 'sendChatScreenshot', 'getStaffChatMessages', 'getStaffChatAttachment', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendStaffChatAttachment', 'startStaffChatLargeUpload', 'appendStaffChatLargeUploadChunk',
+    const protectedMethods = ['getBanVisitors', 'getBanAppeals', 'sendChatReply', 'getChatRealtimeSession', 'getLinks', 'getOfficialLinks', 'saveLink', 'deleteLink', 'getLinkReports', 'markLinkReportChecked', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'getVisitorCounterStats', 'deleteVisitorCounterBefore20261114', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getAdminVisitorChatRead', 'markAdminVisitorChatRead', 'getChatMessages', 'deleteVisitorChatMessage', 'getChatScreenshot', 'sendChatMessage', 'sendChatScreenshot', 'getStaffChatMessages', 'getStaffChatAttachment', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendStaffChatAttachment', 'startStaffChatLargeUpload', 'appendStaffChatLargeUploadChunk',
         'finishStaffChatLargeUpload', 'getStaffChatAttachmentChunk', 'deleteStaffChatMessage', 'sendPrivateChatMessage', 'visitorDirectChatProxy', 'getClickLogs', 'setVisitorBan', 'setClickBrowserName', 'deleteClickLogs', 'deleteClickLog', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
     if (protectedMethods.includes(method)) {
       const token = adminSession.getItem(ADMIN_TOKEN_KEY) || '';
@@ -2669,7 +2670,8 @@ document.getElementById('authSubmit').disabled = false;
   }
   $('adminVisitorCounterRefresh').addEventListener('click', () => { void refreshAdminVisitorCounter(); });
   const otherHistories = [
-  {key:'banAppeals', side:'sideBanAppeals', api:'getBanAppeals', title:'異議申し立て', description:'利用停止の見直しを希望する利用者から届いた申し立てです（直近200件）。', columns:['受信日時','ブラウザID','理由','現在の状態']},
+  {key:'banVisitors', side:'sideBanVisitors', api:'getBanVisitors', title:'BAN操作', description:'利用者をブラウザIDごとに表示します。BAN中のブラウザは先頭に並びます。', columns:['利用者・ブラウザID','最終ログイン','BAN状態','操作']},
+  {key:'banAppeals', side:'sideBanAppeals', api:'getBanAppeals', title:'異議申し立て', description:'利用停止の見直しを希望する利用者から届いた申し立てです（直近200件）。', columns:['受信日時','ブラウザID','理由','現在の状態','操作']},
   {key:'linkReports', side:'sideLinkReports', api:'getLinkReports', title:'リンク報告', description:'利用者から届いたリンクです。確認すると通知件数が減ります。', columns:['日時','URL','ブラウザID','状態']},
   {
     "key": "linkOperations",
@@ -2692,6 +2694,7 @@ document.getElementById('authSubmit').disabled = false;
     "columns": [
       "ログイン日時",
       "ブラウザID",
+      "BAN状態",
       "操作"
     ]
   },
@@ -2706,6 +2709,35 @@ document.getElementById('authSubmit').disabled = false;
 ];
   let activeHistory = null;
   let historyRequest = 0;
+
+  function addHistoryBanButton(cell, log, history) {
+    if (typeof log.banned !== 'boolean' || !/^[A-Za-z0-9_-]{8,100}$/.test(log.browserId)) return;
+    const button = document.createElement('button');
+    const nextBanned = !log.banned;
+    const label = nextBanned ? 'BAN' : 'BAN解除';
+    button.type = 'button';
+    button.className = 'btn' + (nextBanned ? ' danger' : '');
+    button.textContent = label;
+    button.addEventListener('click', async () => {
+      const token = adminSession.getItem(ADMIN_TOKEN_KEY);
+      if (!token || activeHistory !== history || $('otherHistoryView').hidden || clickLogPanel.hidden) return;
+      if (!confirm((log.browserName || log.browserId) + '（' + log.browserId + '）を' + label + 'しますか？')) return;
+      const sameView = () => token === adminSession.getItem(ADMIN_TOKEN_KEY) && activeHistory === history &&
+        !$('otherHistoryView').hidden && !clickLogPanel.hidden;
+      button.disabled = true;
+      try {
+        const result = await serverCall('setVisitorBan', log.browserId, nextBanned);
+        if (!result?.ok || result.banned !== nextBanned) throw new Error('変更を確認できませんでした。');
+        clickLogsLoaded = false;
+        if (sameView()) await refreshOtherHistory();
+      } catch (error) {
+        if (sameView()) $('otherHistoryStatus').textContent = label + 'に失敗しました：' + error.message;
+      } finally {
+        button.disabled = false;
+      }
+    });
+    cell.append(button);
+  }
 
   async function refreshOtherHistory() {
     const token = adminSession.getItem(ADMIN_TOKEN_KEY);
@@ -2723,6 +2755,13 @@ document.getElementById('authSubmit').disabled = false;
       const logs = isCounter ? (Array.isArray(result.days) ? result.days : []) : (history.key === 'linkReports' ? (result.reports || []) : (result.logs || []));
       const rows = logs.map(log => {
         const row = document.createElement('tr');
+        if (history.key === 'banVisitors') {
+          row.append(historyBrowserCell(log, '未記録', 'otherHistoryStatus', 'otherHistoryView', refreshOtherHistory));
+          row.insertCell().textContent = log.lastLogin ? new Date(log.lastLogin).toLocaleString('ja-JP', {timeZone:'Asia/Tokyo'}) : '記録なし';
+          row.insertCell().textContent = log.banned ? 'BAN中' : '未BAN';
+          addHistoryBanButton(row.insertCell(), log, history);
+          return row;
+        }
         const cells = isCounter ? [log.date, Number(log.count || 0).toLocaleString('ja-JP') + '人'] : [new Date(log.date).toLocaleString('ja-JP')];
         if (history.key === 'banAppeals') {
           cells.push(log.browserId, log.message, log.banned ? '利用停止中' : '利用停止なし');
@@ -2731,6 +2770,7 @@ document.getElementById('authSubmit').disabled = false;
         if (history.key === 'linkOperations') cells.push(log.action, log.title || log.linkId);
         if (history.key === 'linkReports') cells.push(log.url, log.browserId || '未記録');
         cells.forEach(value => { row.insertCell().textContent = value; });
+        if (history.key === 'banAppeals') addHistoryBanButton(row.insertCell(), log, history);
         if (history.key === 'linkReports') {
           const button=document.createElement('button');button.className='btn';button.type='button';button.textContent=log.checked?'確認済み':'確認する';button.disabled=!!log.checked;button.addEventListener('click',async()=>{button.disabled=true;try{await serverCall('markLinkReportChecked',log.id);await refreshOtherHistory();void refreshLinkReportBadge();}catch(error){$('otherHistoryStatus').textContent='確認に失敗しました：'+error.message;button.disabled=false;}});row.insertCell().append(button);
         }
@@ -2744,6 +2784,7 @@ document.getElementById('authSubmit').disabled = false;
             browserCell.append(badge);
           }
           row.append(browserCell);
+          row.insertCell().textContent = log.banned === true ? 'BAN中' : log.banned === false && log.browserId ? '未BAN' : '不明';
           const remove = document.createElement('button');
           remove.type = 'button';
           remove.className = 'btn danger';
@@ -2753,6 +2794,7 @@ document.getElementById('authSubmit').disabled = false;
           const cell = row.insertCell();
           cell.className = 'click-log-action';
           cell.appendChild(remove);
+          addHistoryBanButton(cell, log, history);
         }
         return row;
       });
@@ -2767,7 +2809,7 @@ document.getElementById('authSubmit').disabled = false;
       $('otherHistoryRows').replaceChildren(...rows);
       status.textContent = isCounter
         ? '今日 '+Number(result.today || 0).toLocaleString('ja-JP')+'人 ／ 総来客 '+Number(result.total || 0).toLocaleString('ja-JP')+'人 ／ 日付別 '+logs.length+'日を表示中'
-        : '直近 ' + logs.length + ' 件を表示中';
+        : history.key === 'banVisitors' ? logs.length + '件のブラウザを表示中' : '直近 ' + logs.length + ' 件を表示中';
     } catch (error) {
       if (request === historyRequest) status.textContent = '読み込みに失敗しました：' + error.message;
     } finally {
