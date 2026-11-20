@@ -519,9 +519,9 @@ body.window-resizing,body.window-resizing *{user-select:none!important}
   <div class="finder-layout"><aside class="sidebar" aria-label="サイドバー">
 <button class="side-item" type="button" data-view="desktop"><span>▣</span> My Desktop</button>
 <div class="side-label">よく使う項目</div>
-<button class="side-item selected" type="button" data-view="favorites"><span>★</span> お気に入り</button>
+<button class="side-item" type="button" data-view="favorites"><span>★</span> お気に入り</button>
 <button class="side-item" type="button" data-view="recent"><span>◷</span> 最近追加した項目</button>
-<button class="side-item" type="button" data-view="all"><span>▦</span> すべてのリンク</button>
+<button class="side-item selected" type="button" data-view="all"><span>▦</span> すべてのリンク</button>
 <div class="side-label">クイックアクセス</div>
 <button class="side-item" type="button" id="visitorLogout">ログアウト</button>
 <button class="side-item" type="button" id="openLinkReport"><span>⚑</span> リンク報告</button>
@@ -536,7 +536,7 @@ body.window-resizing,body.window-resizing *{user-select:none!important}
 
 <div class="side-label">カテゴリ</div><div id="sideCats" class="side-cats"></div>
 </aside><section class="finder-content"><div class="workspace">
-<div class="section-heading"><div><span class="section-kicker">MY DESKTOP / LINK LIBRARY</span><h2 id="viewTitle">お気に入り</h2></div><span class="section-note">ICON VIEW</span></div>
+<div class="section-heading"><div><span class="section-kicker">MY DESKTOP / LINK LIBRARY</span><h2 id="viewTitle">すべてのリンク</h2></div><span class="section-note">ICON VIEW</span></div>
 <div class="list-heading"><span class="list-heading-title"><span class="heading-dot">◆</span> LINK FEED</span><span class="result-count" id="count"></span><button class="retry-button" id="refreshLinks" type="button">リンクを更新</button></div>
 <div class="link-feed-privacy-note" role="note">
   <p>このページを絶対にバレないようにする方法がこちら↓↓↓</p>
@@ -646,7 +646,7 @@ function showClickLogNotice(message,isError){
  clearTimeout(clickNoticeTimer);clickNoticeTimer=setTimeout(()=>box.classList.remove('show'),isError?12000:2600);
 }
 
-let links=[],categories=[],view='favorites',selectedCategory='',visitorToken='';
+let links=[],categories=[],view='all',selectedCategory='',visitorToken='';
 let favoriteIds=new Set(), favoritesReady=false;
 let pendingFavorites=new Set();
 const isVisitorFavorite=id=>favoriteIds.has(String(id));
@@ -1241,7 +1241,7 @@ $('loginForm').addEventListener('submit',async event=>{
     showVisitorLogin();
     location.reload();
   });
-  view='favorites';
+  view='all';
   selectedCategory='';
   $('search').value='';
   $('loginPanel').classList.add('hidden');
