@@ -466,6 +466,10 @@ body.window-resizing,body.window-resizing *{user-select:none!important}
 .reply-required-locked #linksPanel .workspace,
 .reply-required-locked #sideCats {display:none!important}
 .visitor-dm-message label {display:flex;align-items:center;gap:8px;color:#dceeff;margin-top:10px}
+</style><style>
+#visitorOnlineCount{margin-left:12px;color:#9fe7cf;font-size:12px;font-weight:500;letter-spacing:normal;white-space:nowrap}
+#linksPanel .finder-title{flex-wrap:wrap}
+@media(max-width:600px){#visitorOnlineCount{margin-left:6px;font-size:10px}}
 </style></head>
 <body>
 <main class="wrap">
@@ -519,7 +523,7 @@ body.window-resizing,body.window-resizing *{user-select:none!important}
   </div>
 </section>
 <section class="finder-window hidden" id="linksPanel">
-  <div class="finder-toolbar"><div class="traffic-lights" aria-label="ウィンドウ操作"><span class="traffic-red" aria-hidden="true"></span><span class="traffic-yellow" aria-hidden="true"></span><span class="traffic-green" aria-hidden="true"></span></div><div class="finder-title"><span class="folder-glyph">▰</span> My Desktop <span class="toolbar-chevron">›</span></div><div class="toolbar-tools"><span>▤</span><span>☷</span><button class="share-btn" type="button" id="toolbarShareBtn" aria-label="このページを共有する" title="このページを共有する">⤴</button></div><div class="toolbar-search" role="search"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="検索" aria-label="リンクを検索（/ キーで移動）" autocomplete="off" enterkeyhint="search"><button class="lc-search-clear" type="button" aria-label="検索をクリア" hidden>×</button><kbd aria-hidden="true">/</kbd></div></div>
+  <div class="finder-toolbar"><div class="traffic-lights" aria-label="ウィンドウ操作"><span class="traffic-red" aria-hidden="true"></span><span class="traffic-yellow" aria-hidden="true"></span><span class="traffic-green" aria-hidden="true"></span></div><div class="finder-title"><span class="folder-glyph">▰</span> My Desktop <span class="toolbar-chevron">›</span><span id="visitorOnlineCount" role="status">オンライン人数を確認中…</span></div><div class="toolbar-tools"><span>▤</span><span>☷</span><button class="share-btn" type="button" id="toolbarShareBtn" aria-label="このページを共有する" title="このページを共有する">⤴</button></div><div class="toolbar-search" role="search"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="検索" aria-label="リンクを検索（/ キーで移動）" autocomplete="off" enterkeyhint="search"><button class="lc-search-clear" type="button" aria-label="検索をクリア" hidden>×</button><kbd aria-hidden="true">/</kbd></div></div>
   <div class="finder-layout"><aside class="sidebar" aria-label="サイドバー">
 <button class="side-item" type="button" data-view="desktop"><span>▣</span> My Desktop</button>
 <div class="side-label">よく使う項目</div>
@@ -687,6 +691,24 @@ window.getLinkCoreAiContext = () => ({
       }))
     : []
 });
+
+
+let visitorOnlineBusy = false;
+async function refreshVisitorOnline(active = !document.hidden) {
+ const token = visitorToken;
+ if (!token || visitorOnlineBusy) return;
+ visitorOnlineBusy = true;
+ try {
+  const result = await call('pulseVisitorOnline', active, token);
+  if (token !== visitorToken) return;
+  $('visitorOnlineCount').textContent = Number(result.count).toLocaleString('ja-JP') + '人の利用者がオンライン';
+ } catch (_) {
+  if (token === visitorToken) $('visitorOnlineCount').textContent = 'オンライン人数を確認できません';
+ } finally { visitorOnlineBusy = false; }
+}
+setInterval(() => { if (!document.hidden) void refreshVisitorOnline(); }, 30000);
+document.addEventListener('visibilitychange', () => { void refreshVisitorOnline(!document.hidden); });
+window.addEventListener('pagehide', () => { void refreshVisitorOnline(false); });
 
 const READ_NEW_LINKS_KEY='linkCoreReadNewLinksV1';
 let readNewLinkIds=new Set();
@@ -865,6 +887,7 @@ function showVisitorBan() {
   $('visitorBanTitle').focus();
 }
 function showVisitorLogin(message){
+  if (visitorToken) void call('pulseVisitorOnline', false, visitorToken).catch(() => {});
   if (!$('visitorBanPanel').hidden) return;
   viewerDirectChat?.close();
   viewerChatRealtime?.stop();
@@ -1282,6 +1305,7 @@ $('loginForm').addEventListener('submit',async event=>{
   if(!auth||!auth.token)throw new Error('閲覧用トークンを取得できませんでした。');
   applyVisitorLinks(Array.isArray(auth.links)?auth:await call('getLinks',auth.token));
   visitorToken=auth.token;
+  void refreshVisitorOnline();
   void checkVisitorDmNotice();
   visitorChatProfile=null;
   stopViewerExpiry = watchSessionExpiry(loginStartedAt + Math.min(auth.expiresIn || 1800, 1800) * 1000, () => {

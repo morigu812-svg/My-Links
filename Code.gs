@@ -493,6 +493,10 @@ function storeSession_(role, token, generation) {
 
 function logoutCurrentSession(token) {
   requireLinkViewer_(token);
+  const browser = CacheService.getScriptCache().get('LINK_CORE_VISITOR_BROWSER_' + token);
+  if (browser) {
+    try { visitorOnlineSnapshot_(token, browser, false, false); } catch (_) { /* Session revocation must still succeed. */ }
+  }
   CacheService.getScriptCache().removeAll(['LINK_CORE_ADMIN_' + token, 'LINK_CORE_VISITOR_' + token, 'LINK_CORE_VISITOR_DM_' + token, 'LINK_CORE_VISITOR_PROFILE_' + token, 'LINK_CORE_VISITOR_BROWSER_' + token]);
   return { ok: true };
 }
@@ -3732,4 +3736,55 @@ function visitorRequiredReplies_(browser) {
 function visitorReplyGate_(token) {
   const browser = CacheService.getScriptCache().get('LINK_CORE_VISITOR_BROWSER_' + token);
   return visitorRequiredReplies_(browser).length > 0;
+}
+
+/** Visitor presence: 30-second heartbeat, 90-second expiry, one count per browser. */
+function pulseVisitorOnline(active, visitorToken) {
+  if (typeof active !== 'boolean' || !isSessionValid_('VISITOR', visitorToken)) {
+    throw new Error('利用者ログインが必要です。');
+  }
+  const browser = CacheService.getScriptCache().get('LINK_CORE_VISITOR_BROWSER_' + visitorToken);
+  return visitorOnlineSnapshot_(visitorToken, browser, active, false);
+}
+function getOnlineVisitors(adminToken) {
+  requireAdmin_(adminToken);
+  return visitorOnlineSnapshot_('', '', false, true);
+}
+function visitorOnlineSnapshot_(token, browser, active, includeNames) {
+  const generation = sessionGeneration_();
+  const key = 'LINK_CORE_VISITOR_ONLINE_V1_' + generation;
+  const lock = LockService.getScriptLock();
+  lock.waitLock(5000);
+  let visitors;
+  try {
+    const now = Date.now();
+    const sessions = readChunkedJsonCache_(key) || {};
+    if (token) {
+      if (active) sessions[token] = {browserId:browser, lastSeen:now};
+      else delete sessions[token];
+    }
+    const tokens = Object.keys(sessions);
+    const cacheKeys = tokens.map(id => 'LINK_CORE_VISITOR_' + id);
+    const validSessions = cacheKeys.length ? CacheService.getScriptCache().getAll(cacheKeys) : {};
+    const properties = PropertiesService.getScriptProperties().getProperties();
+    const byBrowser = new Map();
+    tokens.forEach(id => {
+      const item = sessions[id];
+      const session = String(validSessions['LINK_CORE_VISITOR_' + id] || '').split(':');
+      if (!item || !/^[A-Za-z0-9_-]{8,100}$/.test(String(item.browserId || '')) ||
+          !(item.lastSeen > now - 90000) || !(Number(session[1]) > now) ||
+          session[0] !== generation || properties['LINK_CORE_BAN_' + item.browserId] === '1') {
+        delete sessions[id]; return;
+      }
+      byBrowser.set(item.browserId, Math.max(byBrowser.get(item.browserId) || 0, item.lastSeen));
+    });
+    writeChunkedJsonCache_(key, sessions, 120);
+    visitors = Array.from(byBrowser, ([browserId,lastSeen]) => ({browserId:browserId,lastSeen:new Date(lastSeen).toISOString()}))
+      .sort((a,b) => b.lastSeen.localeCompare(a.lastSeen));
+  } finally { lock.releaseLock(); }
+  if (!includeNames) return {count:visitors.length};
+  const names = getClickBrowserNames_();
+  return {count:visitors.length,logs:visitors.map(item => ({
+    browserId:item.browserId,browserName:names.get(item.browserId) || '',lastSeen:item.lastSeen
+  }))};
 }
