@@ -992,7 +992,6 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
 }
 #chatOverlay .click-log-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 #chatOverlay > .section-heading { flex-wrap: wrap; gap: 12px; }
-#chatOverlay #chatRecipient { width: 100%; min-width: 0; margin-top: 4px; }
 #chatOverlay :is(#visitorChatStatus, #chatScreenshotStatus):empty { display: none; }
 #staffPeerPresence {
   display: flex;
@@ -1274,9 +1273,6 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
         <div id="chatMessages" class="staff-message-list"></div>
       </div>
       <form class="chat-compose" id="chatForm">
-        <label class="chat-subtitle" for="chatRecipient">個別チャットID（空欄なら全員）
-          <input id="chatRecipient" type="text" maxlength="67" autocomplete="off" spellcheck="false">
-        </label>
         <textarea id="chatInput" maxlength="1000" rows="4" aria-label="利用者への返信" placeholder="利用者への返信を入力…" required></textarea>
         <div class="staff-compose-actions">
           <button id="chatScreenshot" class="staff-file-button" type="button" aria-describedby="chatScreenshotHint">写真を共有</button>
@@ -1423,7 +1419,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
   <details><summary>削除とゴミ箱</summary><p>通常リンクのカードで「削除」を押すとゴミ箱に移ります。直後は「元に戻す」、後からは「ゴミ箱」の「復元」を使います。「完全に削除」や「ゴミ箱を空にする」を実行すると復元できません。</p></details>
   <details><summary>リンク診断</summary><p>「リンク診断」を開いて「診断する」を押します。開けない可能性があるURLや、重複して登録されたURLを確認できます。</p></details>
   <details><summary>管理者専用チャット</summary><p>「チャット」→「管理者専用チャット」を開きます。メッセージが画面に表示されると、そのブラウザの未読投稿だけを自動で既読にします。過去の既読情報と他の管理者の既読は維持されます。通信に失敗した場合は「既読にする」を手動でも使えます。右上の未読通知からもチャットを開けます。</p></details>
-  <details><summary>利用者チャット</summary><p>「チャット」→「利用者チャット」を開きます。宛先欄を空にして送ると全員に表示されます。特定の利用者に送るときは、その利用者から受け取った個別チャットIDを宛先欄に貼り付けます。</p></details>
+  <details><summary>利用者チャット</summary><p>「チャット」→「利用者チャット」は全員が参加する共通チャットです。個別に話す場合は「利用者個人チャット」の一覧、またはクリック履歴の「個人トーク」から相手を選びます。</p></details>
   <details><summary>サブブラウザを設定</summary><p>メインブラウザで左メニューの「サブブラウザを設定」を開いてコードをコピーします。サブブラウザで同じ画面を開き、貼り付けて「サブとして登録」を押します。連携後は、サブからの新規投稿も自分の投稿として扱われます。</p></details>
   <details><summary>メモ帳</summary><p>左メニューの「メモ帳」を開き、専用パスワードを入力します。メモは新規作成でき、一覧から開いて編集・削除できます。</p></details>
   <details><summary>リンク操作履歴</summary><p>「ログ」→「リンク操作履歴」で、通常リンクの追加・編集・削除の日時とリンク名を確認できます。最新の記録を見るには「再読み込み」を押します。</p></details>
@@ -1651,7 +1647,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
 
   function serverCall(method, ...args) {
     const protectedMethods = ['getOnlineVisitors', 'getBanVisitors', 'getBanAppeals', 'sendChatReply', 'getChatRealtimeSession', 'getLinks', 'getOfficialLinks', 'saveLink', 'deleteLink', 'getLinkReports', 'markLinkReportChecked', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'getVisitorCounterStats', 'deleteVisitorCounterBefore20261114', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getAdminVisitorChatRead', 'markAdminVisitorChatRead', 'getChatMessages', 'deleteVisitorChatMessage', 'getChatScreenshot', 'sendChatMessage', 'sendChatScreenshot', 'getStaffChatMessages', 'getStaffChatAttachment', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendStaffChatAttachment', 'startStaffChatLargeUpload', 'appendStaffChatLargeUploadChunk',
-        'finishStaffChatLargeUpload', 'getStaffChatAttachmentChunk', 'deleteStaffChatMessage', 'sendPrivateChatMessage', 'visitorDirectChatProxy', 'getClickLogs', 'setVisitorBan', 'setClickBrowserName', 'deleteClickLogs', 'deleteClickLog', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
+        'finishStaffChatLargeUpload', 'getStaffChatAttachmentChunk', 'deleteStaffChatMessage', 'visitorDirectChatProxy', 'getClickLogs', 'setVisitorBan', 'setClickBrowserName', 'deleteClickLogs', 'deleteClickLog', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
     if (protectedMethods.includes(method)) {
       const token = adminSession.getItem(ADMIN_TOKEN_KEY) || '';
       // 呼び出し元（埋め込みメモ帳など）が既にトークンを渡している場合は二重追加しない。
@@ -2291,11 +2287,7 @@ document.getElementById('authSubmit').disabled = false;
     });
   }
 
-  const adminVisitorReply = window.createChatReply?.(chatInput, item => {
-    const field = $('chatRecipient');
-    field.value = item.private ? (item.recipient || '') : '';
-    updateScreenshotButton();
-  });
+  const adminVisitorReply = window.createChatReply?.(chatInput);
 
   const adminVisitorPreviews = window.createChatImagePreviews();
   const staffImagePreviews = window.createChatImagePreviews();
@@ -2313,7 +2305,7 @@ document.getElementById('authSubmit').disabled = false;
       if (!confirm('このメッセージを削除しますか？')) return;
       remove.disabled = true;
       try {
-        const result = await serverCall('deleteVisitorChatMessage', item.id, item.private === true);
+        const result = await serverCall('deleteVisitorChatMessage', item.id, false);
         if (token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
         if (!result?.ok) throw new Error('削除完了を確認できませんでした。');
         visitorChatRevision++;
@@ -2335,12 +2327,6 @@ document.getElementById('authSubmit').disabled = false;
     addChatReplyAction(actions, adminVisitorReply, item);
     attachChatMessageActions(line, actions);
 
-    if (item.private) {
-      const recipient = document.createElement('div');
-      recipient.className = 'staff-message-author';
-      recipient.textContent = '個別返信 → ' + item.recipient;
-      bubble.prepend(recipient);
-    }
     if (item.hasScreenshot) {
       const preview = adminVisitorPreviews.create(item.id, '共有されたスクリーンショット', async () => {
         const token = adminSession.getItem(ADMIN_TOKEN_KEY);
@@ -2370,7 +2356,7 @@ document.getElementById('authSubmit').disabled = false;
     const scrollArea = chatMessages.closest('.chat-table-wrap');
     const nearBottom = scrollArea.scrollHeight - scrollArea.scrollTop - scrollArea.clientHeight < 100;
     if (messages.length) {
-      const items = messages.map(item => ({...item, own: item.private === true || item.author === '管理者'}));
+      const items = messages.map(item => ({...item, own: item.author === '管理者'}));
       chatMessages.replaceChildren(...buildChatBubbles(items, decorateVisitorBubble));
     } else {
       const notice = document.createElement('p');
@@ -2423,7 +2409,7 @@ document.getElementById('authSubmit').disabled = false;
       const fallback = () => serverCall('getChatMessages');
       const result = await (adminChatRealtime?.read({chat_type:'visitor'}, fallback) ?? fallback());
       if (token !== adminSession.getItem(ADMIN_TOKEN_KEY) || revision !== visitorChatRevision) return;
-      const messages = Array.isArray(result.messages) ? result.messages : [];
+      const messages = Array.isArray(result.messages) ? result.messages.filter(item => !item.private) : [];
       lastVisitorChatMessages = messages;
       renderChatMessages(messages);
       updateVisitorChatUnread(messages);
@@ -3257,18 +3243,13 @@ $('closeChat').addEventListener('click', closeMainChat);
   const screenshotButton = $('chatScreenshot');
   const screenshotInput = $('chatScreenshotFile');
   const screenshotStatus = $('chatScreenshotStatus');
-  const chatRecipient = $('chatRecipient');
   let screenshotSending = false;
 
   function updateScreenshotButton() {
-    const isDirect = Boolean(chatRecipient.value.trim());
-    screenshotButton.disabled = screenshotSending || isDirect;
-    $('chatScreenshotHint').textContent = isDirect
-      ? '画像を全員に共有するには個別チャットIDを空欄にしてください。'
-      : '選んだ画像は共通チャットの全員に送信されます。';
+    screenshotButton.disabled = screenshotSending;
+    $('chatScreenshotHint').textContent = '選んだ画像は共通チャットの全員に送信されます。';
   }
 
-  chatRecipient.addEventListener('input', () => { adminVisitorReply?.clear(); updateScreenshotButton(); });
   chatForm.addEventListener('submit', updateScreenshotButton);
   screenshotButton.onclick = () => screenshotInput.click();
   screenshotInput.onchange = () => {
@@ -3280,21 +3261,20 @@ $('closeChat').addEventListener('click', closeMainChat);
     const file = pastedChatImage(event);
     if (!file) return;
     if (screenshotButton.disabled) {
-      screenshotStatus.textContent = chatRecipient.value.trim() ? '個別チャットIDが指定されているため、共通チャットには送信しません。' : '画像を送信中です。';
+      screenshotStatus.textContent = '画像を送信中です。';
       return;
     }
     if (window.confirm('この写真を共通チャットの全員に送信しますか？')) void sendChatImage(file);
   });
   async function sendChatImage(file) {
     const token = adminSession.getItem(ADMIN_TOKEN_KEY);
-    if (!file || !token || chatRecipient.value.trim() || screenshotSending) return;
+    if (!file || !token || screenshotSending) return;
     screenshotSending = true;
     updateScreenshotButton();
     screenshotStatus.textContent = '送信中…';
     try {
       const image = await encodeChatScreenshot(file);
       if (adminSession.getItem(ADMIN_TOKEN_KEY) !== token) return;
-      if (chatRecipient.value.trim()) throw new Error('個別チャットIDが入力されたため、画像は送信されませんでした。');
       await serverCall('sendChatScreenshot', image);
       if (adminSession.getItem(ADMIN_TOKEN_KEY) !== token) return;
       screenshotStatus.textContent = 'スクリーンショットを送信しました。';
@@ -3320,12 +3300,11 @@ $('closeChat').addEventListener('click', closeMainChat);
     const target = adminVisitorReply?.target;
     updateChatSendStatus('visitorChatSendStatus', target ? '返信を送信中…' : '送信中…');
     try {
-      const recipient = $('chatRecipient').value.trim();
       const fallback = request => {
-        if (target) return serverCall('sendChatReply', message, recipient ? 'direct' : 'public', recipient, target.id, '', request?.message_id || crypto.randomUUID());
-        return recipient ? serverCall('sendPrivateChatMessage', message, recipient) : serverCall('sendChatMessage', message);
+        if (target) return serverCall('sendChatReply', message, 'public', '', target.id, '', request?.message_id || crypto.randomUUID());
+        return serverCall('sendChatMessage', message);
       };
-      await (adminChatRealtime?.send(recipient ? 'direct' : 'public', message, recipient, fallback, target?.id) ?? fallback());
+      await (adminChatRealtime?.send('public', message, '', fallback, target?.id) ?? fallback());
       if (token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
       if (adminVisitorReply?.target === target) adminVisitorReply?.clear();
       chatInput.value = '';

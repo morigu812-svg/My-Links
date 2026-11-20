@@ -561,7 +561,7 @@ body.window-resizing,body.window-resizing *{user-select:none!important}
 <div class="list loading-skeleton" id="list" role="region" aria-label="リンク一覧" aria-live="polite" aria-busy="true"><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div><div class="loading-card"><div class="loading-line short"></div><div class="loading-line long"></div><div class="loading-line"></div></div></div>
 </div></section></div>
 </section>
-<section class="chat-overlay" id="chatOverlay" aria-label="みんなのチャット"><div class="chat-head"><strong>みんなのチャット</strong><div class="chat-head-actions"><button type="button" id="openVisitorDirectChat">個人トーク</button><button type="button" id="closeChat">閉じる</button></div></div><div class="chat-subtitle">利用者と管理者が参加する共通チャットです。サイトの不具合報告などにもご利用ください。</div><div class="chat-messages" id="chatMessages" aria-live="polite"><div class="chat-status">チャットを開いています…</div></div><label class="chat-subtitle" for="privateChatId">個別チャットID（管理者に共有）<input id="privateChatId" type="text" readonly style="display:block;width:100%"></label><div id="chatScreenshotControls" class="chat-subtitle"><button type="button" id="chatScreenshot">スクリーンショットを共有</button><input id="chatScreenshotFile" type="file" accept="image/*" hidden><span> 選んだ画像はこの共通チャットの参加者に送信されます。</span><div id="chatScreenshotStatus" role="status"></div></div><button type="button" id="editChatProfile" class="chat-profile-edit">学校名・フィルターの種類を変更</button><form class="chat-compose" id="chatForm"><textarea id="chatInput" maxlength="1000" rows="2" placeholder="メッセージを入力…" required></textarea><button id="chatSend" type="submit">送信</button></form></section><footer><a class="admin" href="admin.html">管理者画面</a></footer>
+<section class="chat-overlay" id="chatOverlay" aria-label="みんなのチャット"><div class="chat-head"><strong>みんなのチャット</strong><div class="chat-head-actions"><button type="button" id="openVisitorDirectChat">個人トーク</button><button type="button" id="closeChat">閉じる</button></div></div><div class="chat-subtitle">利用者と管理者が参加する共通チャットです。サイトの不具合報告などにもご利用ください。</div><div class="chat-messages" id="chatMessages" aria-live="polite"><div class="chat-status">チャットを開いています…</div></div><div id="chatScreenshotControls" class="chat-subtitle"><button type="button" id="chatScreenshot">スクリーンショットを共有</button><input id="chatScreenshotFile" type="file" accept="image/*" hidden><span> 選んだ画像はこの共通チャットの参加者に送信されます。</span><div id="chatScreenshotStatus" role="status"></div></div><button type="button" id="editChatProfile" class="chat-profile-edit">学校名・フィルターの種類を変更</button><form class="chat-compose" id="chatForm"><textarea id="chatInput" maxlength="1000" rows="2" placeholder="メッセージを入力…" required></textarea><button id="chatSend" type="submit">送信</button></form></section><footer><a class="admin" href="admin.html">管理者画面</a></footer>
 </main>
 <iframe id="gasBridge" title="通信" hidden></iframe>
 
@@ -663,7 +663,7 @@ async function loadVisitorFavorites(token) {
  if (!token || token !== visitorToken || pendingFavorites.size) return;
  $('favoriteStatus').textContent='お気に入りを読み込んでいます…';
  try{
-  const secret=await privateChatSecret();
+  const secret=await visitorIdentitySecret();
   if(token!==visitorToken)return;
   const data=await call('getVisitorFavorites',secret,token);
   if(token!==visitorToken || pendingFavorites.size)return;
@@ -824,7 +824,7 @@ const chatOverlay=$('chatOverlay'),chatMessages=$('chatMessages'),chatForm=$('ch
 document.querySelector('#linksPanel .finder-content').append(chatOverlay);
 const viewerChatPreviews = window.createChatImagePreviews();
 const viewerReply = window.createChatReply?.(chatInput);
-function renderChat(messages){const key=JSON.stringify(messages);if(key===viewerMessagesKey)return;viewerMessagesKey=key;viewerChatPreviews.keep(messages.filter(item=>item.hasScreenshot).map(item=>item.id));const atBottom=chatMessages.scrollHeight-chatMessages.scrollTop-chatMessages.clientHeight<80;chatMessages.replaceChildren();if(!messages.length){const e=document.createElement('div');e.className='chat-empty';e.textContent='まだメッセージはありません。最初のメッセージを送ってみましょう。';chatMessages.appendChild(e);return;}messages.forEach(item=>{const bubble=document.createElement('article');bubble.className='chat-message'+(item.author==='管理者'?' admin':'');const meta=document.createElement('div');meta.className='chat-message-meta';const author=document.createElement('strong');author.textContent=item.private?'管理者からの個別メッセージ':(item.author==='管理者'?'管理者':'利用者');const time=document.createElement('time');const date=new Date(item.createdAt);time.textContent=isNaN(date.getTime())?'':date.toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});const body=document.createElement('div');body.className='chat-message-body';body.textContent=item.message;if(item.hasScreenshot) showChatImageButton(body,item.id);meta.append(author,time);bubble.append(meta,body);if(viewerReply)window.bindChatReply(bubble,item,viewerReply,!item.private);chatMessages.appendChild(bubble);});if(atBottom)chatMessages.scrollTop=chatMessages.scrollHeight;}
+function renderChat(messages){const key=JSON.stringify(messages);if(key===viewerMessagesKey)return;viewerMessagesKey=key;viewerChatPreviews.keep(messages.filter(item=>item.hasScreenshot).map(item=>item.id));const atBottom=chatMessages.scrollHeight-chatMessages.scrollTop-chatMessages.clientHeight<80;chatMessages.replaceChildren();if(!messages.length){const e=document.createElement('div');e.className='chat-empty';e.textContent='まだメッセージはありません。最初のメッセージを送ってみましょう。';chatMessages.appendChild(e);return;}messages.forEach(item=>{const bubble=document.createElement('article');bubble.className='chat-message'+(item.author==='管理者'?' admin':'');const meta=document.createElement('div');meta.className='chat-message-meta';const author=document.createElement('strong');author.textContent=item.author==='管理者'?'管理者':'利用者';const time=document.createElement('time');const date=new Date(item.createdAt);time.textContent=isNaN(date.getTime())?'':date.toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});const body=document.createElement('div');body.className='chat-message-body';body.textContent=item.message;if(item.hasScreenshot) showChatImageButton(body,item.id);meta.append(author,time);bubble.append(meta,body);if(viewerReply)window.bindChatReply(bubble,item,viewerReply,true);chatMessages.appendChild(bubble);});if(atBottom)chatMessages.scrollTop=chatMessages.scrollHeight;}
 function isVisitorBanError(error) {
   return /このブラウザは利用を停止されています/.test(String(error?.message || error || ''));
 }
@@ -919,25 +919,20 @@ function showVisitorLogin(message){
   $('sitePassword').focus();
   if (message !== 'ログアウトしました。') void checkVisitorBanStatus();
 }
-async function privateChatSecret() {
+async function visitorIdentitySecret() {
+ // Existing identity key also preserves favorites and current browser chat binding.
  const storageKey = 'linkCorePrivateChatSecretV1';
- const idField = $('privateChatId');
  try {
   let secret = localStorage.getItem(storageKey);
   if (!secret || !/^[0-9a-f]{64}$/.test(secret)) {
    secret = Array.from(crypto.getRandomValues(new Uint8Array(32)), byte => byte.toString(16).padStart(2,'0')).join('');
    localStorage.setItem(storageKey, secret);
   }
-  const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(secret));
-  idField.value = 'dm_' + Array.from(new Uint8Array(hash), byte => byte.toString(16).padStart(2,'0')).join('');
   return secret;
- } catch (_) {
-  idField.value = 'このブラウザでは利用できません';
-  return '';
- }
+ } catch (_) { return ''; }
 }
-function readViewerChat(token, secret) {
- const fallback = () => call('getChatMessages', token, secret);
+function readViewerChat(token) {
+ const fallback = () => call('getChatMessages', token);
  return viewerChatRealtime?.read({chat_type:'visitor'}, fallback) ?? fallback();
 }
 function sendViewerChat(message, token) {
@@ -948,11 +943,11 @@ function sendViewerChat(message, token) {
  };
  return viewerChatRealtime?.send('public', message, '', fallback, target?.id) ?? fallback();
 }
-async function refreshChat(){if(!visitorToken||chatLoading)return;chatLoading=true;try{const token=visitorToken;const secret=await privateChatSecret();if(token!==visitorToken)return;const r=await readViewerChat(token,secret);if(token!==visitorToken)return;renderChat(Array.isArray(r.messages)?r.messages:[]);chatLoaded=true;}catch(e){if(isVisitorAuthError(e))showVisitorLogin('ログインの有効期限が切れました。もう一度サイトのパスワードを入力してください。');else{viewerMessagesKey='';chatMessages.textContent='読み込みに失敗しました：'+(e.message||'通信エラー');}}finally{chatLoading=false;}}
+async function refreshChat(){if(!visitorToken||chatLoading)return;chatLoading=true;try{const token=visitorToken;const r=await readViewerChat(token);if(token!==visitorToken)return;renderChat(Array.isArray(r.messages)?r.messages.filter(item => !item.private):[]);chatLoaded=true;}catch(e){if(isVisitorAuthError(e))showVisitorLogin('ログインの有効期限が切れました。もう一度サイトのパスワードを入力してください。');else{viewerMessagesKey='';chatMessages.textContent='読み込みに失敗しました：'+(e.message||'通信エラー');}}finally{chatLoading=false;}}
 const viewerChatRealtime = window.createChatRealtime?.(
   async () => {
     const token = visitorToken;
-    const secret = await privateChatSecret();
+    const secret = await visitorIdentitySecret();
     if (!token || token !== visitorToken) return {enabled:false};
     return call('getChatRealtimeSession', token, secret, '');
   },
@@ -1192,7 +1187,7 @@ $('list').addEventListener('click',async event=>{
  pending.add(id);
  button.disabled=true;
  try{
-  const secret=await privateChatSecret();
+  const secret=await visitorIdentitySecret();
   if(token!==visitorToken)return;
   const result=await call('setVisitorFavorite',id,favorite,secret,token);
   if(token!==visitorToken)return;
@@ -1301,7 +1296,7 @@ $('loginForm').addEventListener('submit',async event=>{
  $('loginRetry').classList.add('hidden');
  try{
   const loginStartedAt = Date.now();
-  const auth=await call('authenticateVisitor', password.value, getNoticeBrowserId(), await privateChatSecret());
+  const auth=await call('authenticateVisitor', password.value, getNoticeBrowserId(), await visitorIdentitySecret());
   if(!auth||!auth.token)throw new Error('閲覧用トークンを取得できませんでした。');
   applyVisitorLinks(Array.isArray(auth.links)?auth:await call('getLinks',auth.token));
   visitorToken=auth.token;

@@ -1479,37 +1479,9 @@ function ensureChatSheet_() {
   }
   return sheet;
 }
-function getChatMessages(viewerToken, browserSecret) {
+function getChatMessages(viewerToken) {
   requireLinkViewer_(viewerToken);
-  const publicResult = getPublicChatMessages_(viewerToken);
-  const publicMessages = publicResult.messages;
-  const isAdmin = isSessionValid_('ADMIN', viewerToken);
-  const recipient = privateChatBrowserId_(browserSecret);
-  if (supabaseChatMode_() === 'supabase') {
-    const params = {kind:'eq.direct', recipient:'like.dm_*', select:'id,recipient,body,created_at', order:'seq.desc', limit:CHAT_MAX_MESSAGES};
-    if (!isAdmin && !recipient) return {messages:publicMessages, screenshotsEnabled:true};
-    if (!isAdmin) params.recipient = 'eq.' + recipient;
-    const directMessages = supabaseChatRows_(params).reverse().map(row => ({
-      id:row.id, author:'管理者', message:row.body, createdAt:row.created_at, private:true, recipient:isAdmin ? row.recipient : ''
-    }));
-    return {messages:publicMessages.concat(directMessages)
-      .sort((a,b)=>Date.parse(a.createdAt)-Date.parse(b.createdAt)).slice(-CHAT_MAX_MESSAGES), screenshotsEnabled:true};
-  }
-  if (!isAdmin && !recipient) return {messages: publicMessages,screenshotsEnabled:true};
-
-  const sheet = privateChatSheet_(false);
-  if (!sheet || sheet.getLastRow() < 2) return {messages: publicMessages,screenshotsEnabled:true};
-  const rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, 4).getValues();
-  const directMessages = rows
-    .filter(row => row[0] && (isAdmin || row[1] === recipient))
-    .slice(-CHAT_MAX_MESSAGES)
-    .map(row => ({
-      id: String(row[0]), author: '管理者', message: String(row[2]),
-      createdAt: toIso_(row[3]), private: true, recipient: isAdmin ? String(row[1]) : ''
-    }));
-  return {messages: publicMessages.concat(directMessages)
-    .sort((first, second) => first.createdAt.localeCompare(second.createdAt))
-    .slice(-CHAT_MAX_MESSAGES),screenshotsEnabled:true};
+  return getPublicChatMessages_(viewerToken);
 }
 
 function privateChatBrowserId_(secret) {
@@ -1530,28 +1502,6 @@ function privateChatSheet_(create) {
   return sheet;
 }
 
-function sendPrivateChatMessage(message, recipient, adminToken) {
-  requireAdmin_(adminToken);
-  const body = cleanText_(message, CHAT_MAX_LENGTH);
-  if (!body) throw new Error('メッセージを入力してください。');
-  if (typeof recipient !== 'string' || !/^dm_[0-9a-f]{64}$/.test(recipient)) {
-    throw new Error('利用者チャットに表示された個別チャットIDを入力してください。');
-  }
-  const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
-  try {
-    requireAdmin_(adminToken);
-    requireChatWritable_();
-    if (supabaseChatMode_() === 'supabase') {
-      supabaseChatInsert_('direct', {body, recipient});
-      return {ok:true};
-    }
-    privateChatSheet_(true).appendRow([Utilities.getUuid(), recipient, safeCell_(body), new Date()]);
-    return {ok: true};
-  } finally {
-    lock.releaseLock();
-  }
-}
 
 function deleteVisitorChatMessage(messageId, isPrivate, adminToken) {
   requireAdmin_(adminToken);
@@ -1626,13 +1576,10 @@ function sendChatReply(message, chatType, destination, targetId, browserId, mess
   if (typeof targetId !== 'string' || !/^[0-9a-f-]{36}$/i.test(targetId)) throw new Error('返信先が不正です。');
   if (typeof messageId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(messageId)) throw new Error('送信IDが不正です。');
   const isAdmin = isSessionValid_('ADMIN', viewerToken);
-  if (!['public','direct','staff'].includes(chatType) || (chatType !== 'public' && !isAdmin)) throw new Error('返信先の権限がありません。');
+  if (!['public','staff'].includes(chatType) || (chatType !== 'public' && !isAdmin)) throw new Error('返信先の権限がありません。');
   let recipient = '';
   let sender = '';
-  if (chatType === 'direct') {
-    if (!/^dm_[0-9a-f]{64}$/.test(String(destination || ''))) throw new Error('宛先が不正です。');
-    recipient = destination;
-  } else if (chatType === 'staff') {
+  if (chatType === 'staff') {
     sender = staffChatMailboxId_(browserId);
     if (!sender) throw new Error('管理者ブラウザIDが不正です。');
     recipient = staffChatPrivateRecipient_(destination, browserId);
@@ -3529,11 +3476,6 @@ function getChatRealtimeSession(viewerToken, browserSecret, staffBrowserId) {
     if (browser && /^[A-Za-z0-9_-]{8,100}$/.test(browser)) {
       directClaims.link_core_visitor_browser = browser;
       topics.push('lc-chat-direct-vb_' + browser);
-    }
-    const inbox = privateChatBrowserId_(browserSecret);
-    if (inbox) {
-      topics.push('lc-chat-direct-' + inbox);
-      directClaims.link_core_visitor_inbox = inbox;
     }
   }
   const now = Math.floor(Date.now() / 1000);
