@@ -1857,24 +1857,35 @@ function setClickBrowserName(browserId, name, adminToken) {
   }
 }
 
-function getClickBrowserNames_() {
-  const namesSheet = twoColumnRecordsSheet_(CLICK_BROWSER_NAMES_SHEET, [], false);
+function getClickBrowserNames_(spreadsheet) {
+  const namesSheet = spreadsheet ? spreadsheet.getSheetByName(CLICK_BROWSER_NAMES_SHEET) : twoColumnRecordsSheet_(CLICK_BROWSER_NAMES_SHEET, [], false);
   const namesLast = namesSheet ? namesSheet.getLastRow() : 0;
   return new Map(namesLast < 2 ? [] : namesSheet.getRange(2, 1, namesLast - 1, 2).getDisplayValues());
 }
 
 function getClickLogs(adminToken) {
   requireAdmin_(adminToken);
-  const sheet = ensureClickLogSheet_();
+  // Read shared metadata once, rather than making a properties call per log.
+  const properties = PropertiesService.getScriptProperties().getProperties();
+  const spreadsheetId = properties[SPREADSHEET_PROPERTY];
+  if (!spreadsheetId) throw new Error('スプレッドシートIDが未設定です。');
+  const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+  const sheet = spreadsheet.getSheetByName(CLICK_LOG_SHEET_NAME);
+  if (!sheet) return {logs: []};
   const last = sheet.getLastRow();
   if (last < 2) return {logs: []};
   const first = Math.max(2, last - 499);
-  const rows = sheet.getRange(first, 1, last - first + 1, Math.max(CLICK_LOG_HEADERS.length, sheet.getLastColumn())).getValues();
-  const names = getClickBrowserNames_();
-  return {logs: rows.filter(row => row[0] !== '').reverse().map(row => ({
-    id: String(row[0] || ''), linkId: String(row[1] || ''), title: String(row[2] || ''),
-    url: String(row[3] || ''), clickedAt: toIso_(row[4]), browserId: String(row[5] || ''), browserName: names.get(String(row[5] || '')) || '', banned:isVisitorBanned_(String(row[5] || ''))
-  }))};
+  const rows = sheet.getRange(first, 1, last - first + 1, CLICK_LOG_HEADERS.length).getValues();
+  const names = getClickBrowserNames_(spreadsheet);
+  return {logs: rows.filter(row => row[0] !== '').reverse().map(row => {
+    const browserId = String(row[5] || '');
+    return {
+      id: String(row[0] || ''), linkId: String(row[1] || ''), title: String(row[2] || ''),
+      url: String(row[3] || ''), clickedAt: toIso_(row[4]), browserId: browserId,
+      browserName: names.get(browserId) || '',
+      banned: /^[A-Za-z0-9_-]{8,100}$/.test(browserId) && properties['LINK_CORE_BAN_' + browserId] === '1'
+    };
+  })};
 }
 
 
