@@ -1344,16 +1344,17 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
   <section id="clickLogPanel" class="click-log-panel" hidden aria-label="クリック履歴">
     <div id="clickLogView">
     <div class="section-heading">
-      <div><span class="section-kicker">LINK CORE / ACTIVITY LOG</span><h2>クリック履歴</h2><p>利用者ページでクリックされたリンクの記録です（直近500件）。</p></div>
+      <div><span class="section-kicker">LINK CORE / ACTIVITY LOG</span><h2>クリック履歴</h2><p>利用者ページでクリックされたリンクの記録です。500件ずつ過去の履歴を読み込めます。</p></div>
       <div class="click-log-actions"><button id="refreshClickLogs" class="btn" type="button">↻ 再読み込み</button><button id="deleteClickLogs" class="btn danger" type="button">履歴をすべて削除</button></div>
     </div>
     <div class="click-history-tools"><label>履歴を検索<input id="clickHistorySearch" type="search" placeholder="リンク名・URL・ブラウザ名・ID"></label><label>期間<select id="clickHistoryPeriod"><option value="all">すべて</option><option value="today">今日（日本時間）</option><option value="week">直近7日（日本時間）</option></select></label></div>
-    <div id="clickHistorySummary" class="click-history-summary" role="status"></div>
+    <div id="clickHistorySummary" class="click-history-summary" role="status"></div><p class="chat-subtitle">検索・期間の絞り込みは取得済みの履歴が対象です。古い履歴は下のボタンで追加できます。</p>
     <div id="clickLogStatus" role="status" aria-live="polite"></div>
     <div class="click-log-table-wrap"><table class="click-log-table">
       <thead><tr><th scope="col">リンク</th><th scope="col">利用者・ブラウザID</th><th scope="col">日時（日本時間）</th><th scope="col">操作</th></tr></thead>
       <tbody id="clickLogRows"><tr><td colspan="4">まだ履歴はありません。</td></tr></tbody>
     </table></div>
+    <div class="click-log-actions" style="margin-top:16px"><button id="loadMoreClickLogs" class="btn" type="button" hidden>以前の履歴を500件取得</button></div>
     </div>
     <div id="otherHistoryView" hidden>
       <div class="section-heading">
@@ -2501,6 +2502,8 @@ document.getElementById('authSubmit').disabled = false;
     return browserCell;
   }
   let clickHistoryLogs = [];
+  let clickLogsCursor = null;
+  let clickLogsRevision = 0;
   function updateClickHistory() {
     const query = $('clickHistorySearch').value.trim().toLocaleLowerCase();
     const period = $('clickHistoryPeriod').value;
@@ -2599,7 +2602,7 @@ document.getElementById('authSubmit').disabled = false;
       const remove=document.createElement('button');remove.type='button';remove.className='btn danger click-log-delete-one';remove.textContent='削除';remove.addEventListener('click',async()=>{
         if(!confirm('「'+(log.title||'（タイトルなし）')+'」のクリック履歴を1件削除しますか？'))return;
         remove.disabled=true;
-        try{const result=await serverCall('deleteClickLog',log.id);if(!result||!result.ok)throw new Error('削除完了の応答がありません。');clickHistoryLogs=clickHistoryLogs.filter(item=>item.id!==log.id);updateClickHistory();$('clickLogStatus').textContent='履歴を1件削除しました。';}
+        try{const result=await serverCall('deleteClickLog',log.id);if(!result||!result.ok)throw new Error('削除完了の応答がありません。');clickLogsRevision++;clickHistoryLogs=clickHistoryLogs.filter(item=>item.id!==log.id);updateClickHistory();$('clickLogStatus').textContent='履歴を1件削除しました。';}
         catch(error){remove.disabled=false;$('clickLogStatus').textContent='削除に失敗しました：'+(error.message||'通信エラー');}
       });
       actionMenu.append(remove);
@@ -2618,12 +2621,41 @@ document.getElementById('authSubmit').disabled = false;
       tr.append(title,browserCell,time,actionCell);body.appendChild(tr);
     });
   }
-  async function refreshClickLogs(){
-    if(clickLogsLoading)return;clickLogsLoading=true;const button=$('refreshClickLogs');button.disabled=true;$('clickLogStatus').textContent='履歴を読み込んでいます…';
-    try{const result=await serverCall('getClickLogs');const logs=Array.isArray(result.logs)?result.logs:[];renderClickLogs(logs);clickLogsLoaded=true;$('clickLogStatus').textContent='直近 '+logs.length+' 件を表示中';}
-    catch(error){$('clickLogStatus').textContent='読み込みに失敗しました：'+(error.message||'通信エラー');}
-    finally{clickLogsLoading=false;button.disabled=false;}
+  async function refreshClickLogs(addMore = false){
+    addMore = addMore === true;
+    if (clickLogsLoading || (addMore && !clickLogsCursor)) return;
+    const token = adminSession.getItem(ADMIN_TOKEN_KEY);
+    if (!token) return;
+    clickLogsLoading = true;
+    const revision = ++clickLogsRevision;
+    const button = $('refreshClickLogs'), moreButton = $('loadMoreClickLogs');
+    button.disabled = true; moreButton.disabled = true;
+    $('clickLogStatus').textContent = addMore ? '以前の履歴を読み込んでいます…' : '履歴を読み込んでいます…';
+    try {
+      let result = await serverCall('getClickLogs', addMore ? {cursor:clickLogsCursor} : {});
+      if (token !== adminSession.getItem(ADMIN_TOKEN_KEY) || revision !== clickLogsRevision) return;
+      let restarted = false;
+      if (result?.resetRequired) {
+        result = await serverCall('getClickLogs', {});
+        if (token !== adminSession.getItem(ADMIN_TOKEN_KEY) || revision !== clickLogsRevision) return;
+        addMore = false; restarted = true;
+      }
+      if (result?.pageSize !== 500 || !Array.isArray(result.logs)) throw new Error('GASのCode.gsを最新版に置き換え、デプロイを更新してください。');
+      const ids = new Set(addMore ? clickHistoryLogs.map(log => log.id) : []);
+      const page = result.logs.filter(log => {if (ids.has(log.id)) return false; ids.add(log.id); return true;});
+      clickLogsCursor = result.nextCursor || null;
+      renderClickLogs(addMore ? [...clickHistoryLogs, ...page] : page);
+      clickLogsLoaded = true;
+      moreButton.hidden = !clickLogsCursor;
+      $('clickLogStatus').textContent = (restarted ? '履歴が削除されたため、最新から読み直しました。' : '') +
+        clickHistoryLogs.length + '件を取得済み' + (clickLogsCursor ? ' · 以前の履歴を追加できます' : ' · すべて取得しました');
+    } catch(error) {
+      if (token === adminSession.getItem(ADMIN_TOKEN_KEY)) $('clickLogStatus').textContent = '読み込みに失敗しました：' + (error.message || '通信エラー');
+    } finally {
+      clickLogsLoading = false; button.disabled = false; moreButton.disabled = false;
+    }
   }
+  $('loadMoreClickLogs').addEventListener('click', () => refreshClickLogs(true));
   function openClickLogs(history){
     hideMainChats();
     if(!adminSession.getItem(ADMIN_TOKEN_KEY)){alert('先に管理者ログインをしてください。');return;}
@@ -2890,8 +2922,9 @@ document.getElementById('authSubmit').disabled = false;
   $('deleteClickLogs').addEventListener('click',async()=>{
     if(!adminSession.getItem(ADMIN_TOKEN_KEY)){alert('先に管理者ログインをしてください。');return;}
     if(!confirm('クリック履歴をすべて削除します。\nこの操作は取り消せません。よろしいですか？'))return;
+    clickLogsRevision++;
     const button=$('deleteClickLogs');button.disabled=true;$('clickLogStatus').textContent='履歴を削除しています…';
-    try{const result=await serverCall('deleteClickLogs');if(!result||!result.ok)throw new Error('削除完了の応答がありません。');renderClickLogs([]);clickLogsLoaded=true;$('clickLogStatus').textContent='クリック履歴をすべて削除しました。';}
+    try{const result=await serverCall('deleteClickLogs');if(!result||!result.ok)throw new Error('削除完了の応答がありません。');clickLogsCursor=null;$('loadMoreClickLogs').hidden=true;renderClickLogs([]);clickLogsLoaded=true;$('clickLogStatus').textContent='クリック履歴をすべて削除しました。';}
     catch(error){$('clickLogStatus').textContent='削除に失敗しました：'+(error.message||'通信エラー');}
     finally{button.disabled=false;}
   });

@@ -1865,29 +1865,58 @@ function getClickBrowserNames_(spreadsheet) {
   return new Map(namesLast < 2 ? [] : namesSheet.getRange(2, 1, namesLast - 1, 2).getDisplayValues());
 }
 
-function getClickLogs(adminToken) {
+function getClickLogs(options, adminToken) {
+  // Keep old callers working while the static site and GAS are updated.
+  if (typeof options === 'string' && adminToken === undefined) { adminToken = options; options = {}; }
   requireAdmin_(adminToken);
-  // Read shared metadata once, rather than making a properties call per log.
-  const properties = PropertiesService.getScriptProperties().getProperties();
-  const spreadsheetId = properties[SPREADSHEET_PROPERTY];
-  if (!spreadsheetId) throw new Error('スプレッドシートIDが未設定です。');
-  const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
-  const sheet = spreadsheet.getSheetByName(CLICK_LOG_SHEET_NAME);
-  if (!sheet) return {logs: []};
-  const last = sheet.getLastRow();
-  if (last < 2) return {logs: []};
-  const first = Math.max(2, last - 499);
-  const rows = sheet.getRange(first, 1, last - first + 1, CLICK_LOG_HEADERS.length).getValues();
-  const names = getClickBrowserNames_(spreadsheet);
-  return {logs: rows.filter(row => row[0] !== '').reverse().map(row => {
-    const browserId = String(row[5] || '');
-    return {
-      id: String(row[0] || ''), linkId: String(row[1] || ''), title: String(row[2] || ''),
-      url: String(row[3] || ''), clickedAt: toIso_(row[4]), browserId: browserId,
-      browserName: names.get(browserId) || '',
-      banned: /^[A-Za-z0-9_-]{8,100}$/.test(browserId) && properties['LINK_CORE_BAN_' + browserId] === '1'
-    };
-  })};
+  options = options || {};
+  const cursor = options.cursor;
+  if (cursor != null && (!Number.isSafeInteger(cursor.beforeRow) || cursor.beforeRow < 2 ||
+      typeof cursor.anchor !== 'string' || cursor.anchor.length > 200)) {
+    throw new Error('クリック履歴の読み込み位置が不正です。');
+  }
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const properties = PropertiesService.getScriptProperties().getProperties();
+    const spreadsheetId = properties[SPREADSHEET_PROPERTY];
+    if (!spreadsheetId) throw new Error('スプレッドシートIDが未設定です。');
+    const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+    const sheet = spreadsheet.getSheetByName(CLICK_LOG_SHEET_NAME);
+    const last = sheet ? sheet.getLastRow() : 0;
+    const empty = {logs:[], nextCursor:null, pageSize:500};
+    if (last < 2) return empty;
+    let beforeRow = last + 1;
+    if (cursor) {
+      beforeRow = cursor.beforeRow;
+      // Appends do not move this anchor. Locate it again after a row deletion.
+      if (beforeRow > last || String(sheet.getRange(beforeRow, 1).getDisplayValue()) !== cursor.anchor) {
+        if (!cursor.anchor) return {logs:[], nextCursor:null, pageSize:500, resetRequired:true};
+        const match = sheet.getRange(2, 1, last - 1, 1).createTextFinder(cursor.anchor)
+          .matchEntireCell(true).useRegularExpression(false).findNext();
+        if (!match) return {logs:[], nextCursor:null, pageSize:500, resetRequired:true};
+        beforeRow = match.getRow();
+      }
+    }
+    const upper = Math.min(last, beforeRow - 1);
+    if (upper < 2) return empty;
+    const first = Math.max(2, upper - 499);
+    const rows = sheet.getRange(first, 1, upper - first + 1, CLICK_LOG_HEADERS.length).getValues();
+    const names = getClickBrowserNames_(spreadsheet);
+    const logs = rows.filter(row => row[0] !== '').slice().reverse().map(row => {
+      const browserId = String(row[5] || '');
+      return {
+        id:String(row[0] || ''), linkId:String(row[1] || ''), title:String(row[2] || ''),
+        url:String(row[3] || ''), clickedAt:toIso_(row[4]), browserId:browserId,
+        browserName:names.get(browserId) || '',
+        banned:/^[A-Za-z0-9_-]{8,100}$/.test(browserId) && properties['LINK_CORE_BAN_' + browserId] === '1'
+      };
+    });
+    // Anchor to the first physical row, including empty legacy rows, so older
+    // batches remain reachable even when a whole batch contains empty rows.
+    const nextCursor = first > 2 ? {beforeRow:first, anchor:String(rows[0][0] || '')} : null;
+    return {logs:logs, nextCursor:nextCursor, pageSize:500};
+  } finally { lock.releaseLock(); }
 }
 
 
