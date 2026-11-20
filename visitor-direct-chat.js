@@ -43,9 +43,25 @@
     const replyStatus = document.createElement('p');
     form.before(replyStatus);
 
+
+    function prepareRequiredReply(messages) {
+      if (isAdmin) return;
+      const pending = messages.filter(item => !item.own && item.replyRequired);
+      const target = pending[0];
+      replyTo = target ? target.id : null;
+      replyStatus.hidden = !target;
+      replyStatus.textContent = target
+        ? '返信が必要です（残り' + pending.length + '件）。下に入力して「返信を送信」を押してください。\n返信先：' + target.message
+        : '';
+      replyStatus.style.cssText = 'white-space:pre-wrap;padding:12px;border-left:3px solid #38cce9;background:#12273b;color:#e5f5ff;max-height:160px;overflow:auto';
+      input.placeholder = target ? '上のメッセージへの返信を入力…' : 'メッセージを入力…';
+      send.textContent = target ? '返信を送信' : '送信';
+    }
+
     function render(keepScroll = false) {
       const messages = [...oldMessages, ...latestMessages];
-      const key = JSON.stringify(messages);
+      prepareRequiredReply(latestMessages);
+      const key = JSON.stringify([messages,replyTo]);
       if (rendered === key) return;
       rendered = key;
       const previousHeight = thread.scrollHeight;
@@ -83,15 +99,10 @@
           card.append(label);
         }
         if (!isAdmin && item.replyRequired) {
-          const reply = document.createElement('button');
-          reply.type = 'button';
-          reply.textContent = '返信必須 · このメッセージに返信';
-          reply.addEventListener('click', () => {
-            replyTo = item.id;
-            replyStatus.textContent = '返信先：' + item.message.slice(0,100);
-            input.focus();
-          });
-          card.append(reply);
+          const badge = document.createElement('p');
+          badge.textContent = item.id === replyTo ? 'このメッセージへの返信を入力してください' : '返信待ち';
+          badge.style.cssText = 'color:#80e4ff;font-weight:600;margin:10px 0 0';
+          card.append(badge);
         }
         return [card];
       });
@@ -170,7 +181,8 @@
       sendError = '';
       history.replaceChildren();
       input.value = '';
-      replyTo = null; replyStatus.textContent = '';
+      replyTo = null; replyStatus.textContent = ''; replyStatus.hidden = true;
+      input.placeholder = 'メッセージを入力…'; send.textContent = '送信';
       const isList = browser === null;
       title.textContent = isList ? '利用者との個人トーク' :
         isAdmin ? (names.get(browser) || browser) + 'との個人トーク' : '管理者との個人トーク';
