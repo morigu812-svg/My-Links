@@ -1416,7 +1416,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
   <h2 id="adminHelpTitle">管理者機能の使い方</h2>
   <p>知りたい機能を選ぶと、操作手順が開きます。</p>
   <details><summary>リンクの追加・編集</summary><p>「リンクを追加」を押し、タイトルとURLを入力します。フォルダーを階層にする場合は「勉強/数学」のように指定します。登録済みのリンクはカードの「編集」から変更できます。</p></details>
-  <details><summary>公開・お気に入り・NEW</summary><p>「利用者ページに公開する」にチェックを入れて保存すると、利用者画面に表示されます。カードの星でお気に入りを切り替え、「NEWラベルを表示する」で新着の目印を付けられます。</p></details>
+  <details><summary>公開・お気に入り・NEW</summary><p>「利用者ページに公開する」にチェックを入れて保存すると、利用者画面に表示されます。カードの星でお気に入りを切り替え、「利用者ページにNEWラベルを表示する」で、利用者向けに新着の目印を付けられます。</p></details>
   <details><summary>公式リンク</summary><p>左メニューの「公式リンク」を開き、フォームに名前とURLを入力して追加します。登録済みの公式リンクは一覧から削除できます。</p></details>
   <details><summary>削除とゴミ箱</summary><p>通常リンクのカードで「削除」を押すとゴミ箱に移ります。直後は「元に戻す」、後からは「ゴミ箱」の「復元」を使います。「完全に削除」や「ゴミ箱を空にする」を実行すると復元できません。</p></details>
   <details><summary>リンク診断</summary><p>「リンク診断」を開いて「診断する」を押します。開けない可能性があるURLや、重複して登録されたURLを確認できます。</p></details>
@@ -1449,7 +1449,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
     <datalist id="catList"></datalist>
     <label for="fMemo">メモ</label>
     <textarea id="fMemo" rows="3"></textarea>
-    <label class="check"><input id="fNew" type="checkbox"> NEWラベルを表示する</label>
+    <label class="check"><input id="fNew" type="checkbox"> 利用者ページにNEWラベルを表示する</label>
     <label class="check"><input id="fVisible" type="checkbox"> 利用者ページに公開する</label>
     <p id="linkSaveStatus" role="status"></p>
     <div class="foot">
@@ -1975,10 +1975,6 @@ document.getElementById('authSubmit').disabled = false;
   function folderParts(path) { return String(path || '').split('/').map(part => part.trim()).filter(Boolean); }
   function folderParent(path) { const parts = folderParts(path); parts.pop(); return parts.join('/'); }
   function folderPath(path) { return folderParts(path).join('/'); }
-  function hasNewInFolder(key) {
-    return state.links.some(link => link.isNew && (key === '__uncategorized__' ? !folderPath(link.category) :
-      folderPath(link.category) === key || folderPath(link.category).startsWith(key + '/')));
-  }
   function childFolders(path, sourceLinks) {
     const prefix = path ? path + '/' : '';
     const counts = new Map();
@@ -2005,14 +2001,14 @@ document.getElementById('authSubmit').disabled = false;
     $('list').setAttribute('aria-busy', 'false');
     $('list').classList.remove('loading-skeleton');
     const folderIcon = "<svg class=\"folder-icon\" viewBox=\"0 0 64 52\" aria-hidden=\"true\"><path d=\"M4 10a5 5 0 0 1 5-5h17l7 7h22a5 5 0 0 1 5 5v4H4z\" fill=\"currentColor\" opacity=\".72\"/><path d=\"M4 17a5 5 0 0 1 5-5h46a5 5 0 0 1 5 5v27a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z\" fill=\"currentColor\"/><path d=\"M4 22h56\" stroke=\"#fff\" stroke-opacity=\".35\" stroke-width=\"2\"/></svg>";
-    const folderButton = (name, key, count) => `<button type="button" class="folder-card" data-open-folder="${esc(key)}">${folderIcon}<span class="folder-card-name">${esc(name)}</span>${hasNewInFolder(key) ? '<span class="new-label">NEW</span>' : ''}<span class="folder-card-count">${count} 個のリンク</span></button>`;
+    const folderButton = (name, key, count) => `<button type="button" class="folder-card" data-open-folder="${esc(key)}">${folderIcon}<span class="folder-card-name">${esc(name)}</span><span class="folder-card-count">${count} 個のリンク</span></button>`;
     if (renderedLinks !== state.links || renderedCategories !== state.categories || renderedCategory !== state.category) {
       const sideFolders = Array.from(new Set(state.categories.map(folderPath).filter(Boolean))).map(cat => {
         const depth = Math.max(0, folderParts(cat).length - 1);
         const label = folderParts(cat).slice(-1)[0] || cat;
-        return `<button type="button" class="side-item ${state.category === cat ? 'selected' : ''}" style="padding-left:${10 + depth * 12}px" data-side-cat="${esc(cat)}"><span class="side-folder-mini">${folderIcon}</span> ${esc(label)}${hasNewInFolder(cat) ? '<span class="new-badge">NEW</span>' : ''}</button>`;
+        return `<button type="button" class="side-item ${state.category === cat ? 'selected' : ''}" style="padding-left:${10 + depth * 12}px" data-side-cat="${esc(cat)}"><span class="side-folder-mini">${folderIcon}</span> ${esc(label)}</button>`;
       });
-      if (state.links.some(link => !folderPath(link.category))) sideFolders.push(`<button type="button" class="side-item ${state.category === '__uncategorized__' ? 'selected' : ''}" data-side-cat="__uncategorized__"><span class="side-folder-mini">${folderIcon}</span> 未分類${hasNewInFolder('__uncategorized__') ? '<span class="new-badge">NEW</span>' : ''}</button>`);
+      if (state.links.some(link => !folderPath(link.category))) sideFolders.push(`<button type="button" class="side-item ${state.category === '__uncategorized__' ? 'selected' : ''}" data-side-cat="__uncategorized__"><span class="side-folder-mini">${folderIcon}</span> 未分類</button>`);
       $('sideCats').innerHTML = sideFolders.join('') || '<div class="side-empty">フォルダがありません</div>';
       $('catList').innerHTML = state.categories.map(c => `<option value="${esc(c)}">`).join('');
       renderedLinks = state.links;
@@ -2042,7 +2038,7 @@ document.getElementById('authSubmit').disabled = false;
         <div class="lc-link-info">
           <div class="lc-link-main">
             <a class="title" href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(link.title)}</a>
-            ${link.isNew ? '<span class="new-label">NEW</span>' : ''}
+            
             <div class="meta">${esc(host(link.url))}${link.category ? ` · ${esc(link.category)}` : ''}</div>
             ${link.memo ? `<div class="memo">${esc(link.memo)}</div>` : ''}
           </div>
