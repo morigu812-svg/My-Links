@@ -404,7 +404,7 @@ function authenticateVisitor(password, browserId, browserSecret) {
   recordVisitorCounter_(browserId);
   return {
     ok: true, token: token, expiresIn: SESSION_TTL_SECONDS,
-    links: initialLinks.links, categories: initialLinks.categories, replyRequired:!!initialLinks.replyRequired
+    links: initialLinks.links, categories: initialLinks.categories, replyRequired:!!initialLinks.replyRequired, profileRequired:!!initialLinks.profileRequired
   };
 }
 
@@ -499,7 +499,7 @@ function logoutCurrentSession(token) {
   if (browser) {
     try { visitorOnlineSnapshot_(token, browser, false, false); } catch (_) { /* Session revocation must still succeed. */ }
   }
-  CacheService.getScriptCache().removeAll(['LINK_CORE_ADMIN_' + token, 'LINK_CORE_VISITOR_' + token, 'LINK_CORE_VISITOR_DM_' + token, 'LINK_CORE_VISITOR_PROFILE_' + token, 'LINK_CORE_VISITOR_BROWSER_' + token]);
+  CacheService.getScriptCache().removeAll(['LINK_CORE_ADMIN_' + token, 'LINK_CORE_VISITOR_' + token, 'LINK_CORE_VISITOR_DM_' + token, 'LINK_CORE_VISITOR_PROFILE_' + token, 'LINK_CORE_PROFILE_READY_' + token, 'LINK_CORE_VISITOR_BROWSER_' + token]);
   return { ok: true };
 }
 
@@ -734,6 +734,7 @@ function getLinksForToken_(viewerToken, knownIsAdmin, performanceData) {
     ? knownIsAdmin
     : isSessionValid_('ADMIN', viewerToken);
 
+  if (!isAdmin && visitorProfileRequired_(viewerToken)) return {links:[], categories:[], profileRequired:true};
   if (!isAdmin && visitorReplyGate_(viewerToken)) return {links:[], categories:[], replyRequired:true};
   const cacheStartedAt = Date.now();
   let result = readChunkedJsonCache_('LINK_CORE_LINKS_ALL_V2');
@@ -1211,6 +1212,7 @@ function invalidateOfficialLinksCache_() {
 }
 function getOfficialLinks(viewerToken) {
   requireLinkViewer_(viewerToken);
+  if (!isSessionValid_('ADMIN', viewerToken) && visitorProfileRequired_(viewerToken)) return {links:[], profileRequired:true};
   if (!isSessionValid_('ADMIN', viewerToken) && visitorReplyGate_(viewerToken)) return {links:[], replyRequired:true};
   const cached = readJsonCache_('LINK_CORE_OFFICIAL_LINKS_V1');
   if (cached) return cached;
@@ -1651,6 +1653,7 @@ function saveVisitorChatProfile(browserId, school, filter, visitorToken) {
     const found = last < 2 ? null : sheet.getRange(2,1,last-1,1).createTextFinder(browserId).matchEntireCell(true).findNext();
     const row = found ? found.getRow() : last+1;
     sheet.getRange(row,1,1,4).setValues([[browserId,safeCell_(name),safeCell_(kind),new Date()]]);
+    CacheService.getScriptCache().put('LINK_CORE_PROFILE_READY_' + visitorToken, '1', SESSION_TTL_SECONDS);
     return {school:name,filter:kind};
   } finally { lock.releaseLock(); }
 }
@@ -3786,4 +3789,19 @@ function visitorChatProfilesByBrowser_(spreadsheet) {
     if (/^[A-Za-z0-9_-]{8,100}$/.test(id)) profiles.set(id, {school:String(row[1] || ''), filter:String(row[2] || '')});
   });
   return profiles;
+}
+
+/** Check the profile once per authenticated session, keeping link payloads gated. */
+function visitorProfileRequired_(token) {
+  const cache = CacheService.getScriptCache();
+  const key = 'LINK_CORE_PROFILE_READY_' + token;
+  const ready = cache.get(key);
+  if (ready === '1') return false;
+  if (ready === '0') return true;
+  const browser = cache.get('LINK_CORE_VISITOR_PROFILE_' + token);
+  if (!browser) return true;
+  const profile = getVisitorChatProfile(browser, token);
+  const complete = !!(String(profile.school || '').trim() && String(profile.filter || '').trim());
+  cache.put(key, complete ? '1' : '0', SESSION_TTL_SECONDS);
+  return !complete;
 }
