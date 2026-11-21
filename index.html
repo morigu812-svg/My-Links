@@ -896,7 +896,7 @@ function showVisitorLogin(message){
   $('visitorLogout').disabled = false;
   visitorToken='';
   if($('chatProfileDialog').open)$('chatProfileDialog').close();
-  visitorChatProfile=null;
+  visitorChatProfile=auth.profile && typeof auth.profile.school === 'string' && typeof auth.profile.filter === 'string' ? auth.profile : null;
   links=[];
   categories=[];
   favoriteIds=new Set();

@@ -398,12 +398,15 @@ function authenticateVisitor(password, browserId, browserSecret) {
   }
 
   // 認証直後のリンク取得を同じ応答にまとめ、ブラウザーとの往復を1回減らす。
+  const profile = getVisitorChatProfile(browserId, token);
+  CacheService.getScriptCache().put('LINK_CORE_PROFILE_READY_' + token,
+    profile.school && profile.filter ? '1' : '0', SESSION_TTL_SECONDS);
   const initialLinks = getLinksForToken_(token, false);
   recordVisitorLogin_(browserId);
   // 同じブラウザは1日1回まで。ログイン履歴の削除とは独立して保存する。
   recordVisitorCounter_(browserId);
   return {
-    ok: true, token: token, browserId:browserId, expiresIn: SESSION_TTL_SECONDS,
+    ok: true, token: token, browserId:browserId, profile:profile, expiresIn: SESSION_TTL_SECONDS,
     links: initialLinks.links, categories: initialLinks.categories, replyRequired:!!initialLinks.replyRequired, profileRequired:!!initialLinks.profileRequired
   };
 }
@@ -3201,16 +3204,9 @@ function recordVisitorCounter_(browserId) {
     if (day < VISITOR_COUNTER_MIN_DATE) return;
     const sheet = visitorCounterSheet_(true);
     const last = sheet.getLastRow();
-    // 過去ログの後日取り込みにより日付が並び順にならないことがある。
-    // そのため、直近の日付が違っても探索を打ち切らず、全行で照合する。
-    for (let end = last; end >= 2; end -= 400) {
-      const start = Math.max(2, end - 399);
-      const rows = sheet.getRange(start, 1, end - start + 1, 2).getValues();
-      for (let i = rows.length - 1; i >= 0; i--) {
-        if (visitorCounterDateKey_(rows[i][0]) === day &&
-            String(rows[i][1]) === digest) return;
-      }
-    }
+    // Read history in one batch, including out-of-order imported visits.
+    const rows = last > 1 ? sheet.getRange(2, 1, last - 1, 2).getValues() : [];
+    if (rows.some(row => visitorCounterDateKey_(row[0]) === day && String(row[1]) === digest)) return;
     sheet.appendRow([day, digest, new Date()]);
 
   } catch (error) {
