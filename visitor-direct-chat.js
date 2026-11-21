@@ -165,21 +165,23 @@
           card.append(receipt);
         }
         if (isAdmin && item.own) {
-          const label = document.createElement('label');
-          label.className = 'visitor-dm-required-toggle';
-          const toggle = document.createElement('input');
-          toggle.type = 'checkbox';
-          toggle.checked = !!item.replyRequired;
-          label.append(toggle, document.createTextNode(' 返信必須'));
-          toggle.addEventListener('change', async () => {
+          const toggle = document.createElement('button');
+          toggle.type = 'button';
+          toggle.className = 'btn';
+          const required = !!item.replyRequired;
+          toggle.textContent = required ? '返信必須を解除' : '返信必須にする';
+          toggle.addEventListener('click', async () => {
+            const current = generation;
             toggle.disabled = true;
             try {
-              await request({operation:'requireReply',browser,message_id:item.id,required:toggle.checked});
+              await request({operation:'requireReply',browser,message_id:item.id,required:!required});
+              if (current !== generation) return;
               await refresh();
-            } catch (error) { toggle.checked = !!item.replyRequired; status.textContent = error.message; }
-            finally { toggle.disabled = false; }
+            } catch (error) {
+              if (current === generation) status.textContent = error.message;
+            } finally { toggle.disabled = false; }
           });
-          card.append(label);
+          card.append(toggle);
         }
         if (!isAdmin && item.replyRequired) {
           const badge = document.createElement('p');

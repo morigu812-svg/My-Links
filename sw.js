@@ -11,7 +11,7 @@
  */
 'use strict';
 
-var CACHE_VERSION = 'link-core-v53';
+var CACHE_VERSION = 'link-core-v54';
 var STATIC_CACHE = 'link-core-static-' + CACHE_VERSION;
 var DATA_CACHE = 'link-core-data-' + CACHE_VERSION;
 
@@ -121,7 +121,7 @@ self.addEventListener('fetch', function (event) {
   /* 静的ファイルは cache-first。 */
   if (isStaticAsset(request)) {
     event.respondWith(
-      caches.match(request, { ignoreSearch: true }).then(function (cached) {
+      caches.match(request).then(function (cached) {
         if (cached) {
           /* バックグラウンドで最新版を取りに行く（次回以降に反映される）。 */
           fetch(request).then(function (response) {
