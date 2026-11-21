@@ -2788,7 +2788,7 @@ document.getElementById('authSubmit').disabled = false;
 
   const directoryDate = value => value ? new Date(value).toLocaleString('ja-JP', {timeZone:'Asia/Tokyo'}) : '記録なし';
 
-  async function refreshOtherHistory() {
+  async function refreshOtherHistory(force = false) {
     const token = adminSession.getItem(ADMIN_TOKEN_KEY);
     const history = activeHistory;
     if (!token || !history) return;
@@ -2798,7 +2798,8 @@ document.getElementById('authSubmit').disabled = false;
     button.disabled = true;
     status.textContent = '履歴を読み込んでいます…';
     try {
-      const result = await serverCall(history.api);
+      const result = history.key === 'visitorDirectory' && force === true
+        ? await serverCall(history.api, {refresh:true}) : await serverCall(history.api);
       if (request !== historyRequest || token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
       const isCounter = history.key === 'visitorCounter';
       const logs = isCounter ? (Array.isArray(result.days) ? result.days : []) : (history.key === 'linkReports' ? (result.reports || []) : (result.logs || []));
@@ -2806,7 +2807,7 @@ document.getElementById('authSubmit').disabled = false;
         const row = document.createElement('tr');
         if (history.key === 'visitorDirectory') {
           row.dataset.visitorSearch = [log.browserName,log.browserId,log.school,log.filter].join(' ').toLowerCase();
-          row.append(historyBrowserCell(log, '未記録', 'otherHistoryStatus', 'otherHistoryView', refreshOtherHistory));
+          row.append(historyBrowserCell(log, '未記録', 'otherHistoryStatus', 'otherHistoryView', () => refreshOtherHistory(true)));
           directoryCell(row, [log.school || '学校名未登録', log.filter || 'フィルター未登録',
             log.profileUpdatedAt ? '更新 ' + log.profileUpdatedAt : '']);
           directoryCell(row, ['初回 ' + directoryDate(log.firstLogin), '最終 ' + directoryDate(log.lastLogin),
@@ -2961,7 +2962,7 @@ document.getElementById('authSubmit').disabled = false;
   setInterval(()=>{if(!document.hidden)void refreshLinkReportBadge()},30000);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)void refreshLinkReportBadge()});
   $('deleteVisitorLoginLogs').addEventListener('click', event => removeVisitorLogins(event.currentTarget));
-  $('refreshOtherHistory').addEventListener('click', refreshOtherHistory);
+  $('refreshOtherHistory').addEventListener('click', () => refreshOtherHistory(true));
   otherHistories.forEach(history => {
     $(history.side).addEventListener('click', () => {
       if (!adminSession.getItem(ADMIN_TOKEN_KEY)) return;

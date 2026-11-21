@@ -487,8 +487,18 @@ function getBanVisitors(adminToken) {
   )};
 }
 
-function getVisitorDirectory(adminToken) {
+function getVisitorDirectory(options, adminToken) {
+  // Older admin pages only pass the token.
+  if (typeof options === 'string' && adminToken === undefined) { adminToken = options; options = null; }
   requireAdmin_(adminToken);
+  const now = new Date();
+  const dayNumber = date => Math.floor((new Date(date).getTime() + 9 * 3600000) / 86400000);
+  const today = dayNumber(now);
+  const cacheKey = 'LINK_CORE_VISITOR_DIRECTORY_V1_' + today;
+  if (!options?.refresh) {
+    const cached = readChunkedJsonCache_(cacheKey);
+    if (cached) return cached;
+  }
   const settings = PropertiesService.getScriptProperties().getProperties();
   const spreadsheetId = settings[SPREADSHEET_PROPERTY];
   if (!spreadsheetId) throw new Error('スプレッドシートIDが未設定です。');
@@ -497,9 +507,6 @@ function getVisitorDirectory(adminToken) {
   const profiles = visitorChatProfilesByBrowser_(spreadsheet);
   const visitors = new Map();
   const daysByBrowser = new Map();
-  const now = new Date();
-  const dayNumber = date => Math.floor((new Date(date).getTime() + 9 * 3600000) / 86400000);
-  const today = dayNumber(now);
 
   function visitorFor(value) {
     const browserId = String(value || '').trim();
@@ -532,8 +539,7 @@ function getVisitorDirectory(adminToken) {
 
   names.forEach((_, id) => visitorFor(id));
   profiles.forEach((_, id) => visitorFor(id));
-  const loginRows = rows('VisitorLoginLogs', 1, 2);
-  loginRows.forEach(([value, id]) => {
+  rows('VisitorLoginLogs', 1, 2).forEach(([value, id]) => {
     const visitor = visitorFor(id);
     const date = timestamp(value);
     if (!visitor || !date) return;
@@ -579,17 +585,21 @@ function getVisitorDirectory(adminToken) {
     const visitor = visitorFor(item.browserId);
     if (visitor) visitor.lastSeen = item.lastSeen;
   });
-  const streaks = visitorLoginStreaks_(loginRows, visitors, now);
   daysByBrowser.forEach((days, id) => {
     const visitor = visitors.get(id);
     visitor.loginDays = days.size;
     visitor.loginDayNumber = today - dayNumber(visitor.firstLogin) + 1;
-    visitor.loginStreak = streaks.get(id) || 0;
+    let cursor = days.has(today) ? today : today - 1;
+    while (days.has(cursor)) { visitor.loginStreak++; cursor--; }
   });
 
-  const activity = visitor => [visitor.lastSeen, visitor.lastLogin, visitor.lastClick].sort().pop();
-  return {logs:Array.from(visitors.values()).sort((a,b) => activity(b).localeCompare(activity(a)) ||
-    a.browserId.localeCompare(b.browserId))};
+  const logs = Array.from(visitors.values(), visitor => ({
+    visitor, activity:[visitor.lastSeen, visitor.lastLogin, visitor.lastClick].sort().pop()
+  })).sort((a,b) => b.activity.localeCompare(a.activity) ||
+    a.visitor.browserId.localeCompare(b.visitor.browserId)).map(item => item.visitor);
+  const result = {logs};
+  writeChunkedJsonCache_(cacheKey, result, 20);
+  return result;
 }
 
 function storeSession_(role, token, generation) {
