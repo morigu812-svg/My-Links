@@ -1198,15 +1198,18 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
   </header>
   <div class="finder-layout">
     <aside class="sidebar" aria-label="サイドバー">
+      <button class="side-item side-primary" type="button" id="sideAdd"><span>＋</span> リンクを追加</button>
+
+      <div class="side-label">ライブラリ</div>
       <button class="side-item" type="button" data-view="desktop"><span>▣</span> My Desktop</button>
-      <div class="side-label">よく使う項目</div>
-      <button class="side-item" type="button" data-view="recent"><span>◷</span> 最近追加した項目</button>
       <button class="side-item selected" type="button" data-view="all"><span>▦</span> すべてのリンク</button>
-      <div class="side-label">クイックアクセス</div>
+      <button class="side-item" type="button" data-view="recent"><span>◷</span> 最近追加した項目</button>
       <button class="side-item" type="button" data-view="official"><span>✦</span> 公式リンク</button>
-      <button class="side-item" type="button" id="adminLogout">ログアウト</button>
-      <button class="side-item" type="button" id="logoutAllBrowsers">全ブラウザをログアウト</button>
-      <button class="side-item" type="button" id="sideMemos"><span>▤</span> メモ帳</button>
+
+      <div class="side-label">カテゴリ</div>
+      <div id="sideCats" class="side-cats"></div>
+
+      <div class="side-label">連絡</div>
       <details class="sidebar-log-folder" id="sidebarChatFolder">
         <summary class="side-item"><span class="side-folder-mini" aria-hidden="true"><svg class="folder-icon" viewBox="0 0 64 52" aria-hidden="true"><path d="M4 10a5 5 0 0 1 5-5h17l7 7h22a5 5 0 0 1 5 5v4H4z" fill="currentColor" opacity=".72"/><path d="M4 17a5 5 0 0 1 5-5h46a5 5 0 0 1 5 5v27a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z" fill="currentColor"/><path d="M4 22h56" stroke="#fff" stroke-opacity=".35" stroke-width="2"/></svg></span> チャット <span class="log-folder-chevron" aria-hidden="true">›</span></summary>
         <div class="sidebar-log-items">
@@ -1215,29 +1218,39 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
           <button class="side-item" type="button" id="sideChat"><span>✉</span> 利用者チャット <span class="new-badge" id="chatUnreadBadge" hidden></span></button>
         </div>
       </details>
+      <button class="side-item" type="button" id="sideMemos"><span>▤</span> メモ帳</button>
+
+      <div class="side-label">管理</div>
       <details class="sidebar-log-folder">
-        <summary class="side-item"><span class="side-folder-mini" aria-hidden="true"><svg class="folder-icon" viewBox="0 0 64 52" aria-hidden="true"><path d="M4 10a5 5 0 0 1 5-5h17l7 7h22a5 5 0 0 1 5 5v4H4z" fill="currentColor" opacity=".72"/><path d="M4 17a5 5 0 0 1 5-5h46a5 5 0 0 1 5 5v27a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z" fill="currentColor"/><path d="M4 22h56" stroke="#fff" stroke-opacity=".35" stroke-width="2"/></svg></span> ログ <span class="log-folder-chevron" aria-hidden="true">›</span></summary>
+        <summary class="side-item"><span class="side-folder-mini" aria-hidden="true"><svg class="folder-icon" viewBox="0 0 64 52" aria-hidden="true"><path d="M4 10a5 5 0 0 1 5-5h17l7 7h22a5 5 0 0 1 5 5v4H4z" fill="currentColor" opacity=".72"/><path d="M4 17a5 5 0 0 1 5-5h46a5 5 0 0 1 5 5v27a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z" fill="currentColor"/><path d="M4 22h56" stroke="#fff" stroke-opacity=".35" stroke-width="2"/></svg></span> 利用者・報告 <span class="log-folder-chevron" aria-hidden="true">›</span></summary>
         <div class="sidebar-log-items">
           <button class="side-item" type="button" id="sideVisitorDirectory"><span aria-hidden="true">▤</span> 利用者一覧</button>
           <button class="side-item" type="button" id="sideOnlineVisitors"><span aria-hidden="true">●</span> オンラインの利用者</button>
           <button class="side-item" type="button" id="sideBanAppeals"><span aria-hidden="true">⚑</span> 異議申し立て</button>
           <button class="side-item" type="button" id="sideLinkReports"><span>⚑</span> リンク報告 <span id="linkReportBadge" class="new-badge" hidden></span></button>
-          <button class="side-item" type="button" id="sideLinkOperations"><span>◷</span> リンク操作履歴</button>
-          <button class="side-item" type="button" id="sideVisitorLogins"><span>◷</span> 利用者ログイン履歴</button>
-          <button class="side-item" type="button" id="sideVisitorCounter"><span>▥</span> 来客数カウンター</button>
+        </div>
+      </details>
+      <details class="sidebar-log-folder">
+        <summary class="side-item"><span class="side-folder-mini" aria-hidden="true"><svg class="folder-icon" viewBox="0 0 64 52" aria-hidden="true"><path d="M4 10a5 5 0 0 1 5-5h17l7 7h22a5 5 0 0 1 5 5v4H4z" fill="currentColor" opacity=".72"/><path d="M4 17a5 5 0 0 1 5-5h46a5 5 0 0 1 5 5v27a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z" fill="currentColor"/><path d="M4 22h56" stroke="#fff" stroke-opacity=".35" stroke-width="2"/></svg></span> ログ <span class="log-folder-chevron" aria-hidden="true">›</span></summary>
+        <div class="sidebar-log-items">
           <button class="side-item" type="button" id="sideClickLogs"><span>◷</span> クリック履歴</button>
+          <button class="side-item" type="button" id="sideVisitorLogins"><span>◷</span> 利用者ログイン履歴</button>
+          <button class="side-item" type="button" id="sideLinkOperations"><span>◷</span> リンク操作履歴</button>
+          <button class="side-item" type="button" id="sideVisitorCounter"><span>▥</span> 来客数カウンター</button>
         </div>
       </details>
       <button class="side-item" type="button" id="sideTrash"><span>🗑</span> ゴミ箱</button>
       <button class="side-item" type="button" id="sideDiagnosis"><span>🩺</span> リンク診断</button>
+
+      <div class="side-label">設定とヘルプ</div>
+      <button class="side-item" type="button" id="sideShare"><span>⤴</span> このページを共有</button>
       <button class="side-item" type="button" id="staffBrowserSettings" aria-haspopup="dialog"><span aria-hidden="true">▣</span> サブブラウザを設定</button>
       <button class="side-item" type="button" id="openAdminHelp" aria-haspopup="dialog"><span aria-hidden="true">?</span> 管理者機能の使い方</button>
       <button class="side-item" type="button" id="sidePageGuide"><span aria-hidden="true">ⓘ</span> このページの仕組み</button>
-      <button class="side-item" type="button" id="sideShare"><span>⤴</span> このページを共有</button>
-      <div class="side-label">カテゴリ</div>
-      <div id="sideCats" class="side-cats"></div>
-      <div class="side-label">アクション</div>
-      <button class="side-item" type="button" id="sideAdd"><span>＋</span> リンクを追加</button>
+
+      <div class="side-label">アカウント</div>
+      <button class="side-item" type="button" id="adminLogout"><span aria-hidden="true">⎋</span> ログアウト</button>
+      <button class="side-item side-danger" type="button" id="logoutAllBrowsers"><span aria-hidden="true">⚠</span> 全ブラウザをログアウト</button>
     </aside>
     <main class="finder-content">
   <section class="workspace" aria-label="リンク一覧">
@@ -7784,6 +7797,22 @@ var qrcode = function() {
   .visitor-directory-view tr { margin-bottom: 10px; border: 1px solid #395769; border-radius: 10px; padding: 8px; }
   .visitor-directory-view td { border: 0; padding: 6px 8px; }
 }
+</style>
+<style id="lc-sidebar-organize-style">
+/* サイドバー整理：グループ見出し・主要ボタン・危険操作・未読ドット（既存の配色は変えない） */
+html body .sidebar .side-label{margin:16px 10px 5px!important;padding-top:10px;border-top:1px solid rgba(128,150,175,.22);letter-spacing:.04em}
+html body .sidebar .side-primary+.side-label{margin-top:12px!important}
+html body .sidebar .side-primary{margin-bottom:2px;font-weight:700;justify-content:flex-start;background:linear-gradient(100deg,#10344a,#171c3a)!important;border-color:#00d9ff!important;color:#eaffff!important}
+html body .sidebar .side-primary>span{color:#7ff0ff!important}
+html body.night-mode .sidebar .side-primary{background:#181818!important;border-color:#3a3a3a!important;color:#aaa!important}
+html body .sidebar .side-danger{color:#ff9aa8!important;border-color:rgba(255,120,140,.35)!important}
+html body .sidebar .side-danger>span{color:#ff9aa8!important}
+html body .sidebar .side-danger:hover{background:rgba(255,90,110,.14)!important}
+/* 折りたたんだフォルダの中に未読・新着があるときだけドットを表示 */
+.sidebar-log-folder:not([open]):has(.new-badge:not([hidden])) > summary::after{content:"";order:2;flex:0 0 auto;width:8px;height:8px;margin-left:auto;border-radius:50%;background:#ff5d6c;box-shadow:0 0 0 2px rgba(255,93,108,.25)}
+.sidebar-log-folder:not([open]):has(.new-badge:not([hidden])) > summary .log-folder-chevron{order:3;margin-inline-start:6px}
+.sidebar-log-folder[open] > .sidebar-log-items .side-item{font-size:12px}
+@media(max-width:760px){html body .sidebar .side-label{border-top:0;padding-top:0}}
 </style>
 </body>
 </html>
