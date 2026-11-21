@@ -1648,7 +1648,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
   }
 
   function serverCall(method, ...args) {
-    const protectedMethods = ['getVisitorDirectory', 'getClickBrowserNames', 'getOnlineVisitors', 'getBanVisitors', 'getBanAppeals', 'sendChatReply', 'getChatRealtimeSession', 'getLinks', 'getOfficialLinks', 'saveLink', 'deleteLink', 'getLinkReports', 'markLinkReportChecked', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'getVisitorCounterStats', 'deleteVisitorCounterBefore20261114', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getAdminVisitorChatRead', 'markAdminVisitorChatRead', 'getChatMessages', 'deleteVisitorChatMessage', 'getChatScreenshot', 'sendChatMessage', 'sendChatScreenshot', 'getStaffChatMessages', 'getStaffChatAttachment', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendStaffChatAttachment', 'startStaffChatLargeUpload', 'appendStaffChatLargeUploadChunk',
+    const protectedMethods = ['requestVisitorSchoolCorrection', 'getVisitorDirectory', 'getClickBrowserNames', 'getOnlineVisitors', 'getBanVisitors', 'getBanAppeals', 'sendChatReply', 'getChatRealtimeSession', 'getLinks', 'getOfficialLinks', 'saveLink', 'deleteLink', 'getLinkReports', 'markLinkReportChecked', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'getVisitorCounterStats', 'deleteVisitorCounterBefore20261114', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getAdminVisitorChatRead', 'markAdminVisitorChatRead', 'getChatMessages', 'deleteVisitorChatMessage', 'getChatScreenshot', 'sendChatMessage', 'sendChatScreenshot', 'getStaffChatMessages', 'getStaffChatAttachment', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendStaffChatAttachment', 'startStaffChatLargeUpload', 'appendStaffChatLargeUploadChunk',
         'finishStaffChatLargeUpload', 'getStaffChatAttachmentChunk', 'deleteStaffChatMessage', 'visitorDirectChatProxy', 'getClickLogs', 'setVisitorBan', 'setClickBrowserName', 'deleteClickLogs', 'deleteClickLog', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
     if (protectedMethods.includes(method)) {
       const token = adminSession.getItem(ADMIN_TOKEN_KEY) || '';
@@ -2808,8 +2808,28 @@ document.getElementById('authSubmit').disabled = false;
         if (history.key === 'visitorDirectory') {
           row.dataset.visitorSearch = [log.browserName,log.browserId,log.school,log.filter].join(' ').toLowerCase();
           row.append(historyBrowserCell(log, '未記録', 'otherHistoryStatus', 'otherHistoryView', () => refreshOtherHistory(true)));
-          directoryCell(row, [log.school || '学校名未登録', log.filter || 'フィルター未登録',
+          const profile = directoryCell(row, [log.school || '学校名未登録', log.filter || 'フィルター未登録',
             log.profileUpdatedAt ? '更新 ' + log.profileUpdatedAt : '']);
+          if (log.school) {
+            const correction = document.createElement('button');
+            correction.type = 'button';
+            correction.className = 'btn';
+            correction.disabled = !!log.schoolCorrectionRequired;
+            correction.textContent = log.schoolCorrectionRequired ? '学校名の再入力待ち' : '学校名の再入力を求める';
+            correction.addEventListener('click', async () => {
+              if (!confirm((log.browserName || log.browserId) + 'に、次回ログイン時の学校名の再入力を求めますか？')) return;
+              correction.disabled = true;
+              try {
+                const result = await serverCall('requestVisitorSchoolCorrection', log.browserId);
+                if (!result?.ok) throw new Error('設定を確認できませんでした。');
+                correction.textContent = '学校名の再入力待ち';
+              } catch (error) {
+                correction.disabled = false;
+                if (activeHistory === history && !clickLogPanel.hidden) status.textContent = '設定に失敗しました：' + error.message;
+              }
+            });
+            profile.append(correction);
+          }
           directoryCell(row, ['初回 ' + directoryDate(log.firstLogin), '最終 ' + directoryDate(log.lastLogin),
             log.loginDayNumber ? '初回から ' + log.loginDayNumber + '日目' : '初回からの日数は不明',
             'ログイン日数 ' + log.loginDays + '日 ／ 計 ' + log.loginCount + '回',

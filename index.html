@@ -1094,7 +1094,9 @@ async function ensureVisitorChatProfile(edit=false,mandatory=false){
   $('chatProfileSchool').value=visitorChatProfile.school||'';
   $('chatProfileFilter').value=visitorChatProfile.filter||'';
   $('chatProfileStatus').textContent='';
-  $('chatProfileDescription').textContent=mandatory
+  $('chatProfileDescription').textContent=visitorChatProfile.schoolCorrectionRequired
+   ? '管理者から学校名の再入力が求められています。正しい学校名を入力し、「保存して続ける」を押してください。'
+   : mandatory
    ? 'リンクを見るには、学校名とフィルターの種類の登録が必要です。両方入力して「保存して続ける」を押してください。次回から入力は不要です。'
    : '学校名とフィルターの種類を入力してください。次回から自動で読み込みます。';
   const dialog=$('chatProfileDialog');

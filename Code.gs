@@ -516,6 +516,7 @@ function getVisitorDirectory(options, adminToken) {
       visitors.set(browserId, {
         browserId, browserName:names.get(browserId) || '', school:profile?.school || '',
         filter:profile?.filter || '', profileUpdatedAt:profile?.updatedAt || '',
+        schoolCorrectionRequired:!!profile?.schoolCorrectionRequired,
         firstLogin:'', lastLogin:'', loginCount:0, loginDays:0, loginDayNumber:0,
         loginStreak:0, clickCount:0, lastClick:'', lastClickTitle:'',
         reports:0, appeals:0, requiredReplies:0, lastSeen:'',
@@ -1743,15 +1744,43 @@ function visitorChatProfileSheet_() {
   if (!sheet.getLastRow()) sheet.appendRow(['ブラウザID', '学校名', 'フィルターの種類', '更新日時']);
   return sheet;
 }
+function requestVisitorSchoolCorrection(browserId, adminToken) {
+  requireAdmin_(adminToken);
+  if (typeof browserId !== 'string' || !/^[A-Za-z0-9_-]{8,100}$/.test(browserId)) throw new Error('ブラウザIDが不正です。');
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const sheet = visitorChatProfileSheet_();
+    const last = sheet.getLastRow();
+    const found = last < 2 ? null : sheet.getRange(2,1,last-1,1).createTextFinder(browserId).matchEntireCell(true).matchCase(true).findNext();
+    if (!found || !String(sheet.getRange(found.getRow(), 2).getDisplayValue()).trim()) throw new Error('登録済みの学校名が見つかりません。');
+    if (sheet.getLastColumn() < 5) sheet.getRange(1,5).setValue('学校名再入力リクエスト');
+    const request = sheet.getRange(found.getRow(),5);
+    if (!request.getValue()) request.setValue(Utilities.getUuid());
+    SpreadsheetApp.flush();
+    invalidateVisitorDirectory_();
+    return {ok:true};
+  } finally { lock.releaseLock(); }
+}
+
+function invalidateVisitorDirectory_() {
+  const day = Math.floor((Date.now() + 9 * 3600000) / 86400000);
+  CacheService.getScriptCache().remove('LINK_CORE_VISITOR_DIRECTORY_V1_' + day + '_META');
+}
+
 function getVisitorChatProfile(browserId, visitorToken) {
   browserId = visitorProfileBrowser_(browserId, visitorToken);
   const sheet = visitorChatProfileSheet_();
   const last = sheet.getLastRow();
   if (last < 2) return {school:'', filter:''};
-  const found = sheet.getRange(2,1,last-1,1).createTextFinder(browserId).matchEntireCell(true).findNext();
+  const found = sheet.getRange(2,1,last-1,1).createTextFinder(browserId).matchEntireCell(true).matchCase(true).findNext();
   if (!found) return {school:'', filter:''};
-  const row = sheet.getRange(found.getRow(),2,1,2).getDisplayValues()[0];
-  return {school:row[0], filter:row[1]};
+  const [school, filter,, request] = sheet.getRange(found.getRow(),2,1,4).getDisplayValues()[0];
+  if (request) {
+    CacheService.getScriptCache().put('LINK_CORE_SCHOOL_CORRECTION_' + visitorToken, request, SESSION_TTL_SECONDS);
+    return {school:'', filter, schoolCorrectionRequired:true};
+  }
+  return {school, filter};
 }
 function saveVisitorChatProfile(browserId, school, filter, visitorToken) {
   browserId = visitorProfileBrowser_(browserId, visitorToken);
@@ -1761,9 +1790,15 @@ function saveVisitorChatProfile(browserId, school, filter, visitorToken) {
   try {
     const sheet = visitorChatProfileSheet_();
     const last = sheet.getLastRow();
-    const found = last < 2 ? null : sheet.getRange(2,1,last-1,1).createTextFinder(browserId).matchEntireCell(true).findNext();
+    const found = last < 2 ? null : sheet.getRange(2,1,last-1,1).createTextFinder(browserId).matchEntireCell(true).matchCase(true).findNext();
     const row = found ? found.getRow() : last+1;
-    sheet.getRange(row,1,1,4).setValues([[browserId,safeCell_(name),safeCell_(kind),new Date()]]);
+    const request = found ? String(sheet.getRange(row,5).getValue() || '') : '';
+    if (request && CacheService.getScriptCache().get('LINK_CORE_SCHOOL_CORRECTION_' + visitorToken) !== request) {
+      throw new Error('学校名の再入力が必要です。ログインし直してください。');
+    }
+    sheet.getRange(row,1,1,5).setValues([[browserId,safeCell_(name),safeCell_(kind),new Date(),'']]);
+    SpreadsheetApp.flush();
+    if (request) invalidateVisitorDirectory_();
     CacheService.getScriptCache().put('LINK_CORE_PROFILE_READY_' + visitorToken, '1', SESSION_TTL_SECONDS);
     return {school:name,filter:kind};
   } finally { lock.releaseLock(); }
@@ -3896,9 +3931,9 @@ function visitorChatProfilesByBrowser_(spreadsheet) {
   const last = sheet ? sheet.getLastRow() : 0;
   const profiles = new Map();
   if (last < 2) return profiles;
-  sheet.getRange(2, 1, last - 1, 4).getDisplayValues().forEach(row => {
+  sheet.getRange(2, 1, last - 1, 5).getDisplayValues().forEach(row => {
     const id = String(row[0] || '');
-    if (/^[A-Za-z0-9_-]{8,100}$/.test(id)) profiles.set(id, {school:String(row[1] || ''), filter:String(row[2] || ''), updatedAt:String(row[3] || '')});
+    if (/^[A-Za-z0-9_-]{8,100}$/.test(id)) profiles.set(id, {school:String(row[1] || ''), filter:String(row[2] || ''), updatedAt:String(row[3] || ''), schoolCorrectionRequired:!!row[4]});
   });
   return profiles;
 }
