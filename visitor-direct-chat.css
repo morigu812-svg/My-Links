@@ -210,3 +210,23 @@ html body .visitor-dm .visitor-dm-read-receipt {
   line-height:1.4;
   padding:0 3px;
 }
+
+/* Match the staff conversation's message and compose layout. */
+html body .visitor-dm {font-family:"BIZ UDPGothic","Yu Gothic UI",system-ui,sans-serif}
+html body .visitor-dm form {display:flex;flex-wrap:wrap;gap:10px}
+html body .visitor-dm textarea {flex:1 1 100%;min-height:90px}
+html body .visitor-dm .visitor-dm-compose-tools {display:flex;flex-wrap:wrap;gap:8px;align-items:center;width:100%}
+html body .visitor-dm .visitor-dm-compose-tools span {overflow-wrap:anywhere;color:#aacbdf;font-size:12px}
+html body .visitor-dm .visitor-dm-message {min-width:0;max-width:88%;gap:6px;padding:8px 0}
+html body .visitor-dm .visitor-dm-message > div:first-child {padding:11px 14px;border:1px solid #294b65;border-radius:15px;background:#142b43}
+html body .visitor-dm .visitor-dm-message.own > div:first-child {background:#15415b;border-color:#30708c}
+html body .visitor-dm .visitor-dm-quote {margin:0;padding:8px 12px;border-left:3px solid #48bedf;border-radius:7px;background:#10263c;color:#b9dcec;white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px}
+html body .visitor-dm .visitor-dm-actions {font-size:13px}
+html body .visitor-dm .visitor-dm-actions summary {cursor:pointer;display:inline-block;padding:3px 10px;color:#c4dceb;font-weight:700}
+html body .visitor-dm .visitor-dm-actions[open] {padding:5px;border:1px solid #35566f;border-radius:9px;background:#0b1a2d}
+html body .visitor-dm .visitor-dm-actions button {margin:4px}
+html body .visitor-dm .visitor-dm-attachment {max-width:100%;white-space:normal;overflow-wrap:anywhere;text-align:left}
+html body .visitor-dm img,html body .visitor-dm video {display:block;max-width:100%;max-height:340px;border-radius:10px;margin-bottom:8px}
+html body .visitor-dm .visitor-dm-presence {margin:0;color:#9fe7cf;font-size:12px}
+html body .visitor-dm .visitor-dm-required-toggle {margin-top:4px}
+@media(max-width:600px){html body .visitor-dm .visitor-dm-message{max-width:95%}html body .visitor-dm .visitor-dm-compose-tools button{font-size:12px}}

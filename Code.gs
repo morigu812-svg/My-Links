@@ -3701,7 +3701,7 @@ function visitorDirectChatProxy(parameters, viewerToken) {
     throw new Error('個人トークのリクエストが不正です。');
   }
   const operation = parameters.operation;
-  if (!['list', 'read', 'send', 'requireReply', 'markRead'].includes(operation)) {
+  if (!['list', 'read', 'send', 'requireReply', 'markRead', 'delete', 'presence', 'uploadStart', 'uploadChunk', 'attachment'].includes(operation)) {
     throw new Error('個人トークの操作を確認してください。');
   }
   const isAdmin = isSessionValid_('ADMIN', viewerToken);
@@ -3723,7 +3723,7 @@ function visitorDirectChatProxy(parameters, viewerToken) {
   if (operation === 'send') {
     if (typeof parameters.message !== 'string') throw new Error('送信するメッセージが不正です。');
     message = parameters.message.trim();
-    if (!message || message.length > 1000) throw new Error('メッセージは1〜1000文字で入力してください。');
+    if ((!message && !parameters.upload_id) || message.length > 1000) throw new Error('メッセージは1〜1000文字で入力してください。');
     messageId = parameters.message_id;
     if (typeof messageId !== 'string' ||
         !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(messageId)) {
@@ -3737,6 +3737,59 @@ function visitorDirectChatProxy(parameters, viewerToken) {
   }
   const peer = isAdmin ? browser : ownBrowser;
   const base = 'link_core_chat?kind=eq.direct&recipient=eq.' + encodeURIComponent('vb_' + peer);
+  const author = isAdmin ? '管理者' : '利用者';
+  if (operation === 'presence') {
+    const cache = CacheService.getScriptCache();
+    const key = 'LC_DM_PRESENCE_' + peer + '_';
+    cache.put(key + author, String(Date.now()), 90);
+    const other = Number(cache.get(key + (isAdmin ? '利用者' : '管理者')) || 0);
+    return {online:other > Date.now() - 90000};
+  }
+  if (operation === 'uploadStart' || operation === 'uploadChunk') {
+    return visitorDmUpload_(parameters, peer, author, viewerToken);
+  }
+  if (operation === 'attachment') {
+    const id = parameters.message_id;
+    if (typeof id !== 'string' || !/^[0-9a-f-]{36}$/i.test(id)) throw new Error('添付IDが不正です。');
+    const [item] = supabaseChatRequest_('get', base + '&id=eq.' + id + '&select=file_id,file_name,file_mime,file_size&limit=1');
+    if (!item?.file_id) throw new Error('添付が見つかりません。');
+    const file = DriveApp.getFileById(item.file_id);
+    if (file.isTrashed() || !staffAttachmentFileIsInFolder_(file)) throw new Error('添付を取得できません。');
+    const size = Number(item.file_size);
+    const offset = parameters.offset;
+    if (!Number.isSafeInteger(size) || size < 1 || size > STAFF_ATTACHMENT_MAX_BYTES ||
+        !Number.isSafeInteger(offset) || offset < 0 || offset >= size || offset % STAFF_ATTACHMENT_CHUNK_BYTES !== 0) {
+      throw new Error('添付の取得位置が不正です。');
+    }
+    let bytes;
+    if (size <= STAFF_ATTACHMENT_INLINE_MAX_BYTES) bytes = file.getBlob().getBytes();
+    else {
+      const end = Math.min(size, offset + STAFF_ATTACHMENT_CHUNK_BYTES) - 1;
+      const response = UrlFetchApp.fetch('https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(item.file_id) + '?alt=media',
+        {headers:{Authorization:'Bearer ' + ScriptApp.getOAuthToken(), Range:'bytes=' + offset + '-' + end},muteHttpExceptions:true});
+      if (response.getResponseCode() !== 206) throw new Error('添付の分割取得に失敗しました。');
+      bytes = response.getContent();
+      if (bytes.length !== end - offset + 1) throw new Error('添付のサイズが一致しません。');
+    }
+    return {base64:Utilities.base64Encode(bytes), nextOffset:offset + bytes.length,
+      size, name:item.file_name, mime:item.file_mime};
+  }
+  if (operation === 'delete') {
+    if (!isAdmin) throw new Error('送信取消は管理者のみ利用できます。');
+    const id = parameters.message_id;
+    if (typeof id !== 'string' || !/^[0-9a-f-]{36}$/i.test(id)) throw new Error('投稿IDが不正です。');
+    const lock = LockService.getScriptLock(); lock.waitLock(10000);
+    try {
+      const [item] = supabaseChatRequest_('get', base + '&id=eq.' + id + '&select=author,file_id&limit=1');
+      if (!item) return {ok:true};
+      if (item.author !== '管理者') throw new Error('管理者の投稿のみ取り消せます。');
+      supabaseChatRequest_('delete', base + '&id=eq.' + id);
+      PropertiesService.getScriptProperties().setProperty('LINK_CORE_REQUIRED_REPLY_' + peer,
+        JSON.stringify(visitorRequiredReplies_(peer).filter(value => value !== id)));
+      trashStaffChatFile_(item.file_id);
+      return {ok:true};
+    } finally { lock.releaseLock(); }
+  }
   if (operation === 'markRead') {
     const ids = parameters.message_ids;
     if (!Array.isArray(ids) || ids.length < 1 || ids.length > 100 ||
@@ -3791,12 +3844,12 @@ function visitorDirectChatProxy(parameters, viewerToken) {
   }
   if (operation === 'read') {
     const pending = visitorRequiredReplies_(peer);
-    const query = base + (beforeCursor ? '&seq=lt.' + beforeCursor : '') + '&select=id,author,body,created_at,seq,readers&order=seq.desc&limit=101';
+    const query = base + (beforeCursor ? '&seq=lt.' + beforeCursor : '') + '&select=id,author,body,created_at,seq,readers,reply_to,file_name,file_mime,file_size&order=seq.desc&limit=101';
     const rows = supabaseChatRequest_('get', query);
     const more = rows.length > 100;
     const page = rows.slice(0,100);
     // Required messages must remain reachable even when older than the latest page.
-    const requiredRows = pending.length ? supabaseChatRequest_('get', base + '&id=in.(' + pending.join(',') + ')&select=id,author,body,created_at,seq,readers&order=seq.asc') : [];
+    const requiredRows = pending.length ? supabaseChatRequest_('get', base + '&id=in.(' + pending.join(',') + ')&select=id,author,body,created_at,seq,readers,reply_to,file_name,file_mime,file_size&order=seq.asc') : [];
     const present = new Set(page.map(row => row.id));
     const messages = page.slice().reverse();
     requiredRows.forEach(row => { if (!present.has(row.id)) messages.unshift(row); });
@@ -3815,7 +3868,8 @@ function visitorDirectChatProxy(parameters, viewerToken) {
       readByMe:Array.isArray(row.readers) && row.readers.includes(isAdmin ? 'dm_admin' : 'dm_visitor')})),
       replyRequired:pending.length > 0,requiredReplyIds:pending,browserName:isAdmin ? getClickBrowserNames_().get(peer) || '' : undefined,
       messages:messages.map(row=>({id:row.id,author:row.author,message:row.body,createdAt:row.created_at,
-      replyRequired:pending.includes(row.id),
+      replyRequired:pending.includes(row.id), replyTo:row.reply_to,
+      attachment:row.file_name ? {name:row.file_name,mime:row.file_mime,size:row.file_size} : null,
       readByPeer:Array.isArray(row.readers) && row.readers.includes(isAdmin ? 'dm_visitor' : 'dm_admin'),
       readByMe:Array.isArray(row.readers) && row.readers.includes(isAdmin ? 'dm_admin' : 'dm_visitor'),
       own:row.author === (isAdmin ? '管理者' : '利用者')})),nextCursor:more ? page[page.length-1].seq : null};
@@ -3833,9 +3887,26 @@ function visitorDirectChatProxy(parameters, viewerToken) {
   lock.waitLock(10000);
   try {
     const pending = visitorRequiredReplies_(peer);
-    if (!isAdmin && replyTo && !pending.includes(replyTo)) throw new Error('返信必須の状態が変わりました。読み込み直してください。');
-    supabaseChatRequest_('post', 'link_core_chat', {kind:'direct',id:messageId,created_at:new Date().toISOString(),
-      author:isAdmin ? '管理者' : '利用者',recipient:'vb_' + peer,body:message});
+    if (replyTo) {
+      const targets = supabaseChatRequest_('get', base + '&id=eq.' + replyTo + '&select=id&limit=1');
+      if (!targets.length) throw new Error('返信先が見つかりません。');
+    }
+    const [existing] = supabaseChatRequest_('get', 'link_core_chat?id=eq.' + messageId + '&select=recipient,author,reply_to,body&limit=1');
+    if (existing && (existing.recipient !== 'vb_' + peer || existing.author !== author || existing.body !== message ||
+        (existing.reply_to || null) !== (replyTo || null))) throw new Error('送信IDが重複しています。');
+    let attachment = {};
+    if (parameters.upload_id) {
+      const state = visitorDmUploadState_(parameters.upload_id, peer, author, viewerToken);
+      if (!state.fileId || state.offset !== state.size) throw new Error('添付の転送が完了していません。');
+      const file = DriveApp.getFileById(state.fileId);
+      if (file.isTrashed() || !staffAttachmentFileIsInFolder_(file) || file.getSize() !== state.size) throw new Error('添付の保存を確認できません。');
+      if (state.messageId && state.messageId !== messageId) throw new Error('添付は送信済みです。');
+      state.messageId = messageId;
+      visitorDmSaveUpload_(state);
+      attachment = {file_id:state.fileId,file_name:state.filename,file_mime:state.mime,file_size:state.size};
+    }
+    if (!existing) supabaseChatRequest_('post', 'link_core_chat', Object.assign({kind:'direct',id:messageId,
+      created_at:new Date().toISOString(),author,recipient:'vb_' + peer,body:message,reply_to:replyTo || null},attachment));
     if (!isAdmin && replyTo) {
       PropertiesService.getScriptProperties().setProperty('LINK_CORE_REQUIRED_REPLY_' + peer, JSON.stringify(pending.filter(id => id !== replyTo)));
     }
@@ -4015,4 +4086,99 @@ function visitorProfileBrowser_(browserId, token) {
   if (!/^[A-Za-z0-9_-]{8,100}$/.test(String(bound || ''))) throw new Error('ログイン情報を確認できません。再ログインしてください。');
   if (browserId && browserId !== bound) throw new Error('ブラウザIDがログイン情報と一致しません。再ログインしてください。');
   return bound;
+}
+
+function visitorDmApplyUploadResponse_(state, response) {
+  const status = response.getResponseCode();
+  if (status === 308) {
+    const received = staffDriveUploadHeader_(response, 'Range');
+    const matched = received.match(/^bytes=0-(\d+)$/i);
+    state.offset = matched ? Number(matched[1]) + 1 : 0;
+    if (!Number.isSafeInteger(state.offset) || state.offset > state.size) {
+      throw new Error('アップロード進捗が不正です。');
+    }
+  } else if (status === 200 || status === 201) {
+    let item;
+    try { item = JSON.parse(response.getContentText()); } catch (_) {}
+    if (!item || typeof item.id !== 'string' || !/^[A-Za-z0-9_-]+$/.test(item.id)) {
+      throw new Error('Driveへのアップロード完了を確認できませんでした。');
+    }
+    state.fileId = item.id;
+    state.offset = state.size;
+  } else {
+    throw new Error('Driveへのアップロードに失敗しました（HTTP ' + status + '）。');
+  }
+  visitorDmSaveUpload_(state);
+  return {ok:true, offset:state.offset, complete:!!state.fileId};
+}
+function visitorDmUploadStatus_(state) {
+  const response = UrlFetchApp.fetch(state.sessionUrl, {
+    method:'put', followRedirects:false, headers:{
+      Authorization:'Bearer ' + ScriptApp.getOAuthToken(),
+      'Content-Range':'bytes */' + state.size
+    },
+    contentType:state.mime, payload:'', muteHttpExceptions:true
+  });
+  return visitorDmApplyUploadResponse_(state, response);
+}
+function visitorDmUploadKey_(id) {
+  if (typeof id !== 'string' || !/^[0-9a-f-]{36}$/i.test(id)) throw new Error('添付の送信IDが不正です。');
+  return 'LC_DM_UPLOAD_' + id;
+}
+function visitorDmSaveUpload_(state) {
+  CacheService.getScriptCache().put(visitorDmUploadKey_(state.requestId), JSON.stringify(state), STAFF_ATTACHMENT_UPLOAD_TTL);
+}
+function visitorDmUploadState_(id, peer, author, token) {
+  const raw = CacheService.getScriptCache().get(visitorDmUploadKey_(id));
+  if (!raw) throw new Error('添付の有効期限が切れました。ファイルを選び直してください。');
+  const state = JSON.parse(raw);
+  if (state.peer !== peer || state.author !== author || state.token !== token) throw new Error('添付のアクセス権限がありません。');
+  return state;
+}
+function visitorDmUpload_(parameters, peer, author, token) {
+  const id = parameters.upload_id;
+  const key = visitorDmUploadKey_(id);
+  const lock = LockService.getScriptLock(); lock.waitLock(20000);
+  try {
+    if (parameters.operation === 'uploadStart') {
+      const meta = validateStaffAttachmentMeta_(parameters.file);
+      const raw = CacheService.getScriptCache().get(key);
+      if (raw) {
+        const state = visitorDmUploadState_(id, peer, author, token);
+        if (state.filename !== meta.filename || state.size !== meta.size || state.mime !== meta.mime) throw new Error('添付IDが重複しています。');
+        return {offset:state.offset,chunkSize:STAFF_ATTACHMENT_CHUNK_BYTES};
+      }
+      const response = UrlFetchApp.fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id,size', {
+        method:'post',contentType:'application/json',followRedirects:false,
+        headers:{Authorization:'Bearer ' + ScriptApp.getOAuthToken(),
+          'X-Upload-Content-Type':meta.mime,'X-Upload-Content-Length':String(meta.size)},
+        payload:JSON.stringify({name:meta.filename,mimeType:meta.mime,parents:[staffAttachmentFolder_().getId()]}),
+        muteHttpExceptions:true
+      });
+      if (response.getResponseCode() !== 200) throw new Error('添付の転送準備に失敗しました。');
+      const sessionUrl = staffDriveUploadHeader_(response, 'Location');
+      if (!/^https:\/\/www\.googleapis\.com\/upload\/drive\/v3\/files(?:\?|\/)/.test(sessionUrl)) throw new Error('添付の転送先を確認できません。');
+      visitorDmSaveUpload_({requestId:id,peer,author,token,filename:meta.filename,mime:meta.mime,size:meta.size,
+        offset:0,fileId:'',sessionUrl});
+      return {offset:0,chunkSize:STAFF_ATTACHMENT_CHUNK_BYTES};
+    }
+    const state = visitorDmUploadState_(id, peer, author, token);
+    if (state.fileId) return {offset:state.size,complete:true};
+    const offset = parameters.offset;
+    if (!Number.isSafeInteger(offset) || offset < 0 || offset > state.size) throw new Error('転送位置が不正です。');
+    if (offset !== state.offset) return {offset:state.offset};
+    const encoded = parameters.base64;
+    if (typeof encoded !== 'string' || encoded.length > Math.ceil(STAFF_ATTACHMENT_CHUNK_BYTES / 3) * 4 + 4 ||
+        !/^[A-Za-z0-9+/]+={0,2}$/.test(encoded)) throw new Error('添付データが不正です。');
+    const bytes = Utilities.base64Decode(encoded);
+    if (!bytes.length || bytes.length > STAFF_ATTACHMENT_CHUNK_BYTES || offset + bytes.length > state.size ||
+        (offset + bytes.length < state.size && bytes.length % (256 * 1024) !== 0)) throw new Error('添付のサイズが不正です。');
+    try {
+      const response = UrlFetchApp.fetch(state.sessionUrl,{method:'put',contentType:state.mime,payload:bytes,followRedirects:false,
+        headers:{Authorization:'Bearer ' + ScriptApp.getOAuthToken(),
+          'Content-Range':'bytes ' + offset + '-' + (offset + bytes.length - 1) + '/' + state.size},muteHttpExceptions:true});
+      if (![200,201,308].includes(response.getResponseCode())) return visitorDmUploadStatus_(state);
+      return visitorDmApplyUploadResponse_(state,response);
+    } catch (_) { return visitorDmUploadStatus_(state); }
+  } finally { lock.releaseLock(); }
 }

@@ -12,7 +12,7 @@
         <div data-messages></div>
       </div>
       <form data-form hidden>
-        <textarea placeholder="メッセージを入力…" aria-label="メッセージ" maxlength="1000" rows="2" required></textarea>
+        <textarea placeholder="メッセージを入力…" aria-label="メッセージ" maxlength="1000" rows="2"></textarea>
         <button type="submit" class="btn primary">送信</button>
       </form>
       <p data-status role="status"></p>`;
@@ -25,7 +25,7 @@
     const older = find('[data-older]');
     const form = find('form');
     const input = find('textarea');
-    const send = form.querySelector('button');
+    const send = form.querySelector('button[type=submit]');
     const status = find('[data-status]');
     const back = find('[data-back]');
     const names = new Map();
@@ -68,11 +68,92 @@
     let sending = false;
     let sendError = '';
     let replyTo = null;
+    let manualReply = null;
+    let selectedFile = null;
+    let uploadId = null;
+    let sendId = null;
+    let sendSignature = '';
+    const mediaUrls = new Map();
     const replyStatus = document.createElement('p');
     replyStatus.className = 'visitor-dm-reply-context';
     replyStatus.setAttribute('role', 'status');
     replyStatus.hidden = true;
     form.before(replyStatus);
+    const presence = document.createElement('p');
+    presence.className = 'visitor-dm-presence';
+    presence.setAttribute('role', 'status');
+    form.before(presence);
+    const tools = document.createElement('div');
+    tools.className = 'visitor-dm-compose-tools';
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.png,.jpg,.jpeg,.gif,.webp,.pdf,.txt,.csv,.docx,.xlsx,.pptx,.mp4,.mov,.webm,.m4v';
+    fileInput.hidden = true;
+    const chooseFile = document.createElement('button');
+    chooseFile.type = 'button'; chooseFile.className = 'btn'; chooseFile.textContent = '📎 ファイルを添付';
+    const photoInput = document.createElement('input');
+    photoInput.type = 'file'; photoInput.accept = 'image/*'; photoInput.hidden = true;
+    const choosePhoto = document.createElement('button');
+    choosePhoto.type = 'button'; choosePhoto.className = 'btn'; choosePhoto.textContent = '写真を添付';
+    const fileLabel = document.createElement('span');
+    const clearFile = document.createElement('button');
+    clearFile.type = 'button'; clearFile.className = 'btn'; clearFile.textContent = '添付を解除'; clearFile.hidden = true;
+    const cancelReply = document.createElement('button');
+    cancelReply.type = 'button'; cancelReply.className = 'btn'; cancelReply.textContent = '返信を解除'; cancelReply.hidden = true;
+    tools.append(chooseFile,choosePhoto,fileInput,photoInput,fileLabel,clearFile,cancelReply);
+    form.prepend(tools);
+    // Keep the submit reference independent of attachment and reply buttons.
+    function selectFile(file) {
+      if (sending || !file) return;
+      if (!file.size || file.size > 40 * 1024 * 1024) { status.textContent = '添付は40 MiB以内にしてください。'; return; }
+      selectedFile = file; uploadId = crypto.randomUUID(); sendId = null;
+      fileLabel.textContent = file.name + '（' + (file.size / 1024 / 1024).toFixed(1) + ' MiB）';
+      clearFile.hidden = false;
+    }
+    chooseFile.addEventListener('click', () => fileInput.click());
+    choosePhoto.addEventListener('click', () => photoInput.click());
+    fileInput.addEventListener('change', () => selectFile(fileInput.files[0]));
+    photoInput.addEventListener('change', () => selectFile(photoInput.files[0]));
+    clearFile.addEventListener('click', () => { if (!sending) clearAttachment(); });
+    function clearAttachment() {
+      selectedFile = null; uploadId = null; fileLabel.textContent = '';
+      fileInput.value = ''; photoInput.value = ''; clearFile.hidden = true;
+    }
+    cancelReply.addEventListener('click', () => { if (!sending) { manualReply = null; rendered = ''; render(true); } });
+    async function updatePresence() {
+      if (!panel.open || browser === null || document.hidden) return;
+      const current = generation;
+      try {
+        const result = await request({operation:'presence',browser});
+        if (panel.open && current === generation) presence.textContent = result.online ? '● 相手はオンラインです' : '相手はオフラインです';
+      } catch (_) { if (current === generation) presence.textContent = '接続状況を確認できません'; }
+    }
+    function asBase64(blob) {
+      return new Promise((resolve,reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result).split(',')[1]);
+        reader.onerror = () => reject(new Error('ファイルを読み込めません。'));
+        reader.readAsDataURL(blob);
+      });
+    }
+    async function attachmentUrl(item, targetBrowser) {
+      if (mediaUrls.has(item.id)) return mediaUrls.get(item.id);
+      const current = generation;
+      const parts = [];
+      let offset = 0;
+      do {
+        const response = await request({operation:'attachment',browser:targetBrowser,message_id:item.id,offset});
+        if (!(response.nextOffset > offset) || response.nextOffset > item.attachment.size || response.size !== item.attachment.size) throw new Error('添付の取得位置を確認できません。');
+        if (current !== generation || !panel.open) throw new Error('添付の取得を中止しました。');
+        const binary = atob(response.base64);
+        parts.push(Uint8Array.from(binary, c => c.charCodeAt(0)));
+        offset = response.nextOffset;
+      } while (offset < item.attachment.size);
+      const url = URL.createObjectURL(new Blob(parts,{type:item.attachment.mime}));
+      mediaUrls.set(item.id,url);
+      return url;
+    }
+
 
 
 
@@ -120,14 +201,14 @@
     window.addEventListener('resize', scheduleRead);
 
     function prepareRequiredReply(messages) {
-      if (isAdmin) return;
-      const pending = messages.filter(item => !item.own && item.replyRequired);
+      const pending = isAdmin ? [] : messages.filter(item => !item.own && item.replyRequired);
       const target = pending[0];
-      replyTo = target ? target.id : null;
-      replyStatus.hidden = !target;
+      replyTo = target ? target.id : manualReply?.id || null;
+      replyStatus.hidden = !target && !manualReply;
+      cancelReply.hidden = !!target || !manualReply;
       replyStatus.textContent = target
         ? '返信が必要です（残り' + pending.length + '件）。下に入力して「返信を送信」を押してください。\n返信先：' + target.message
-        : '';
+        : manualReply ? '返信先：' + manualReply.message : '';
       input.placeholder = target ? '上のメッセージへの返信を入力…' : 'メッセージを入力…';
       send.textContent = target ? '返信を送信' : '送信';
     }
@@ -157,7 +238,72 @@
           time.dateTime = date.toISOString();
           time.textContent = date.toLocaleString('ja-JP', {month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
         }
+        if (item.replyTo) {
+          const quote = document.createElement('blockquote');
+          quote.className = 'visitor-dm-quote';
+          const original = messages.find(message => message.id === item.replyTo);
+          quote.textContent = original ? original.message || original.attachment?.name || '添付ファイル' : '以前のメッセージへの返信';
+          card.append(quote);
+        }
         card.append(body, time);
+        if (item.attachment) {
+          const attachment = document.createElement('button');
+          attachment.type = 'button'; attachment.className = 'btn visitor-dm-attachment';
+          attachment.textContent = '📎 ' + item.attachment.name + '（' + (item.attachment.size / 1048576).toFixed(1) + ' MiB）';
+          const media = document.createElement('div');
+          const targetBrowser = browser;
+          const current = generation;
+          attachment.addEventListener('click', async () => {
+            attachment.disabled = true;
+            try {
+              const url = await attachmentUrl(item, targetBrowser);
+              if (current !== generation || !panel.open) return;
+              const download = document.createElement('a');
+              download.href = url; download.download = item.attachment.name;
+              download.textContent = 'ダウンロード'; download.className = 'btn';
+              const content = [];
+              if (/^image\//.test(item.attachment.mime)) {
+                const image = document.createElement('img'); image.src = url; image.alt = item.attachment.name; content.push(image);
+              } else if (/^video\//.test(item.attachment.mime)) {
+                const video = document.createElement('video'); video.src = url; video.controls = true; video.playsInline = true; content.push(video);
+              }
+              media.replaceChildren(...content, download);
+            } catch (error) { if (current === generation) status.textContent = error.message; }
+            finally { attachment.disabled = false; }
+          });
+          card.append(attachment,media);
+        }
+        const actions = document.createElement('details');
+        actions.className = 'visitor-dm-actions';
+        const menu = document.createElement('summary');
+        menu.textContent = '…'; menu.setAttribute('aria-label', 'メッセージの操作');
+        const reply = document.createElement('button');
+        reply.type = 'button'; reply.className = 'btn'; reply.textContent = '返信';
+        reply.addEventListener('click', () => {
+          if (sending) return;
+          manualReply = {id:item.id,message:item.message || item.attachment?.name || '添付ファイル'};
+          rendered = ''; render(true); input.focus();
+        });
+        actions.append(menu,reply);
+        if (isAdmin && item.own) {
+          const remove = document.createElement('button');
+          remove.type = 'button'; remove.className = 'btn danger'; remove.textContent = '送信取消';
+          remove.addEventListener('click', async () => {
+            if (!confirm('このメッセージの送信を取り消しますか？')) return;
+            remove.disabled = true;
+            const current = generation;
+            try {
+              await request({operation:'delete',browser,message_id:item.id});
+              if (current !== generation) return;
+              oldMessages = oldMessages.filter(message => message.id !== item.id);
+              if (manualReply?.id === item.id) manualReply = null;
+              rendered = ''; await refresh();
+            } catch (error) { if (current === generation) status.textContent = error.message; }
+            finally { remove.disabled = false; }
+          });
+          actions.append(remove);
+        }
+        card.append(actions);
         if (item.own) {
           const receipt = document.createElement('span');
           receipt.className = 'visitor-dm-read-receipt';
@@ -252,7 +398,7 @@
           const receipts = new Map((response.receipts || []).map(item => [item.id,item]));
           oldMessages = oldMessages.map(item => ({...item, ...receipts.get(item.id), replyRequired:requiredIds.has(item.id)}));
           latestMessages = response.messages;
-          if (replyTo && !latestMessages.some(item => item.id === replyTo && item.replyRequired)) { replyTo = null; replyStatus.textContent = ''; }
+
           layout.onGate?.(!!response.replyRequired);
           if (!document.hidden) layout.onRead?.(latestMessages);
           if (!oldMessages.length) nextCursor = response.nextCursor;
@@ -274,6 +420,7 @@
       if (target && name) names.set(target, name);
       browser = isAdmin ? (target || null) : '';
       generation++;
+      mediaUrls.forEach(url => URL.revokeObjectURL(url)); mediaUrls.clear();
       readObserver.disconnect(); visibleMessages.clear(); clearTimeout(readTimer);
       nextCursor = null;
       oldMessages = [];
@@ -282,7 +429,7 @@
       sendError = '';
       history.replaceChildren();
       input.value = '';
-      replyTo = null; replyStatus.textContent = ''; replyStatus.hidden = true;
+      replyTo = null; manualReply = null; sendId = null; clearAttachment(); replyStatus.textContent = ''; replyStatus.hidden = true;
       input.placeholder = 'メッセージを入力…'; send.textContent = '送信';
       const isList = browser === null;
       title.textContent = isList ? '利用者との個人トーク' :
@@ -295,12 +442,12 @@
       status.textContent = '読み込み中…';
       if (!panel.open) { if (layout.main) { layout.onOpen?.(panel); panel.show(); } else panel.showModal(); }
       nameLookup = loadBrowserNames(generation);
-      void refresh();
+      void refresh(); void updatePresence();
     }
 
     find('[data-close]').addEventListener('click', () => { panel.close(); layout.onClose?.(); });
     back.addEventListener('click', () => open());
-    panel.addEventListener('close', () => { readObserver.disconnect(); visibleMessages.clear(); clearTimeout(readTimer); generation++; renderedRooms=''; history.replaceChildren(); rooms.replaceChildren(); input.value=''; });
+    panel.addEventListener('close', () => { mediaUrls.forEach(url => URL.revokeObjectURL(url)); mediaUrls.clear(); readObserver.disconnect(); visibleMessages.clear(); clearTimeout(readTimer); generation++; renderedRooms=''; history.replaceChildren(); rooms.replaceChildren(); input.value=''; });
     older.addEventListener('click', async () => {
       if (older.disabled || !nextCursor || browser === null) return;
       const current = generation;
@@ -319,17 +466,38 @@
     form.addEventListener('submit', async event => {
       event.preventDefault();
       const message = input.value.trim();
-      if (sending || !message || browser === null) return;
+      if (sending || (!message && !selectedFile) || browser === null) return;
       const current = generation;
       sending = true;
       send.disabled = true;
+      input.disabled = true; chooseFile.disabled = true; choosePhoto.disabled = true;
       sendError = '';
       status.textContent = '送信中…';
       try {
-        await request({operation:'send',browser,message,message_id:crypto.randomUUID(),reply_to:replyTo});
+        if (selectedFile) {
+          const file = selectedFile;
+          const start = await request({operation:'uploadStart',browser,upload_id:uploadId,
+            file:{name:file.name,mime:file.type,size:file.size}});
+          let offset = start.offset;
+          let retries = 0;
+          while (offset < file.size) {
+            status.textContent = '添付を送信中 ' + Math.floor(offset / file.size * 100) + '%';
+            const encoded = await asBase64(file.slice(offset,Math.min(file.size,offset + start.chunkSize)));
+            const result = await request({operation:'uploadChunk',browser,upload_id:uploadId,offset,base64:encoded});
+            if (!Number.isSafeInteger(result.offset) || result.offset < offset || result.offset > file.size ||
+                (result.offset === offset && ++retries > 2)) throw new Error('添付の転送が進みません。再送してください。');
+            if (result.offset > offset) retries = 0;
+            offset = result.offset;
+          }
+        }
+        const signature = JSON.stringify([message,replyTo,uploadId]);
+        if (sendId && signature !== sendSignature && selectedFile) throw new Error('送信確認が完了していません。元の本文と返信先で再送するか、添付を選び直してください。');
+        if (!sendId || signature !== sendSignature) sendId = crypto.randomUUID();
+        sendSignature = signature;
+        await request({operation:'send',browser,message,message_id:sendId,reply_to:replyTo,upload_id:selectedFile ? uploadId : null});
         if (current !== generation) return;
         if (input.value.trim() === message) input.value = '';
-        replyTo = null; replyStatus.textContent = '';
+        replyTo = null; manualReply = null; sendId = null; clearAttachment(); replyStatus.textContent = '';
         status.textContent = '';
       } catch (error) {
         if (current === generation) {
@@ -338,11 +506,13 @@
         }
       } finally {
         sending = false;
-        send.disabled = false;
+        send.disabled = false; input.disabled = false; chooseFile.disabled = false; choosePhoto.disabled = false;
         if (current === generation) void refresh();
       }
     });
     setInterval(() => { if (panel.open) void refresh(); }, 5000);
+    setInterval(() => { void updatePresence(); }, 30000);
+    window.addEventListener('pagehide', () => { mediaUrls.forEach(url => URL.revokeObjectURL(url)); mediaUrls.clear(); });
     return {open, refresh, setBrowserName, close:() => { if (panel.open) panel.close(); }};
   };
 })();
