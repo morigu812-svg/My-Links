@@ -29,6 +29,15 @@
     const status = find('[data-status]');
     const back = find('[data-back]');
     const names = new Map();
+    function resolveBrowserName(id) {
+      return names.get(id) || layout.resolveName?.(id) || '';
+    }
+    function setBrowserName(id, name) {
+      if (typeof id !== 'string' || typeof name !== 'string') return;
+      if (name) names.set(id, name); else names.delete(id);
+      renderedRooms = '';
+      if (isAdmin && browser === id) title.textContent = (resolveBrowserName(id) || id) + 'とのトーク';
+    }
     let browser = null;
     let generation = 0;
     let polling = false;
@@ -200,11 +209,11 @@
               if (room.browserName) names.set(room.browserId, room.browserName);
               else names.delete(room.browserId);
             }
-            name.textContent = names.get(room.browserId) || room.browserId;
+            name.textContent = (resolveBrowserName(room.browserId) || room.browserId) + 'とのトーク';
             const description = document.createElement('span');
             description.textContent = room.lastMessage;
             button.append(name, description);
-            button.addEventListener('click', () => open(room.browserId));
+            button.addEventListener('click', () => open(room.browserId, resolveBrowserName(room.browserId)));
             return button;
           }));
           if (!response.rooms.length) rooms.textContent = 'クリック履歴の「個人トーク」から相手を選べます。';
@@ -214,7 +223,7 @@
           if (isAdmin && typeof response.browserName === 'string') {
             if (response.browserName) names.set(browser, response.browserName);
             else names.delete(browser);
-            title.textContent = (response.browserName || browser) + 'との個人トーク';
+            title.textContent = (resolveBrowserName(browser) || browser) + 'とのトーク';
           }
           const requiredIds = new Set(response.requiredReplyIds || []);
           const receipts = new Map((response.receipts || []).map(item => [item.id,item]));
@@ -254,7 +263,7 @@
       input.placeholder = 'メッセージを入力…'; send.textContent = '送信';
       const isList = browser === null;
       title.textContent = isList ? '利用者との個人トーク' :
-        isAdmin ? (names.get(browser) || browser) + 'との個人トーク' : '管理者との個人トーク';
+        isAdmin ? (resolveBrowserName(browser) ? resolveBrowserName(browser) + 'とのトーク' : '名前を確認中…') : '管理者との個人トーク';
       rooms.hidden = !isList;
       back.hidden = !isAdmin || isList;
       thread.hidden = isList;
@@ -310,6 +319,6 @@
       }
     });
     setInterval(() => { if (panel.open) void refresh(); }, 5000);
-    return {open, refresh, close:() => { if (panel.open) panel.close(); }};
+    return {open, refresh, setBrowserName, close:() => { if (panel.open) panel.close(); }};
   };
 })();

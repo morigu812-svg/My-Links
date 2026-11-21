@@ -1158,7 +1158,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
 <script src="./chat-preview.js"></script>
 <script src="./chat-realtime.js?v=staff-direct-pilot"></script>
 <link rel="stylesheet" href="./visitor-direct-chat.css?v=read-receipts1">
-<script src="./visitor-direct-chat.js?v=read-receipts1"></script>
+<script src="./visitor-direct-chat.js?v=browser-name-titles2"></script>
 <script src="./chat-screenshot.js?v=clipboard1" defer></script>
 <style id="visitor-counter-style">
 .visitor-counter-strip{display:flex;align-items:center;flex-wrap:wrap;gap:10px 20px;margin:11px 0 13px;padding:11px 14px;border:1px solid rgba(53,217,255,.28);border-radius:10px;background:rgba(14,38,51,.65);font-size:12px;color:#a9c7d4}
@@ -2463,6 +2463,7 @@ document.getElementById('authSubmit').disabled = false;
       nameButton.textContent=name||'名前をつける';
       nameButton.setAttribute('aria-label', name ? name+'の名前を編集（ブラウザID '+log.browserId+'）' : 'ブラウザID '+log.browserId+'に名前をつける');
     }
+    if (log.browserId && typeof log.browserName === 'string') visitorBrowserNames.set(log.browserId, log.browserName);
     showName(log.browserName || '');
     nameButton.addEventListener('click',async()=>{
       if (clickBrowserNameSaving) return;
@@ -2475,6 +2476,8 @@ document.getElementById('authSubmit').disabled = false;
       try{
         const result=await serverCall('setClickBrowserName',log.browserId,name);
         if(!result?.ok)throw new Error('保存完了の応答がありません。');
+        visitorBrowserNames.set(log.browserId, name);
+        adminVisitorDirectChat.setBrowserName(log.browserId, name);
         clickLogsLoaded=false;
         if (!clickLogPanel.hidden && !$(viewId).hidden) await refresh();
       }catch(error){
@@ -2488,6 +2491,7 @@ document.getElementById('authSubmit').disabled = false;
   }
     return browserCell;
   }
+  const visitorBrowserNames = new Map();
   let clickHistoryLogs = [];
   let clickLogsCursor = null;
   let clickLogsRevision = 0;
@@ -4149,7 +4153,7 @@ $('closeChat').addEventListener('click', closeMainChat);
       if (topics.some(topic => !topic.startsWith('lc-chat-staff-'))) void refreshAdminChat();
     }
   );
-  const adminVisitorDirectChat = window.createVisitorDirectChat(params => serverCall('visitorDirectChatProxy', params), true, {main:true,container:document.querySelector('.finder-content'),onOpen:panel=>openMainChat(panel,'個人トーク'),onClose:closeMainChat,onRead:markVisitorPersonalRead});
+  const adminVisitorDirectChat = window.createVisitorDirectChat(params => serverCall('visitorDirectChatProxy', params), true, {resolveName:id=>visitorBrowserNames.get(id),main:true,container:document.querySelector('.finder-content'),onOpen:panel=>openMainChat(panel,'個人トーク'),onClose:closeMainChat,onRead:markVisitorPersonalRead});
   const personalChatNotice = document.createElement('button');
   personalChatNotice.type = 'button';
   personalChatNotice.id = 'visitorPersonalNotice';
@@ -4182,7 +4186,7 @@ $('closeChat').addEventListener('click', closeMainChat);
   personalChatNotice.addEventListener('click', () => {
     const latest = personalChatUnread[0];
     if (!latest || !adminSession.getItem(ADMIN_TOKEN_KEY)) return;
-    adminVisitorDirectChat.open(latest.browserId);
+    adminVisitorDirectChat.open(latest.browserId, visitorBrowserNames.get(latest.browserId) || '');
   });
   async function checkVisitorPersonalChat() {
     const token = adminSession.getItem(ADMIN_TOKEN_KEY);
@@ -4193,6 +4197,7 @@ $('closeChat').addEventListener('click', closeMainChat);
       await loadVisitorChatRead();
       const result = await serverCall('visitorDirectChatProxy',{operation:'list'});
       if (token !== adminSession.getItem(ADMIN_TOKEN_KEY) || document.hidden) return;
+      (result.rooms || []).forEach(room => { if (typeof room.browserName === 'string') visitorBrowserNames.set(room.browserId, room.browserName); });
       personalChatUnread = (result.incoming || []).filter(item =>
         /^[A-Za-z0-9_-]{8,100}$/.test(item.browserId) && !readVisitorChatIds.has(String(item.id)));
       updatePersonalChatNotice();
