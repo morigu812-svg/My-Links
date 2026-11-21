@@ -38,25 +38,6 @@
       renderedRooms = '';
       if (isAdmin && browser === id) title.textContent = (resolveBrowserName(id) || id) + 'とのトーク';
     }
-    let nameLookup = null;
-    let nameLookupError = '';
-    async function loadBrowserNames(current) {
-      if (!isAdmin || !layout.loadNames) return;
-      try {
-        const entries = await layout.loadNames();
-        if (current !== generation || !panel.open) return;
-        names.clear();
-        entries.forEach(item => { if (item.name) names.set(item.browserId,item.name); });
-        renderedRooms = '';
-        nameLookupError = '';
-        if (browser !== null) title.textContent = (resolveBrowserName(browser) || browser) + 'とのトーク';
-      } catch (error) {
-        if (current === generation) {
-          nameLookupError = '名前を取得できませんでした。GASのCode.gsとbridge.htmlを更新して再デプロイしてください。';
-          if (browser !== null) title.textContent = (resolveBrowserName(browser) || browser) + 'とのトーク';
-        }
-      }
-    }
     let browser = null;
     let generation = 0;
     let polling = false;
@@ -390,14 +371,13 @@
       const current = generation;
       polling = true;
       try {
-        if (nameLookup) await nameLookup;
         if (!panel.open || current !== generation) return;
         if (browser === null) {
           const response = await request({operation:'list'});
           if (!panel.open || current !== generation) return;
           const roomKey = JSON.stringify(response.rooms);
           if (renderedRooms === roomKey) {
-            status.textContent = sendError || nameLookupError;
+            status.textContent = sendError;
             return;
           }
           renderedRooms = roomKey;
@@ -405,7 +385,7 @@
             const button = document.createElement('button');
             button.type = 'button';
             const name = document.createElement('strong');
-            if (!layout.loadNames && typeof room.browserName === 'string') {
+            if (typeof room.browserName === 'string') {
               if (room.browserName) names.set(room.browserId, room.browserName);
               else names.delete(room.browserId);
             }
@@ -420,7 +400,7 @@
         } else {
           const response = await request({operation:'read',browser,receipt_ids:visibleReceiptIds()});
           if (!panel.open || current !== generation) return;
-          if (isAdmin && !layout.loadNames && typeof response.browserName === 'string') {
+          if (isAdmin && typeof response.browserName === 'string') {
             if (response.browserName) names.set(browser, response.browserName);
             else names.delete(browser);
             title.textContent = (resolveBrowserName(browser) || browser) + 'とのトーク';
@@ -437,7 +417,7 @@
           render();
           scheduleRead();
         }
-        if (!sending) status.textContent = sendError || nameLookupError;
+        if (!sending) status.textContent = sendError;
       } catch (error) {
         if (current === generation && panel.open && !sending) status.textContent = error.message || '読み込みに失敗しました。';
       } finally {
@@ -472,7 +452,7 @@
       older.hidden = true;
       status.textContent = '読み込み中…';
       if (!panel.open) { if (layout.main) { layout.onOpen?.(panel); panel.show(); } else panel.showModal(); }
-      nameLookup = loadBrowserNames(generation);
+      // Each list/read response already includes the canonical browser name.
       void refresh(); void updatePresence();
     }
 

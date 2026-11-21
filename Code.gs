@@ -3831,16 +3831,21 @@ function visitorDirectChatProxy(parameters, viewerToken) {
     } finally { lock.releaseLock(); }
   }
   if (operation === 'list') {
+    const cacheKey = 'LC_DM_ADMIN_ROOMS_V1';
+    const cached = readChunkedJsonCache_(cacheKey);
+    if (cached) return cached;
     const rows = supabaseChatRequest_('get', 'link_core_chat?kind=eq.direct&recipient=like.vb_*&select=id,author,recipient,body,created_at,seq&order=seq.desc&limit=500');
     const seen = new Set();
     const names = getClickBrowserNames_();
-    return {
+    const result = {
       rooms:rows.filter(row => {if (seen.has(row.recipient)) return false; seen.add(row.recipient); return true;})
         .map(row => ({browserId:String(row.recipient).slice(3),browserName:names.get(String(row.recipient).slice(3)) || '',lastMessage:String(row.body).slice(0,90),createdAt:row.created_at})),
       incoming:rows.filter(row => row.author !== '管理者').map(row => ({
         id:row.id, browserId:String(row.recipient).slice(3), createdAt:row.created_at
       }))
     };
+    writeChunkedJsonCache_(cacheKey, result, 10);
+    return result;
   }
   if (operation === 'read') {
     const pending = visitorRequiredReplies_(peer);
