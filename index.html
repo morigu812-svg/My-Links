@@ -437,16 +437,7 @@ a.admin{color:#68ddff!important}
 
 
 
-#chatProfileDescription.profile-correction-notice {
-  padding: 12px 14px;
-  border: 2px solid #f2ad37;
-  border-radius: 10px;
-  background: #fff4d6;
-  color: #5b3100;
-  font-size: 1.05rem;
-  font-weight: 800;
-  line-height: 1.55;
-}
+
 </style>
 
 <style id="link-feed-privacy-note-style">
@@ -1109,12 +1100,18 @@ async function ensureVisitorChatProfile(edit=false,mandatory=false){
   if (visitorChatProfile.filterCorrectionRequired) correctionFields.push('フィルターの種類');
   const correctionLabel = correctionFields.join('と');
   const description = $('chatProfileDescription');
-  description.classList.toggle('profile-correction-notice', !!correctionLabel);
+  const requiresInput = !!correctionLabel || mandatory;
+  description.classList.toggle('profile-correction-notice', requiresInput);
   description.textContent=correctionLabel
    ? '管理者から' + correctionLabel + 'の再入力が求められています。正しい' + correctionLabel + 'を入力し、「保存して続ける」を押してください。'
    : mandatory
    ? 'リンクを見るには、学校名とフィルターの種類の登録が必要です。両方入力して「保存して続ける」を押してください。次回から入力は不要です。'
    : '学校名とフィルターの種類を入力してください。次回から自動で読み込みます。';
+  if (requiresInput) {
+   const heading = document.createElement('strong');
+   heading.textContent = correctionLabel ? correctionLabel + 'の再入力が必要です' : '利用者情報の入力が必要です';
+   description.prepend(heading);
+  }
   const dialog=$('chatProfileDialog');
   const cancel=$('cancelChatProfile');
   cancel.textContent=mandatory?'ログアウト':'キャンセル';
@@ -4347,7 +4344,7 @@ footer{margin:16px 4px!important;font-size:11px!important}
 </script>
 <dialog id="linkReportDialog" class="link-report-dialog" aria-labelledby="linkReportTitle"><form id="linkReportForm"><h2 id="linkReportTitle">リンク報告</h2><p>管理者に制限回避を追加して欲しい時、ここに報告することによって追加されます。</p><label for="linkReportUrl">URL</label><input id="linkReportUrl" type="url" inputmode="url" maxlength="2048" required placeholder="https://example.com"><p id="linkReportStatus" role="status" aria-live="polite"></p><div class="link-report-actions"><button type="button" id="closeLinkReport">キャンセル</button><button type="submit" id="sendLinkReport">報告する</button></div></form></dialog>
 <style>.link-report-dialog{width:min(92vw,480px);border:1px solid #267d98;border-radius:14px;background:#0b1727;color:#e7faff;padding:24px;box-shadow:0 24px 70px #000b}.link-report-dialog::backdrop{background:#000b}.link-report-dialog h2{margin:0 0 10px}.link-report-dialog p{color:#aac5d3}.link-report-dialog label{display:block;margin:18px 0 6px}.link-report-dialog input{width:100%;padding:12px;border:1px solid #32728b;border-radius:8px;background:#07101c;color:#fff}.link-report-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}.link-report-actions button{padding:10px 15px;border:1px solid #32728b;border-radius:8px;background:#12334d;color:#dff8ff;cursor:pointer}</style>
-<dialog id="chatProfileDialog" class="chat-profile-dialog" aria-labelledby="chatProfileTitle"><form id="chatProfileForm"><h2 id="chatProfileTitle">利用者情報の設定</h2><p id="chatProfilePrivacy">正しく入力してください。入力した情報は、管理者が利用状況を確認するために使用します。</p><p id="chatProfileDescription">学校名とフィルターの種類を入力してください。次回から自動で読み込みます。</p><label>学校名<input id="chatProfileSchool" maxlength="80" required autocomplete="organization"></label><label>フィルターの種類<input id="chatProfileFilter" maxlength="80" required placeholder="例：i-FILTER"></label><p id="chatProfileStatus" role="status"></p><div><button type="button" id="cancelChatProfile">キャンセル</button><button type="submit" id="saveChatProfile">保存して続ける</button></div></form></dialog><style>.chat-profile-dialog{width:min(92vw,480px);border:1px solid #2684a0;border-radius:14px;background:#0b1727;color:#e8f9ff;padding:24px;box-shadow:0 24px 70px #000b}.chat-profile-dialog::backdrop{background:#000c}.chat-profile-dialog p{color:#afcbd8;line-height:1.6}.chat-profile-dialog label{display:block;margin:14px 0;font-weight:700}.chat-profile-dialog input{display:block;width:100%;margin-top:6px;padding:12px;border:1px solid #3c7992;border-radius:8px;background:#07101c;color:#fff}.chat-profile-dialog form>div{display:flex;justify-content:flex-end;gap:10px}.chat-profile-dialog button,.chat-profile-edit{padding:9px 12px;border:1px solid #32728b;border-radius:8px;background:#12334d;color:#dff8ff;cursor:pointer}.chat-profile-edit{display:block;margin:10px 0;font-size:12px}</style>
+<dialog id="chatProfileDialog" class="chat-profile-dialog" aria-labelledby="chatProfileTitle"><form id="chatProfileForm"><h2 id="chatProfileTitle">利用者情報の設定</h2><p id="chatProfileDescription">学校名とフィルターの種類を入力してください。次回から自動で読み込みます。</p><p id="chatProfilePrivacy">正しく入力してください。入力した情報は、管理者が利用状況を確認するために使用します。</p><label>学校名<input id="chatProfileSchool" maxlength="80" required autocomplete="organization"></label><label>フィルターの種類<input id="chatProfileFilter" maxlength="80" required placeholder="例：i-FILTER"></label><p id="chatProfileStatus" role="status"></p><div><button type="button" id="cancelChatProfile">キャンセル</button><button type="submit" id="saveChatProfile">保存して続ける</button></div></form></dialog><style>.chat-profile-dialog{width:min(92vw,480px);border:1px solid #2684a0;border-radius:14px;background:#0b1727;color:#e8f9ff;padding:24px;box-shadow:0 24px 70px #000b}.chat-profile-dialog::backdrop{background:#000c}.chat-profile-dialog p{color:#afcbd8;line-height:1.6}.chat-profile-dialog label{display:block;margin:14px 0;font-weight:700}.chat-profile-dialog input{display:block;width:100%;margin-top:6px;padding:12px;border:1px solid #3c7992;border-radius:8px;background:#07101c;color:#fff}.chat-profile-dialog form>div{display:flex;justify-content:flex-end;gap:10px}.chat-profile-dialog button,.chat-profile-edit{padding:9px 12px;border:1px solid #32728b;border-radius:8px;background:#12334d;color:#dff8ff;cursor:pointer}.chat-profile-edit{display:block;margin:10px 0;font-size:12px}</style>
 <style id="mobile-usability">
 @media (max-width:760px) {
   html {scroll-padding-top:12px}
@@ -4536,5 +4533,25 @@ html body #linksPanel .finder-content>#chatOverlay.open{position:relative!import
 #visitorBanPanel .ban-footer code{display:block;margin-top:8px;color:#ffb49b;overflow-wrap:anywhere;user-select:all}
 #visitorBanPanel .ban-footer button{min-height:44px;padding:8px 14px;border:1px solid #ff9b78;border-radius:9px;background:#ff9b78;color:#211211;font-weight:800;cursor:pointer}
 @media(max-width:620px){#visitorBanPanel .ban-lines{grid-template-columns:1fr}#visitorBanPanel .ban-hero{gap:12px}#visitorBanPanel .ban-seal{width:clamp(80px,21vw,125px)}}
+</style>
+<style>
+#chatProfileDialog #chatProfileDescription.profile-correction-notice {
+  margin: 0 0 14px;
+  padding: 14px 16px;
+  border: 3px solid #d98200;
+  border-radius: 10px;
+  background: #fff1c2;
+  color: #482600 !important;
+  font-size: 17px !important;
+  font-weight: 800 !important;
+  line-height: 1.6;
+}
+#chatProfileDialog #chatProfileDescription strong {
+  display: block;
+  margin-bottom: 4px;
+  color: inherit;
+  font-size: 21px;
+  font-weight: 900;
+}
 </style>
 </body></html>
