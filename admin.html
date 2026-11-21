@@ -1220,7 +1220,6 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
         <div class="sidebar-log-items">
           <button class="side-item" type="button" id="sideVisitorDirectory"><span aria-hidden="true">▤</span> 利用者一覧</button>
           <button class="side-item" type="button" id="sideOnlineVisitors"><span aria-hidden="true">●</span> オンラインの利用者</button>
-          <button class="side-item" type="button" id="sideBanVisitors"><span aria-hidden="true">⊘</span> BAN操作</button>
           <button class="side-item" type="button" id="sideBanAppeals"><span aria-hidden="true">⚑</span> 異議申し立て</button>
           <button class="side-item" type="button" id="sideLinkReports"><span>⚑</span> リンク報告 <span id="linkReportBadge" class="new-badge" hidden></span></button>
           <button class="side-item" type="button" id="sideLinkOperations"><span>◷</span> リンク操作履歴</button>
@@ -2718,7 +2717,6 @@ document.getElementById('authSubmit').disabled = false;
   const otherHistories = [
     {key:'visitorDirectory',side:'sideVisitorDirectory',api:'getVisitorDirectory',title:'利用者一覧',description:'ブラウザIDごとに表示します。ログイン日数は保存されている履歴を日本時間で集計します。',columns:['利用者・登録情報','状態・最終ログイン','操作・詳細']},
   {key:'onlineVisitors',side:'sideOnlineVisitors',api:'getOnlineVisitors',title:'オンラインの利用者',description:'利用者ページを表示中のブラウザです。30秒ごとに更新し、90秒通信がない場合はオフラインになります。同じブラウザの複数タブは1人として数えます。',columns:['利用者・ブラウザID','学校名','フィルターの種類','最終接続（日本時間）','状態']},
-  {key:'banVisitors', side:'sideBanVisitors', api:'getBanVisitors', title:'BAN操作', description:'利用者をブラウザIDごとに表示します。BAN中のブラウザは先頭に並びます。', columns:['利用者・ブラウザID','学校名','フィルターの種類','最終ログイン','BAN状態','操作']},
   {key:'banAppeals', side:'sideBanAppeals', api:'getBanAppeals', title:'異議申し立て', description:'利用停止の見直しを希望する利用者から届いた申し立てです（直近200件）。', columns:['受信日時','ブラウザID','理由','現在の状態','操作']},
   {key:'linkReports', side:'sideLinkReports', api:'getLinkReports', title:'リンク報告', description:'利用者から届いたリンクです。確認すると通知件数が減ります。', columns:['日時','URL','ブラウザID','状態']},
   {
