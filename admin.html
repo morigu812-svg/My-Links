@@ -1648,7 +1648,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
   }
 
   function serverCall(method, ...args) {
-    const protectedMethods = ['requestVisitorSchoolCorrection', 'requestVisitorFilterCorrection', 'getVisitorDirectory', 'getClickBrowserNames', 'getOnlineVisitors', 'getBanVisitors', 'getBanAppeals', 'sendChatReply', 'getChatRealtimeSession', 'getLinks', 'getOfficialLinks', 'saveLink', 'deleteLink', 'getLinkReports', 'markLinkReportChecked', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'getVisitorCounterStats', 'deleteVisitorCounterBefore20261114', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getAdminVisitorChatRead', 'markAdminVisitorChatRead', 'getChatMessages', 'deleteVisitorChatMessage', 'getChatScreenshot', 'sendChatMessage', 'sendChatScreenshot', 'getStaffChatMessages', 'getStaffChatAttachment', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendStaffChatAttachment', 'startStaffChatLargeUpload', 'appendStaffChatLargeUploadChunk',
+    const protectedMethods = ['requestVisitorSchoolCorrection', 'requestVisitorFilterCorrection', 'requestVisitorSchoolAndFilterCorrection', 'getVisitorDirectory', 'getClickBrowserNames', 'getOnlineVisitors', 'getBanVisitors', 'getBanAppeals', 'sendChatReply', 'getChatRealtimeSession', 'getLinks', 'getOfficialLinks', 'saveLink', 'deleteLink', 'getLinkReports', 'markLinkReportChecked', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'getVisitorCounterStats', 'deleteVisitorCounterBefore20261114', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getAdminVisitorChatRead', 'markAdminVisitorChatRead', 'getChatMessages', 'deleteVisitorChatMessage', 'getChatScreenshot', 'sendChatMessage', 'sendChatScreenshot', 'getStaffChatMessages', 'getStaffChatAttachment', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendStaffChatAttachment', 'startStaffChatLargeUpload', 'appendStaffChatLargeUploadChunk',
         'finishStaffChatLargeUpload', 'getStaffChatAttachmentChunk', 'deleteStaffChatMessage', 'visitorDirectChatProxy', 'getClickLogs', 'setVisitorBan', 'setClickBrowserName', 'deleteClickLogs', 'deleteClickLog', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
     if (protectedMethods.includes(method)) {
       const token = adminSession.getItem(ADMIN_TOKEN_KEY) || '';
@@ -2810,31 +2810,45 @@ document.getElementById('authSubmit').disabled = false;
           row.append(historyBrowserCell(log, '未記録', 'otherHistoryStatus', 'otherHistoryView', () => refreshOtherHistory(true)));
           const profile = directoryCell(row, [log.school || '学校名未登録', log.filter || 'フィルター未登録',
             log.profileUpdatedAt ? '更新 ' + log.profileUpdatedAt : '']);
+          const pending = [!!log.schoolCorrectionRequired, !!log.filterCorrectionRequired];
           const corrections = [
-            [log.school, log.schoolCorrectionRequired, '学校名', 'requestVisitorSchoolCorrection'],
-            [log.filter, log.filterCorrectionRequired, 'フィルター', 'requestVisitorFilterCorrection']
+            [log.school, [0], '学校名', 'requestVisitorSchoolCorrection'],
+            [log.filter, [1], 'フィルター', 'requestVisitorFilterCorrection'],
+            [log.school && log.filter, [0, 1], 'どちらも', 'requestVisitorSchoolAndFilterCorrection']
           ];
-          for (const [value, pending, label, method] of corrections) {
+          const controls = [];
+          function updateCorrectionControls(busy) {
+            controls.forEach(({button, fields, label}) => {
+              const waiting = fields.every(field => pending[field]);
+              const subject = fields.length === 2 ? '学校名とフィルター' : label;
+              button.disabled = busy || waiting;
+              button.textContent = waiting ? subject + 'の再入力待ち'
+                : label + (fields.length === 2 ? '' : 'の') + '再入力を求める';
+            });
+          }
+          for (const [value, fields, label, method] of corrections) {
             if (!value) continue;
-            const correction = document.createElement('button');
-            correction.type = 'button';
-            correction.className = 'btn';
-            correction.disabled = !!pending;
-            correction.textContent = pending ? label + 'の再入力待ち' : label + 'の再入力を求める';
-            correction.addEventListener('click', async () => {
-              if (!confirm((log.browserName || log.browserId) + 'に、次回ログイン時の' + label + 'の再入力を求めますか？')) return;
-              correction.disabled = true;
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'btn';
+            controls.push({button, fields, label});
+            button.addEventListener('click', async () => {
+              const subject = fields.length === 2 ? '学校名とフィルター' : label;
+              if (!confirm((log.browserName || log.browserId) + 'に、次回ログイン時の' + subject + 'の再入力を求めますか？')) return;
+              updateCorrectionControls(true);
               try {
                 const result = await serverCall(method, log.browserId);
                 if (!result?.ok) throw new Error('設定を確認できませんでした。');
-                correction.textContent = label + 'の再入力待ち';
+                fields.forEach(field => { pending[field] = true; });
               } catch (error) {
-                correction.disabled = false;
                 if (activeHistory === history && !clickLogPanel.hidden) status.textContent = '設定に失敗しました：' + error.message;
+              } finally {
+                updateCorrectionControls(false);
               }
             });
-            profile.append(correction);
+            profile.append(button);
           }
+          updateCorrectionControls(false);
           directoryCell(row, ['初回 ' + directoryDate(log.firstLogin), '最終 ' + directoryDate(log.lastLogin),
             log.loginDayNumber ? '初回から ' + log.loginDayNumber + '日目' : '初回からの日数は不明',
             'ログイン日数 ' + log.loginDays + '日 ／ 計 ' + log.loginCount + '回',

@@ -1745,14 +1745,18 @@ function visitorChatProfileSheet_() {
   return sheet;
 }
 function requestVisitorSchoolCorrection(browserId, adminToken) {
-  return requestVisitorProfileCorrection_(browserId, 2, '学校名', adminToken);
+  return requestVisitorProfileCorrection_(browserId, [0], adminToken);
 }
 
 function requestVisitorFilterCorrection(browserId, adminToken) {
-  return requestVisitorProfileCorrection_(browserId, 3, 'フィルター', adminToken);
+  return requestVisitorProfileCorrection_(browserId, [1], adminToken);
 }
 
-function requestVisitorProfileCorrection_(browserId, profileColumn, label, adminToken) {
+function requestVisitorSchoolAndFilterCorrection(browserId, adminToken) {
+  return requestVisitorProfileCorrection_(browserId, [0, 1], adminToken);
+}
+
+function requestVisitorProfileCorrection_(browserId, fields, adminToken) {
   requireAdmin_(adminToken);
   if (typeof browserId !== 'string' || !/^[A-Za-z0-9_-]{8,100}$/.test(browserId)) throw new Error('ブラウザIDが不正です。');
   const lock = LockService.getScriptLock();
@@ -1761,14 +1765,20 @@ function requestVisitorProfileCorrection_(browserId, profileColumn, label, admin
     const sheet = visitorChatProfileSheet_();
     const last = sheet.getLastRow();
     const found = last < 2 ? null : sheet.getRange(2,1,last-1,1).createTextFinder(browserId).matchEntireCell(true).matchCase(true).findNext();
-    if (!found || !String(sheet.getRange(found.getRow(),profileColumn).getDisplayValue()).trim()) {
-      throw new Error('登録済みの' + label + 'が見つかりません。');
-    }
-    const requestColumn = profileColumn + 3;
-    const header = sheet.getRange(1, requestColumn);
-    if (!header.getValue()) header.setValue(label + '再入力リクエスト');
-    const request = sheet.getRange(found.getRow(), requestColumn);
-    if (!request.getValue()) request.setValue(Utilities.getUuid());
+    if (!found) throw new Error('登録済みの利用者情報が見つかりません。');
+    const labels = ['学校名', 'フィルター'];
+    const values = sheet.getRange(found.getRow(), 2, 1, 2).getDisplayValues()[0];
+    const headers = sheet.getRange(1, 5, 1, 2);
+    const headerValues = headers.getValues()[0];
+    const requests = sheet.getRange(found.getRow(), 5, 1, 2);
+    const pending = requests.getValues()[0];
+    fields.forEach(field => {
+      if (!values[field].trim()) throw new Error('登録済みの' + labels[field] + 'が見つかりません。');
+      headerValues[field] ||= labels[field] + '再入力リクエスト';
+      pending[field] ||= Utilities.getUuid();
+    });
+    headers.setValues([headerValues]);
+    requests.setValues([pending]);
     SpreadsheetApp.flush();
     invalidateVisitorDirectory_();
     return {ok:true};
