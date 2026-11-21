@@ -2777,6 +2777,64 @@ document.getElementById('authSubmit').disabled = false;
   }
   $('visitorDirectorySearch').addEventListener('input', filterVisitorDirectory);
 
+  function visitorClickHistory(log) {
+    const details = document.createElement('details');
+    const summary = document.createElement('summary');
+    summary.textContent = 'クリック履歴';
+    const status = document.createElement('p');
+    status.setAttribute('role', 'status');
+    const entries = document.createElement('ul');
+    entries.className = 'directory-click-history';
+    const more = document.createElement('button');
+    more.type = 'button';
+    more.className = 'btn';
+    more.textContent = '以前の履歴を表示';
+    more.hidden = true;
+    details.append(summary, status, entries, more);
+    let cursor = null;
+    let loaded = false;
+    async function load() {
+      if (more.disabled) return;
+      more.disabled = true;
+      status.textContent = '読み込み中…';
+      try {
+        const options = {browserId:log.browserId, cursor};
+        let result = await serverCall('getClickLogs', options);
+        if (result?.resetRequired) {
+          cursor = null;
+          entries.replaceChildren();
+          result = await serverCall('getClickLogs', {browserId:log.browserId});
+        }
+        if (result?.pageSize !== 50 || !Array.isArray(result.logs) ||
+            result.logs.some(item => item.browserId !== log.browserId)) {
+          throw new Error('GASのCode.gsを最新版に更新し、再デプロイしてください。');
+        }
+        entries.append(...result.logs.map(item => {
+          const entry = document.createElement('li');
+          const title = document.createElement('strong');
+          title.textContent = item.title || item.url || '名称未登録';
+          const date = document.createElement('div');
+          date.textContent = directoryDate(item.clickedAt);
+          entry.append(title, date);
+          return entry;
+        }));
+        cursor = result.nextCursor;
+        loaded = true;
+        more.hidden = !cursor;
+        status.textContent = entries.children.length ? entries.children.length + '件を表示中' : 'クリック履歴はありません。';
+      } catch (error) {
+        status.textContent = '取得に失敗しました：' + error.message;
+        more.textContent = '再試行';
+        more.hidden = false;
+      } finally {
+        more.disabled = false;
+      }
+    }
+    details.addEventListener('toggle', () => { if (details.open && !loaded) void load(); });
+    more.addEventListener('click', () => { more.textContent = '以前の履歴を表示'; void load(); });
+    return details;
+  }
+
   const directoryDate = value => value ? new Date(value).toLocaleString('ja-JP', {timeZone:'Asia/Tokyo'}) : '記録なし';
 
   async function refreshOtherHistory(force = false) {
@@ -2917,7 +2975,7 @@ document.getElementById('authSubmit').disabled = false;
           shortcuts.className = 'directory-corrections';
           shortcuts.append(direct);
           addHistoryBanButton(shortcuts, log, history);
-          actions.append(shortcuts, details);
+          actions.append(shortcuts, visitorClickHistory(log), details);
           return row;
         }
         if (history.key === 'onlineVisitors') {
@@ -7666,6 +7724,9 @@ var qrcode = function() {
 .directory-badges .directory-banned { background: #542b39; color: #ffd9e2; }
 .directory-badges .directory-waiting { background: #4c3917; color: #ffe3a3; }
 .visitor-directory-view details { margin-top: 8px; }
+.directory-click-history { max-height: 18rem; overflow: auto; margin: 6px 0; padding-inline-start: 20px; }
+.directory-click-history li { padding: 5px 0; border-bottom: 1px solid #395769; }
+.directory-click-history li div { color: #b8cedb; font-size: 12px; }
 .visitor-directory-view summary { cursor: pointer; color: #b9e8fa; padding: 5px 0; }
 .visitor-directory-view dl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 10px; font-size: 13px; margin: 8px 0 12px; }
 .visitor-directory-view dt { color: #b8cedb; }

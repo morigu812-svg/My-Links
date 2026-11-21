@@ -2004,6 +2004,11 @@ function getClickLogs(options, adminToken) {
   requireAdmin_(adminToken);
   options = options || {};
   const cursor = options.cursor;
+  const browser = options.browserId;
+  if (browser !== undefined && (typeof browser !== 'string' || !/^[A-Za-z0-9_-]{8,100}$/.test(browser))) {
+    throw new Error('ブラウザIDが不正です。');
+  }
+  const pageSize = browser ? 50 : 500;
   if (cursor != null && (!Number.isSafeInteger(cursor.beforeRow) || cursor.beforeRow < 2 ||
       typeof cursor.anchor !== 'string' || cursor.anchor.length > 200)) {
     throw new Error('クリック履歴の読み込み位置が不正です。');
@@ -2017,26 +2022,44 @@ function getClickLogs(options, adminToken) {
     const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
     const sheet = spreadsheet.getSheetByName(CLICK_LOG_SHEET_NAME);
     const last = sheet ? sheet.getLastRow() : 0;
-    const empty = {logs:[], nextCursor:null, pageSize:500};
+    const empty = {logs:[], nextCursor:null, pageSize};
     if (last < 2) return empty;
     let beforeRow = last + 1;
     if (cursor) {
       beforeRow = cursor.beforeRow;
       // Appends do not move this anchor. Locate it again after a row deletion.
       if (beforeRow > last || String(sheet.getRange(beforeRow, 1).getDisplayValue()) !== cursor.anchor) {
-        if (!cursor.anchor) return {logs:[], nextCursor:null, pageSize:500, resetRequired:true};
+        if (!cursor.anchor) return {logs:[], nextCursor:null, pageSize, resetRequired:true};
         const match = sheet.getRange(2, 1, last - 1, 1).createTextFinder(cursor.anchor)
           .matchEntireCell(true).useRegularExpression(false).findNext();
-        if (!match) return {logs:[], nextCursor:null, pageSize:500, resetRequired:true};
+        if (!match) return {logs:[], nextCursor:null, pageSize, resetRequired:true};
         beforeRow = match.getRow();
       }
     }
     const upper = Math.min(last, beforeRow - 1);
     if (upper < 2) return empty;
-    const first = Math.max(2, upper - 499);
+    const first = browser ? 2 : Math.max(2, upper - pageSize + 1);
     const rows = sheet.getRange(first, 1, upper - first + 1, CLICK_LOG_HEADERS.length).getValues();
+    let selected = rows;
+    // Use a matching row as the cursor anchor for a filtered page.
+    let nextCursor = first > 2 ? {beforeRow:first, anchor:String(rows[0][0] || '')} : null;
+    if (browser) {
+      selected = [];
+      let oldestSelected = -1;
+      for (let i = rows.length - 1; i >= 0; i--) {
+        const row = rows[i];
+        if (!row[0] || String(row[5]) !== browser) continue;
+        if (selected.length === pageSize) {
+          nextCursor = {beforeRow:first + oldestSelected, anchor:String(rows[oldestSelected][0])};
+          break;
+        }
+        selected.push(row);
+        oldestSelected = i;
+      }
+      selected.reverse();
+    }
     const names = getClickBrowserNames_(spreadsheet);
-    const logs = rows.filter(row => row[0] !== '').slice().reverse().map(row => {
+    const logs = selected.filter(row => row[0] !== '').slice().reverse().map(row => {
       const browserId = String(row[5] || '');
       return {
         id:String(row[0] || ''), linkId:String(row[1] || ''), title:String(row[2] || ''),
@@ -2045,10 +2068,7 @@ function getClickLogs(options, adminToken) {
         banned:/^[A-Za-z0-9_-]{8,100}$/.test(browserId) && properties['LINK_CORE_BAN_' + browserId] === '1'
       };
     });
-    // Anchor to the first physical row, including empty legacy rows, so older
-    // batches remain reachable even when a whole batch contains empty rows.
-    const nextCursor = first > 2 ? {beforeRow:first, anchor:String(rows[0][0] || '')} : null;
-    return {logs:logs, nextCursor:nextCursor, pageSize:500};
+    return {logs:logs, nextCursor:nextCursor, pageSize};
   } finally { lock.releaseLock(); }
 }
 
