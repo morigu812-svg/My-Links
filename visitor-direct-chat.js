@@ -221,13 +221,19 @@
       rendered = key;
       const previousHeight = thread.scrollHeight;
       const atBottom = previousHeight - thread.scrollTop - thread.clientHeight < 80;
+      const existingCards = new Map(Array.from(history.querySelectorAll('[data-message-id]'), card => [card.dataset.messageId,card]));
       const seen = new Set();
       readObserver.disconnect();
       visibleMessages.clear();
       const cards = messages.flatMap(item => {
         if (seen.has(item.id)) return [];
         seen.add(item.id);
+        const contentKey = JSON.stringify([item.id,item.author,item.message,item.createdAt,item.own,item.attachment,item.replyTo,
+          messages.find(message => message.id === item.replyTo)?.message]);
+        const existing = existingCards.get(item.id);
+        if (existing?.dataset.contentKey === contentKey) return [existing];
         const card = document.createElement('article');
+        card.dataset.contentKey = contentKey;
         card.className = 'visitor-dm-message' + (item.own ? ' own' : '');
         card.dataset.messageId = item.id;
         const body = document.createElement('div');
@@ -315,14 +321,15 @@
         if (isAdmin && item.own) {
           const toggle = document.createElement('button');
           toggle.type = 'button';
-          toggle.className = 'btn';
+          toggle.className = 'btn visitor-dm-require-action';
+          toggle.dataset.required = String(!!item.replyRequired);
           const required = !!item.replyRequired;
           toggle.textContent = required ? '返信必須を解除' : '返信必須にする';
           toggle.addEventListener('click', async () => {
             const current = generation;
             toggle.disabled = true;
             try {
-              await request({operation:'requireReply',browser,message_id:item.id,required:!required});
+              await request({operation:'requireReply',browser,message_id:item.id,required:toggle.dataset.required !== 'true'});
               if (current !== generation) return;
               await refresh();
             } catch (error) {
@@ -339,7 +346,29 @@
         }
         return [card];
       });
-      history.replaceChildren(...cards);
+      const retained = new Set(cards);
+      Array.from(history.children).forEach(card => { if (!retained.has(card)) card.remove(); });
+      if (cards.length && !history.children.length) history.textContent = '';
+      cards.forEach((card,index) => {
+        // Preserve the DOM nodes holding open menus, previews and playing media.
+        if (history.children[index] !== card) history.insertBefore(card,history.children[index] || null);
+        const item = messages.find(message => message.id === card.dataset.messageId);
+        const receipt = card.querySelector('.visitor-dm-read-receipt');
+        if (receipt) {
+          receipt.textContent = item.readByPeer ? '既読' : '未読';
+          receipt.classList.toggle('is-read', !!item.readByPeer);
+        }
+        const toggle = card.querySelector('.visitor-dm-require-action');
+        if (toggle) {
+          toggle.dataset.required = String(!!item.replyRequired);
+          toggle.textContent = item.replyRequired ? '返信必須を解除' : '返信必須にする';
+        }
+        let badge = card.querySelector('.visitor-dm-required-badge');
+        if (!isAdmin && item.replyRequired) {
+          if (!badge) { badge = document.createElement('p'); badge.className = 'visitor-dm-required-badge'; card.append(badge); }
+          badge.textContent = item.id === replyTo ? 'このメッセージへの返信を入力してください' : '返信待ち';
+        } else if (badge) badge.remove();
+      });
       cards.forEach(card => readObserver.observe(card));
       scheduleRead();
       if (!cards.length) history.textContent = 'メッセージはまだありません。';
