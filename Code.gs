@@ -1774,8 +1774,8 @@ function requestVisitorProfileCorrection_(browserId, fields, adminToken) {
     const pending = requests.getValues()[0];
     fields.forEach(field => {
       if (!values[field].trim()) throw new Error('登録済みの' + labels[field] + 'が見つかりません。');
-      headerValues[field] ||= labels[field] + '再入力リクエスト';
-      pending[field] ||= Utilities.getUuid();
+      if (!headerValues[field]) headerValues[field] = labels[field] + '再入力リクエスト';
+      if (!pending[field]) pending[field] = Utilities.getUuid();
     });
     headers.setValues([headerValues]);
     requests.setValues([pending]);
