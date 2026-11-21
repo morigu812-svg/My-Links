@@ -2661,6 +2661,7 @@ document.getElementById('authSubmit').disabled = false;
     $('clickLogView').hidden = !!other;
     $('otherHistoryView').hidden = !other;
     $('visitorDirectoryTools').hidden = other?.key !== 'visitorDirectory';
+    $('otherHistoryView').classList.toggle('visitor-directory-view', other?.key === 'visitorDirectory');
     $('visitorDirectorySearch').value = '';
     $('deleteVisitorLoginLogs').hidden = other?.key !== 'visitorLogins';
     $('deleteOldVisitorCounter').hidden = other?.key !== 'visitorCounter';
@@ -2693,7 +2694,7 @@ document.getElementById('authSubmit').disabled = false;
   }
   $('adminVisitorCounterRefresh').addEventListener('click', () => { void refreshAdminVisitorCounter(); });
   const otherHistories = [
-    {key:'visitorDirectory',side:'sideVisitorDirectory',api:'getVisitorDirectory',title:'利用者一覧',description:'ブラウザIDごとに表示します。ログイン日数は保存されている履歴を日本時間で集計します。',columns:['利用者・ブラウザID','学校名・フィルター','ログイン履歴（日本時間）','クリック履歴（日本時間）','オンライン・BAN','報告・個人トーク']},
+    {key:'visitorDirectory',side:'sideVisitorDirectory',api:'getVisitorDirectory',title:'利用者一覧',description:'ブラウザIDごとに表示します。ログイン日数は保存されている履歴を日本時間で集計します。',columns:['利用者・登録情報','状態・最終ログイン','操作・詳細']},
   {key:'onlineVisitors',side:'sideOnlineVisitors',api:'getOnlineVisitors',title:'オンラインの利用者',description:'利用者ページを表示中のブラウザです。30秒ごとに更新し、90秒通信がない場合はオフラインになります。同じブラウザの複数タブは1人として数えます。',columns:['利用者・ブラウザID','学校名','フィルターの種類','最終接続（日本時間）','状態']},
   {key:'banVisitors', side:'sideBanVisitors', api:'getBanVisitors', title:'BAN操作', description:'利用者をブラウザIDごとに表示します。BAN中のブラウザは先頭に並びます。', columns:['利用者・ブラウザID','学校名','フィルターの種類','最終ログイン','BAN状態','操作']},
   {key:'banAppeals', side:'sideBanAppeals', api:'getBanAppeals', title:'異議申し立て', description:'利用停止の見直しを希望する利用者から届いた申し立てです（直近200件）。', columns:['受信日時','ブラウザID','理由','現在の状態','操作']},
@@ -2754,7 +2755,7 @@ document.getElementById('authSubmit').disabled = false;
         const result = await serverCall('setVisitorBan', log.browserId, nextBanned);
         if (!result?.ok || result.banned !== nextBanned) throw new Error('変更を確認できませんでした。');
         clickLogsLoaded = false;
-        if (sameView()) await refreshOtherHistory();
+        if (sameView()) await refreshOtherHistory(history.key === 'visitorDirectory');
       } catch (error) {
         if (sameView()) $('otherHistoryStatus').textContent = label + 'に失敗しました：' + error.message;
       } finally {
@@ -2775,16 +2776,6 @@ document.getElementById('authSubmit').disabled = false;
     $('otherHistoryStatus').textContent = query ? shown + '件一致 ／ 全' + rows.length + '件' : rows.length + '件のブラウザ';
   }
   $('visitorDirectorySearch').addEventListener('input', filterVisitorDirectory);
-
-  function directoryCell(row, values) {
-    const cell = row.insertCell();
-    values.forEach(value => {
-      const line = document.createElement('div');
-      line.textContent = value;
-      cell.append(line);
-    });
-    return cell;
-  }
 
   const directoryDate = value => value ? new Date(value).toLocaleString('ja-JP', {timeZone:'Asia/Tokyo'}) : '記録なし';
 
@@ -2807,9 +2798,76 @@ document.getElementById('authSubmit').disabled = false;
         const row = document.createElement('tr');
         if (history.key === 'visitorDirectory') {
           row.dataset.visitorSearch = [log.browserName,log.browserId,log.school,log.filter].join(' ').toLowerCase();
-          row.append(historyBrowserCell(log, '未記録', 'otherHistoryStatus', 'otherHistoryView', () => refreshOtherHistory(true)));
-          const profile = directoryCell(row, [log.school || '学校名未登録', log.filter || 'フィルター未登録',
-            log.profileUpdatedAt ? '更新 ' + log.profileUpdatedAt : '']);
+          const identity = historyBrowserCell(log, '未記録', 'otherHistoryStatus', 'otherHistoryView', () => refreshOtherHistory(true));
+          const browserId = identity.querySelector('div');
+          row.append(identity);
+          const registration = document.createElement('p');
+          registration.className = 'directory-secondary';
+          registration.textContent = (log.school || '学校名未登録') + ' ／ ' + (log.filter || 'フィルター未登録');
+          identity.append(registration);
+
+          const overview = row.insertCell();
+          const badges = document.createElement('div');
+          badges.className = 'directory-badges';
+          const presence = document.createElement('span');
+          presence.className = log.lastSeen ? 'directory-online' : '';
+          presence.textContent = log.lastSeen ? 'オンライン' : 'オフライン';
+          badges.append(presence);
+          if (log.loginStreak >= 3) {
+            const regular = document.createElement('span');
+            regular.className = 'directory-regular';
+            regular.textContent = '常連';
+            regular.title = log.loginStreak + '日連続ログイン（日本時間）';
+            badges.append(regular);
+          }
+          if (log.banned) {
+            const banned = document.createElement('span');
+            banned.className = 'directory-banned';
+            banned.textContent = 'BAN中';
+            badges.append(banned);
+          }
+          const waiting = document.createElement('span');
+          waiting.className = 'directory-waiting';
+          waiting.textContent = '再入力待ち';
+          badges.append(waiting);
+          const lastLogin = document.createElement('p');
+          lastLogin.className = 'directory-secondary';
+          lastLogin.textContent = '最終ログイン ' + directoryDate(log.lastLogin);
+          overview.append(badges, lastLogin);
+
+          const actions = row.insertCell();
+          const details = document.createElement('details');
+          const summary = document.createElement('summary');
+          summary.textContent = '履歴・再入力の設定';
+          details.append(summary);
+          const historyList = document.createElement('dl');
+          const facts = [
+            ['ブラウザID', browserId.textContent],
+            ['登録情報の更新', log.profileUpdatedAt || '記録なし'],
+            ['初回ログイン', directoryDate(log.firstLogin)],
+            ['初回ログインから', log.loginDayNumber ? log.loginDayNumber + '日目' : '記録なし'],
+            ['ログイン日数・回数', log.loginDays + '日 ／ ' + log.loginCount + '回'],
+            ['連続ログイン', log.loginStreak + '日'],
+            ['クリック', log.clickCount + '回'],
+            ['最終クリック', [directoryDate(log.lastClick), log.lastClickTitle].filter(Boolean).join(' ／ ')],
+            ['最終接続', directoryDate(log.lastSeen)],
+            ['BAN状態', log.banned ? 'BAN中' : '未BAN'],
+            ['リンク報告', log.reports + '件'],
+            ['異議申し立て', log.appeals + '件'],
+            ['必須返信待ち', log.requiredReplies + '件']
+          ];
+          if (log.browserName) browserId.remove();
+          facts.forEach(([label, value]) => {
+            const term = document.createElement('dt');
+            const data = document.createElement('dd');
+            term.textContent = label;
+            data.textContent = value;
+            historyList.append(term, data);
+          });
+          details.append(historyList);
+          const profile = document.createElement('div');
+          profile.className = 'directory-corrections';
+          details.append(profile);
           const pending = [!!log.schoolCorrectionRequired, !!log.filterCorrectionRequired];
           const corrections = [
             [log.school, [0], '学校名', 'requestVisitorSchoolCorrection'],
@@ -2818,6 +2876,7 @@ document.getElementById('authSubmit').disabled = false;
           ];
           const controls = [];
           function updateCorrectionControls(busy) {
+            waiting.hidden = !pending.some(Boolean);
             controls.forEach(({button, fields, label}) => {
               const waiting = fields.every(field => pending[field]);
               const subject = fields.length === 2 ? '学校名とフィルター' : label;
@@ -2849,21 +2908,16 @@ document.getElementById('authSubmit').disabled = false;
             profile.append(button);
           }
           updateCorrectionControls(false);
-          directoryCell(row, ['初回 ' + directoryDate(log.firstLogin), '最終 ' + directoryDate(log.lastLogin),
-            log.loginDayNumber ? '初回から ' + log.loginDayNumber + '日目' : '初回からの日数は不明',
-            'ログイン日数 ' + log.loginDays + '日 ／ 計 ' + log.loginCount + '回',
-            '連続ログイン ' + log.loginStreak + '日']);
-          directoryCell(row, ['クリック ' + log.clickCount + '回', '最終 ' + directoryDate(log.lastClick), log.lastClickTitle]);
-          directoryCell(row, [log.lastSeen ? '● オンライン（' + directoryDate(log.lastSeen) + '）' : 'オフライン',
-            log.banned ? 'BAN中' : '未BAN']);
-          const actions = directoryCell(row, ['リンク報告 ' + log.reports + '件', '異議申し立て ' + log.appeals + '件',
-            '必須返信待ち ' + log.requiredReplies + '件']);
           const direct = document.createElement('button');
           direct.type = 'button';
           direct.className = 'btn';
           direct.textContent = '個人トーク';
           direct.addEventListener('click', () => adminVisitorDirectChat.open(log.browserId, log.browserName));
-          actions.append(direct);
+          const shortcuts = document.createElement('div');
+          shortcuts.className = 'directory-corrections';
+          shortcuts.append(direct);
+          addHistoryBanButton(shortcuts, log, history);
+          actions.append(shortcuts, details);
           return row;
         }
         if (history.key === 'onlineVisitors') {
@@ -7598,6 +7652,31 @@ var qrcode = function() {
 #clickLogView .click-log-action details .btn{width:100%;margin:6px 0 0}
 #clickLogView .log-browser-id{overflow-wrap:anywhere}
 @media(max-width:900px){#clickLogView .click-log-action{justify-items:stretch}#clickLogView .click-log-action summary{padding:12px 8px}}
+</style>
+<style>
+#otherHistoryView.visitor-directory-view .click-log-table { min-width: 0; table-layout: fixed; }
+.visitor-directory-view th:nth-child(1) { width: 30%; }
+.visitor-directory-view th:nth-child(2) { width: 28%; }
+.visitor-directory-view td { vertical-align: top; overflow-wrap: anywhere; }
+.visitor-directory-view .directory-secondary { margin: 6px 0 0; color: #b8cedb; font-size: 13px; }
+.directory-badges, .directory-corrections { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.directory-badges span { border-radius: 7px; padding: 3px 8px; background: #24354a; color: #e2ebf5; font-size: 12px; font-weight: 700; }
+.directory-badges .directory-online { background: #103a35; color: #a5f0d5; }
+.directory-badges .directory-regular { background: #3f315e; color: #eadcff; }
+.directory-badges .directory-banned { background: #542b39; color: #ffd9e2; }
+.directory-badges .directory-waiting { background: #4c3917; color: #ffe3a3; }
+.visitor-directory-view details { margin-top: 8px; }
+.visitor-directory-view summary { cursor: pointer; color: #b9e8fa; padding: 5px 0; }
+.visitor-directory-view dl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 10px; font-size: 13px; margin: 8px 0 12px; }
+.visitor-directory-view dt { color: #b8cedb; }
+.visitor-directory-view dd { margin: 0; }
+@media (max-width: 760px) {
+  .visitor-directory-view .click-log-table-wrap { max-height: none; overflow: visible; border: 0; }
+  .visitor-directory-view .click-log-table thead { display: none; }
+  .visitor-directory-view .click-log-table, .visitor-directory-view tbody, .visitor-directory-view td, .visitor-directory-view tr:not([hidden]) { display: block; }
+  .visitor-directory-view tr { margin-bottom: 10px; border: 1px solid #395769; border-radius: 10px; padding: 8px; }
+  .visitor-directory-view td { border: 0; padding: 6px 8px; }
+}
 </style>
 </body>
 </html>
