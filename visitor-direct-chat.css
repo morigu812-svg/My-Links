@@ -230,3 +230,16 @@ html body .visitor-dm img,html body .visitor-dm video {display:block;max-width:1
 html body .visitor-dm .visitor-dm-presence {margin:0;color:#9fe7cf;font-size:12px}
 html body .visitor-dm .visitor-dm-required-toggle {margin-top:4px}
 @media(max-width:600px){html body .visitor-dm .visitor-dm-message{max-width:95%}html body .visitor-dm .visitor-dm-compose-tools button{font-size:12px}}
+
+html body .visitor-dm .visitor-dm-message {position:relative;padding-inline-end:34px}
+html body .visitor-dm .visitor-dm-message.own {padding-inline-end:0;padding-inline-start:34px}
+html body .visitor-dm .visitor-dm-actions {position:absolute;top:8px;right:0;z-index:2}
+html body .visitor-dm .visitor-dm-message.own .visitor-dm-actions {right:auto;left:0}
+html body .visitor-dm .visitor-dm-actions summary {display:block;list-style:none;padding:3px 6px;border-radius:6px;line-height:1.5}
+html body .visitor-dm .visitor-dm-actions summary::-webkit-details-marker {display:none}
+html body .visitor-dm .visitor-dm-actions[open] {position:relative;grid-column:1;justify-self:start;top:auto;right:auto;left:auto;padding:4px;max-width:100%;z-index:3}
+html body .visitor-dm .visitor-dm-actions[open] summary {font-weight:700}
+html body .visitor-dm .visitor-dm-actions[open] button {display:block;margin:4px 0;width:100%;text-align:left}
+html body .visitor-dm .visitor-dm-read-receipt.is-read {color:#73e5a4;font-weight:700}
+html body .visitor-dm .visitor-dm-body {padding:11px 14px;border:1px solid #294b65;border-radius:15px;background:#142b43;white-space:pre-wrap;overflow-wrap:anywhere}
+html body .visitor-dm .visitor-dm-message.own .visitor-dm-body {background:#15415b;border-color:#30708c}

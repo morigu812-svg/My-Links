@@ -245,6 +245,7 @@
           quote.textContent = original ? original.message || original.attachment?.name || '添付ファイル' : '以前のメッセージへの返信';
           card.append(quote);
         }
+        body.className = 'visitor-dm-body';
         card.append(body, time);
         if (item.attachment) {
           const attachment = document.createElement('button');
@@ -308,6 +309,7 @@
           const receipt = document.createElement('span');
           receipt.className = 'visitor-dm-read-receipt';
           receipt.textContent = item.readByPeer ? '既読' : '未読';
+          receipt.classList.toggle('is-read', !!item.readByPeer);
           card.append(receipt);
         }
         if (isAdmin && item.own) {
@@ -327,7 +329,7 @@
               if (current === generation) status.textContent = error.message;
             } finally { toggle.disabled = false; }
           });
-          card.append(toggle);
+          actions.append(toggle);
         }
         if (!isAdmin && item.replyRequired) {
           const badge = document.createElement('p');
@@ -445,7 +447,11 @@
       void refresh(); void updatePresence();
     }
 
-    find('[data-close]').addEventListener('click', () => { panel.close(); layout.onClose?.(); });
+    find('[data-close]').addEventListener('click', () => {
+      if (sending) return;
+      if (isAdmin && browser !== null) { open(); return; }
+      panel.close(); layout.onClose?.();
+    });
     back.addEventListener('click', () => open());
     panel.addEventListener('close', () => { mediaUrls.forEach(url => URL.revokeObjectURL(url)); mediaUrls.clear(); readObserver.disconnect(); visibleMessages.clear(); clearTimeout(readTimer); generation++; renderedRooms=''; history.replaceChildren(); rooms.replaceChildren(); input.value=''; });
     older.addEventListener('click', async () => {
