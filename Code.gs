@@ -487,6 +487,111 @@ function getBanVisitors(adminToken) {
   )};
 }
 
+function getVisitorDirectory(adminToken) {
+  requireAdmin_(adminToken);
+  const settings = PropertiesService.getScriptProperties().getProperties();
+  const spreadsheetId = settings[SPREADSHEET_PROPERTY];
+  if (!spreadsheetId) throw new Error('スプレッドシートIDが未設定です。');
+  const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+  const names = getClickBrowserNames_(spreadsheet);
+  const profiles = visitorChatProfilesByBrowser_(spreadsheet);
+  const visitors = new Map();
+  const daysByBrowser = new Map();
+  const now = new Date();
+  const dayNumber = date => Math.floor((new Date(date).getTime() + 9 * 3600000) / 86400000);
+  const today = dayNumber(now);
+
+  function visitorFor(value) {
+    const browserId = String(value || '').trim();
+    if (!/^[A-Za-z0-9_-]{8,100}$/.test(browserId)) return null;
+    if (!visitors.has(browserId)) {
+      const profile = profiles.get(browserId);
+      visitors.set(browserId, {
+        browserId, browserName:names.get(browserId) || '', school:profile?.school || '',
+        filter:profile?.filter || '', profileUpdatedAt:profile?.updatedAt || '',
+        firstLogin:'', lastLogin:'', loginCount:0, loginDays:0, loginDayNumber:0,
+        loginStreak:0, clickCount:0, lastClick:'', lastClickTitle:'',
+        reports:0, appeals:0, requiredReplies:0, lastSeen:'',
+        banned:settings['LINK_CORE_BAN_' + browserId] === '1'
+      });
+    }
+    return visitors.get(browserId);
+  }
+
+  function rows(sheetName, firstColumn, width) {
+    const sheet = spreadsheet.getSheetByName(sheetName);
+    const last = sheet ? sheet.getLastRow() : 0;
+    return last > 1 && sheet.getLastColumn() >= firstColumn + width - 1
+      ? sheet.getRange(2, firstColumn, last - 1, width).getValues() : [];
+  }
+
+  function timestamp(value) {
+    const time = value ? new Date(value) : null;
+    return time && Number.isFinite(time.getTime()) ? time.toISOString() : '';
+  }
+
+  names.forEach((_, id) => visitorFor(id));
+  profiles.forEach((_, id) => visitorFor(id));
+  const loginRows = rows('VisitorLoginLogs', 1, 2);
+  loginRows.forEach(([value, id]) => {
+    const visitor = visitorFor(id);
+    const date = timestamp(value);
+    if (!visitor || !date) return;
+    const day = dayNumber(date);
+    if (day > today) return;
+    if (!daysByBrowser.has(visitor.browserId)) daysByBrowser.set(visitor.browserId, new Set());
+    daysByBrowser.get(visitor.browserId).add(day);
+    visitor.loginCount++;
+    if (!visitor.firstLogin || date < visitor.firstLogin) visitor.firstLogin = date;
+    if (date > visitor.lastLogin) visitor.lastLogin = date;
+  });
+
+  rows(CLICK_LOG_SHEET_NAME, 3, 4).forEach(([title,, value, id]) => {
+    const visitor = visitorFor(id);
+    const date = timestamp(value);
+    if (!visitor || !date) return;
+    visitor.clickCount++;
+    if (date >= visitor.lastClick) {
+      visitor.lastClick = date;
+      visitor.lastClickTitle = String(title || '');
+    }
+  });
+  rows(LINK_REPORT_SHEET, 4, 1).forEach(([id]) => {
+    const visitor = visitorFor(id);
+    if (visitor) visitor.reports++;
+  });
+  rows('BAN異議申し立て', 2, 1).forEach(([id]) => {
+    const visitor = visitorFor(id);
+    if (visitor) visitor.appeals++;
+  });
+
+  Object.entries(settings).forEach(([key, value]) => {
+    if (key.startsWith('LINK_CORE_BAN_') && value === '1') visitorFor(key.slice('LINK_CORE_BAN_'.length));
+    if (!key.startsWith('LINK_CORE_REQUIRED_REPLY_')) return;
+    let pending;
+    try { pending = JSON.parse(value); } catch (_) { return; }
+    if (!Array.isArray(pending) || !pending.length) return;
+    const visitor = visitorFor(key.slice('LINK_CORE_REQUIRED_REPLY_'.length));
+    if (visitor) visitor.requiredReplies = pending.length;
+  });
+
+  visitorOnlineSnapshot_('', '', false, true, true).logs.forEach(item => {
+    const visitor = visitorFor(item.browserId);
+    if (visitor) visitor.lastSeen = item.lastSeen;
+  });
+  const streaks = visitorLoginStreaks_(loginRows, visitors, now);
+  daysByBrowser.forEach((days, id) => {
+    const visitor = visitors.get(id);
+    visitor.loginDays = days.size;
+    visitor.loginDayNumber = today - dayNumber(visitor.firstLogin) + 1;
+    visitor.loginStreak = streaks.get(id) || 0;
+  });
+
+  const activity = visitor => [visitor.lastSeen, visitor.lastLogin, visitor.lastClick].sort().pop();
+  return {logs:Array.from(visitors.values()).sort((a,b) => activity(b).localeCompare(activity(a)) ||
+    a.browserId.localeCompare(b.browserId))};
+}
+
 function storeSession_(role, token, generation) {
   const expiresAt = Date.now() + SESSION_TTL_SECONDS * 1000;
   CacheService.getScriptCache().put('LINK_CORE_' + role + '_' + token,
@@ -3732,7 +3837,7 @@ function getOnlineVisitors(adminToken) {
   requireAdmin_(adminToken);
   return visitorOnlineSnapshot_('', '', false, true);
 }
-function visitorOnlineSnapshot_(token, browser, active, includeNames) {
+function visitorOnlineSnapshot_(token, browser, active, includeNames, omitProfiles) {
   const generation = sessionGeneration_();
   const key = 'LINK_CORE_VISITOR_ONLINE_V1_' + generation;
   const lock = LockService.getScriptLock();
@@ -3765,6 +3870,7 @@ function visitorOnlineSnapshot_(token, browser, active, includeNames) {
       .sort((a,b) => b.lastSeen.localeCompare(a.lastSeen));
   } finally { lock.releaseLock(); }
   if (!includeNames) return {count:visitors.length};
+  if (omitProfiles) return {count:visitors.length, logs:visitors};
   const spreadsheet = SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY));
   const names = getClickBrowserNames_(spreadsheet);
   const profiles = visitorChatProfilesByBrowser_(spreadsheet);
@@ -3780,9 +3886,9 @@ function visitorChatProfilesByBrowser_(spreadsheet) {
   const last = sheet ? sheet.getLastRow() : 0;
   const profiles = new Map();
   if (last < 2) return profiles;
-  sheet.getRange(2, 1, last - 1, 3).getDisplayValues().forEach(row => {
+  sheet.getRange(2, 1, last - 1, 4).getDisplayValues().forEach(row => {
     const id = String(row[0] || '');
-    if (/^[A-Za-z0-9_-]{8,100}$/.test(id)) profiles.set(id, {school:String(row[1] || ''), filter:String(row[2] || '')});
+    if (/^[A-Za-z0-9_-]{8,100}$/.test(id)) profiles.set(id, {school:String(row[1] || ''), filter:String(row[2] || ''), updatedAt:String(row[3] || '')});
   });
   return profiles;
 }
