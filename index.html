@@ -437,6 +437,16 @@ a.admin{color:#68ddff!important}
 
 
 
+#chatProfileDescription.profile-correction-notice {
+  padding: 12px 14px;
+  border: 2px solid #f2ad37;
+  border-radius: 10px;
+  background: #fff4d6;
+  color: #5b3100;
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 1.55;
+}
 </style>
 
 <style id="link-feed-privacy-note-style">
@@ -1094,8 +1104,14 @@ async function ensureVisitorChatProfile(edit=false,mandatory=false){
   $('chatProfileSchool').value=visitorChatProfile.school||'';
   $('chatProfileFilter').value=visitorChatProfile.filter||'';
   $('chatProfileStatus').textContent='';
-  $('chatProfileDescription').textContent=visitorChatProfile.schoolCorrectionRequired
-   ? '管理者から学校名の再入力が求められています。正しい学校名を入力し、「保存して続ける」を押してください。'
+  const correctionFields = [];
+  if (visitorChatProfile.schoolCorrectionRequired) correctionFields.push('学校名');
+  if (visitorChatProfile.filterCorrectionRequired) correctionFields.push('フィルターの種類');
+  const correctionLabel = correctionFields.join('と');
+  const description = $('chatProfileDescription');
+  description.classList.toggle('profile-correction-notice', !!correctionLabel);
+  description.textContent=correctionLabel
+   ? '管理者から' + correctionLabel + 'の再入力が求められています。正しい' + correctionLabel + 'を入力し、「保存して続ける」を押してください。'
    : mandatory
    ? 'リンクを見るには、学校名とフィルターの種類の登録が必要です。両方入力して「保存して続ける」を押してください。次回から入力は不要です。'
    : '学校名とフィルターの種類を入力してください。次回から自動で読み込みます。';
