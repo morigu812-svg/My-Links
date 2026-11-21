@@ -1265,8 +1265,12 @@ function writeNoticeStorage(key,value){
  try{localStorage.setItem(key,value)}catch(_){}
 }
 function getNoticeBrowserId(){
- if(!noticeBrowserId){
-  noticeBrowserId=readNoticeStorage(NOTICE_BROWSER_KEY)||(crypto.randomUUID&&crypto.randomUUID())||('browser-'+Date.now()+'-'+Math.random().toString(36).slice(2));
+ const valid=value=>typeof value==='string'&&/^[A-Za-z0-9_-]{8,100}$/.test(value);
+ if(valid(noticeBrowserId))return noticeBrowserId;
+ const saved=readNoticeStorage(NOTICE_BROWSER_KEY);
+ if(valid(saved))noticeBrowserId=saved;
+ else{
+  noticeBrowserId=globalThis.crypto?.randomUUID?.()||('browser-'+Date.now()+'-'+Math.random().toString(36).slice(2));
   writeNoticeStorage(NOTICE_BROWSER_KEY,noticeBrowserId);
  }
  return noticeBrowserId;
@@ -1315,6 +1319,9 @@ $('loginForm').addEventListener('submit',async event=>{
   const loginStartedAt = Date.now();
   const auth=await call('authenticateVisitor', password.value, getNoticeBrowserId(), await visitorIdentitySecret());
   if(!auth||!auth.token)throw new Error('閲覧用トークンを取得できませんでした。');
+  if(typeof auth.browserId==='string'&&/^[A-Za-z0-9_-]{8,100}$/.test(auth.browserId)){
+   noticeBrowserId=auth.browserId;writeNoticeStorage(NOTICE_BROWSER_KEY,noticeBrowserId);
+  }
   visitorToken=auth.token;
   visitorChatProfile=null;
   stopViewerExpiry = watchSessionExpiry(loginStartedAt + Math.min(auth.expiresIn || 1800, 1800) * 1000, () => {

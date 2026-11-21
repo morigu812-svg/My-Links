@@ -403,7 +403,7 @@ function authenticateVisitor(password, browserId, browserSecret) {
   // 同じブラウザは1日1回まで。ログイン履歴の削除とは独立して保存する。
   recordVisitorCounter_(browserId);
   return {
-    ok: true, token: token, expiresIn: SESSION_TTL_SECONDS,
+    ok: true, token: token, browserId:browserId, expiresIn: SESSION_TTL_SECONDS,
     links: initialLinks.links, categories: initialLinks.categories, replyRequired:!!initialLinks.replyRequired, profileRequired:!!initialLinks.profileRequired
   };
 }
@@ -1629,9 +1629,7 @@ function visitorChatProfileSheet_() {
   return sheet;
 }
 function getVisitorChatProfile(browserId, visitorToken) {
-  if (!isSessionValid_('VISITOR', visitorToken)) throw new Error('利用者ログインが必要です。');
-  if (!/^[A-Za-z0-9_-]{8,100}$/.test(String(browserId || ''))) throw new Error('ブラウザIDが不正です。');
-  if (CacheService.getScriptCache().get('LINK_CORE_VISITOR_PROFILE_' + visitorToken) !== browserId) throw new Error('ブラウザIDを確認できません。再ログインしてください。');
+  browserId = visitorProfileBrowser_(browserId, visitorToken);
   const sheet = visitorChatProfileSheet_();
   const last = sheet.getLastRow();
   if (last < 2) return {school:'', filter:''};
@@ -1641,9 +1639,7 @@ function getVisitorChatProfile(browserId, visitorToken) {
   return {school:row[0], filter:row[1]};
 }
 function saveVisitorChatProfile(browserId, school, filter, visitorToken) {
-  if (!isSessionValid_('VISITOR', visitorToken)) throw new Error('利用者ログインが必要です。');
-  if (!/^[A-Za-z0-9_-]{8,100}$/.test(String(browserId || ''))) throw new Error('ブラウザIDが不正です。');
-  if (CacheService.getScriptCache().get('LINK_CORE_VISITOR_PROFILE_' + visitorToken) !== browserId) throw new Error('ブラウザIDを確認できません。再ログインしてください。');
+  browserId = visitorProfileBrowser_(browserId, visitorToken);
   const name = cleanText_(school,80), kind = cleanText_(filter,80);
   if (!name || !kind || /[\u0000-\u001f]/.test(name+kind)) throw new Error('学校名とフィルターの種類を入力してください。');
   const lock = LockService.getScriptLock(); lock.waitLock(10000);
@@ -3798,7 +3794,7 @@ function visitorProfileRequired_(token) {
   const ready = cache.get(key);
   if (ready === '1') return false;
   if (ready === '0') return true;
-  const browser = cache.get('LINK_CORE_VISITOR_PROFILE_' + token);
+  const browser = cache.get('LINK_CORE_VISITOR_BROWSER_' + token);
   if (!browser) return true;
   const profile = getVisitorChatProfile(browser, token);
   const complete = !!(String(profile.school || '').trim() && String(profile.filter || '').trim());
@@ -3812,4 +3808,13 @@ function getClickBrowserNames(adminToken) {
   return {names:Array.from(getClickBrowserNames_(), ([browserId,name]) => ({
     browserId:String(browserId).trim(),name:String(name).trim()
   }))};
+}
+
+/** Use the authenticated session's canonical browser binding for profile access. */
+function visitorProfileBrowser_(browserId, token) {
+  if (!isSessionValid_('VISITOR', token)) throw new Error('利用者ログインが必要です。');
+  const bound = CacheService.getScriptCache().get('LINK_CORE_VISITOR_BROWSER_' + token);
+  if (!/^[A-Za-z0-9_-]{8,100}$/.test(String(bound || ''))) throw new Error('ログイン情報を確認できません。再ログインしてください。');
+  if (browserId && browserId !== bound) throw new Error('ブラウザIDがログイン情報と一致しません。再ログインしてください。');
+  return bound;
 }
