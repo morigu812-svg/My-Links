@@ -1158,7 +1158,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
 <script src="./chat-preview.js"></script>
 <script src="./chat-realtime.js?v=staff-direct-pilot"></script>
 <link rel="stylesheet" href="./visitor-direct-chat.css?v=read-receipts1">
-<script src="./visitor-direct-chat.js?v=browser-name-titles2"></script>
+<script src="./visitor-direct-chat.js?v=canonical-browser-names3"></script>
 <script src="./chat-screenshot.js?v=clipboard1" defer></script>
 <style id="visitor-counter-style">
 .visitor-counter-strip{display:flex;align-items:center;flex-wrap:wrap;gap:10px 20px;margin:11px 0 13px;padding:11px 14px;border:1px solid rgba(53,217,255,.28);border-radius:10px;background:rgba(14,38,51,.65);font-size:12px;color:#a9c7d4}
@@ -1646,7 +1646,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
   }
 
   function serverCall(method, ...args) {
-    const protectedMethods = ['getOnlineVisitors', 'getBanVisitors', 'getBanAppeals', 'sendChatReply', 'getChatRealtimeSession', 'getLinks', 'getOfficialLinks', 'saveLink', 'deleteLink', 'getLinkReports', 'markLinkReportChecked', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'getVisitorCounterStats', 'deleteVisitorCounterBefore20261114', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getAdminVisitorChatRead', 'markAdminVisitorChatRead', 'getChatMessages', 'deleteVisitorChatMessage', 'getChatScreenshot', 'sendChatMessage', 'sendChatScreenshot', 'getStaffChatMessages', 'getStaffChatAttachment', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendStaffChatAttachment', 'startStaffChatLargeUpload', 'appendStaffChatLargeUploadChunk',
+    const protectedMethods = ['getClickBrowserNames', 'getOnlineVisitors', 'getBanVisitors', 'getBanAppeals', 'sendChatReply', 'getChatRealtimeSession', 'getLinks', 'getOfficialLinks', 'saveLink', 'deleteLink', 'getLinkReports', 'markLinkReportChecked', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'getVisitorCounterStats', 'deleteVisitorCounterBefore20261114', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getAdminVisitorChatRead', 'markAdminVisitorChatRead', 'getChatMessages', 'deleteVisitorChatMessage', 'getChatScreenshot', 'sendChatMessage', 'sendChatScreenshot', 'getStaffChatMessages', 'getStaffChatAttachment', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendStaffChatAttachment', 'startStaffChatLargeUpload', 'appendStaffChatLargeUploadChunk',
         'finishStaffChatLargeUpload', 'getStaffChatAttachmentChunk', 'deleteStaffChatMessage', 'visitorDirectChatProxy', 'getClickLogs', 'setVisitorBan', 'setClickBrowserName', 'deleteClickLogs', 'deleteClickLog', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
     if (protectedMethods.includes(method)) {
       const token = adminSession.getItem(ADMIN_TOKEN_KEY) || '';
@@ -4153,7 +4153,15 @@ $('closeChat').addEventListener('click', closeMainChat);
       if (topics.some(topic => !topic.startsWith('lc-chat-staff-'))) void refreshAdminChat();
     }
   );
-  const adminVisitorDirectChat = window.createVisitorDirectChat(params => serverCall('visitorDirectChatProxy', params), true, {resolveName:id=>visitorBrowserNames.get(id),main:true,container:document.querySelector('.finder-content'),onOpen:panel=>openMainChat(panel,'個人トーク'),onClose:closeMainChat,onRead:markVisitorPersonalRead});
+  const adminVisitorDirectChat = window.createVisitorDirectChat(params => serverCall('visitorDirectChatProxy', params), true, {
+    loadNames:async()=>{
+      const result=await serverCall('getClickBrowserNames');
+      if(!Array.isArray(result.names))throw new Error('ブラウザ名の取得結果が不正です。');
+      visitorBrowserNames.clear();
+      result.names.forEach(item=>visitorBrowserNames.set(item.browserId,item.name));
+      return result.names;
+    },
+    resolveName:id=>visitorBrowserNames.get(id),main:true,container:document.querySelector('.finder-content'),onOpen:panel=>openMainChat(panel,'個人トーク'),onClose:closeMainChat,onRead:markVisitorPersonalRead});
   const personalChatNotice = document.createElement('button');
   personalChatNotice.type = 'button';
   personalChatNotice.id = 'visitorPersonalNotice';

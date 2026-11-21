@@ -3805,3 +3805,11 @@ function visitorProfileRequired_(token) {
   cache.put(key, complete ? '1' : '0', SESSION_TTL_SECONDS);
   return !complete;
 }
+
+/** Canonical browser labels for administrator conversation titles. */
+function getClickBrowserNames(adminToken) {
+  requireAdmin_(adminToken);
+  return {names:Array.from(getClickBrowserNames_(), ([browserId,name]) => ({
+    browserId:String(browserId).trim(),name:String(name).trim()
+  }))};
+}
