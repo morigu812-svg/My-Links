@@ -2903,19 +2903,29 @@ document.getElementById('authSubmit').disabled = false;
         const row = document.createElement('tr');
         if (history.key === 'visitorDirectory') {
           row.dataset.visitorSearch = [log.browserName,log.browserId,log.school,log.filter].join(' ').toLowerCase();
+          row.classList.add('directory-row');
+          row.classList.toggle('directory-row-online', !!log.lastSeen);
+          row.classList.toggle('directory-row-banned', !!log.banned);
           const identity = historyBrowserCell(log, '未記録', 'otherHistoryStatus', 'otherHistoryView', () => refreshOtherHistory(true));
           const browserId = identity.querySelector('div');
           row.append(identity);
-          const registration = document.createElement('p');
-          registration.className = 'directory-secondary';
-          registration.textContent = (log.school || '学校名未登録') + ' ／ ' + (log.filter || 'フィルター未登録');
+          const registration = document.createElement('div');
+          registration.className = 'directory-registration';
+          [['学校', log.school], ['フィルター', log.filter]].forEach(([label, value]) => {
+            const item = document.createElement('span');
+            item.className = value ? '' : 'is-empty';
+            const key = document.createElement('small');
+            key.textContent = label;
+            item.append(key, document.createTextNode(value || '未登録'));
+            registration.append(item);
+          });
           identity.append(registration);
 
           const overview = row.insertCell();
           const badges = document.createElement('div');
           badges.className = 'directory-badges';
           const presence = document.createElement('span');
-          presence.className = log.lastSeen ? 'directory-online' : '';
+          presence.className = log.lastSeen ? 'directory-online' : 'directory-offline';
           presence.textContent = log.lastSeen ? 'オンライン' : 'オフライン';
           badges.append(presence);
           if (log.loginStreak >= 3) {
@@ -2938,7 +2948,18 @@ document.getElementById('authSubmit').disabled = false;
           const lastLogin = document.createElement('p');
           lastLogin.className = 'directory-secondary';
           lastLogin.textContent = '最終ログイン ' + directoryDate(log.lastLogin);
-          overview.append(badges, lastLogin);
+          const stats = document.createElement('div');
+          stats.className = 'directory-stats';
+          [['ログイン', (log.loginDays || 0) + '日'], ['連続', (log.loginStreak || 0) + '日'], ['クリック', (log.clickCount || 0) + '回']].forEach(([label, value]) => {
+            const item = document.createElement('span');
+            const key = document.createElement('small');
+            const num = document.createElement('b');
+            key.textContent = label;
+            num.textContent = value;
+            item.append(key, num);
+            stats.append(item);
+          });
+          overview.append(badges, lastLogin, stats);
 
           const actions = row.insertCell();
           const details = document.createElement('details');
@@ -7813,6 +7834,45 @@ html body .sidebar .side-danger:hover{background:rgba(255,90,110,.14)!important}
 .sidebar-log-folder:not([open]):has(.new-badge:not([hidden])) > summary .log-folder-chevron{order:3;margin-inline-start:6px}
 .sidebar-log-folder[open] > .sidebar-log-items .side-item{font-size:12px}
 @media(max-width:760px){html body .sidebar .side-label{border-top:0;padding-top:0}}
+</style>
+<style id="lc-visitor-directory-style">
+/* 利用者一覧：見やすさ改善（配色の基調は変えない） */
+.visitor-directory-view .directory-registration{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+.visitor-directory-view .directory-registration span{display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:3px 9px;border:1px solid #28526a;border-radius:7px;background:#0d2236;color:#dbeaf5;font-size:12px;overflow-wrap:anywhere}
+.visitor-directory-view .directory-registration small{flex:0 0 auto;color:#8fdfff;font-size:10px;font-weight:700;letter-spacing:.04em}
+.visitor-directory-view .directory-registration .is-empty{border-style:dashed;color:#7f95a8}
+.visitor-directory-view .directory-browser-id{margin:2px 0 8px;color:#8da8c3;font:11px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;user-select:all}
+#clickLogPanel .visitor-directory-view button.click-browser-name{padding:6px 11px;margin-bottom:6px;font-size:14px;font-weight:800}
+.visitor-directory-view .directory-badges .directory-online::before{content:"● "}
+.visitor-directory-view .directory-badges .directory-offline{background:#1e2a38;color:#9fb0c0}
+.visitor-directory-view .directory-stats{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.visitor-directory-view .directory-stats span{display:inline-flex;align-items:baseline;gap:6px;padding:4px 9px;border:1px solid #1f405a;border-radius:8px;background:#0d2236;font-size:12px}
+.visitor-directory-view .directory-stats small{color:#8da8c3;font-size:10px}
+.visitor-directory-view .directory-stats b{color:#eaffff;font-variant-numeric:tabular-nums}
+.visitor-directory-view .directory-corrections .btn{padding:7px 12px;font-size:12px}
+.visitor-directory-view details>summary{display:inline-block;padding:6px 11px;border:1px solid #28526a;border-radius:8px;background:#0d2236;font-size:12px}
+.visitor-directory-view details[open]>summary{border-color:#34768e;color:#eaffff}
+.visitor-directory-view dl{gap:0 14px}
+.visitor-directory-view dt,.visitor-directory-view dd{padding:6px 0;border-bottom:1px dashed #254054;font-size:12px}
+.visitor-directory-view dd{font-variant-numeric:tabular-nums}
+@media (min-width:761px){
+  #otherHistoryView.visitor-directory-view .click-log-table-wrap{max-height:min(74vh,900px);border-color:#28526a;background:#071321}
+  #otherHistoryView.visitor-directory-view .click-log-table{border-collapse:separate;border-spacing:0}
+  #otherHistoryView.visitor-directory-view th:nth-child(1){width:34%}
+  #otherHistoryView.visitor-directory-view th:nth-child(2){width:28%}
+  #otherHistoryView.visitor-directory-view th:nth-child(3){width:38%}
+  #otherHistoryView.visitor-directory-view th{z-index:1;font-size:11px;letter-spacing:.04em;background:#10253a;border-bottom:1px solid #34768e}
+  #otherHistoryView.visitor-directory-view tr.directory-row td{padding:16px 14px;border-bottom:1px solid #254054;transition:background .15s}
+  #otherHistoryView.visitor-directory-view tr.directory-row:hover td{background:rgba(0,217,255,.05)}
+  #otherHistoryView.visitor-directory-view tr.directory-row td:first-child{box-shadow:inset 3px 0 0 transparent}
+  #otherHistoryView.visitor-directory-view tr.directory-row-online td:first-child{box-shadow:inset 3px 0 0 #3fe0a8}
+  #otherHistoryView.visitor-directory-view tr.directory-row-banned td:first-child{box-shadow:inset 3px 0 0 #ff6b86}
+}
+@media (max-width:760px){
+  .visitor-directory-view tr.directory-row{background:#0b1a2b}
+  .visitor-directory-view tr.directory-row-online{border-left:4px solid #3fe0a8}
+  .visitor-directory-view tr.directory-row-banned{border-left:4px solid #ff6b86}
+}
 </style>
 </body>
 </html>
