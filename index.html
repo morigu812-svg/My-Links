@@ -470,7 +470,9 @@ a.admin{color:#68ddff!important}
 #visitorOnlineCount{margin-left:12px;color:#9fe7cf;font-size:12px;font-weight:500;letter-spacing:normal;white-space:nowrap}
 #linksPanel .finder-title{flex-wrap:wrap}
 @media(max-width:600px){#visitorOnlineCount{margin-left:6px;font-size:10px}}
-</style></head>
+</style><link rel="stylesheet" href="./filter-access.css?v=1">
+<script src="./filter-access.js?v=1"></script>
+</head>
 <body>
 <main class="wrap">
 <div class="click-log-notice" id="clickLogNotice" role="status" aria-live="polite"></div>
@@ -780,6 +782,7 @@ function visibleLinks(){
  return items;
 }
 let renderedCategories, renderedCategory, renderedNewLinkCount;
+window.setupVisitorFilterAccess($('list'),(method,...args)=>call(method,...args,visitorToken));
 function render(){
  document.getElementById('chatOverlay')?.classList.remove('open');
  document.querySelector('#linksPanel .workspace').hidden = false;
@@ -812,7 +815,7 @@ function render(){
  }
  const folderChildren=!query&&selectedCategory&&selectedCategory!=='__uncategorized__'?childFolders(selectedCategory,visible):[];
  const currentLinks=visibleLinks();
- const linkCards=currentLinks.map(x=>{const href=/^https?:\/\//i.test(x.url)?x.url:'#';const ini=Array.from(String(x.title||'').trim())[0]||'•';let hh=0;for(const ch of String(x.title||''))hh=(hh*31+ch.charCodeAt(0))%90;return '<article class="item lc-link-card" data-link-id="'+esc(x.id)+'"><div class="lc-link-info"><span class="lc-avatar" aria-hidden="true" style="--h:'+(175+hh)+'">'+esc(ini.toUpperCase())+'</span><div class="lc-link-main"><a class="title" data-open-mode="external" href="'+esc(href)+'" target="_blank" rel="noopener noreferrer">'+esc(x.title)+'</a>'+(x.isNew&&!readNewLinkIds.has(String(x.id))?'<span class="new-label">NEW</span>':'')+'<div class="meta">'+esc((()=>{try{return new URL(x.url).hostname}catch(e){return x.category||''}})())+'</div>'+(x.memo?'<div class="memo">'+esc(x.memo)+'</div>':'')+(query&&folderPath(x.category)?'<span class="lc-cat">'+esc(folderPath(x.category).split('/').join(' › '))+'</span>':'')+'</div><button type="button" class="lc-visitor-favorite" data-visitor-favorite aria-label="お気に入り" aria-pressed="'+isVisitorFavorite(x.id)+'"'+(!favoritesReady||pendingFavorites.has(String(x.id))?' disabled':'')+'>'+ (isVisitorFavorite(x.id)?'★':'☆')+'</button></div></article>';}).join('');
+ const linkCards=currentLinks.map(x=>{const href=/^https?:\/\//i.test(x.url)?x.url:'#';const ini=Array.from(String(x.title||'').trim())[0]||'•';let hh=0;for(const ch of String(x.title||''))hh=(hh*31+ch.charCodeAt(0))%90;return '<article class="item lc-link-card" data-link-id="'+esc(x.id)+'"><div class="lc-link-info"><span class="lc-avatar" aria-hidden="true" style="--h:'+(175+hh)+'">'+esc(ini.toUpperCase())+'</span><div class="lc-link-main"><a class="title" data-open-mode="external" href="'+esc(href)+'" target="_blank" rel="noopener noreferrer">'+esc(x.title)+'</a>'+(x.isNew&&!readNewLinkIds.has(String(x.id))?'<span class="new-label">NEW</span>':'')+'<div class="meta">'+esc((()=>{try{return new URL(x.url).hostname}catch(e){return x.category||''}})())+'</div>'+(x.memo?'<div class="memo">'+esc(x.memo)+'</div>':'')+(query&&folderPath(x.category)?'<span class="lc-cat">'+esc(folderPath(x.category).split('/').join(' › '))+'</span>':'')+'</div><button type="button" class="lc-visitor-favorite" data-visitor-favorite aria-label="お気に入り" aria-pressed="'+isVisitorFavorite(x.id)+'"'+(!favoritesReady||pendingFavorites.has(String(x.id))?' disabled':'')+'>'+ (isVisitorFavorite(x.id)?'★':'☆')+'</button></div><details class="filter-access-menu"><summary aria-label="リンクの操作">…</summary><button type="button" data-filter-access>アクセス状況を報告</button></details></article>';}).join('');
  const back=query?'':selectedCategory&&selectedCategory!=='__uncategorized__'?'<div class="folder-toolbar"><button type="button" data-folder-back>‹ '+(folderParent(selectedCategory)?'親フォルダーに戻る':'フォルダー一覧に戻る')+'</button><span>My Desktop　›　'+esc(selectedCategory.split('/').join('　›　'))+'</span></div>':(selectedCategory?'<div class="folder-toolbar"><button type="button" data-folder-back>‹ フォルダー一覧に戻る</button><span>My Desktop　›　未分類</span></div>':'');
  const childHtml=folderChildren.map(f=>folderButton(f.name,f.key,f.count)).join('');
  $('count').textContent=(folderChildren.length?folderChildren.length+' フォルダー / ':'')+currentLinks.length+' 件';

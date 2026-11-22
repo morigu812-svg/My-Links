@@ -4187,3 +4187,97 @@ function visitorDmUpload_(parameters, peer, author, token) {
     } catch (_) { return visitorDmUploadStatus_(state); }
   } finally { lock.releaseLock(); }
 }
+
+/* Filter access reports, owned by the authenticated visitor browser. */
+function filterAccessSpreadsheet_() {
+  const id = PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY);
+  if (!id) throw new Error('スプレッドシートIDが未設定です。');
+  return SpreadsheetApp.openById(id);
+}
+function filterAccessSheet_(spreadsheet, name, headers, create) {
+  let sheet = spreadsheet.getSheetByName(name);
+  if (!sheet && create) sheet = spreadsheet.insertSheet(name);
+  if (sheet && create && !sheet.getLastRow()) sheet.appendRow(headers);
+  return sheet;
+}
+function filterAccessRows_(spreadsheet) {
+  const sheet = spreadsheet.getSheetByName('FilterAccessReports');
+  return sheet && sheet.getLastRow() > 1 ? sheet.getRange(2,1,sheet.getLastRow()-1,9).getValues() : [];
+}
+function filterAccessAliases_(spreadsheet) {
+  const sheet = spreadsheet.getSheetByName('FilterAccessAliases');
+  return new Map(sheet && sheet.getLastRow() > 1 ? sheet.getRange(2,1,sheet.getLastRow()-1,2).getDisplayValues() : []);
+}
+function filterAccessVisitor_(linkId, token) {
+  if (!isSessionValid_('VISITOR', token)) throw new Error('利用者ログインが必要です。');
+  const browser = visitorProfileBrowser_('', token);
+  const profile = getVisitorChatProfile(browser, token);
+  if (!profile.school || !profile.filter) throw new Error('学校名とフィルターを設定してください。');
+  const link = getLinksForToken_(token).links.find(item => item.id === linkId && item.visibleToVisitors === true);
+  if (!link) throw new Error('公開リンクが見つかりません。');
+  return {browser,profile,link};
+}
+function getMyFilterAccessReport(linkId, token) {
+  const {browser,profile} = filterAccessVisitor_(linkId, token);
+  const rows = filterAccessRows_(filterAccessSpreadsheet_());
+  const matches = rows.filter(row => row[0] === browser && row[1] === linkId && row[2] === profile.filter);
+  const latest = matches.sort((a,b) => String(toIso_(b[5])).localeCompare(String(toIso_(a[5]))))[0];
+  return {filter:profile.filter,school:profile.school,result:latest ? latest[4] : ''};
+}
+function saveFilterAccessReport(linkId, result, token) {
+  if (!['allowed','blocked',''].includes(result)) throw new Error('報告の種類が不正です。');
+  const {browser,profile,link} = filterAccessVisitor_(linkId, token);
+  const lock = LockService.getScriptLock(); lock.waitLock(10000);
+  try {
+    const spreadsheet = filterAccessSpreadsheet_();
+    const sheet = filterAccessSheet_(spreadsheet,'FilterAccessReports',
+      ['ブラウザID','リンクID','フィルター','学校名','結果','更新日時','リンク名','URL','報告ID'],!!result);
+    const rows = filterAccessRows_(spreadsheet);
+    const matches = rows.flatMap((row,index) => row[0] === browser && row[1] === linkId && row[2] === profile.filter ? [index+2] : []);
+    if (result) {
+      const row = matches.length ? matches[0] : sheet.getLastRow()+1;
+      sheet.getRange(row,1,1,9).setValues([[browser,linkId,safeCell_(profile.filter),safeCell_(profile.school),result,new Date(),
+        safeCell_(link.title),safeCell_(link.url),Utilities.getUuid()]]);
+      matches.slice(1).reverse().forEach(index => sheet.deleteRow(index));
+    } else if (sheet) matches.reverse().forEach(index => sheet.deleteRow(index));
+    SpreadsheetApp.flush();
+    removeChunkedJsonCache_('LC_FILTER_ACCESS_ADMIN_V1');
+    return {ok:true,filter:profile.filter,result};
+  } finally { lock.releaseLock(); }
+}
+function getFilterAccessSummary(adminToken) {
+  requireAdmin_(adminToken);
+  const cached = readChunkedJsonCache_('LC_FILTER_ACCESS_ADMIN_V1');
+  if (cached) return cached;
+  const spreadsheet = filterAccessSpreadsheet_();
+  const aliases = filterAccessAliases_(spreadsheet);
+  const reports = filterAccessRows_(spreadsheet).filter(row => ['allowed','blocked'].includes(row[4]))
+    .map(row => ({browser:String(row[0]),linkId:String(row[1]),filter:aliases.get(String(row[2])) || String(row[2]),
+      rawFilter:String(row[2]),school:String(row[3]),result:row[4],updatedAt:toIso_(row[5]),title:String(row[6]),url:String(row[7])}));
+  const registered = Array.from(visitorChatProfilesByBrowser_(spreadsheet).values(), profile => aliases.get(profile.filter) || profile.filter).filter(Boolean);
+  const filters = Array.from(new Set([...registered,...reports.map(row => row.filter)])).sort((a,b)=>a.localeCompare(b,'ja'));
+  const links = readLinksForDisplay_().links.map(link => ({id:link.id,title:link.title,url:link.url}));
+  const result = {reports,filters,links};
+  writeChunkedJsonCache_('LC_FILTER_ACCESS_ADMIN_V1',result,20);
+  return result;
+}
+function mergeFilterAccessNames(source, target, adminToken) {
+  requireAdmin_(adminToken);
+  source = cleanText_(source,80); target = cleanText_(target,80);
+  if (!source || !target || /[\u0000-\u001f]/.test(source+target)) throw new Error('フィルター名を入力してください。');
+  const lock = LockService.getScriptLock(); lock.waitLock(10000);
+  try {
+    const spreadsheet = filterAccessSpreadsheet_();
+    const aliases = filterAccessAliases_(spreadsheet);
+    const from = aliases.get(source) || source, to = aliases.get(target) || target;
+    if (from === to) return {ok:true};
+    aliases.forEach((value,key) => { if (value === from) aliases.set(key,to); });
+    aliases.set(from,to); aliases.set(source,to);
+    const sheet = filterAccessSheet_(spreadsheet,'FilterAccessAliases',['入力名','集計名'],true);
+    const values = Array.from(aliases, ([key,value]) => [safeCell_(key),safeCell_(value)]);
+    sheet.getRange(2,1,values.length,2).setValues(values);
+    SpreadsheetApp.flush();
+    removeChunkedJsonCache_('LC_FILTER_ACCESS_ADMIN_V1');
+    return {ok:true};
+  } finally { lock.releaseLock(); }
+}
