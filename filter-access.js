@@ -146,7 +146,11 @@
           row.append(link);
           [report.filter,report.state,report.allowed+'件',report.blocked+'件',
             report.updatedAt ? new Date(report.updatedAt).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo'}) : '—']
-            .forEach(value=>row.append(element('td',value)));
+            .forEach((value,index)=>{
+              const cell=element('td',value);
+              cell.dataset.label=['フィルター','結果','開けた','制限された','最終報告'][index];
+              row.append(cell);
+            });
           return row;
         }));
         status.textContent=rows.length ? rows.length+'件中 '+Math.min(visible,rows.length)+'件を表示' : '報告はまだありません。';
