@@ -16,3 +16,13 @@ html body .filter-access-menu{margin:4px 12px 12px;align-self:flex-end;color:#c4
 html body .filter-access-menu summary{cursor:pointer;list-style:none;text-align:right;padding:0 8px;font-weight:700}
 html body .filter-access-menu summary::-webkit-details-marker{display:none}
 html body .filter-access-menu button{font:inherit;color:#ddf4ff;background:#122e43;border:1px solid #365e78;border-radius:8px;padding:7px 10px;cursor:pointer}
+
+html body .filter-access-report{display:flex;justify-content:flex-end;padding:0 12px 12px}
+html body .filter-access-report .filter-access-blocked{
+ display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:40px;max-width:100%;
+ padding:8px 12px;border:1px solid #8a6931;border-radius:8px;background:#322817;color:#ffe2a2;
+ font:600 13px/1.5 "BIZ UDPGothic","Yu Gothic UI",system-ui,sans-serif;white-space:normal;text-align:center;cursor:pointer
+}
+html body .filter-access-report .filter-access-blocked:hover{background:#49371c;border-color:#d6a74c}
+html body .filter-access-report .filter-access-blocked:focus-visible{outline:2px solid #ffe2a2;outline-offset:3px}
+@media(max-width:760px){html body .filter-access-report{padding:0 12px 12px}html body .filter-access-report .filter-access-blocked{width:100%;min-height:44px}}

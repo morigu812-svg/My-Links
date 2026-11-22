@@ -11,7 +11,7 @@
  */
 'use strict';
 
-var CACHE_VERSION = 'link-core-v74';
+var CACHE_VERSION = 'link-core-v75';
 var STATIC_CACHE = 'link-core-static-' + CACHE_VERSION;
 var DATA_CACHE = 'link-core-data-' + CACHE_VERSION;
 
@@ -20,8 +20,8 @@ var DATA_CACHE = 'link-core-data-' + CACHE_VERSION;
 var STATIC_ASSETS = [
   './mobile-layout.css?v=1',
   './mobile-layout.js?v=1',
-  './filter-access.js?v=2',
-  './filter-access.css?v=1',
+  './filter-access.js?v=3',
+  './filter-access.css?v=3',
   './',
   './index.html',
   './admin.html',

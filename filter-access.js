@@ -29,7 +29,7 @@
       const id = card?.dataset.linkId;
       if (!id) return;
       event.preventDefault();
-      const dialog = modal('アクセス状況を報告');
+      const dialog = modal('⚠️ フィルターで制限された');
       const title = element('p',card.querySelector('a.title')?.textContent || 'リンク');
       const profile = element('p');
       const status = element('p', '登録情報を確認中…');
@@ -41,7 +41,7 @@
         profile.textContent = '登録フィルター　' + current.filter;
         status.textContent = '現在の報告　' + resultLabel(current.result);
         const actions = element('div','','filter-access-actions');
-        const buttons = [['allowed','開けた'],['blocked','フィルターで制限された'],['','報告を取り消す']].map(([result,label]) => {
+        const buttons = [['blocked','制限されたと報告する'],['allowed','開けたと報告する'],['','報告を取り消す']].map(([result,label]) => {
           const action = element('button',label,'btn');
           action.type = 'button';
           action.addEventListener('click', async () => {
@@ -51,8 +51,8 @@
               const response = await request('saveFilterAccessReport', id, result);
               if (!dialog.open) return;
               if (!response?.ok) throw new Error('保存を確認できませんでした。');
-              status.textContent = result ? response.filter + 'で「' + label + '」と報告しました。' : '報告を取り消しました。';
-              button.closest('details')?.removeAttribute('open');
+              status.textContent = result ? response.filter + 'で「' + resultLabel(result) + '」と報告しました。' : '報告を取り消しました。';
+
             } catch (error) {
               if (dialog.open) status.textContent = '保存できませんでした　' + error.message;
             } finally { buttons.forEach(item=>{item.disabled=false;}); }
