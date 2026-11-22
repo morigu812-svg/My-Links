@@ -880,6 +880,26 @@ function watchSessionExpiry(deadline, onExpired) {
   return stopWatching;
 }
 
+const VISITOR_SESSION_KEY = 'linkCoreVisitorSessionV1';
+function readVisitorSession() {
+ try {
+  const saved = JSON.parse(sessionStorage.getItem(VISITOR_SESSION_KEY) || 'null');
+  if (!saved || typeof saved.token !== 'string' || !saved.token ||
+      !Number.isFinite(saved.expiresAt) || saved.expiresAt <= Date.now() ||
+      saved.expiresAt > Date.now() + 1800000 ||
+      typeof saved.browserId !== 'string' || !/^[A-Za-z0-9_-]{8,100}$/.test(saved.browserId)) {
+   sessionStorage.removeItem(VISITOR_SESSION_KEY);
+   return null;
+  }
+  return saved;
+ } catch (_) { return null; }
+}
+function saveVisitorSession(token, expiresAt) {
+ try { sessionStorage.setItem(VISITOR_SESSION_KEY, JSON.stringify({token,expiresAt,browserId:getNoticeBrowserId()})); } catch (_) {}
+}
+function clearVisitorSession() {
+ try { sessionStorage.removeItem(VISITOR_SESSION_KEY); } catch (_) {}
+}
 let stopViewerExpiry = () => {};
 $('visitorLogout').addEventListener('click', async event => {
   event.currentTarget.disabled = true;
@@ -899,6 +919,7 @@ function showVisitorBan() {
   $('visitorBanTitle').focus();
 }
 function showVisitorLogin(message){
+  clearVisitorSession();
   if (visitorToken) void call('pulseVisitorOnline', false, visitorToken).catch(() => {});
   if (!$('visitorBanPanel').hidden) return;
   viewerDirectChat?.close();
@@ -908,7 +929,7 @@ function showVisitorLogin(message){
   $('visitorLogout').disabled = false;
   visitorToken='';
   if($('chatProfileDialog').open)$('chatProfileDialog').close();
-  visitorChatProfile=auth.profile && typeof auth.profile.school === 'string' && typeof auth.profile.filter === 'string' ? auth.profile : null;
+  visitorChatProfile=null;
   links=[];
   categories=[];
   favoriteIds=new Set();
@@ -1331,27 +1352,16 @@ function applyVisitorLinks(data){
  links=publicLinks(data.links);
  categories=Array.from(new Set(links.map(x=>x.category).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'ja'));
 }
-$('loginForm').addEventListener('submit',async event=>{
- event.preventDefault();
- const button=$('loginButton'), password=$('sitePassword');
- if(button.disabled)return;
- if (password.value === 'MoriLinks') {
-   location.assign('https://ea-deta.onrender.com/');
-   return;
- }
- button.disabled=true;
- $('loginError').textContent='認証中…';
- $('loginRetry').classList.add('hidden');
- try{
-  const loginStartedAt = Date.now();
-  const auth=await call('authenticateVisitor', password.value, getNoticeBrowserId(), await visitorIdentitySecret());
-  if(!auth||!auth.token)throw new Error('閲覧用トークンを取得できませんでした。');
+async function finishVisitorLogin(auth, expiresAt) {
+  if (expiresAt <= Date.now()) throw new Error('ログインの有効期限が切れました。');
   if(typeof auth.browserId==='string'&&/^[A-Za-z0-9_-]{8,100}$/.test(auth.browserId)){
    noticeBrowserId=auth.browserId;writeNoticeStorage(NOTICE_BROWSER_KEY,noticeBrowserId);
   }
   visitorToken=auth.token;
-  visitorChatProfile=null;
-  stopViewerExpiry = watchSessionExpiry(loginStartedAt + Math.min(auth.expiresIn || 1800, 1800) * 1000, () => {
+  visitorChatProfile=auth.profile && typeof auth.profile.school === 'string' && typeof auth.profile.filter === 'string' ? auth.profile : null;
+  saveVisitorSession(auth.token, expiresAt);
+  stopViewerExpiry();
+  stopViewerExpiry = watchSessionExpiry(expiresAt, () => {
     showVisitorLogin();
     location.reload();
   });
@@ -1373,13 +1383,31 @@ $('loginForm').addEventListener('submit',async event=>{
   $('search').value='';
   $('loginPanel').classList.add('hidden');
   $('linksPanel').classList.remove('hidden');
-  password.value='';
+  $('sitePassword').value='';
   $('loginError').textContent='';
   render();
   void refreshVisitorCounter();
   void loadVisitorFavorites(visitorToken);
+}
+$('loginForm').addEventListener('submit',async event=>{
+ event.preventDefault();
+ const button=$('loginButton'), password=$('sitePassword');
+ if(button.disabled)return;
+ if (password.value === 'MoriLinks') {
+   location.assign('https://ea-deta.onrender.com/');
+   return;
+ }
+ button.disabled=true;
+ $('loginError').textContent='認証中…';
+ $('loginRetry').classList.add('hidden');
+ try{
+  const loginStartedAt = Date.now();
+  const auth=await call('authenticateVisitor', password.value, getNoticeBrowserId(), await visitorIdentitySecret());
+  if(!auth||!auth.token)throw new Error('閲覧用トークンを取得できませんでした。');
+  await finishVisitorLogin(auth, loginStartedAt + Math.min(auth.expiresIn || 1800,1800)*1000);
  }catch(error){
   if (isVisitorBanError(error)) { showVisitorBan(); return; }
+  clearVisitorSession(); stopViewerExpiry();
   visitorToken='';
   $('linksPanel').classList.add('hidden');
   $('loginPanel').classList.remove('hidden');
@@ -1420,9 +1448,35 @@ async function checkVisitorBanStatus() {
     // Older GAS deployments still detect bans on login.
   }
 }
-void checkVisitorBanStatus();
-document.getElementById('loginButton').disabled = false;
-  document.getElementById('loginError').textContent = '';
+async function restoreVisitorSession() {
+ const saved = readVisitorSession();
+ if (!saved) {
+  $('loginButton').disabled=false;
+  $('loginError').textContent='';
+  void checkVisitorBanStatus();
+  return;
+ }
+ $('loginButton').disabled=true;
+ $('loginError').textContent='ログイン状態を確認中…';
+ try {
+  await call('checkViewerSession',saved.token);
+  if (saved.expiresAt <= Date.now()) throw new Error('ログインの有効期限が切れました。');
+  await finishVisitorLogin({token:saved.token,browserId:saved.browserId},saved.expiresAt);
+ } catch(error) {
+  stopViewerExpiry();
+  visitorToken='';
+  $('linksPanel').classList.add('hidden');
+  $('loginPanel').classList.remove('hidden');
+  if (isVisitorBanError(error)) { showVisitorBan(); return; }
+  const invalid = saved.expiresAt <= Date.now() || isVisitorAuthError(error) ||
+    /利用者ログインが必要|ログイン情報|ログインし直|再ログイン|ブラウザID/.test(error.message || '');
+  if (invalid) clearVisitorSession();
+  $('loginError').textContent=invalid
+   ? 'ログインの有効期限が切れました。もう一度サイトのパスワードを入力してください。'
+   : 'ログイン状態を復元できませんでした。再読み込みするか、ログインし直してください。';
+ } finally { $('loginButton').disabled=false; }
+}
+document.addEventListener('DOMContentLoaded',()=>{void restoreVisitorSession();},{once:true});
   $('loginRetry').addEventListener('click',()=>$('loginForm').requestSubmit());
 
 $('refreshLinks').addEventListener('click',async()=>{
