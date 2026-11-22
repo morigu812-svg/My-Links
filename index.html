@@ -4462,13 +4462,15 @@ footer{margin:16px 4px!important;font-size:11px!important}
   close.addEventListener('click', () => setOpen(false, true));
   backdrop.addEventListener('click', () => setOpen(false, true));
   sidebar.addEventListener('click', event => {
-    if (event.target.closest('.side-item')) setOpen(false);
+    if (!mobile.matches) return;
+    // Folder summaries expand in place. Navigation buttons close the drawer.
+    if (event.target.closest('button.side-item,a.side-item')) setOpen(false);
   });
   document.addEventListener('keydown', event => {
     if (!open) return;
     if (event.key === 'Escape') { event.preventDefault(); setOpen(false, true); }
     if (event.key === 'Tab') {
-      const items = Array.from(sidebar.querySelectorAll('button,a[href],input,select,textarea,[tabindex="0"]'))
+      const items = Array.from(sidebar.querySelectorAll('button,a[href],summary,input,select,textarea,[tabindex="0"]'))
         .filter(item => !item.disabled && item.getClientRects().length);
       const first = items[0], last = items[items.length - 1];
       if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
