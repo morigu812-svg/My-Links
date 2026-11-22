@@ -26,3 +26,15 @@ html body .filter-access-report .filter-access-blocked{
 html body .filter-access-report .filter-access-blocked:hover{background:#49371c;border-color:#d6a74c}
 html body .filter-access-report .filter-access-blocked:focus-visible{outline:2px solid #ffe2a2;outline-offset:3px}
 @media(max-width:760px){html body .filter-access-report{padding:0 12px 12px}html body .filter-access-report .filter-access-blocked{width:100%;min-height:44px}}
+
+/* Keep report controls above the card's stretched link hit area. */
+html body #linksPanel .lc-link-card .filter-access-report {
+ position:relative;
+ z-index:2;
+ isolation:isolate;
+}
+html body #linksPanel .lc-link-card .filter-access-blocked {
+ position:relative;
+ z-index:1;
+ pointer-events:auto;
+}
