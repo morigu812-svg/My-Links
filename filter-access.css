@@ -43,3 +43,50 @@ html body #linksPanel .lc-link-card .filter-access-blocked {
 html body .filter-access-panel{width:100%;max-width:none;max-height:none;min-width:0;margin:0;border:0;border-radius:0;padding:20px;background:transparent;font:inherit}
 html body .filter-access-panel .filter-access-table{max-height:none}
 html body .filter-access-panel h2{margin:0 0 12px}
+
+/* Filter access analytics dashboard — 2026 */
+.fa-dashboard{display:grid;gap:17px;min-width:0;padding-bottom:24px}
+.fa-lead{margin:0;color:#a5c1d2;font-size:13px;line-height:1.7}
+.fa-period-tools,.fa-actions,.fa-toolbar,.fa-detail-tools{display:flex;align-items:center;flex-wrap:wrap;gap:10px}
+.fa-period-tools{padding:4px;border:1px solid #264b61;border-radius:12px;width:max-content;max-width:100%}
+.filter-access-dialog .fa-period{padding:8px 15px;border:0;background:transparent;color:#9bbaca;cursor:pointer;border-radius:9px;font-size:13px}
+.filter-access-dialog .fa-period[aria-pressed=true]{background:#146586;color:#f2fdff;box-shadow:0 3px 12px #0005;font-weight:750}
+.fa-toolbar{align-items:end}
+.fa-field{display:grid;gap:5px;min-width:125px;flex:1}
+.fa-field>span{font-size:11px;color:#abc9da;font-weight:650}
+.fa-field input,.fa-field select{width:100%;box-sizing:border-box;min-height:40px}
+.fa-field.fa-search{flex:2;min-width:200px}
+.fa-status{margin:0;color:#a9c5d5;font-size:12px}
+.fa-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.fa-card{display:grid;align-content:start;gap:7px;border:1px solid #2a5267;background:linear-gradient(135deg,#152b40,#0d2031);border-radius:13px;min-height:105px;padding:17px}
+.fa-card-label{font-size:12px;color:#a5c4d6}
+.fa-card-value{color:#e4fbff;font-size:clamp(23px,3vw,31px);font-weight:850;font-variant-numeric:tabular-nums}
+.fa-card-hint{font-size:10px;color:#89a9bb;line-height:1.5}
+.fa-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.fa-section{min-width:0;background:linear-gradient(135deg,#13263b,#0b1b2c);border:1px solid #29495e;border-radius:13px;padding:17px}
+.fa-section>h3{margin:0 0 8px;font-size:16px;font-weight:750;color:#e7faff}
+.fa-hint,.fa-method{font-size:11px;color:#92acbe;line-height:1.75;margin:0 0 12px}
+.fa-ranks{max-height:330px;overflow:auto;display:grid;gap:7px}
+.filter-access-dialog .fa-rank{padding:9px 10px;border:1px solid #294a5d;border-radius:9px;background:#0b2031;width:100%;display:grid;gap:8px;text-align:left;color:#e5f6ff;cursor:pointer}
+.filter-access-dialog .fa-rank:hover{border-color:#3cb8dd;background:#122e45}
+.fa-rank-info{display:grid;gap:3px}
+.fa-rank-name{font-size:12px;font-weight:700;overflow-wrap:anywhere}
+.fa-rank-count{font-size:10px;color:#9bb8c9}
+.fa-rank-bar{width:100%;height:6px;background:#223b4b;border-radius:7px;overflow:hidden}
+.fa-rank-fill{height:100%;border-radius:7px;background:linear-gradient(90deg,#276cba,#55e0f5);min-width:2px}
+.fa-graph{min-width:0;min-height:225px}
+.fa-plot{width:100%;height:auto;display:block}
+.fa-school-list{display:grid;gap:6px}
+.fa-school-row{display:grid;grid-template-columns:minmax(140px,2fr) repeat(3,minmax(90px,1fr));gap:8px;align-items:center;background:#0a1e30;padding:10px 12px;border:1px solid #24465a;border-radius:9px;font-size:11px;color:#b9d9ea}
+.fa-school-row strong{color:#e8faff;font-size:12px;overflow-wrap:anywhere}
+.fa-detail-tools{justify-content:space-between;align-items:start}
+.fa-detail-tools .fa-hint{max-width:680px}
+.fa-toggle{display:flex;align-items:center;gap:7px;cursor:pointer;font-size:11px;color:#b6cede}
+.fa-toggle input{width:auto!important}
+.fa-empty{text-align:center;color:#86a9bd;padding:16px 6px;font-size:12px}
+.fa-method{margin:0;border-top:1px solid #29495e;padding-top:12px}
+.fa-detail-table{min-width:730px}
+.fa-link-title strong{display:block;font-size:12px}
+.fa-link-title small{display:block;margin-top:4px}
+@media(max-width:1000px){.fa-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.fa-grid{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:620px){.fa-cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.fa-card{padding:12px;min-height:90px}.fa-section{padding:12px}.fa-field,.fa-field.fa-search{min-width:calc(50% - 10px)}.fa-school-row{grid-template-columns:1fr 1fr;gap:5px}.fa-school-row strong{grid-column:1/-1}.fa-detail-table{min-width:680px}.fa-period-tools{width:100%}.filter-access-dialog .fa-period{flex:1}}

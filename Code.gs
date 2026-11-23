@@ -4274,6 +4274,98 @@ function getFilterAccessSummary(adminToken) {
   writeChunkedJsonCache_('LC_FILTER_ACCESS_ADMIN_V1',result,20);
   return result;
 }
+
+/**
+ * FILTER ACCESS ANALYTICS — clicks and login events (not self-reported success).
+ * Links each logged browser to its CURRENT registered filter and school.
+ * Private browser IDs never leave GAS; only aggregated numbers reach admin.
+ * Source histories can be deleted/truncated independently from these reports.
+ */
+function getFilterAccessActivitySummary(adminToken) {
+  requireAdmin_(adminToken);
+  const key = 'LC_FILTER_ACTIVITY_DASHBOARD_V2';
+  const cached = readChunkedJsonCache_(key);
+  if (cached) return cached;
+  const ss = filterAccessSpreadsheet_();
+  const aliases = filterAccessAliases_(ss);
+  const profiles = visitorChatProfilesByBrowser_(ss);
+  const unknown = '未設定・不明';
+  const now = new Date();
+  const today = Utilities.formatDate(now,'Asia/Tokyo','yyyy-MM-dd');
+  const midnight = Date.parse(today + 'T00:00:00+09:00');
+  const jstDate = stamp => new Date(stamp + 9 * 3600000).toISOString().slice(0,10);
+  const day7 = jstDate(midnight - 6 * 86400000);
+  const day30 = jstDate(midnight - 29 * 86400000);
+  const period = () => ({clicks:0,logins:0,ids:new Set(),unknownIds:new Set(),groups:new Map()});
+  const periods = {'7':period(),'30':period(),'all':period()};
+  const trends = new Map(), missing=[], truncated=[];
+  const sources = [{sheet:'ClickLogs',firstColumn:5,type:'clicks'},
+                   {sheet:'VisitorLoginLogs',firstColumn:1,type:'logins'}];
+  function countVisit(sourceName, type, dateCell, browserCell) {
+    const browser = String(browserCell || '').trim();
+    let stamp;
+    if (dateCell instanceof Date) stamp = dateCell.getTime();
+    else stamp = new Date(dateCell).getTime();
+    if (!Number.isFinite(stamp) || stamp > now.getTime()+86400000) return;
+    const day = jstDate(stamp);
+    const profile = browser ? profiles.get(browser) : null;
+    const rawFilter = String(profile?.filter || '').trim();
+    const filter = (aliases.get(rawFilter) || rawFilter).trim() || unknown;
+    const school = String(profile?.school || '').trim() || unknown;
+    const groupKey = JSON.stringify([filter,school]);
+    for (const key of ['7','30','all']) {
+      if (key==='7' && day<day7 || key==='30' && day<day30) continue;
+      const total = periods[key];
+      total[type]++;
+      if (browser) {
+        total.ids.add(browser);
+        if (filter===unknown) total.unknownIds.add(browser);
+      }
+      if (!total.groups.has(groupKey)) {
+        total.groups.set(groupKey,{filter,school,clicks:0,logins:0,ids:new Set()});
+      }
+      const group = total.groups.get(groupKey);
+      group[type]++;
+      if (browser) group.ids.add(browser);
+    }
+    if (day>=day30 && day<=today) {
+      const trendKey = JSON.stringify([day,filter,school]);
+      if (!trends.has(trendKey)) trends.set(trendKey,{date:day,filter,school,clicks:0,logins:0});
+      trends.get(trendKey)[type]++;
+    }
+  }
+  sources.forEach(source=>{
+    const sheet = ss.getSheetByName(source.sheet);
+    if (!sheet) {missing.push(source.sheet);return;}
+    const last = sheet.getLastRow();
+    if (last<2) return;
+    const first = Math.max(2,last-49999);
+    if (first>2) truncated.push(source.sheet);
+    if (sheet.getMaxColumns()<source.firstColumn+1) {missing.push(source.sheet+'（列不足）');return;}
+    // Only read the timestamp and browser ID columns, not URLs or message text.
+    sheet.getRange(first,source.firstColumn,last-first+1,2).getValues()
+      .forEach(row=>countVisit(source.sheet,source.type,row[0],row[1]));
+  });
+  function exportPeriod(p) {
+    return {clicks:p.clicks,logins:p.logins,browsers:p.ids.size,
+      unknownBrowsers:p.unknownIds.size,
+      groups:Array.from(p.groups.values(),g=>({
+        filter:g.filter,school:g.school,clicks:g.clicks,logins:g.logins,browsers:g.ids.size
+      })).sort((a,b)=>b.clicks-a.clicks || b.browsers-a.browsers || a.filter.localeCompare(b.filter,'ja'))};
+  }
+  const result = {periods:{
+      '7':exportPeriod(periods['7']),
+      '30':exportPeriod(periods['30']),
+      'all':exportPeriod(periods.all)
+    },
+    daily:Array.from(trends.values()).sort((a,b)=>a.date.localeCompare(b.date)),
+    missing,truncated,generatedAt:now.toISOString(),
+    classification:'記録にあるブラウザIDを現在の登録フィルター・学校と照合しています。過去の設定変更は遡って復元できません。',
+    definitions:'リンククリックとログインは保存済みの操作履歴です。利用者からの「開けた・制限された」報告数とは異なります。'};
+  writeChunkedJsonCache_(key,result,60);
+  return result;
+}
+
 function mergeFilterAccessNames(source, target, adminToken) {
   requireAdmin_(adminToken);
   source = cleanText_(source,80); target = cleanText_(target,80);
