@@ -3836,7 +3836,7 @@ $('closeChat').addEventListener('click', closeMainChat);
 
 
   const STAFF_RECENT_BATCH = 20;
-  const STAFF_MAX_VISIBLE = 200;
+  const STAFF_HISTORY_BATCH = 200;
   let staffRefreshRequestedWhileLoading = false;
   let staffFullRefreshRequestedWhileLoading = false;
   let staffMessageCache = [];
@@ -3848,7 +3848,7 @@ $('closeChat').addEventListener('click', closeMainChat);
     [...older, ...newer].forEach(message => {
       if (message && typeof message.id === 'string') combined.set(message.id, message);
     });
-    return Array.from(combined.values()).slice(-STAFF_MAX_VISIBLE);
+    return Array.from(combined.values());
   }
 
   let openStaffMessageActions = null;
@@ -4274,22 +4274,30 @@ $('closeChat').addEventListener('click', closeMainChat);
         if (firstLoad) staffStatus.textContent = '最新' + newest.length + '件を表示中。古いメッセージを追加で読み込んでいます…';
         let older = [];
         try {
-          const previous = await readStaffRoom(token,
-            {room, beforeRow: result.nextCursor, limit: STAFF_MAX_VISIBLE - newest.length});
-          if (previous?.room !== room || !Array.isArray(previous.messages)) {
-            throw new Error('古い履歴の形式が不正です。');
+          let cursor = result.nextCursor;
+          const seenCursors = new Set();
+          while (Number.isInteger(cursor)) {
+            if (seenCursors.has(cursor)) throw new Error('古い履歴の取得位置が重複しました。');
+            seenCursors.add(cursor);
+            const previous = await readStaffRoom(token,
+              {room, beforeRow: cursor, limit: STAFF_HISTORY_BATCH});
+            if (previous?.room !== room || !Array.isArray(previous.messages)) {
+              throw new Error('古い履歴の形式が不正です。');
+            }
+            if (token !== adminSession.getItem(ADMIN_TOKEN_KEY) ||
+                openGeneration !== staffOpenGeneration || document.hidden ||
+                !staffChat.classList.contains('open')) {
+              await newestRead;
+              return;
+            }
+            older = mergeStaffMessagePages(previous.messages, older);
+            staffMessageCache = mergeStaffMessagePages(older, newest);
+            renderStaffMessages(staffMessageCache, token);
+            // Each read-receipt request remains within the server's 200-ID limit.
+            await markDisplayedStaffUnread(previous.messages, token);
+            cursor = previous.nextCursor;
           }
-          older = previous.messages;
-          if (token !== adminSession.getItem(ADMIN_TOKEN_KEY) ||
-              openGeneration !== staffOpenGeneration || document.hidden ||
-              !staffChat.classList.contains('open')) {
-            await newestRead;
-            return;
-          }
-          staffMessageCache = mergeStaffMessagePages(older, newest);
-          renderStaffMessages(staffMessageCache, token);
-          const olderRead = markDisplayedStaffUnread(older, token);
-          await Promise.all([newestRead, olderRead]);
+          await newestRead;
           if (openGeneration !== staffOpenGeneration || !staffChat.classList.contains('open') ||
               token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
           staffHistoryLoaded = true;
