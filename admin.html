@@ -1170,7 +1170,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
 <link rel="stylesheet" href="./filter-access.css?v=6">
 <script src="./filter-access.js?v=6"></script>
 <meta name="referrer" content="no-referrer">
-<link rel="stylesheet" href="./log-dashboard.css?v=2"><script src="./log-dashboard.js?v=2"></script></head>
+<link rel="stylesheet" href="./log-dashboard.css?v=3"><script src="./log-dashboard.js?v=3"></script></head>
 <body>
 <section id="authGate" class="auth-gate" aria-labelledby="authTitle">
   <form id="authForm" onsubmit="return false" class="auth-card">
@@ -2936,7 +2936,15 @@ document.getElementById('authSubmit').disabled = false;
     const button = $('refreshOtherHistory');
     const status = $('otherHistoryStatus');
     button.disabled = true;
-    status.textContent = '履歴を読み込んでいます…';
+    status.textContent = history.key === 'logDashboard' ? 'ログ分析を読み込んでいます…' : '履歴を読み込んでいます…';
+    $('otherHistoryRows').setAttribute('aria-busy', String(history.key === 'logDashboard'));
+    if (history.key === 'logDashboard') {
+      const row = document.createElement('tr');
+      const cell = row.insertCell();
+      cell.colSpan = history.columns.length;
+      window.renderLogDashboardSkeleton(cell);
+      $('otherHistoryRows').replaceChildren(row);
+    }
     try {
       const result = history.key === 'visitorDirectory' && force === true
         ? await serverCall(history.api, {refresh:true}) : await serverCall(history.api);
@@ -3173,9 +3181,21 @@ document.getElementById('authSubmit').disabled = false;
         ? '今日 '+Number(result.today || 0).toLocaleString('ja-JP')+'人 ／ 総来客 '+Number(result.total || 0).toLocaleString('ja-JP')+'人 ／ 日付別 '+logs.length+'日を表示中'
         : history.key === 'onlineVisitors' ? logs.length + '人の利用者がオンライン' : history.key === 'banVisitors' ? logs.length + '件のブラウザを表示中' : '直近 ' + logs.length + ' 件を表示中';
     } catch (error) {
-      if (request === historyRequest) status.textContent = '読み込みに失敗しました：' + error.message;
+      if (request === historyRequest) {
+        status.textContent = '読み込みに失敗しました：' + error.message;
+        if (history.key === 'logDashboard') {
+          const row = document.createElement('tr');
+          const cell = row.insertCell();
+          cell.colSpan = history.columns.length;
+          cell.textContent = 'ログ分析を取得できませんでした。「再読み込み」で再試行できます。';
+          $('otherHistoryRows').replaceChildren(row);
+        }
+      }
     } finally {
-      if (request === historyRequest) button.disabled = false;
+      if (request === historyRequest) {
+        button.disabled = false;
+        $('otherHistoryRows').setAttribute('aria-busy', 'false');
+      }
     }
   }
 

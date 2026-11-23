@@ -1,5 +1,26 @@
 (() => {
   const make=(tag,text,cls)=>{const el=document.createElement(tag);if(text!==undefined)el.textContent=text;if(cls)el.className=cls;return el;};
+  window.renderLogDashboardSkeleton=container=>{
+    container.replaceChildren();
+    const root=make('div',undefined,'log-dashboard log-dashboard-skeleton');
+    root.setAttribute('aria-hidden','true');
+    const placeholder=(cls)=>make('div',undefined,'log-skeleton-block '+cls);
+    root.append(placeholder('log-skeleton-intro'));
+    const cards=make('div',undefined,'log-dashboard-cards');
+    for(let i=0;i<7;i++){
+      const card=make('div',undefined,'log-dashboard-stat');
+      card.append(placeholder('log-skeleton-label'),placeholder('log-skeleton-number'),placeholder('log-skeleton-unit'));
+      cards.append(card);
+    }
+    root.append(cards,placeholder('log-skeleton-control'));
+    const grid=make('div',undefined,'log-dashboard-grid');
+    for(let i=0;i<4;i++){
+      const chart=make('section',undefined,'log-dashboard-chart');
+      chart.append(placeholder('log-skeleton-label'),placeholder('log-skeleton-plot'),placeholder('log-skeleton-axis'));
+      grid.append(chart);
+    }
+    root.append(grid);container.append(root);
+  };
   window.renderLogDashboard=(container,data)=>{
     container.replaceChildren();
     const root=make('div',undefined,'log-dashboard');

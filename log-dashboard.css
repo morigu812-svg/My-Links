@@ -2,3 +2,16 @@
 #otherHistoryView:has(.log-dashboard)>.click-log-table-wrap>.click-log-table{min-width:0;width:100%;table-layout:fixed}#otherHistoryView:has(.log-dashboard)>.click-log-table-wrap>.click-log-table>tbody>tr>td{padding:0;white-space:normal;max-width:none}#otherHistoryView:has(.log-dashboard)>.click-log-table-wrap>.click-log-table>thead{display:none}
 
 .log-dashboard-category{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:18px 0}.log-dashboard-category select{font:inherit;color:inherit;background:#102b40;border:1px solid #32728b;border-radius:8px;padding:8px 12px}.log-dashboard-chart[hidden]{display:none!important}#sideBanAppeals[hidden]{display:none!important}
+
+/* Loading placeholders use the same card and chart layout as the dashboard. */
+.log-skeleton-block{position:relative;overflow:hidden;border-radius:6px;background:#173246}
+.log-skeleton-block::after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,rgba(151,223,245,.13),transparent);animation:log-skeleton-shimmer 1.5s ease-in-out infinite}
+.log-skeleton-intro{height:18px;width:min(90%,620px);margin:14px 0 22px}
+.log-skeleton-label{height:14px;width:65%;margin:3px 0 12px}
+.log-skeleton-number{height:34px;width:48%;margin:2px 0 8px}
+.log-skeleton-unit{height:11px;width:28%}
+.log-skeleton-control{height:36px;width:220px;max-width:100%;margin:18px 0}
+.log-skeleton-plot{height:160px;width:100%;margin-top:20px}
+.log-skeleton-axis{height:12px;width:100%;margin:12px 0}
+@keyframes log-skeleton-shimmer{to{transform:translateX(100%)}}
+@media(prefers-reduced-motion:reduce){.log-skeleton-block::after{animation:none;transform:none;background:none}}
