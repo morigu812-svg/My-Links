@@ -841,7 +841,7 @@ function renderChat(messages){const key=JSON.stringify(messages);if(key===viewer
 function isVisitorBanError(error) {
   return /このブラウザは利用を停止されています/.test(String(error?.message || error || ''));
 }
-function isVisitorAuthError(error){return isVisitorBanError(error) || /閲覧にはサイトのパスワード認証が必要|利用者用パスワード|認証が必要/.test(error&&error.message?error.message:String(error||''));}
+function isVisitorAuthError(error){return isVisitorBanError(error) || /閲覧にはサイトのパスワード認証が必要|利用者用パスワード|認証が必要|ログインの有効期限が切れ|ログインし直してください/.test(error&&error.message?error.message:String(error||''));}
 let checkingViewerSession = false;
 let viewerSessionCheckAvailable = true;
 
@@ -865,19 +865,25 @@ document.addEventListener('visibilitychange', checkActiveViewerSession);
 setInterval(checkActiveViewerSession, 30000);
 
 function watchSessionExpiry(deadline, onExpired) {
+  let stopped = false;
   function checkExpiry() {
-    if (Date.now() < deadline) return;
+    if (stopped || Date.now() < deadline) return;
     stopWatching();
     onExpired();
   }
   function stopWatching() {
+    stopped = true;
     clearTimeout(timer);
+    clearInterval(interval);
     document.removeEventListener('visibilitychange', checkExpiry);
     window.removeEventListener('pageshow', checkExpiry);
+    window.removeEventListener('focus', checkExpiry);
   }
   const timer = setTimeout(checkExpiry, Math.max(0, deadline - Date.now()));
+  const interval = setInterval(checkExpiry, 1000);
   document.addEventListener('visibilitychange', checkExpiry);
   window.addEventListener('pageshow', checkExpiry);
+  window.addEventListener('focus', checkExpiry);
   return stopWatching;
 }
 
@@ -923,6 +929,7 @@ function showVisitorLogin(message){
   clearVisitorSession();
   if (visitorToken) void call('pulseVisitorOnline', false, visitorToken).catch(() => {});
   if (!$('visitorBanPanel').hidden) return;
+  visitorToken='';
   viewerDirectChat?.close();
   viewerChatRealtime?.stop();
   viewerReply?.clear();
@@ -1364,7 +1371,6 @@ async function finishVisitorLogin(auth, expiresAt) {
   stopViewerExpiry();
   stopViewerExpiry = watchSessionExpiry(expiresAt, () => {
     showVisitorLogin();
-    location.reload();
   });
   if(!await ensureVisitorChatProfile(false,true)){
    const token=visitorToken;
