@@ -409,8 +409,7 @@ function authenticateVisitor(password, browserId, browserSecret) {
     profile.school && profile.filter ? '1' : '0', SESSION_TTL_SECONDS);
   const initialLinks = getLinksForToken_(token, false);
   recordVisitorLogin_(browserId);
-  // 同じブラウザは1日1回まで。ログイン履歴の削除とは独立して保存する。
-  recordVisitorCounter_(browserId);
+
   return {
     ok: true, token: token, browserId:browserId, profile:profile, expiresIn: SESSION_TTL_SECONDS,
     links: initialLinks.links, categories: initialLinks.categories, replyRequired:!!initialLinks.replyRequired, profileRequired:!!initialLinks.profileRequired
@@ -3185,31 +3184,36 @@ function visitorCounterDigest_(browserId, salt) {
   return Utilities.computeHmacSha256Signature(browserId, salt)
     .map(byte => (byte & 255).toString(16).padStart(2, '0')).join('');
 }
-function recordVisitorCounter_(browserId) {
-  // 有効な識別子がない場合に仮のIDでカウントを増やさない。
+function recordVisitorCounter_(browserId, lockedSpreadsheet) {
   if (typeof browserId !== 'string' || !/^[A-Za-z0-9_-]{8,100}$/.test(browserId)) return;
-  const lock = LockService.getScriptLock();
+  const cache = CacheService.getScriptCache();
+  const day = visitorCounterToday_();
+  if (day < VISITOR_COUNTER_MIN_DATE) return;
+  const digest = visitorCounterDigest_(browserId, visitorCounterSalt_());
+  const cacheKey = 'LINK_CORE_COUNTED_V1_' + day + '_' + digest;
+  if (cache.get(cacheKey) === '1') return;
+  const lock = lockedSpreadsheet ? null : LockService.getScriptLock();
   let acquired = false;
   try {
-    lock.waitLock(10000);
-    acquired = true;
-    const digest = visitorCounterDigest_(browserId, visitorCounterSalt_());
-    const day = visitorCounterToday_();
-    if (day < VISITOR_COUNTER_MIN_DATE) return;
-    const sheet = visitorCounterSheet_(true);
+    if (lock) { lock.waitLock(10000); acquired = true; }
+    if (cache.get(cacheKey) === '1') return;
+    let sheet = lockedSpreadsheet ? lockedSpreadsheet.getSheetByName(VISITOR_COUNTER_SHEET) : null;
+    if (!sheet || sheet.getLastRow() === 0) sheet = visitorCounterSheet_(true);
     const last = sheet.getLastRow();
-    // Read history in one batch, including out-of-order imported visits.
-    const rows = last > 1 ? sheet.getRange(2, 1, last - 1, 2).getValues() : [];
-    if (rows.some(row => visitorCounterDateKey_(row[0]) === day && String(row[1]) === digest)) return;
-    sheet.appendRow([day, digest, new Date()]);
-
+    // Search this browser's history rather than transferring every visitor's rows.
+    const matches = last > 1 ? sheet.getRange(2, 2, last - 1, 1)
+      .createTextFinder(digest).matchEntireCell(true).matchCase(true).findAll() : [];
+    const counted = matches.some(cell => visitorCounterDateKey_(sheet.getRange(cell.getRow(), 1).getValue()) === day);
+    if (!counted) sheet.appendRow([day, digest, new Date()]);
+    // Cache is only an optimization. A miss always checks the persisted records under the lock.
+    cache.put(cacheKey, '1', 21600);
   } catch (error) {
-    // カウント機能のトラブルで利用者ログインを失敗させない。
     console.error('利用者来客カウンターを記録できませんでした。', error && error.message ? error.message : error);
   } finally {
     if (acquired) lock.releaseLock();
   }
 }
+
 
 /** 過去ログの日時を日本時間の日付に揃える。文字列はシートに表示された日付形式のみ許可。 */
 function visitorCounterLegacyDate_(value) {
@@ -3387,9 +3391,11 @@ function recordVisitorLogin_(browserId) {
     const id = PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY);
     const spreadsheet = SpreadsheetApp.openById(id);
     const sheet = spreadsheet.getSheetByName('VisitorLoginLogs') || spreadsheet.insertSheet('VisitorLoginLogs');
-    if (!sheet.getLastRow()) sheet.appendRow(['ログイン日時', 'ブラウザID', '履歴ID']);
+    const lastRow = sheet.getLastRow();
+    if (!lastRow) sheet.appendRow(['ログイン日時', 'ブラウザID', '履歴ID']);
     else if (sheet.getLastColumn() === 1) sheet.getRange(1, 2).setValue('ブラウザID');
     sheet.appendRow([new Date(), safeCell_(idForLog), Utilities.getUuid()]);
+    recordVisitorCounter_(browserId, spreadsheet);
   } catch (error) {
     console.error('利用者ログイン履歴の保存に失敗しました。', error.message);
   } finally {
