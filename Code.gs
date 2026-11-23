@@ -3605,25 +3605,17 @@ function supabaseStaffChatMessages_(opts, mailbox, metadata, limit) {
   const summary = opts.mode === 'summary' || opts.mode === 'conversations';
   if (roomScoped) metadata.room = opts.room;
   if (summary) {
-    const rows = supabaseChatRows_(Object.assign({}, base, {select:'sender,recipient,readers', limit:CHAT_MAX_MESSAGES}));
+    const result = supabaseChatRequest_('post', 'rpc/link_core_staff_summary',
+      {mailbox:mailbox || '', include_conversations:opts.mode === 'conversations'});
+    if (!result || !Array.isArray(result.messages)) throw new Error('管理者チャット一覧を取得できませんでした。');
     if (opts.mode === 'conversations') {
-      const peers = new Map();
-      if (mailbox) {
-        const props = PropertiesService.getScriptProperties().getProperties();
-        for (let offset = 0; ; offset += 500) {
-          const page = supabaseChatRows_({kind:'eq.staff', is_direct:'eq.true', or:'(sender.eq.'+mailbox+',recipient.eq.'+mailbox+')', order:'seq.desc', select:'sender,recipient', limit:500, offset});
-          page.forEach(row => {
-            const peer = row.sender === mailbox ? row.recipient : row.sender;
-            if (peer && !peers.has(peer)) peers.set(peer, {mailboxId:peer, name:props[STAFF_CHAT_MEMBER_PREFIX+peer] || '管理者'});
-          });
-          if (page.length < 500) break;
-        }
-      }
-      metadata.conversations = Array.from(peers.values());
+      if (!Array.isArray(result.conversations)) throw new Error('トーク一覧の応答が不正です。');
+      const names = PropertiesService.getScriptProperties().getProperties();
+      result.conversations = result.conversations.map(peer => ({
+        mailboxId:peer.mailboxId, name:names[STAFF_CHAT_MEMBER_PREFIX + peer.mailboxId] || '管理者'
+      }));
     }
-    const unread = mailbox ? rows.filter(row => row.sender !== mailbox && !row.readers.includes(mailbox)) : [];
-    return Object.assign({messages:[], nextCursor:null, unreadCount:unread.length,
-      latestUnreadRoom:unread.length ? (unread[0].recipient ? unread[0].sender || null : '') : null}, metadata);
+    return Object.assign(result, metadata);
   }
   const query = Object.assign(base, {select:'seq,id,sender,recipient,body,created_at,readers,file_name,file_mime,file_size,reply_to', limit:limit+1});
   if (roomScoped) {
