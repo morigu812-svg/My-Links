@@ -1168,9 +1168,9 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
 @media(max-width:540px){.visitor-counter-strip{gap:8px 13px;padding:10px}}
 </style>
 <link rel="stylesheet" href="./filter-access.css?v=6">
-<script src="./filter-access.js?v=5"></script>
+<script src="./filter-access.js?v=6"></script>
 <meta name="referrer" content="no-referrer">
-<link rel="stylesheet" href="./log-dashboard.css?v=1"><script src="./log-dashboard.js?v=1"></script></head>
+<link rel="stylesheet" href="./log-dashboard.css?v=2"><script src="./log-dashboard.js?v=2"></script></head>
 <body>
 <section id="authGate" class="auth-gate" aria-labelledby="authTitle">
   <form id="authForm" onsubmit="return false" class="auth-card">
@@ -1229,7 +1229,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
           <button class="side-item" type="button" id="sideFilterAccess"><span aria-hidden="true">▥</span> フィルター別アクセス状況</button>
           <button class="side-item" type="button" id="sideVisitorDirectory"><span aria-hidden="true">▤</span> 利用者一覧</button>
           <button class="side-item" type="button" id="sideOnlineVisitors"><span aria-hidden="true">●</span> オンラインの利用者</button>
-          <button class="side-item" type="button" id="sideBanAppeals"><span aria-hidden="true">⚑</span> 異議申し立て</button>
+          <button class="side-item" type="button" id="sideBanAppeals" hidden><span aria-hidden="true">⚑</span> 異議申し立て</button>
           <button class="side-item" type="button" id="sideLinkReports"><span>⚑</span> リンク報告 <span id="linkReportBadge" class="new-badge" hidden></span></button>
         </div>
       </details>
@@ -1239,7 +1239,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
           <button class="side-item" type="button" id="sideClickLogs"><span>◷</span> クリック履歴</button>
           <button class="side-item" type="button" id="sideVisitorLogins"><span>◷</span> 利用者ログイン履歴</button>
           <button class="side-item" type="button" id="sideLogDashboard"><span aria-hidden="true">▥</span> ログ分析</button>
-          <button class="side-item" type="button" id="sideSecurityEvents"><span aria-hidden="true">🛡</span> セキュリティ検知</button>
+          <button class="side-item" type="button" id="sideSecurityEvents"><span aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4.5 6v5c0 4.5 3 8 7.5 10 4.5-2 7.5-5.5 7.5-10V6L12 3Z"/><path d="m9 12 2 2 4-5"/></svg></span> セキュリティ検知</button>
           <button class="side-item" type="button" id="sideLinkOperations"><span>◷</span> リンク操作履歴</button>
           <button class="side-item" type="button" id="sideVisitorCounter"><span>▥</span> 来客数カウンター</button>
         </div>
@@ -1694,7 +1694,14 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
         reject(error);
       }
     }));
-    return request.catch(error => {
+    return request.then(value => {
+      if (Number.isInteger(value?.bannedCount)) {
+        const menu = $('sideBanAppeals');
+        menu.hidden = value.bannedCount === 0;
+        if (menu.hidden && activeHistory?.key === 'banAppeals') document.querySelector('[data-view="all"]').click();
+      }
+      return value;
+    }).catch(error => {
       const message = error && error.message ? error.message : String(error || '');
       if (protectedMethods.includes(method) &&
           /管理者ログインが必要|ログインし直してください|閲覧にはサイトのパスワード認証が必要/.test(message)) {
@@ -2784,10 +2791,12 @@ document.getElementById('authSubmit').disabled = false;
     "side": "sideVisitorLogins",
     "api": "getVisitorLoginLogs",
     "title": "利用者ログイン履歴",
-    "description": "利用者のログイン成功の記録です（直近200件）。",
+    "description": "利用者のログイン成功の記録です（直近200件）。学校名・フィルターは現在の登録情報で、ログイン当時の設定ではありません。",
     "columns": [
       "ログイン日時",
       "ブラウザID",
+      "学校名（現在）",
+      "フィルター（現在）",
       "BAN状態",
       "操作"
     ]
@@ -3134,6 +3143,8 @@ document.getElementById('authSubmit').disabled = false;
             browserCell.append(badge);
           }
           row.append(browserCell);
+          row.insertCell().textContent = log.school || '未登録';
+          row.insertCell().textContent = log.filter || '未登録';
           row.insertCell().textContent = log.banned === true ? 'BAN中' : log.banned === false && log.browserId ? '未BAN' : '不明';
           const remove = document.createElement('button');
           remove.type = 'button';

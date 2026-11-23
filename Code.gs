@@ -451,7 +451,7 @@ function setVisitorBan(browserId, banned, adminToken) {
   const props = PropertiesService.getScriptProperties();
   const key = 'LINK_CORE_BAN_' + browserId;
   if (banned) props.setProperty(key, '1'); else props.deleteProperty(key);
-  return {ok:true, banned};
+  return {ok:true, banned, bannedCount:activeBanCount_()};
 }
 
 function getBanVisitors(adminToken) {
@@ -836,11 +836,12 @@ function submitLinkReport(url, browserId, visitorToken) {
 }
 function getLinkReports(adminToken) {
   requireAdmin_(adminToken);
+  const bannedCount = activeBanCount_();
   const sheet = linkReportSheet_(false);
-  if (!sheet || sheet.getLastRow() < 2) return {reports:[], unread:0};
+  if (!sheet || sheet.getLastRow() < 2) return {reports:[], unread:0, bannedCount};
   const last = sheet.getLastRow();
   const rows = sheet.getRange(2, 1, last - 1, 5).getValues();
-  return {unread:rows.filter(row=>row[0] && !row[4]).length,
+  return {bannedCount, unread:rows.filter(row=>row[0] && !row[4]).length,
     reports:rows.slice(-200).reverse().filter(row=>row[0]).map(row=>({id:String(row[0]), date:toIso_(row[1]), url:String(row[2]), browserId:String(row[3]), checked:!!row[4]}))};
 }
 function markLinkReportChecked(id, adminToken) {
@@ -3417,6 +3418,7 @@ function getVisitorLoginLogs(adminToken) {
     lock.releaseLock();
   }
   const names = getClickBrowserNames_(spreadsheet);
+  const profiles = visitorChatProfilesByBrowser_(spreadsheet);
   const browsers = new Set(rows.filter(row => row[0]).map(row => String(row[1] || '')));
   const streaks = visitorLoginStreaks_(history, browsers, Date.now());
   return {logs: rows.slice().reverse().filter(row => row[0]).map(([date, browserId, id]) => {
@@ -3425,6 +3427,7 @@ function getVisitorLoginLogs(adminToken) {
     return {
       date:toIso_(date), browserId:browser, id:String(id),
       browserName:names.get(browser) || '',
+      school:profiles.get(browser)?.school || '', filter:profiles.get(browser)?.filter || '',
       banned:/^[A-Za-z0-9_-]{8,100}$/.test(browser) && properties['LINK_CORE_BAN_' + browser] === '1',
       loginStreak:streak, regularVisitor:streak >= 3
     };
@@ -4253,7 +4256,7 @@ function getFilterAccessSummary(adminToken) {
  */
 function getFilterAccessActivitySummary(adminToken) {
   requireAdmin_(adminToken);
-  const key = 'LC_FILTER_ACTIVITY_DASHBOARD_V2';
+  const key = 'LC_FILTER_ACTIVITY_DASHBOARD_V3';
   const cached = readChunkedJsonCache_(key);
   if (cached) return cached;
   const ss = filterAccessSpreadsheet_();
@@ -4300,8 +4303,9 @@ function getFilterAccessActivitySummary(adminToken) {
     }
     if (day>=day30 && day<=today) {
       const trendKey = JSON.stringify([day,filter,school]);
-      if (!trends.has(trendKey)) trends.set(trendKey,{date:day,filter,school,clicks:0,logins:0});
+      if (!trends.has(trendKey)) trends.set(trendKey,{date:day,filter,school,clicks:0,logins:0,ids:new Set()});
       trends.get(trendKey)[type]++;
+      if (browser) trends.get(trendKey).ids.add(browser);
     }
   }
   sources.forEach(source=>{
@@ -4328,7 +4332,7 @@ function getFilterAccessActivitySummary(adminToken) {
       '30':exportPeriod(periods['30']),
       'all':exportPeriod(periods.all)
     },
-    daily:Array.from(trends.values()).sort((a,b)=>a.date.localeCompare(b.date)),
+    daily:Array.from(trends.values(),g=>({date:g.date,filter:g.filter,school:g.school,clicks:g.clicks,logins:g.logins,browsers:g.ids.size})).sort((a,b)=>a.date.localeCompare(b.date)),
     missing,truncated,generatedAt:now.toISOString(),
     classification:'記録にあるブラウザIDを現在の登録フィルター・学校と照合しています。過去の設定変更は遡って復元できません。',
     definitions:'リンククリックとログインは保存済みの操作履歴です。利用者からの「開けた・制限された」報告数とは異なります。'};
@@ -4438,7 +4442,7 @@ function getSecurityEvents(adminToken) {
 /** Aggregates only anonymous totals. Reads at most the last 50,000 rows per source. */
 function getLogDashboard(adminToken) {
   requireAdmin_(adminToken);
-  const cacheKey = 'LINK_BASE_LOG_DASHBOARD_V1';
+  const cacheKey = 'LINK_BASE_LOG_DASHBOARD_V2';
   const cached = readChunkedJsonCache_(cacheKey);
   if (cached) return cached;
   const ss = SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY));
@@ -4447,10 +4451,20 @@ function getLogDashboard(adminToken) {
   const days = [], byDay = Object.create(null);
   for (let i=29;i>=0;i--) {
     const date = new Date(anchor-i*86400000+9*3600000).toISOString().slice(0,10);
-    const item = {date:date,logins:0,clicks:0,visitors:0,security:0};
+    const item = {date:date,logins:0,clicks:0,visitors:0,security:0,operations:0,reports:0,appeals:0};
     days.push(item);byDay[date]=item;
   }
   const truncated = [], missing = [], links = new Map(), events = new Map(), visitKeys = new Set();
+  const profiles = visitorChatProfilesByBrowser_(ss);
+  const schools = new Map(), filters = new Map(), operations = new Map(), severities = new Map();
+  const hours = Array.from({length:24},(_,hour)=>({label:String(hour).padStart(2,'0')+'時',count:0}));
+  function add(map,label) {const key=String(label || '未登録');map.set(key,(map.get(key)||0)+1);}
+  function classify(browser,date) {
+    const profile=profiles.get(String(browser || ''));
+    add(schools,profile?.school);add(filters,profile?.filter);
+    const parsed=date instanceof Date?date:new Date(date);
+    if(!isNaN(parsed.getTime()))hours[new Date(parsed.getTime()+9*3600000).getUTCHours()].count++;
+  }
   function rows(name,width,consume) {
     const sheet=ss.getSheetByName(name);
     if (!sheet) {missing.push(name);return;}
@@ -4464,10 +4478,10 @@ function getLogDashboard(adminToken) {
     const date = new Date(value);
     return isNaN(date.getTime()) ? '' : new Date(date.getTime()+9*3600000).toISOString().slice(0,10);
   }
-  rows('VisitorLoginLogs',2,row=>{const day=byDay[dateKey(row[0])];if(day)day.logins++;});
-  rows(CLICK_LOG_SHEET_NAME,5,row=>{
+  rows('VisitorLoginLogs',2,row=>{const day=byDay[dateKey(row[0])];if(day){day.logins++;classify(row[1],row[0]);}});
+  rows(CLICK_LOG_SHEET_NAME,6,row=>{
     const day=byDay[dateKey(row[4])];if(!day)return;
-    day.clicks++;
+    day.clicks++;classify(row[5],row[4]);
     const key=String(row[1] || row[2] || '名称未記録');
     const item=links.get(key) || {label:String(row[2] || '名称未記録'),count:0};
     item.count++;links.set(key,item);
@@ -4480,15 +4494,25 @@ function getLogDashboard(adminToken) {
   });
   rows('SecurityEvents',7,row=>{
     const day=byDay[dateKey(row[0])];if(!day)return;
-    day.security++;
+    day.security++;add(severities,row[1]);
     const label=String(row[4] || row[2] || '種別未記録');
     events.set(label,(events.get(label)||0)+1);
   });
-  const totals=days.reduce((sum,day)=>{['logins','clicks','visitors','security'].forEach(key=>sum[key]+=day[key]);return sum;},{logins:0,clicks:0,visitors:0,security:0});
+  rows('LinkOperationLogs',4,row=>{const day=byDay[dateKey(row[0])];if(day){day.operations++;add(operations,row[1]);}});
+  rows('LinkReports',5,row=>{const day=byDay[dateKey(row[1])];if(day)day.reports++;});
+  rows('BAN異議申し立て',3,row=>{const day=byDay[dateKey(row[0])];if(day)day.appeals++;});
+  const ranks=map=>Array.from(map,([label,count])=>({label:label,count:count})).sort((a,b)=>b.count-a.count).slice(0,10);
+  const totals=days.reduce((sum,day)=>{['logins','clicks','visitors','security','operations','reports','appeals'].forEach(key=>sum[key]+=day[key]);return sum;},{logins:0,clicks:0,visitors:0,security:0,operations:0,reports:0,appeals:0});
   const result={days:days,totals:totals,
     topLinks:Array.from(links.values()).sort((a,b)=>b.count-a.count).slice(0,10),
     securityTypes:Array.from(events,([label,count])=>({label:label,count:count})).sort((a,b)=>b.count-a.count),
+    schoolActivity:ranks(schools),filterActivity:ranks(filters),hourlyActivity:hours,operationTypes:ranks(operations),securityLevels:ranks(severities),
     missing:missing,truncated:truncated,generatedAt:new Date().toISOString()};
   writeChunkedJsonCache_(cacheKey,result,60);
   return result;
+}
+
+function activeBanCount_() {
+  const settings = PropertiesService.getScriptProperties().getProperties();
+  return Object.keys(settings).filter(key=>key.startsWith('LINK_CORE_BAN_') && settings[key]==='1').length;
 }

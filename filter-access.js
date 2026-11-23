@@ -158,7 +158,7 @@
     const byDay = new Map(dates.map(date=>[date,0]));
     (daily || []).forEach(row=>{
       if (!byDay.has(row.date) || filter && row.filter!==filter || school && row.school!==school) return;
-      byDay.set(row.date,byDay.get(row.date)+Number(row[metric]||0));
+      byDay.set(row.date,byDay.get(row.date)+(metric==='operations'?Number(row.clicks||0)+Number(row.logins||0):Number(row[metric]||0)));
     });
     const values=dates.map(date=>byDay.get(date)||0);
     const max=Math.max(1,...values), width=720,height=210,left=42,right=16,top=15,bottom=34;
@@ -167,7 +167,7 @@
     const svg=document.createElementNS(ns,'svg');
     svg.setAttribute('viewBox','0 0 '+width+' '+height);
     svg.setAttribute('role','img');
-    svg.setAttribute('aria-label',metric==='clicks'?'日別リンククリック数':'日別ログイン回数');
+    svg.setAttribute('aria-label',({clicks:'日別リンククリック数',logins:'日別ログイン回数',browsers:'日別ブラウザ数',operations:'日別操作合計'})[metric]);
     svg.classList.add('fa-plot');
     function shape(tag,attributes,textValue){
       const el=document.createElementNS(ns,tag);
@@ -221,7 +221,9 @@
       const filter=selectControl('フィルター');
       const school=selectControl('学校');
       const metric=selectControl('推移の指標');
-      metric.append(new Option('リンククリック回数','clicks'),new Option('ログイン回数','logins'));
+      metric.append(new Option('リンククリック回数','clicks'),new Option('ログイン回数','logins'),new Option('日別ブラウザ数','browsers'),new Option('操作合計（クリック＋ログイン）','operations'));
+      const reportState=selectControl('報告の状態');
+      [['','すべて'],['blocked','制限報告あり'],['allowed','開放報告あり'],['mixed','結果が混在'],['none','報告なし']].forEach(([value,label])=>reportState.append(new Option(label,value)));
       const searchWrapper=node('label','fa-field fa-search');
       searchWrapper.append(node('span','','リンク名・URLを検索'));
       const search=node('input');search.type='search';search.placeholder='報告一覧を検索';
@@ -290,7 +292,11 @@
           numberCard('リンククリック',activity?fmt(scoped.clicks):'—','クリック履歴に保存された回数'),
           numberCard('ユニークブラウザ',activity?fmt(scoped.browsers):'—','ログイン・クリックに登場したブラウザ'),
           numberCard('ログイン回数',activity?fmt(scoped.logins):'—','訪問者ログイン履歴の件数'),
-          numberCard('開放報告率',reports?percent(report.allowed,totalReports):'—','開けた '+fmt(report.allowed)+'件 / 全 '+fmt(totalReports)+'件')
+          numberCard('開放報告率',reports?percent(report.allowed,totalReports):'—','開けた '+fmt(report.allowed)+'件 / 全 '+fmt(totalReports)+'件'),
+          numberCard('制限報告率',reports?percent(report.blocked,totalReports):'—','制限された報告の割合'),
+          numberCard('制限報告数',reports?fmt(report.blocked):'—','各ブラウザの最新報告'),
+          numberCard('1ブラウザ当たりクリック',activity&&scoped.browsers?(scoped.clicks/scoped.browsers).toFixed(1):'—','選択期間のクリック ÷ ユニークブラウザ'),
+          numberCard('学校数',activity?fmt(new Set(scoped.groups.map(g=>g.school).filter(x=>x!==UNKNOWN_FILTER)).size):'—','アクセス記録に登場する登録校')
         );
         const byFilter=new Map();
         scoped.groups.forEach(g=>{
@@ -320,7 +326,7 @@
           rankingRows.append(line);
         });
         trendContent.replaceChildren();
-        const label=metric.value==='clicks'?'リンククリック':'ログイン';
+        const label=({clicks:'リンククリック',logins:'ログイン',browsers:'日別ブラウザ数',operations:'操作合計'})[metric.value];
         trendHint.textContent=(period==='all'?'全期間選択中のためグラフは直近30日分を表示します。':'日本時間で日別集計します。')+' 指標：'+label+'。';
         if(activity)trendContent.append(chartSvg(activity.daily,period,filterName,schoolName,metric.value));
         else trendContent.append(emptyNode('推移を読み込んでいます…'));
@@ -339,7 +345,7 @@
             node('span','',fmt(item.browsers)+'ブラウザ'),node('span','',fmt(item.logins)+'ログイン'));
           schoolBody.append(row);
         });
-        const rows=buildReports(reports,period,filterName,schoolName,search.value.trim().toLowerCase(),showEmpty.checked);
+        const rows=buildReports(reports,period,filterName,schoolName,search.value.trim().toLowerCase(),showEmpty.checked||reportState.value==='none').filter(item=>!reportState.value || (reportState.value==='blocked'?item.blocked>0:reportState.value==='allowed'?item.allowed>0:reportState.value==='mixed'?item.allowed>0&&item.blocked>0:item.allowed+item.blocked===0));
         body.replaceChildren();
         rows.slice(0,visible).forEach(item=>{
           const row=node('tr');
@@ -402,7 +408,7 @@
           if(dialog.open)render();
         }
       }
-      [filter,school,metric].forEach(item=>item.addEventListener('change',()=>{visible=80;render();}));
+      [filter,school,metric,reportState].forEach(item=>item.addEventListener('change',()=>{visible=80;render();}));
       search.addEventListener('input',()=>{visible=80;render();});
       showEmpty.addEventListener('change',()=>{visible=80;render();});
       more.addEventListener('click',()=>{visible+=80;render();});

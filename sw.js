@@ -9,17 +9,17 @@
  */
 'use strict';
 
-var CACHE_VERSION = 'link-core-v90';
+var CACHE_VERSION = 'link-core-v91';
 var STATIC_CACHE = 'link-core-static-' + CACHE_VERSION;
 
 /* アプリの殻。相対パスなので、GitHub Pages のプロジェクトサイト
    （例：https://<user>.github.io/My-Links/）でもカスタムドメインでも動く。 */
 var STATIC_ASSETS = [
-  './log-dashboard.js?v=1',
-  './log-dashboard.css?v=1',
+  './log-dashboard.js?v=2',
+  './log-dashboard.css?v=2',
   './mobile-layout.css?v=1',
   './mobile-layout.js?v=1',
-  './filter-access.js?v=4',
+  './filter-access.js?v=6',
   './filter-access.css?v=5',
   './',
   './index.html',
