@@ -4372,3 +4372,61 @@ function getSecurityEvents(adminToken) {
     description:String(row[4]),actor:String(row[5]),failures:Number(row[6]) || 0
   }))};
 }
+
+/** Aggregates only anonymous totals. Reads at most the last 50,000 rows per source. */
+function getLogDashboard(adminToken) {
+  requireAdmin_(adminToken);
+  const cacheKey = 'LINK_BASE_LOG_DASHBOARD_V1';
+  const cached = readChunkedJsonCache_(cacheKey);
+  if (cached) return cached;
+  const ss = SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY));
+  const today = Utilities.formatDate(new Date(),'Asia/Tokyo','yyyy-MM-dd');
+  const anchor = new Date(today+'T00:00:00+09:00').getTime();
+  const days = [], byDay = Object.create(null);
+  for (let i=29;i>=0;i--) {
+    const date = new Date(anchor-i*86400000+9*3600000).toISOString().slice(0,10);
+    const item = {date:date,logins:0,clicks:0,visitors:0,security:0};
+    days.push(item);byDay[date]=item;
+  }
+  const truncated = [], missing = [], links = new Map(), events = new Map(), visitKeys = new Set();
+  function rows(name,width,consume) {
+    const sheet=ss.getSheetByName(name);
+    if (!sheet) {missing.push(name);return;}
+    const last=sheet.getLastRow();if(last<2)return;
+    const first=Math.max(2,last-49999);if(first>2)truncated.push(name);
+    sheet.getRange(first,1,last-first+1,Math.min(width,sheet.getMaxColumns())).getValues().forEach(consume);
+  }
+  function dateKey(value) {
+    if (value instanceof Date && !isNaN(value.getTime())) return new Date(value.getTime()+9*3600000).toISOString().slice(0,10);
+    if (typeof value==='string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+    const date = new Date(value);
+    return isNaN(date.getTime()) ? '' : new Date(date.getTime()+9*3600000).toISOString().slice(0,10);
+  }
+  rows('VisitorLoginLogs',2,row=>{const day=byDay[dateKey(row[0])];if(day)day.logins++;});
+  rows(CLICK_LOG_SHEET_NAME,5,row=>{
+    const day=byDay[dateKey(row[4])];if(!day)return;
+    day.clicks++;
+    const key=String(row[1] || row[2] || '名称未記録');
+    const item=links.get(key) || {label:String(row[2] || '名称未記録'),count:0};
+    item.count++;links.set(key,item);
+  });
+  rows(VISITOR_COUNTER_SHEET,2,row=>{
+    const key=dateKey(row[0]),day=byDay[key];if(!day)return;
+    const unique=key+':'+String(row[1] || '');
+    if (!row[1] || visitKeys.has(unique))return;
+    visitKeys.add(unique);day.visitors++;
+  });
+  rows('SecurityEvents',7,row=>{
+    const day=byDay[dateKey(row[0])];if(!day)return;
+    day.security++;
+    const label=String(row[4] || row[2] || '種別未記録');
+    events.set(label,(events.get(label)||0)+1);
+  });
+  const totals=days.reduce((sum,day)=>{['logins','clicks','visitors','security'].forEach(key=>sum[key]+=day[key]);return sum;},{logins:0,clicks:0,visitors:0,security:0});
+  const result={days:days,totals:totals,
+    topLinks:Array.from(links.values()).sort((a,b)=>b.count-a.count).slice(0,10),
+    securityTypes:Array.from(events,([label,count])=>({label:label,count:count})).sort((a,b)=>b.count-a.count),
+    missing:missing,truncated:truncated,generatedAt:new Date().toISOString()};
+  writeChunkedJsonCache_(cacheKey,result,60);
+  return result;
+}

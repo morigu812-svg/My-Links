@@ -1170,7 +1170,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
 <link rel="stylesheet" href="./filter-access.css?v=5">
 <script src="./filter-access.js?v=4"></script>
 <meta name="referrer" content="no-referrer">
-</head>
+<link rel="stylesheet" href="./log-dashboard.css?v=1"><script src="./log-dashboard.js?v=1"></script></head>
 <body>
 <section id="authGate" class="auth-gate" aria-labelledby="authTitle">
   <form id="authForm" onsubmit="return false" class="auth-card">
@@ -1238,6 +1238,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
         <div class="sidebar-log-items">
           <button class="side-item" type="button" id="sideClickLogs"><span>◷</span> クリック履歴</button>
           <button class="side-item" type="button" id="sideVisitorLogins"><span>◷</span> 利用者ログイン履歴</button>
+          <button class="side-item" type="button" id="sideLogDashboard"><span aria-hidden="true">▥</span> ログ分析</button>
           <button class="side-item" type="button" id="sideSecurityEvents"><span aria-hidden="true">🛡</span> セキュリティ検知</button>
           <button class="side-item" type="button" id="sideLinkOperations"><span>◷</span> リンク操作履歴</button>
           <button class="side-item" type="button" id="sideVisitorCounter"><span>▥</span> 来客数カウンター</button>
@@ -1666,7 +1667,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
   }
 
   function serverCall(method, ...args) {
-    const protectedMethods = ['getSecurityEvents', 'getFilterAccessSummary', 'mergeFilterAccessNames', 'requestVisitorSchoolCorrection', 'requestVisitorFilterCorrection', 'requestVisitorSchoolAndFilterCorrection', 'getVisitorDirectory', 'getClickBrowserNames', 'getOnlineVisitors', 'getBanVisitors', 'getBanAppeals', 'sendChatReply', 'getChatRealtimeSession', 'getLinks', 'getOfficialLinks', 'saveLink', 'deleteLink', 'getLinkReports', 'markLinkReportChecked', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'getVisitorCounterStats', 'deleteVisitorCounterBefore20261114', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getAdminVisitorChatRead', 'markAdminVisitorChatRead', 'getChatMessages', 'deleteVisitorChatMessage', 'getChatScreenshot', 'sendChatMessage', 'sendChatScreenshot', 'getStaffChatMessages', 'getStaffChatAttachment', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendStaffChatAttachment', 'startStaffChatLargeUpload', 'appendStaffChatLargeUploadChunk',
+    const protectedMethods = ['getLogDashboard', 'getSecurityEvents', 'getFilterAccessSummary', 'mergeFilterAccessNames', 'requestVisitorSchoolCorrection', 'requestVisitorFilterCorrection', 'requestVisitorSchoolAndFilterCorrection', 'getVisitorDirectory', 'getClickBrowserNames', 'getOnlineVisitors', 'getBanVisitors', 'getBanAppeals', 'sendChatReply', 'getChatRealtimeSession', 'getLinks', 'getOfficialLinks', 'saveLink', 'deleteLink', 'getLinkReports', 'markLinkReportChecked', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'getVisitorCounterStats', 'deleteVisitorCounterBefore20261114', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getAdminVisitorChatRead', 'markAdminVisitorChatRead', 'getChatMessages', 'deleteVisitorChatMessage', 'getChatScreenshot', 'sendChatMessage', 'sendChatScreenshot', 'getStaffChatMessages', 'getStaffChatAttachment', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendStaffChatAttachment', 'startStaffChatLargeUpload', 'appendStaffChatLargeUploadChunk',
         'finishStaffChatLargeUpload', 'getStaffChatAttachmentChunk', 'deleteStaffChatMessage', 'visitorDirectChatProxy', 'getClickLogs', 'setVisitorBan', 'setClickBrowserName', 'deleteClickLogs', 'deleteClickLog', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
     if (protectedMethods.includes(method)) {
       const token = adminSession.getItem(ADMIN_TOKEN_KEY) || '';
@@ -2761,6 +2762,7 @@ document.getElementById('authSubmit').disabled = false;
     return panel;
   });
   const otherHistories = [
+    {key:'logDashboard',side:'sideLogDashboard',api:'getLogDashboard',title:'ログ分析',description:'直近30日の利用状況とセキュリティ検知をグラフで確認できます。',columns:['ログの集計']},
     {key:'securityEvents',side:'sideSecurityEvents',api:'getSecurityEvents',title:'セキュリティ検知',description:'認証失敗・試行制限・権限のない操作・識別情報の不一致を表示します。期限切れや入力ミスも含むため、不正アクセスの確定を示すものではありません。同じ種類・対象・匿名識別子の記録は10分間隔にまとめます。直近200件。',columns:['日時','重要度','対象','検知内容','匿名識別子','失敗回数']},
     {key:'visitorDirectory',side:'sideVisitorDirectory',api:'getVisitorDirectory',title:'利用者一覧',description:'ブラウザIDごとに表示します。ログイン日数は保存されている履歴を日本時間で集計します。',columns:['利用者・登録情報','状態・最終ログイン','操作・詳細']},
   {key:'onlineVisitors',side:'sideOnlineVisitors',api:'getOnlineVisitors',title:'オンラインの利用者',description:'利用者ページを表示中のブラウザです。30秒ごとに更新し、90秒通信がない場合はオフラインになります。同じブラウザの複数タブは1人として数えます。',columns:['利用者・ブラウザID','学校名','フィルターの種類','最終接続（日本時間）','状態']},
@@ -2931,6 +2933,15 @@ document.getElementById('authSubmit').disabled = false;
       const result = history.key === 'visitorDirectory' && force === true
         ? await serverCall(history.api, {refresh:true}) : await serverCall(history.api);
       if (request !== historyRequest || token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
+      if (history.key === 'logDashboard') {
+        const row = document.createElement('tr');
+        const cell = row.insertCell();
+        cell.colSpan = history.columns.length;
+        window.renderLogDashboard(cell, result);
+        $('otherHistoryRows').replaceChildren(row);
+        status.textContent = '直近30日の集計（日本時間）';
+        return;
+      }
       const isCounter = history.key === 'visitorCounter';
       const logs = isCounter ? (Array.isArray(result.days) ? result.days : []) : (history.key === 'linkReports' ? (result.reports || []) : (result.logs || []));
       const rows = logs.map(log => {
