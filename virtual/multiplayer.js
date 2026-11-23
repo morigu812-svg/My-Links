@@ -11,7 +11,7 @@ export function createCityMultiplayer({snapshot,onPeers,onStatus}){
       const xhr=new XMLHttpRequest();xhr.open('POST','/chat-api/rest/v1/rpc/link_base_virtual_sync',true);xhr.timeout=8000;
       xhr.setRequestHeader('apikey',KEY);xhr.setRequestHeader('Content-Type','application/json');
       xhr.onload=()=>{let data;try{data=JSON.parse(xhr.responseText);}catch{reject(new Error('マルチ通信の中継設定を確認してください。'));return;}
-        if(xhr.status<200||xhr.status>=300){reject(new Error(data?.message||'マルチ通信に失敗しました。'));return;}resolve(data);};
+        if(xhr.status<200||xhr.status>=300){reject(new Error(data?.message||'マルチ通信に失敗しました。'));return;}if(!data||typeof data!=='object'||!Array.isArray(data.players)){reject(new Error('マルチ通信の応答が不正です。'));return;}resolve(data);};
       xhr.onerror=()=>reject(new Error('マルチ通信に接続できません。'));xhr.ontimeout=()=>reject(new Error('マルチ通信がタイムアウトしました。'));
       xhr.send(JSON.stringify({player_id:identity.id,player_secret:identity.secret,room_code:selectedRoom,profile:snap.avatar,px:snap.x,pz:snap.z,heading:snap.yaw,operation}));
     });

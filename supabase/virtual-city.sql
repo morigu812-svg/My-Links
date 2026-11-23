@@ -68,7 +68,7 @@ begin
  'suit',case when profile->>'suit' ~ '^#[0-9a-fA-F]{6}$' then profile->>'suit' else '#37bce8' end,
  'accent',case when profile->>'accent' ~ '^#[0-9a-fA-F]{6}$' then profile->>'accent' else '#70fff0' end,
  'skin',case when profile->>'skin' ~ '^#[0-9a-fA-F]{6}$' then profile->>'skin' else '#d9ad8c' end,
- 'style',case when profile->>'style' in ('visor','hair','helmet','robot') then profile->>'style' else 'visor' end,
+ 'style',case when profile->>'style' in ('short','long','ponytail') then profile->>'style' else 'short' end,
  'height',case when profile->>'height' ~ '^[0-9]{2,3}$' and (profile->>'height')::integer between 85 and 120 then (profile->>'height')::integer else 100 end);
  insert into link_base_virtual.players(id,secret_hash,room,avatar,x,z,yaw,last_seen)
  values(player_id,secret_digest,room_code,clean_profile,px,pz,heading,stamp)
