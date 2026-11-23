@@ -470,10 +470,18 @@ a.admin{color:#68ddff!important}
 #visitorOnlineCount{margin-left:12px;color:#9fe7cf;font-size:12px;font-weight:500;letter-spacing:normal;white-space:nowrap}
 #linksPanel .finder-title{flex-wrap:wrap}
 @media(max-width:600px){#visitorOnlineCount{margin-left:6px;font-size:10px}}
-</style><link rel="stylesheet" href="./filter-access.css?v=4">
-<script src="./filter-access.js?v=3"></script>
+</style><link rel="stylesheet" href="./filter-access.css?v=5">
+<script src="./filter-access.js?v=4"></script>
 <meta name="referrer" content="no-referrer">
-</head>
+<style>
+html body #chatScreenshot{font:inherit;font-size:12px;line-height:1.4;min-height:36px;padding:9px 12px;border:1px solid #32728b;border-radius:8px;background:#12334d;color:#dff8ff;cursor:pointer}
+html body #chatScreenshot:hover{background:#19455f;border-color:#35d9ff}
+html body #chatScreenshot:focus-visible{outline:2px solid #35d9ff;outline-offset:3px}
+html body #chatScreenshot:disabled{opacity:.55;cursor:wait}
+html body #chatScreenshotControls{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+html body #chatScreenshotStatus{flex-basis:100%}
+@media(max-width:650px){html body #chatScreenshot{min-height:44px}}
+</style></head>
 <body>
 <main class="wrap">
 <div class="click-log-notice" id="clickLogNotice" role="status" aria-live="polite"></div>

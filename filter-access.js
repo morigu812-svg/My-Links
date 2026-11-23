@@ -100,9 +100,9 @@
     });
     return rows;
   }
-  window.setupAdminFilterAccess = (button, request) => {
+  window.setupAdminFilterAccess = (button, request, createPanel) => {
     button.addEventListener('click', () => {
-      const dialog = modal('フィルター別アクセス状況');
+      const dialog = createPanel ? createPanel() : modal('フィルター別アクセス状況');
       const note = element('p','利用者の報告を集計しています。学校や設定によって結果が異なります。');
       const status = element('p','読み込み中…');
       status.setAttribute('role','status');

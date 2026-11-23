@@ -9,7 +9,7 @@
  */
 'use strict';
 
-var CACHE_VERSION = 'link-core-v80';
+var CACHE_VERSION = 'link-core-v81';
 var STATIC_CACHE = 'link-core-static-' + CACHE_VERSION;
 
 /* アプリの殻。相対パスなので、GitHub Pages のプロジェクトサイト
@@ -17,8 +17,8 @@ var STATIC_CACHE = 'link-core-static-' + CACHE_VERSION;
 var STATIC_ASSETS = [
   './mobile-layout.css?v=1',
   './mobile-layout.js?v=1',
-  './filter-access.js?v=3',
-  './filter-access.css?v=4',
+  './filter-access.js?v=4',
+  './filter-access.css?v=5',
   './',
   './index.html',
   './admin.html',

@@ -1167,8 +1167,8 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
 .visitor-counter-strip button{font-size:11px;cursor:pointer}
 @media(max-width:540px){.visitor-counter-strip{gap:8px 13px;padding:10px}}
 </style>
-<link rel="stylesheet" href="./filter-access.css?v=1">
-<script src="./filter-access.js?v=2"></script>
+<link rel="stylesheet" href="./filter-access.css?v=5">
+<script src="./filter-access.js?v=4"></script>
 <meta name="referrer" content="no-referrer">
 </head>
 <body>
@@ -2732,7 +2732,33 @@ document.getElementById('authSubmit').disabled = false;
     }
   }
   $('adminVisitorCounterRefresh').addEventListener('click', () => { void refreshAdminVisitorCounter(); });
-  window.setupAdminFilterAccess($('sideFilterAccess'), (method,...args)=>serverCall(method,...args));
+  let filterAccessPanel = null;
+  document.addEventListener('click', event => {
+    const target = event.target.closest('button, a');
+    if (!target || target === $('sideFilterAccess') || !target.closest('.finder-sidebar, .sidebar')) return;
+    filterAccessPanel?.remove();
+    filterAccessPanel = null;
+    $('sideFilterAccess').classList.remove('selected');
+  }, true);
+  window.setupAdminFilterAccess($('sideFilterAccess'), (method,...args)=>serverCall(method,...args), () => {
+    document.querySelector('[data-view="all"]').click();
+    hideMainChats();
+    filterAccessPanel?.remove();
+    const panel = document.createElement('section');
+    panel.className = 'filter-access-dialog filter-access-panel click-log-panel';
+    panel.setAttribute('aria-label', 'フィルター別アクセス状況');
+    const heading = document.createElement('h2');
+    heading.textContent = 'フィルター別アクセス状況';
+    panel.append(heading);
+    Object.defineProperty(panel, 'open', {get: () => panel.isConnected && !panel.hidden});
+    document.querySelector('.workspace').hidden = true;
+    document.querySelector('.finder-content').append(panel);
+    filterAccessPanel = panel;
+    document.querySelectorAll('.side-item.selected').forEach(item => item.classList.remove('selected'));
+    $('sideFilterAccess').classList.add('selected');
+    $('viewTitle').textContent = 'フィルター別アクセス状況';
+    return panel;
+  });
   const otherHistories = [
     {key:'visitorDirectory',side:'sideVisitorDirectory',api:'getVisitorDirectory',title:'利用者一覧',description:'ブラウザIDごとに表示します。ログイン日数は保存されている履歴を日本時間で集計します。',columns:['利用者・登録情報','状態・最終ログイン','操作・詳細']},
   {key:'onlineVisitors',side:'sideOnlineVisitors',api:'getOnlineVisitors',title:'オンラインの利用者',description:'利用者ページを表示中のブラウザです。30秒ごとに更新し、90秒通信がない場合はオフラインになります。同じブラウザの複数タブは1人として数えます。',columns:['利用者・ブラウザID','学校名','フィルターの種類','最終接続（日本時間）','状態']},
