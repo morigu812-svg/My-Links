@@ -1134,6 +1134,26 @@ setInterval(() => {
   if (!document.hidden && chatOverlay.classList.contains('open') && viewerChatRealtime?.isConnected()) void refreshChat();
 }, 30000);
 let visitorChatProfile=null;
+function syncSchoolProfileFields(){
+ const regional=$('chatProfileSchoolMode').value==='region';
+ $('chatProfileSchoolNameFields').hidden=regional;$('chatProfileSchool').disabled=regional;$('chatProfileSchool').required=!regional;
+ $('chatProfileSchoolRegionFields').hidden=!regional;
+ for(const id of ['chatProfilePrefecture','chatProfileSchoolType']){$(id).disabled=!regional;$(id).required=regional;}
+}
+function setSchoolProfileChoice(value){
+ const match=/^学校名非公開：(.+)／(国立|公立|私立|その他・わからない)$/.exec(value||'');
+ $('chatProfileSchoolMode').value=match?'region':'name';
+ $('chatProfileSchool').value=match?'':value||'';
+ $('chatProfilePrefecture').value=match?match[1]:'';
+ $('chatProfileSchoolType').value=match?match[2]:'';
+ $('chatProfileSchoolMode').onchange=syncSchoolProfileFields;syncSchoolProfileFields();
+}
+function schoolProfileValue(){
+ if($('chatProfileSchoolMode').value!=='region')return $('chatProfileSchool').value;
+ if(!$('chatProfilePrefecture').value||!$('chatProfileSchoolType').value)throw new Error('都道府県と学校の区分を選択してください。');
+ return '学校名非公開：'+$('chatProfilePrefecture').value+'／'+$('chatProfileSchoolType').value;
+}
+
 async function ensureVisitorChatProfile(edit=false,mandatory=false){
  if(!visitorToken)return false;
  const token=visitorToken;
@@ -1141,7 +1161,7 @@ async function ensureVisitorChatProfile(edit=false,mandatory=false){
   if(!visitorChatProfile){visitorChatProfile=await call('getVisitorChatProfile',getNoticeBrowserId(),token);}
   if(token!==visitorToken)return false;
   if(!edit&&visitorChatProfile.school?.trim()&&visitorChatProfile.filter?.trim())return true;
-  $('chatProfileSchool').value=visitorChatProfile.school||'';
+  setSchoolProfileChoice(visitorChatProfile.school||'');
   $('chatProfileFilter').value=visitorChatProfile.filter||'';
   $('chatProfileStatus').textContent='';
   const correctionFields = [];
@@ -1152,10 +1172,10 @@ async function ensureVisitorChatProfile(edit=false,mandatory=false){
   const requiresInput = !!correctionLabel || mandatory;
   description.classList.toggle('profile-correction-notice', requiresInput);
   description.textContent=correctionLabel
-   ? '管理者から' + correctionLabel + 'の再入力が求められています。正しい' + correctionLabel + 'を入力し、「保存して続ける」を押してください。'
+   ? '管理者から' + correctionLabel + 'の再入力が求められています。学校名の代わりに都道府県と区分も選べます。正しい' + correctionLabel + 'を入力し、「保存して続ける」を押してください。'
    : mandatory
-   ? 'リンクを見るには、学校名とフィルターの種類の登録が必要です。両方入力して「保存して続ける」を押してください。次回から入力は不要です。'
-   : '学校名とフィルターの種類を入力してください。次回から自動で読み込みます。';
+   ? 'リンクを見るには、学校情報とフィルターの種類の登録が必要です。学校名の代わりに都道府県と区分も選べます。入力して「保存して続ける」を押してください。次回から入力は不要です。'
+   : '学校名、または都道府県と学校の区分を選び、フィルターの種類を入力してください。次回から自動で読み込みます。';
   if (requiresInput) {
    const heading = document.createElement('strong');
    heading.textContent = correctionLabel ? correctionLabel + 'の再入力が必要です' : '利用者情報の入力が必要です';
@@ -1174,7 +1194,7 @@ async function ensureVisitorChatProfile(edit=false,mandatory=false){
     if(button.disabled)return;
     button.disabled=true;cancel.disabled=true;$('chatProfileStatus').textContent='保存中…';
     try{
-     const result=await call('saveVisitorChatProfile',getNoticeBrowserId(),$('chatProfileSchool').value,$('chatProfileFilter').value,token);
+     const result=await call('saveVisitorChatProfile',getNoticeBrowserId(),schoolProfileValue(),$('chatProfileFilter').value,token);
      if(token!==visitorToken)throw new Error('ログインし直してください。');
      if(!result?.school?.trim()||!result?.filter?.trim())throw new Error('学校名とフィルターの保存を確認できませんでした。');
      visitorChatProfile=result;cleanup();dialog.close();resolve(true);
@@ -4426,7 +4446,7 @@ footer{margin:16px 4px!important;font-size:11px!important}
 </script>
 <dialog id="linkReportDialog" class="link-report-dialog" aria-labelledby="linkReportTitle"><form id="linkReportForm"><h2 id="linkReportTitle">リンク報告</h2><p>管理者に制限回避を追加して欲しい時、ここに報告することによって追加されます。</p><label for="linkReportUrl">URL</label><input id="linkReportUrl" type="url" inputmode="url" maxlength="2048" required placeholder="https://example.com"><p id="linkReportStatus" role="status" aria-live="polite"></p><div class="link-report-actions"><button type="button" id="closeLinkReport">キャンセル</button><button type="submit" id="sendLinkReport">報告する</button></div></form></dialog>
 <style>.link-report-dialog{width:min(92vw,480px);border:1px solid #267d98;border-radius:14px;background:#0b1727;color:#e7faff;padding:24px;box-shadow:0 24px 70px #000b}.link-report-dialog::backdrop{background:#000b}.link-report-dialog h2{margin:0 0 10px}.link-report-dialog p{color:#aac5d3}.link-report-dialog label{display:block;margin:18px 0 6px}.link-report-dialog input{width:100%;padding:12px;border:1px solid #32728b;border-radius:8px;background:#07101c;color:#fff}.link-report-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}.link-report-actions button{padding:10px 15px;border:1px solid #32728b;border-radius:8px;background:#12334d;color:#dff8ff;cursor:pointer}</style>
-<dialog id="chatProfileDialog" class="chat-profile-dialog" aria-labelledby="chatProfileTitle"><form id="chatProfileForm"><h2 id="chatProfileTitle">利用者情報の設定</h2><p id="chatProfileDescription">学校名とフィルターの種類を入力してください。次回から自動で読み込みます。</p><p id="chatProfilePrivacy">正しく入力してください。入力した情報は、管理者が利用状況を確認するために使用します。</p><label>学校名<input id="chatProfileSchool" maxlength="80" required autocomplete="organization"></label><label>フィルターの種類<input id="chatProfileFilter" maxlength="80" required placeholder="例：i-FILTER"></label><p id="chatProfileStatus" role="status"></p><div><button type="button" id="cancelChatProfile">キャンセル</button><button type="submit" id="saveChatProfile">保存して続ける</button></div></form></dialog><style>.chat-profile-dialog{width:min(92vw,480px);border:1px solid #2684a0;border-radius:14px;background:#0b1727;color:#e8f9ff;padding:24px;box-shadow:0 24px 70px #000b}.chat-profile-dialog::backdrop{background:#000c}.chat-profile-dialog p{color:#afcbd8;line-height:1.6}.chat-profile-dialog label{display:block;margin:14px 0;font-weight:700}.chat-profile-dialog input{display:block;width:100%;margin-top:6px;padding:12px;border:1px solid #3c7992;border-radius:8px;background:#07101c;color:#fff}.chat-profile-dialog form>div{display:flex;justify-content:flex-end;gap:10px}.chat-profile-dialog button,.chat-profile-edit{padding:9px 12px;border:1px solid #32728b;border-radius:8px;background:#12334d;color:#dff8ff;cursor:pointer}.chat-profile-edit{display:block;margin:10px 0;font-size:12px}</style>
+<dialog id="chatProfileDialog" class="chat-profile-dialog" aria-labelledby="chatProfileTitle"><form id="chatProfileForm"><h2 id="chatProfileTitle">利用者情報の設定</h2><p id="chatProfileDescription">学校名、または都道府県と学校の区分を選び、フィルターの種類を入力してください。次回から自動で読み込みます。</p><p id="chatProfilePrivacy">正しく入力してください。入力した情報は、管理者が利用状況を確認するために使用します。</p><label>学校情報の登録方法<select id="chatProfileSchoolMode"><option value="name">学校名を入力する</option><option value="region">学校名を伝えず、都道府県と区分を選ぶ</option></select></label><div id="chatProfileSchoolNameFields"><label>学校名<input id="chatProfileSchool" maxlength="80" required autocomplete="organization"></label></div><div id="chatProfileSchoolRegionFields" hidden><label>都道府県<select id="chatProfilePrefecture" disabled><option value="">選択してください</option><option>北海道</option><option>青森県</option><option>岩手県</option><option>宮城県</option><option>秋田県</option><option>山形県</option><option>福島県</option><option>茨城県</option><option>栃木県</option><option>群馬県</option><option>埼玉県</option><option>千葉県</option><option>東京都</option><option>神奈川県</option><option>新潟県</option><option>富山県</option><option>石川県</option><option>福井県</option><option>山梨県</option><option>長野県</option><option>岐阜県</option><option>静岡県</option><option>愛知県</option><option>三重県</option><option>滋賀県</option><option>京都府</option><option>大阪府</option><option>兵庫県</option><option>奈良県</option><option>和歌山県</option><option>鳥取県</option><option>島根県</option><option>岡山県</option><option>広島県</option><option>山口県</option><option>徳島県</option><option>香川県</option><option>愛媛県</option><option>高知県</option><option>福岡県</option><option>佐賀県</option><option>長崎県</option><option>熊本県</option><option>大分県</option><option>宮崎県</option><option>鹿児島県</option><option>沖縄県</option></select></label><label>学校の区分<select id="chatProfileSchoolType" disabled><option value="">選択してください</option><option>国立</option><option>公立</option><option>私立</option><option>その他・わからない</option></select></label><p>学校名の入力は不要です。選んだ都道府県と区分が管理者に表示されます。</p></div><label>フィルターの種類<input id="chatProfileFilter" maxlength="80" required placeholder="例：i-FILTER"></label><p id="chatProfileStatus" role="status"></p><div><button type="button" id="cancelChatProfile">キャンセル</button><button type="submit" id="saveChatProfile">保存して続ける</button></div></form></dialog><style>.chat-profile-dialog{width:min(92vw,480px);border:1px solid #2684a0;border-radius:14px;background:#0b1727;color:#e8f9ff;padding:24px;box-shadow:0 24px 70px #000b}.chat-profile-dialog::backdrop{background:#000c}.chat-profile-dialog p{color:#afcbd8;line-height:1.6}.chat-profile-dialog label{display:block;margin:14px 0;font-weight:700}.chat-profile-dialog input{display:block;width:100%;margin-top:6px;padding:12px;border:1px solid #3c7992;border-radius:8px;background:#07101c;color:#fff}.chat-profile-dialog form>div{display:flex;justify-content:flex-end;gap:10px}.chat-profile-dialog button,.chat-profile-edit{padding:9px 12px;border:1px solid #32728b;border-radius:8px;background:#12334d;color:#dff8ff;cursor:pointer}.chat-profile-edit{display:block;margin:10px 0;font-size:12px}</style>
 <style id="mobile-usability">
 @media (max-width:760px) {
   html {scroll-padding-top:12px}
@@ -4662,4 +4682,4 @@ body { font-size:15px; line-height:1.7; }
 </style>
 <link rel="stylesheet" href="./mobile-layout.css?v=1">
 <script src="./mobile-layout.js?v=1"></script>
-</body></html>
+<style>#chatProfileDialog select{display:block;width:100%;padding:12px;border:1px solid #527184;border-radius:8px;background:#102638;color:#e8f9ff;font:inherit;margin-top:6px}#chatProfileSchoolRegionFields p{font-size:12px;line-height:1.7}#chatProfileDialog [hidden]{display:none!important}</style></body></html>
