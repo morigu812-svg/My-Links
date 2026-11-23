@@ -2445,6 +2445,7 @@ function staffPeerHasRead_(readerBrowserIds, recipientMailbox) {
 
 function getStaffChatMessages(adminToken, browserId, pageOptions) {
   requireAdmin_(adminToken);
+  requireStaffSupabase_();
   const opts = pageOptions && typeof pageOptions === 'object' && !Array.isArray(pageOptions)
     ? pageOptions : {};
   const summaryOnly = opts.mode === 'summary' || opts.mode === 'conversations';
@@ -2553,6 +2554,7 @@ function getStaffChatMessages(adminToken, browserId, pageOptions) {
 
 function markStaffChatRead(ids, browserId, adminToken) {
   requireAdmin_(adminToken);
+  requireStaffSupabase_();
   if (!validStaffBrowserId_(browserId) || !Array.isArray(ids) || ids.length > CHAT_MAX_MESSAGES) {
     throw new Error('既読にするメッセージを確認できません。');
   }
@@ -2605,6 +2607,7 @@ function validStaffBrowserId_(id) {
 
 function sendStaffChatMessage(message, adminToken, browserId, recipientId) {
   requireAdmin_(adminToken);
+  requireStaffSupabase_();
   const body = cleanText_(message, CHAT_MAX_LENGTH);
   if (!body) throw new Error('メッセージを入力してください。');
   const recipient = staffChatPrivateRecipient_(recipientId, browserId);
@@ -2702,6 +2705,7 @@ function sendStaffChatAttachment(message, payload, requestId, browserId, recipie
   // 古い画面からの5引数呼び出しは全員宛てとして扱う。
   if (adminToken === undefined) { adminToken = recipientOrToken; recipientOrToken = ''; }
   requireAdmin_(adminToken);
+  requireStaffSupabase_();
   if (!validStaffBrowserId_(browserId)) throw new Error('送信元ブラウザを確認できません。');
   if (typeof requestId !== 'string' || !/^[0-9a-f-]{36}$/i.test(requestId)) throw new Error('送信IDが不正です。');
   const body = cleanText_(message, CHAT_MAX_LENGTH);
@@ -2817,6 +2821,7 @@ function staffDriveApplyUploadResponse_(state, response) {
 function startStaffChatLargeUpload(message, payload, requestId, browserId, recipientOrToken, adminToken) {
   if (adminToken === undefined) { adminToken = recipientOrToken; recipientOrToken = ''; }
   requireAdmin_(adminToken);
+  requireStaffSupabase_();
   if (!validStaffBrowserId_(browserId)) throw new Error('送信元ブラウザを確認できません。');
   staffLargeUploadKey_(requestId);
   requireChatWritable_();
@@ -2884,6 +2889,7 @@ function startStaffChatLargeUpload(message, payload, requestId, browserId, recip
 
 function appendStaffChatLargeUploadChunk(requestId, browserId, offset, base64, adminToken) {
   requireAdmin_(adminToken);
+  requireStaffSupabase_();
   if (!validStaffBrowserId_(browserId)) throw new Error('送信元ブラウザを確認できません。');
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
@@ -2932,6 +2938,7 @@ function appendStaffChatLargeUploadChunk(requestId, browserId, offset, base64, a
 
 function finishStaffChatLargeUpload(requestId, browserId, adminToken) {
   requireAdmin_(adminToken);
+  requireStaffSupabase_();
   if (!validStaffBrowserId_(browserId)) throw new Error('送信元ブラウザを確認できません。');
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
@@ -3009,6 +3016,7 @@ function getStaffChatAttachment(messageId, browserOrToken, adminToken) {
   const browserId = adminToken === undefined ? '' : browserOrToken;
   if (adminToken === undefined) adminToken = browserOrToken;
   requireAdmin_(adminToken);
+  requireStaffSupabase_();
   const item = staffAttachmentAuthorizedFile_(messageId, browserId);
   const meta = {name:item.name,mime:item.mime,size:item.size};
   if (item.size > STAFF_ATTACHMENT_INLINE_MAX_BYTES) {
@@ -3022,6 +3030,7 @@ function getStaffChatAttachmentChunk(messageId, offset, browserOrToken, adminTok
   const browserId = adminToken === undefined ? '' : browserOrToken;
   if (adminToken === undefined) adminToken = browserOrToken;
   requireAdmin_(adminToken);
+  requireStaffSupabase_();
   const item = staffAttachmentAuthorizedFile_(messageId, browserId);
   if (item.size <= STAFF_ATTACHMENT_INLINE_MAX_BYTES) {
     throw new Error('このファイルは通常のダウンロードを使用してください。');
@@ -3047,6 +3056,7 @@ function getStaffChatAttachmentChunk(messageId, offset, browserOrToken, adminTok
 
 function deleteStaffChatMessage(id, browserId, adminToken) {
   requireAdmin_(adminToken);
+  requireStaffSupabase_();
   if (typeof id !== 'string' || !/^[0-9a-f-]{36}$/i.test(id) || !validStaffBrowserId_(browserId)) {
     throw new Error('投稿を確認できません。');
   }
@@ -4299,4 +4309,10 @@ function validateAttachmentSignature_(bytes, ext) {
   if (ext === 'webm' && (bytes.length < 4 || [26,69,223,163].some((n,i) => b(i) !== n))) {
     throw new Error('WebMの内容を確認してください。');
   }
+}
+
+// Staff chat never falls back to the legacy spreadsheet backend.
+function requireStaffSupabase_() {
+  if (supabaseChatMode_() !== 'supabase') throw new Error('管理者チャットはSupabase専用です。チャット履歴の移行とLINK_CORE_CHAT_BACKENDのsupabase設定を完了してください。');
+  supabaseChatConfig_();
 }
