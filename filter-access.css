@@ -90,3 +90,16 @@ html body .filter-access-panel h2{margin:0 0 12px}
 .fa-link-title small{display:block;margin-top:4px}
 @media(max-width:1000px){.fa-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.fa-grid{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:620px){.fa-cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.fa-card{padding:12px;min-height:90px}.fa-section{padding:12px}.fa-field,.fa-field.fa-search{min-width:calc(50% - 10px)}.fa-school-row{grid-template-columns:1fr 1fr;gap:5px}.fa-school-row strong{grid-column:1/-1}.fa-detail-table{min-width:680px}.fa-period-tools{width:100%}.filter-access-dialog .fa-period{flex:1}}
+
+/* Filter dashboard loading placeholders; independent of log dashboard assets. */
+.fa-dashboard .fa-skeleton{position:relative;overflow:hidden;background:#173246;border-radius:6px;min-height:12px}
+.fa-dashboard .fa-skeleton::after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,rgba(151,223,245,.15),transparent);animation:fa-skeleton-shimmer 1.5s ease-in-out infinite}
+.fa-skeleton-label{height:14px;width:64%;margin:2px 0 12px}
+.fa-skeleton-number{height:34px;width:48%;margin-bottom:10px}
+.fa-skeleton-hint{height:11px;width:88%}
+.fa-skeleton-rank{height:56px;margin:10px 0}
+.fa-skeleton-chart{height:210px;width:100%}
+.fa-skeleton-school{height:42px;margin:8px 0}
+.fa-skeleton-table-row{height:42px;margin:9px 0;width:100%}
+@keyframes fa-skeleton-shimmer{to{transform:translateX(100%)}}
+@media(prefers-reduced-motion:reduce){.fa-dashboard .fa-skeleton::after{animation:none;transform:none;background:none}}

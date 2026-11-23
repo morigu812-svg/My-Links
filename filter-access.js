@@ -282,8 +282,31 @@
         card.append(node('span','fa-card-label',label),node('strong','fa-card-value',value),node('span','fa-card-hint',detailText));
         return card;
       }
+      function renderSkeleton() {
+        const block=cls=>{
+          const placeholder=node('div','fa-skeleton '+cls);
+          placeholder.setAttribute('aria-hidden','true');
+          return placeholder;
+        };
+        cards.replaceChildren(...Array.from({length:8},()=>{
+          const card=node('div','fa-card');
+          card.setAttribute('aria-hidden','true');
+          card.append(block('fa-skeleton-label'),block('fa-skeleton-number'),block('fa-skeleton-hint'));
+          return card;
+        }));
+        rankingRows.replaceChildren(...Array.from({length:4},()=>block('fa-skeleton-rank')));
+        trendContent.replaceChildren(block('fa-skeleton-chart'));
+        schoolBody.replaceChildren(...Array.from({length:3},()=>block('fa-skeleton-school')));
+        const row=node('tr');
+        const cell=node('td');cell.colSpan=6;
+        cell.append(...Array.from({length:3},()=>block('fa-skeleton-table-row')));
+        row.append(cell);body.replaceChildren(row);
+        more.hidden=true;
+      }
       function render() {
         if(!dialog.open)return;
+        container.setAttribute('aria-busy',String(loading));
+        if(loading) { renderSkeleton(); return; }
         const filterName=filter.value,schoolName=school.value;
         const scoped=scopedActivity(activity,period,filterName,schoolName);
         const report=reportTotals(reports,period,filterName,schoolName);
@@ -379,6 +402,7 @@
         if(loading)return;
         loading=true;refresh.disabled=true;merge.disabled=true;
         status.textContent='集計結果を読み込んでいます…';
+        render();
         try{
           const response=await request('getFilterAccessSummary');
           if(!dialog.open)return;
