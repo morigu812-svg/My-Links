@@ -288,7 +288,7 @@
           placeholder.setAttribute('aria-hidden','true');
           return placeholder;
         };
-        cards.replaceChildren(...Array.from({length:8},()=>{
+        cards.replaceChildren(...Array.from({length:5},()=>{
           const card=node('div','fa-card');
           card.setAttribute('aria-hidden','true');
           card.append(block('fa-skeleton-label'),block('fa-skeleton-number'),block('fa-skeleton-hint'));
@@ -309,15 +309,10 @@
         if(loading) { renderSkeleton(); return; }
         const filterName=filter.value,schoolName=school.value;
         const scoped=scopedActivity(activity,period,filterName,schoolName);
-        const report=reportTotals(reports,period,filterName,schoolName);
-        const totalReports=report.allowed+report.blocked;
         cards.replaceChildren(
           numberCard('リンククリック',activity?fmt(scoped.clicks):'—','クリック履歴に保存された回数'),
           numberCard('ユニークブラウザ',activity?fmt(scoped.browsers):'—','ログイン・クリックに登場したブラウザ'),
           numberCard('ログイン回数',activity?fmt(scoped.logins):'—','訪問者ログイン履歴の件数'),
-          numberCard('開放報告率',reports?percent(report.allowed,totalReports):'—','開けた '+fmt(report.allowed)+'件 / 全 '+fmt(totalReports)+'件'),
-          numberCard('制限報告率',reports?percent(report.blocked,totalReports):'—','制限された報告の割合'),
-          numberCard('制限報告数',reports?fmt(report.blocked):'—','各ブラウザの最新報告'),
           numberCard('1ブラウザ当たりクリック',activity&&scoped.browsers?(scoped.clicks/scoped.browsers).toFixed(1):'—','選択期間のクリック ÷ ユニークブラウザ'),
           numberCard('学校数',activity?fmt(new Set(scoped.groups.map(g=>g.school).filter(x=>x!==UNKNOWN_FILTER)).size):'—','アクセス記録に登場する登録校')
         );
@@ -387,7 +382,7 @@
         const alerts=[];
         if(activity?.truncated?.length)alerts.push('最大5万行で打ち切った履歴：'+activity.truncated.join('、'));
         if(activity?.missing?.length)alerts.push('取得できない記録：'+activity.missing.join('、'));
-        foot.textContent='集計上の注意：クリック・ログインは操作履歴、開放報告率は各利用者が最後に報告した結果です。'
+        foot.textContent='集計上の注意：クリック・ログインは操作履歴、開放率は各利用者が最後に報告した結果です。'
           +'過去のフィルター・学校は保存されていないため、ログは現在の登録情報で分類します。'
           +'削除済みの履歴は含みません。'
           +(alerts.length?' '+alerts.join('。')+'。':'');
