@@ -1391,6 +1391,7 @@ async function finishVisitorLogin(auth, expiresAt) {
   if(visitorToken!==auth.token)return;
   if(initialData.profileRequired)throw new Error('利用者情報の保存を確認できません。もう一度ログインしてください。');
   applyVisitorLinks(initialData);
+  writeNoticeStorage('linkBaseRegisteredBrowserV1',JSON.stringify({browserId:getNoticeBrowserId(),registered:true}));
   void refreshVisitorOnline();
   void checkVisitorDmNotice();
   view='all';
