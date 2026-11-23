@@ -3,7 +3,7 @@ import * as T from './vendor/three.module.min.js';
 import {readSave,writeSave} from './save.js';
 import {getWallet,awardCredits,todayJst} from './wallet.js';
 import {createCityMultiplayer} from './multiplayer.js';
-import {addSky,windowTexture,asphaltTexture,lightPool,sportHover} from './visuals.js';
+import {addSky,asphaltTexture,lightPool,sportHover} from './visuals.js';
 var cityLife;
 const citySave=readSave('city');
 const $=id=>document.getElementById(id);const clamp=T.MathUtils.clamp;const WORLD_RADIUS=246;
@@ -31,20 +31,37 @@ const core=new T.Group();const crystal=new T.Mesh(new T.OctahedronGeometry(3.3),
 function sign(text,sub,color=0x6affe2){const canvas=document.createElement('canvas');canvas.width=1024;canvas.height=256;const ctx=canvas.getContext('2d');ctx.fillStyle='#09182be8';ctx.fillRect(0,0,1024,256);ctx.strokeStyle='#477487';ctx.lineWidth=5;ctx.strokeRect(5,5,1014,246);ctx.fillStyle='#'+new T.Color(color).getHexString();ctx.textAlign='center';ctx.font='bold 70px sans-serif';ctx.fillText(text,512,117);ctx.fillStyle='#bdd7e6';ctx.font='28px sans-serif';ctx.fillText(sub,512,192);const texture=new T.CanvasTexture(canvas);texture.colorSpace=T.SRGBColorSpace;return new T.Mesh(new T.PlaneGeometry(24,6),new T.MeshBasicMaterial({map:texture,side:T.DoubleSide,transparent:true}));}
 const signs=[];function placard(text,sub,x,z,color){const m=sign(text,sub,color);m.position.set(x,12,z);scene.add(m);signs.push(m);return m;}
 placard('CENTRAL PLAZA','LINK BASE / YOUR NEXT WORLD',0,35,0x78fff0);
-const cityMats=[0x51527e,0x6b4983,0x3a6277].map((color,i)=>{const tex=windowTexture(i+10);return new T.MeshStandardMaterial({color,map:tex,emissiveMap:tex,emissive:0xaabbe8,emissiveIntensity:.55,metalness:.55,roughness:.3});});let seed=682;function rnd(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;}
+let seed=682;function rnd(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;}
 const facadeParts=new Map();
 function facade(w,h,d,mat,x,y,z){const key=mat.uuid;if(!facadeParts.has(key))facadeParts.set(key,{mat,parts:[]});facadeParts.get(key).parts.push({w,h,d,x,y,z});}
-const towers=[];for(let sx of [-1,1])for(let sz of [-1,1])for(let row=0;row<4;row++)for(let col=0;col<4;col++){
-const x=sx*(62+col*46),z=sz*(62+row*46);if(Math.hypot(x,z)>244)continue;if(Math.hypot(x+116,z+116)<38||Math.hypot(x-116,z-116)<38)continue;const w=22+rnd()*9,d=22+rnd()*9,h=20+rnd()*70;const m=cube(w,h,d,cityMats[Math.floor(rnd()*3)],x,h/2,z);obstacles.push({x,z,w:w/2+3,d:d/2+3});towers.push(m);const neon=(col+row)%2?cyan:pink;for(const side of [-1,1])facade(.35,h*.85,.35,neon,x+side*w*.4,h/2,z+d/2+.12);facade(w+1,.25,d+1,neon,x,h,z);for(let k=6;k<h-4;k+=7)facade(w*.8,.35,.15,blue,x,k,z+d/2+.16);
-}
+// --- Everyday future town: planned low-rise houses and shops, not random towers ---
+const warmWin=new T.MeshBasicMaterial({color:0xffd98a});
+const wallMat=c=>new T.MeshStandardMaterial({color:c,roughness:.75,metalness:.05});
+const roofMat=c=>new T.MeshStandardMaterial({color:c,roughness:.85,metalness:.02});
+function winRow(g,w,h,d,y,n){for(let i=0;i<n;i++){const win=new T.Mesh(box,warmWin);win.scale.set(1.7,1.7,.14);win.position.set(-w/2+2.6+i*((w-5.2)/Math.max(1,n-1)),y,d/2+.08);g.add(win);}}
+function townDoor(g,w,d){const dr=new T.Mesh(box,new T.MeshStandardMaterial({color:0x4a3428,roughness:.8}));dr.scale.set(1.8,2.8,.16);dr.position.set(0,1.4,d/2+.08);g.add(dr);}
+function house(x,z,w,d,h,wall,roof){const g=new T.Group();g.position.set(x,0,z);scene.add(g);const body=new T.Mesh(box,wallMat(wall));body.scale.set(w,h,d);body.position.y=h/2;g.add(body);const roofH=h*.45+1.4;const rf=new T.Mesh(new T.ConeGeometry(Math.hypot(w,d)/2*1.06,roofH,4),roofMat(roof));rf.rotation.y=Math.PI/4;rf.position.y=h+roofH/2;g.add(rf);const chim=new T.Mesh(box,wallMat(0x8a6f5c));chim.scale.set(1,2,.9);chim.position.set(w*.28,h+1.2,-d*.18);g.add(chim);winRow(g,w,h,d,h*.62,Math.max(2,Math.round(w/5)));townDoor(g,w,d);obstacles.push({x,z,w:w/2+1,d:d/2+1});return g;}
+function shopBuilding(x,z,w,d,h,wall,signText,signSub,awning){const g=new T.Group();g.position.set(x,0,z);g.rotation.y=-Math.PI/2;scene.add(g);const body=new T.Mesh(box,wallMat(wall));body.scale.set(w,h,d);body.position.y=h/2;g.add(body);const awn=new T.Mesh(box,new T.MeshStandardMaterial({color:awning,roughness:.7}));awn.scale.set(w+1,.3,d*.55);awn.position.set(0,h*.62,d/2+.4);g.add(awn);winRow(g,w,h,d,h*.35,Math.max(2,Math.round(w/5)));townDoor(g,w,d);const board=sign(signText,signSub,0xffd98a);board.scale.set(.5,.5,.5);board.position.set(x-7.5,h+3.4,z);board.rotation.y=-Math.PI/2;scene.add(board);obstacles.push({x,z,w:d/2+1,d:w/2+1});return g;}
+function civicBuilding(x,z,w,d,h,wall,signText,signSub,signColor){const g=new T.Group();g.position.set(x,0,z);scene.add(g);const body=new T.Mesh(box,wallMat(wall));body.scale.set(w,h,d);body.position.y=h/2;g.add(body);const cap=new T.Mesh(box,wallMat(0x5a6b7a));cap.scale.set(w+1,.8,d+1);cap.position.y=h+.4;g.add(cap);winRow(g,w,h,d,h*.32,Math.max(3,Math.round(w/4)));winRow(g,w,h,d,h*.68,Math.max(3,Math.round(w/4)));townDoor(g,w,d);const board=sign(signText,signSub,signColor||0xffd98a);board.scale.set(.7,.7,.7);board.position.set(x,h+4.5,z+d/2+1);scene.add(board);obstacles.push({x,z,w:w/2+1,d:d/2+1});return g;}
+// Residential streets: pitched-roof houses, north of the plaza.
+const houseWalls=[0xe8dcc8,0xdfe8d8,0xf2ddd0,0xd8e0ea,0xead9c2,0xdcead9];const houseRoofs=[0x8a5a44,0x5a6b7a,0x7a4a3a,0x4a5a6b,0x96684a,0x6b4a5a];
+for(const [hx,hz] of [[-70,150],[-110,150],[-150,150],[-70,185],[-110,185],[-150,185],[70,150],[110,150],[140,150],[70,185],[110,185],[140,185]]){const i=(Math.abs(hx)+Math.abs(hz))%6;house(hx,hz,11,9,6,houseWalls[i],houseRoofs[i]);}
+// Shopping street: bakery, cafe, convenience store and florist, east of the main road.
+shopBuilding(48,-80,13,10,6,0xf2e3c8,'パン屋','BAKERY / 朝焼きたて',0xe07856);
+shopBuilding(48,-40,13,10,6,0xe3d9c2,'カフェ','CAFE / くつろぎの時間',0x5a8a6b);
+shopBuilding(48,40,13,10,6,0xdde8f2,'コンビニ','CONVENIENCE STORE / 24H',0x3a7bd5);
+shopBuilding(48,80,13,10,6,0xeed9e0,'花屋','FLOWER SHOP / 季節の花',0xd56a9a);
+// Station, school, clinic and library: the town's everyday anchors.
+civicBuilding(-80,-190,26,12,8,0xe8e2d4,'駅','STATION / みんなの玄関',0x8ec9ff);
+civicBuilding(130,-185,32,12,12,0xe3d9c2,'学校','SCHOOL / 未来の教室',0xffd98a);
+civicBuilding(-160,-60,16,12,8,0xf5f5f0,'病院','CLINIC / まちの診療所',0x7be495);
+civicBuilding(-116,-116,20,12,11,0xdfe8f2,'図書館','LIBRARY / 静かな時間',0x9ec9ff);
+// Park: trees, benches and playground, west of the canal.
+for(const [tx,tz] of [[-70,70],[-90,80],[-110,70],[-130,85],[-80,105],[-100,115],[-125,105],[-70,95]]){const trunk=new T.Mesh(new T.CylinderGeometry(.4,.6,3.6,6),wallMat(0x7a5a44));trunk.position.set(tx,1.8,tz);scene.add(trunk);const leaves=new T.Mesh(new T.SphereGeometry(2.6,8,6),new T.MeshStandardMaterial({color:0x3f7d44,roughness:.9}));leaves.position.set(tx,5,tz);scene.add(leaves);obstacles.push({x:tx,z:tz,w:1,d:1});}
+for(const [bx,bz] of [[-85,95],[-105,90],[-95,110]]){const bench=new T.Mesh(box,wallMat(0x9a7a52));bench.scale.set(4,.4,1.4);bench.position.set(bx,1,bz);scene.add(bench);obstacles.push({x:bx,z:bz,w:2.2,d:1});}
+const slide=new T.Mesh(box,wallMat(0xd56a6a));slide.scale.set(1.2,.3,6);slide.position.set(-115,2.4,95);slide.rotation.x=.5;scene.add(slide);obstacles.push({x:-115,z:95,w:1.5,d:3.5});
+const swingFrame=new T.Mesh(box,wallMat(0x5a6b7a));swingFrame.scale.set(5,.4,.4);swingFrame.position.set(-75,3.4,110);scene.add(swingFrame);obstacles.push({x:-75,z:110,w:2.8,d:1});
 const whiteLamp=basic(0xe5fff5);
-
-// Architectural podiums, rooftop setbacks and ground-level shopfronts.
-for(const tower of towers){
- const [w,h,d]=[tower.scale.x,tower.scale.y,tower.scale.z],x=tower.position.x,z=tower.position.z;
- facade(w+4,3,d+4,dark,x,1.5,z);facade(w*.78,5,d*.78,dark,x,h+2.5,z);facade(.3,6,.3,pink,x,h+8,z);
- facade(w+4,.15,d+4,gold,x,3.1,z);
-}
 for(const side of [-1,1])for(const z of [-190,-145,-100,-55,55,100,145,190]){
  facade(.35,8,.35,dark,side*23,4,z);facade(4,.35,.45,dark,side*21.2,8,z);facade(3.7,.12,.4,whiteLamp,side*21.2,7.8,z);
  if(Math.abs(z)%2===0){const pool=lightPool(24,18,side>0?0xe2a6ff:0x8ee9f4,.26);pool.position.set(side*13,.22,z);scene.add(pool);}
@@ -52,14 +69,6 @@ for(const side of [-1,1])for(const z of [-190,-145,-100,-55,55,100,145,190]){
 for(const z of [-190,-86,86,190]){
  for(const x of [-27,27]){facade(1.2,12,1.2,dark,x,6,z);facade(.18,11,.18,pink,x+.8,6,z);}
  facade(56,.6,2,dark,0,12,z);facade(56,.15,2.2,gold,0,12.5,z);
-}
-const shopNames=['ASTRA','NEON CAFE','PULSE LAB','HORIZON'];
-for(let i=0;i<8;i++){
- const side=i%2?1:-1,z=[-160,-110,110,160][Math.floor(i/2)],x=side*41;
- facade(8,5,18,dark,x,2.5,z);facade(8.4,.3,19,i%2?pink:cyan,x,5.3,z);
- facade(.2,3.5,8,blue,x-side*4.1,2.4,z);
- const board=sign(shopNames[i%4],'VIRTUAL CITY / OPEN',i%2?0xff8fe4:0x8affef);board.scale.set(.55,.55,.55);board.position.set(x-side*4.3,7,z);board.rotation.y=side>0?-Math.PI/2:Math.PI/2;scene.add(board);
- obstacles.push({x,z,w:4.7,d:9.7});
 }
 for(const side of [-1,1])for(const z of [-46,46]){
  facade(7,1.3,3,dark,side*29,.65,z);
@@ -76,77 +85,62 @@ const starsG=new T.BufferGeometry(),starPos=[];for(let i=0;i<350;i++)starPos.pus
 const transit=ring(315,1.7,blue,0,75,0);const traffic=[];for(let i=0;i<10;i++){const car=new T.Group(),paint=metal(i%2?0x306386:0x75448d);cube(3,1,7,paint,0,0,0,car);cube(2,.8,3,metal(0x65a5bb),0,.8,0,car);for(const x of [-1.7,1.7])cube(.25,.25,5,i%2?pink:cyan,x,-.2,0,car);cube(2,.2,.15,cyan,0,0,-3.6,car);scene.add(car);traffic.push({mesh:car,angle:rnd()*Math.PI*2,r:300+rnd()*200,y:65+rnd()*90,speed:.04+rnd()*.05});}
 // Only the race portal is playable; future venues are explicitly marked.
 const racePortal={x:0,z:-132,radius:16};const portal=new T.Group();portal.position.set(racePortal.x,0,racePortal.z);scene.add(portal);cube(34,.4,28,dark,0,.2,0,portal);for(const x of [-17,17]){cube(1,17,1,pink,x,8.5,0,portal);cube(3,.4,5,cyan,x,1,0,portal);}cube(35,1,1,pink,0,17,0,portal);const raceSign=sign('SKYLINE RACE','PLAY NOW / HOVER CAR RACING',0xff8de8);raceSign.position.set(0,22,0);portal.add(raceSign);const portalRing=ring(10,.3,pink,0,.5,-132);
-placard('ARCADE DISTRICT','COMING SOON / 次の遊びを準備中',122,0,0x9aa1ff);placard('SKY GARDEN','EXPLORE / 街を散歩しよう',-120,0,0x89ffd0);
+placard('商店街','SHOPPING STREET / パン屋・カフェ・コンビニ',122,0,0xffd98a);placard('公園','CITY PARK / 木とベンチと遊具',-120,0,0x89ffd0);
 for(const p of [[-30,-68],[30,-68],[-30,68],[30,68],[-105,-27],[105,27]]){cube(10,1.1,3,dark,p[0],.55,p[1]);cube(10,.12,.15,cyan,p[0],1.15,p[1]+1.5);}
-// Holographic trees outside the main streets.
-for(let i=0;i<18;i++){const angle=i*Math.PI*2/18,r=225;const x=Math.sin(angle)*r,z=Math.cos(angle)*r;cube(.5,4,.5,dark,x,2,z);const tree=new T.Mesh(new T.IcosahedronGeometry(3.5,0),new T.MeshStandardMaterial({color:0x268c8d,emissive:0x164c59,metalness:.4,roughness:.5,transparent:true,opacity:.85}));tree.position.set(x,6,z);scene.add(tree);}
-// Civic landmarks and landscaped waterfront: a lived-in future city.
+// Trees ringing the town.
+for(let i=0;i<18;i++){const angle=i*Math.PI*2/18,r=225;const x=Math.sin(angle)*r,z=Math.cos(angle)*r;cube(.5,4,.5,dark,x,2,z);const tree=new T.Mesh(new T.IcosahedronGeometry(3.5,0),new T.MeshStandardMaterial({color:0x3f7d44,emissive:0x1d4a24,metalness:.2,roughness:.8}));tree.position.set(x,6,z);scene.add(tree);}
+// Landscaped waterfront: a lived-in future city.
 const glass=new T.MeshStandardMaterial({color:0x769db3,metalness:.65,roughness:.18,transparent:true,opacity:.7});
-const civic=new T.Group();civic.position.set(-116,0,-116);scene.add(civic);
-for(let i=0;i<7;i++){const y=i*10;const floor=cube(38-i*2.8,8,32-i*2,cityMats[i%3],0,y+4,0,civic);floor.rotation.y=i*.12;cube(40-i*2.8,.3,34-i*2,cyan,0,y+8,0,civic).rotation.y=i*.12;}
-const dome=new T.Mesh(new T.SphereGeometry(20,24,12,0,Math.PI*2,0,Math.PI/2),glass);dome.position.set(116,9,116);scene.add(dome);placard('SKY CONSERVATORY','未来の温室 / BOTANICAL GARDEN',116,94,0xa0ffcb);
+const dome=new T.Mesh(new T.SphereGeometry(20,24,12,0,Math.PI*2,0,Math.PI/2),glass);dome.position.set(116,9,116);scene.add(dome);placard('植物園','CITY GARDEN / 未来の温室',116,94,0xa0ffcb);
 const water=new T.Mesh(new T.PlaneGeometry(16,240),new T.MeshStandardMaterial({color:0x289bac,emissive:0x124a61,metalness:.8,roughness:.2}));water.rotation.x=-Math.PI/2;water.position.set(-38,.2,0);scene.add(water);
 for(let z=-180;z<=180;z+=45){cube(30,.45,5,dark,-38,.5,z);for(const side of [-1,1])cube(.2,2,5,cyan,-38+side*14,1.6,z);}
 for(let i=0;i<26;i++){const z=-180+i*14;for(const x of [-24,25]){const trunk=new T.Mesh(new T.CylinderGeometry(.35,.55,4,6),metal(0x826b72));trunk.position.set(x,2,z);scene.add(trunk);const leaves=new T.Mesh(new T.SphereGeometry(2.4,8,6),metal(i%3===0?0xa77ba6:0x3b9c89));leaves.position.set(x,5,z);scene.add(leaves);}if(i%3===0){cube(5,.4,1.5,metal(0xc9a382),29,1,z);cube(.4,1,1.5,dark,27, .5,z);cube(.4,1,1.5,dark,31,.5,z);}}
-placard('NOVA LIVING','HOME / MARKET / PEOPLE / PLAY',0,88,0xffd9a0);
-const templates=[{id:'scout',label:'シティボーイ',suit:'#37bce8',accent:'#70fff0',skin:'#d9ad8c',style:'hair',height:100},{id:'runner',label:'ストリート',suit:'#a36ae8',accent:'#ff9be3',skin:'#b87954',style:'hair',height:105},{id:'pilot',label:'シティガール',suit:'#e2e8f6',accent:'#4dbdff',skin:'#e5c5a7',style:'hair',height:100},{id:'robot',label:'カジュアル',suit:'#294b70',accent:'#ffd37b',skin:'#d6af92',style:'hair',height:95}];let config={...templates[0],name:'プレイヤー'},selected='scout',soundChoice=null,state='setup',hasEntered=false,elapsed=0,yaw=0,walkPhase=0,toastTime=0,portalNear=false;
+placard('LINK BASE TOWN','未来の日常の町 / HOME・MARKET・PARK',0,88,0xffd9a0);
+const templates=[{id:'scout',label:'シティボーイ',suit:'#4a7fa5',accent:'#e8e4da',skin:'#d9ad8c',style:'short',height:100},{id:'runner',label:'ストリート',suit:'#6b5b8f',accent:'#f2ede4',skin:'#b87954',style:'short',height:105},{id:'pilot',label:'シティガール',suit:'#c96f7f',accent:'#f7f0e6',skin:'#e5c5a7',style:'long',height:98},{id:'casual',label:'カジュアル',suit:'#5b8c6a',accent:'#efe9dc',skin:'#d6af92',style:'ponytail',height:95}];let config={...templates[0],name:'プレイヤー'},selected='scout',soundChoice=null,state='setup',hasEntered=false,elapsed=0,yaw=0,walkPhase=0,toastTime=0,portalNear=false;
 const avatarRoot=new T.Group();scene.add(avatarRoot);const avatarPreviewRoot=new T.Group();previewScene.add(avatarPreviewRoot);let body,previewBody;const position=new T.Vector3(0,0,26);
 if(citySave?.position && Number.isFinite(citySave.position.x)&&Number.isFinite(citySave.position.z)&&canWalk(citySave.position.x,citySave.position.z))position.set(citySave.position.x,0,citySave.position.z);
 if(Number.isFinite(citySave?.yaw))yaw=citySave.yaw%(Math.PI*2);
 function buildAvatar(c){
  const root=new T.Group(),limbs=[];
- const suit=new T.MeshStandardMaterial({color:c.suit,metalness:.28,roughness:.5});
- const skin=new T.MeshStandardMaterial({color:c.skin,metalness:c.style==='robot'?.7:.04,roughness:.52});
- const accent=new T.MeshStandardMaterial({color:c.accent,emissive:c.accent,emissiveIntensity:.55,roughness:.3,metalness:.45});
- const trim=new T.MeshStandardMaterial({color:0xe8ebfa,metalness:.3,roughness:.5});
- const hair=new T.MeshStandardMaterial({color:0x242031,roughness:.8});
+ const suit=new T.MeshStandardMaterial({color:c.suit,metalness:.1,roughness:.65});
+ const skin=new T.MeshStandardMaterial({color:c.skin,metalness:.04,roughness:.52});
+ const accent=new T.MeshStandardMaterial({color:c.accent,roughness:.65,metalness:.05});
+ const trim=new T.MeshStandardMaterial({color:0xe8ebfa,metalness:.1,roughness:.6});
+ const hair=new T.MeshStandardMaterial({color:0x2e2118,roughness:.85});
  const eye=new T.MeshStandardMaterial({color:0x132333,roughness:.25});
- const visor=new T.MeshStandardMaterial({color:c.accent,emissive:c.accent,emissiveIntensity:.18,metalness:.85,roughness:.1});
  function part(geo,mat,x,y,z,parent=root,sx=1,sy=1,sz=1){const m=new T.Mesh(geo,mat);m.position.set(x,y,z);m.scale.set(sx,sy,sz);parent.add(m);return m;}
  function round(mat,x,y,z,sx,sy,sz,parent=root){return part(new T.SphereGeometry(1,12,10),mat,x,y,z,parent,sx,sy,sz);}
  function capsule(mat,x,y,z,r,length,parent=root){return part(new T.CapsuleGeometry(r,length,4,8),mat,x,y,z,parent);}
- // Fitted jacket, shoulder shapes, collar, utility belt and illuminated chest emblem.
- capsule(suit,0,1.23,0,.33,.38);
- round(suit,0,1.48,0,.46,.23,.25);
+ // Everyday jacket, shoulder shapes, collar, shirt and belt.
+ capsule(suit,0,1.23,0,.3,.38);
+ round(suit,0,1.48,0,.42,.22,.24);
  round(dark,0,.95,0,.35,.17,.23);
- part(box,trim,0,1.12,.255,root,.052,.48,.04);
- part(box,accent,.18,1.42,.245,root,.16,.12,.04);
- part(box,accent,-.19,1.42,.245,root,.035,.16,.04);
- part(box,dark,0,.91,0,root,.72,.13,.5);
- part(box,accent,0,.91,.27,root,.13,.09,.06);
+ part(box,trim,0,1.12,.24,root,.052,.48,.04);
+ part(box,accent,0,1.42,.235,root,.3,.34,.04);
+ part(box,dark,0,.91,0,root,.66,.13,.46);
  capsule(skin,0,1.73,0,.12,.14);
- // A sculpted head with ears, eyes, brows and nose, rather than a featureless cube.
- if(c.style==='robot'){
-   const g=new T.BoxGeometry(.56,.55,.49);part(g,skin,0,2,0);
-   part(box,dark,0,2.04,.252,root,.47,.23,.04);
-   part(box,accent,-.11,2.06,.28,root,.1,.055,.02);part(box,accent,.11,2.06,.28,root,.1,.055,.02);
-   part(box,trim,0,1.87,.26,root,.23,.025,.03);
-   capsule(accent,.3,2.37,0,.035,.18);
-   round(accent,.3,2.5,0,.055,.055,.055);
+ // A realistic human head: smaller proportions, with ears, eyes, brows, nose and mouth.
+ round(skin,0,1.98,0,.24,.28,.22);
+ for(const side of [-1,1]){
+   round(skin,side*.24,1.97,0,.055,.085,.06);
+   round(trim,side*.088,2.02,.2,.06,.05,.022);
+   round(eye,side*.088,2.02,.218,.028,.034,.015);
+   part(box,hair,side*.088,2.1,.208,root,.11,.022,.022);
+ }
+ round(skin,0,1.97,.238,.04,.055,.05);
+ part(box,eye,0,1.86,.21,root,.09,.014,.01);
+ if(c.style==='short'){
+   round(hair,0,2.19,-.02,.25,.15,.22);
+   round(hair,-.21,2.06,-.05,.06,.15,.17);
+   round(hair,.21,2.06,-.05,.06,.15,.17);
+ }else if(c.style==='long'){
+   round(hair,0,2.2,-.03,.26,.17,.23);
+   capsule(hair,0,1.78,-.24,.12,.32);
+   round(hair,0,1.6,-.25,.13,.1,.12);
  }else{
-   round(skin,0,2,0,.29,.34,.255);
-   for(const side of [-1,1]){
-     round(skin,side*.29,1.99,0,.065,.1,.07);
-     round(trim,side*.105,2.04,.232,.072,.058,.026);
-     round(eye,side*.105,2.04,.254,.033,.04,.018);
-     part(box,hair,side*.105,2.13,.239,root,.13,.025,.025);
-   }
-   round(skin,0,1.99,.272,.047,.065,.06);
-   part(box,eye,0,1.87,.24,root,.105,.016,.012);
-   if(c.style==='hair'){
-     round(hair,0,2.23,-.025,.3,.18,.26);
-     for(let i=0;i<6;i++){const tuft=capsule(hair,-.22+i*.085,2.31,-.03,.07,.17);tuft.rotation.z=-.45;tuft.rotation.x=.35;}
-     round(hair,-.255,2.1,-.07,.07,.18,.2);
-   }else if(c.style==='helmet'){
-     round(suit,0,2.09,-.04,.34,.36,.31);
-     round(visor,0,2.06,.21,.28,.18,.17);
-     for(const side of [-1,1])part(new T.CylinderGeometry(.105,.105,.07,12),accent,side*.33,2.06,0).rotation.z=Math.PI/2;
-     part(box,trim,0,2.38,-.02,root,.08,.03,.48);
-   }else{
-     round(hair,0,2.24,-.05,.295,.12,.24);
-     part(box,visor,0,2.07,.27,root,.5,.115,.07);
-     part(box,accent,0,2.03,.312,root,.44,.015,.012);
-   }
+   round(hair,0,2.2,-.03,.26,.16,.23);
+   const tail=capsule(hair,0,2.32,-.3,.08,.24);tail.rotation.x=-.85;
+   part(box,trim,0,2.22,-.27,root,.14,.04,.06);
  }
  // Articulated arms and legs keep the existing walking animation.
  for(const side of [-1,1]){
@@ -155,7 +149,6 @@ function buildAvatar(c){
    capsule(suit,0,-.23,0,.12,.24,arm);
    part(box,trim,0,-.36,.1,arm,.22,.12,.04);
    capsule(dark,0,-.48,0,.115,.12,arm);
-   part(box,accent,0,-.43,.12,arm,.17,.04,.04);
    round(skin,0,-.65,.01,.105,.13,.1,arm);
    const leg=new T.Group();leg.position.set(side*.2,.86,0);root.add(leg);
    capsule(suit,0,-.22,0,.14,.25,leg);
@@ -163,14 +156,11 @@ function buildAvatar(c){
    capsule(suit,0,-.53,0,.12,.15,leg);
    round(dark,0,-.73,.09,.155,.13,.25,leg);
    part(box,trim,0,-.8,.08,leg,.31,.055,.43);
-   part(box,accent,side*.12,-.68,.12,leg,.035,.07,.25);
    limbs.push({arm,leg,side});
  }
  // Casual human avatars wear a small fabric backpack.
  round(suit,0,1.28,-.27,.23,.27,.1);
  part(box,trim,0,1.25,-.38,root,.12,.05,.025);
- if(c.style==='helmet'){for(const side of [-1,1])capsule(trim,side*.22,1.23,-.35,.07,.33);}
- if(c.style==='robot'){part(box,accent,0,1.26,.3,root,.2,.2,.05);}
  // Merge static parts sharing a material, separately for each articulated limb.
  function mergeParts(group){
    for(const child of [...group.children])if(child.isGroup)mergeParts(child);
@@ -194,7 +184,7 @@ function rebuild(){if(body){avatarRoot.remove(body);disposeModel(body);}if(previ
 function syncFields(){for(const [id,key]of [['suitColor','suit'],['accentColor','accent'],['skinColor','skin'],['headStyle','style'],['height','height']])$(id).value=config[key];document.querySelectorAll('#templates button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.template===selected)));}
 for(const t of templates){const b=document.createElement('button');b.type='button';b.textContent=t.label;b.dataset.template=t.id;b.onclick=()=>{config={...t,name:$('avatarName').value};selected=t.id;syncFields();rebuild();};$('templates').append(b);}
 for(const [id,key]of [['suitColor','suit'],['accentColor','accent'],['skinColor','skin'],['headStyle','style'],['height','height']])$(id).addEventListener('input',()=>{config[key]=key==='height'?Number($(id).value):$(id).value;selected='custom';syncFields();rebuild();});
-try{const saved=citySave?.avatar||JSON.parse(sessionStorage.getItem('linkBaseVirtualAvatar')||'null');if(saved&&/^#[0-9a-f]{6}$/i.test(saved.suit)&&/^#[0-9a-f]{6}$/i.test(saved.accent)&&/^#[0-9a-f]{6}$/i.test(saved.skin)&&['visor','hair','helmet','robot'].includes(saved.style)){config={...config,suit:saved.suit,accent:saved.accent,skin:saved.skin,style:'hair',skin:saved.style==='robot'?'#d6af92':saved.skin,name:String(saved.name||'パイロット').slice(0,14),height:clamp(Number(saved.height)||100,85,120)};selected='custom';$('avatarName').value=config.name;}}catch{}
+try{const saved=citySave?.avatar||JSON.parse(sessionStorage.getItem('linkBaseVirtualAvatar')||'null');if(saved&&/^#[0-9a-f]{6}$/i.test(saved.suit)&&/^#[0-9a-f]{6}$/i.test(saved.accent)&&/^#[0-9a-f]{6}$/i.test(saved.skin)){config={...config,suit:saved.suit,accent:saved.accent,skin:saved.skin,style:['short','long','ponytail'].includes(saved.style)?saved.style:'short',name:String(saved.name||'パイロット').slice(0,14),height:clamp(Number(saved.height)||100,85,120)};selected='custom';$('avatarName').value=config.name;}}catch{}
 syncFields();rebuild();
 let audio=null,osc=null,gain=null,sound=false;function setAudio(enabled){sound=enabled;soundChoice=enabled;if(enabled){try{if(!audio){audio=new (window.AudioContext||window.webkitAudioContext)();osc=audio.createOscillator();gain=audio.createGain();osc.type='sine';osc.frequency.value=82;gain.gain.value=0;osc.connect(gain);gain.connect(audio.destination);osc.start();}audio.resume().catch(()=>{});}catch{sound=false;}}$('audioToggle').textContent=sound?'音 ON':'音 OFF';$('audioToggle').setAttribute('aria-pressed',String(sound));$('chooseSound').setAttribute('aria-pressed',String(soundChoice===true));$('chooseSilent').setAttribute('aria-pressed',String(soundChoice===false));$('enter').disabled=false;$('enter').textContent=hasEntered?'このアバターで街に戻る':'このアバターで街へ';}
 $('chooseSound').onclick=()=>setAudio(true);$('chooseSilent').onclick=()=>setAudio(false);$('audioToggle').onclick=()=>setAudio(!sound);
@@ -298,7 +288,7 @@ document.body.classList.toggle('walking',state==='walking');
 if(state==='setup'&&!hasEntered){const a=elapsed*.018;camPos.set(Math.sin(a)*58,18,Math.cos(a)*58);target.set(0,8,-45);}else{camPos.set(position.x+Math.sin(yaw)*7,position.y+3.35,position.z+Math.cos(yaw)*7);target.set(position.x-Math.sin(yaw)*7,position.y+1.65,position.z-Math.cos(yaw)*7);}camera.position.lerp(camPos,1-Math.exp(-dt*8));camera.lookAt(target);
 core.rotation.y=elapsed*.4;crystal.position.y=Math.sin(elapsed)*.7;portalRing.rotation.z=elapsed*.3;for(const t of traffic){t.angle+=dt*t.speed;t.mesh.position.set(Math.sin(t.angle)*t.r,t.y+Math.sin(elapsed+t.r)*1.2,Math.cos(t.angle)*t.r);t.mesh.rotation.y=t.angle+Math.PI/2;}for(const g of collectibles)if(!g.found){g.mesh.rotation.y+=dt;g.mesh.position.y=1.7+Math.sin(elapsed*2+g.x)*.25;}for(const sign of signs){sign.rotation.y=Math.atan2(camera.position.x-sign.position.x,camera.position.z-sign.position.z);}residents.forEach((n,i)=>{n.rotation.y=Math.sin(elapsed*.3+i)*.4;n.position.y=Math.sin(elapsed+i)*.025;});
 if(state==='setup'){previewBody.rotation.y+=dt*.3;previewRenderer.render(previewScene,previewCamera);}if(gain&&audio)gain.gain.setTargetAtTime(sound&&state==='walking'?.025:0,audio.currentTime,.15);if(osc&&audio)osc.frequency.setTargetAtTime(moving?92:73,audio.currentTime,.4);
-if(toastTime>0){toastTime-=dt;if(toastTime<=0)$('toast').textContent='';}hudTick+=dt;if(hudTick>.2){hudTick=0;if(collectionDay!==todayJst()){collectionDay=todayJst();for(const item of collectibles){item.found=false;item.mesh.visible=true;}$('collectCount').textContent='0 / 12';persistCity();toast('新しい日の光が街に現れました。');}drawMap();$('district').textContent=position.z>175&&Math.abs(position.x)<30?'ホーム・ガーデン':position.x>165&&Math.abs(position.z)<35?'NOVA MARKET':portalNear?'スカイライン・レースゲート':position.x>70?'アーケード・ストリート':position.x< -70?'スカイガーデン':position.z>75?'ネオン・プロムナード':'セントラルプラザ';}renderer.render(scene,camera);requestAnimationFrame(animate);}
+if(toastTime>0){toastTime-=dt;if(toastTime<=0)$('toast').textContent='';}hudTick+=dt;if(hudTick>.2){hudTick=0;if(collectionDay!==todayJst()){collectionDay=todayJst();for(const item of collectibles){item.found=false;item.mesh.visible=true;}$('collectCount').textContent='0 / 12';persistCity();toast('新しい日の光が街に現れました。');}drawMap();$('district').textContent=position.z>175&&Math.abs(position.x)<30?'ホーム・ガーデン':position.x>165&&Math.abs(position.z)<35?'NOVA MARKET':portalNear?'スカイライン・レースゲート':position.x<0&&position.z<-160?'駅前広場':position.x>0&&position.z<-160?'学校前':position.x<-90&&position.z<-90&&position.z>-150?'図書館前':position.x<-140&&position.z>-90&&position.z<-30?'病院前':position.x<-50&&position.z>40&&position.z<130?'公園':Math.abs(position.x)>50&&position.z>130?'住宅街':position.x>40&&Math.abs(position.z)<100?'商店街':position.z>75?'プロムナード':'セントラルプラザ';}renderer.render(scene,camera);requestAnimationFrame(animate);}
 camera.position.set(50,18,55);requestAnimationFrame(animate);addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
 
 
