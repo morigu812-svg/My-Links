@@ -1,6 +1,6 @@
 // Versioned browser-local saves. Never stores LINK BASE credentials or sends data to a server.
 const PREFIX='linkBaseVirtualSaveV1:';
-const allowed=new Set(['city','race']);
+const allowed=new Set(['city','race','wallet','player']);
 export function readSave(name){
   if(!allowed.has(name))return null;
   try{
@@ -15,3 +15,4 @@ export function writeSave(name,payload){
   try{localStorage.setItem(PREFIX+name,JSON.stringify({version:1,savedAt:new Date().toISOString(),payload}));return true;}
   catch{return false;}
 }
+
