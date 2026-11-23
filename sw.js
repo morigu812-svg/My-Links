@@ -9,7 +9,7 @@
  */
 'use strict';
 
-var CACHE_VERSION = 'link-core-v97';
+var CACHE_VERSION = 'link-core-v98';
 var STATIC_CACHE = 'link-core-static-' + CACHE_VERSION;
 
 /* アプリの殻。相対パスなので、GitHub Pages のプロジェクトサイト

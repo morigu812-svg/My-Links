@@ -4,6 +4,7 @@ import {awardCredits,getWallet} from '../wallet.js';
 import {addSky,windowTexture,asphaltTexture,lightPool,sportHover} from '../visuals.js';
 let rewardId=crypto.randomUUID();
 const savedRace=readSave('race');
+const recentTimes=(savedRace?.trackVersion===2&&Array.isArray(savedRace.recentTimes)?savedRace.recentTimes:[]).filter(n=>Number.isFinite(n)&&n>8&&n<1800).slice(-8);let eventSeen=new Set(),sector=-1,jumpTime=0;
 const $=id=>document.getElementById(id), TAU=Math.PI*2;
 const mobileDevice=matchMedia('(pointer:coarse)').matches;
 let renderer;
@@ -12,7 +13,7 @@ renderer.setPixelRatio(Math.min(devicePixelRatio,mobileDevice?1:1.25));renderer.
 const scene=new THREE.Scene();scene.background=new THREE.Color('#351d44');scene.fog=new THREE.FogExp2('#3b234e',.00145);addSky(scene);
 const camera=new THREE.PerspectiveCamera(72,innerWidth/innerHeight,.5,9000);
 scene.add(new THREE.HemisphereLight(0xa9d9ff,0x18112e,2));const sun=new THREE.DirectionalLight(0xaaaaff,2.5);sun.position.set(100,500,200);scene.add(sun);
-const points=[[-800,140,0],[-500,180,-1000],[600,260,-1450],[1650,210,-900],[1800,320,250],[900,390,1300],[-200,260,1600],[-1350,180,1000]].map(p=>new THREE.Vector3(...p));
+const points=[[-800,140,0],[-500,180,-1000],[600,260,-1450],[1650,210,-900],[1800,320,250],[900,390,1300],[-200,260,1600],[-1350,180,1000]].map(p=>new THREE.Vector3(...p).multiplyScalar(.72));
 const track=new THREE.CatmullRomCurve3(points,true,'catmullrom',.35);track.arcLengthDivisions=4000;track.updateArcLengths();const length=track.getLength(), WIDTH=33;
 const samples=Array.from({length:1201},(_,i)=>frame(i/1200));
 function frame(u){u=((u%1)+1)%1;const p=track.getPointAt(u),f=track.getTangentAt(u).normalize(),right=new THREE.Vector3().crossVectors(f,new THREE.Vector3(0,1,0)).normalize();const up=new THREE.Vector3().crossVectors(right,f).normalize();return {p,f,right,up};}
@@ -54,14 +55,22 @@ part(0,1,0,4.3,1.1,8.6,paint);part(0,1.9,.2,2.7,1.3,4.3,materials.glass);part(0,
 for(const x of [-2.6,2.6]){part(x,.3,.5,.65,.7,6.8,materials.dark);part(x,.65,-2.9,.8,.2,1.5,white);part(x,.5,2.9,.7,.3,1.8,lit);}part(0,.45,-4.5,2.9,.18,.3,white);part(0,.6,4.4,3.6,.25,.2,lit);
 const jets=[];for(const x of [-1.4,1.4]){const jet=new THREE.Mesh(new THREE.ConeGeometry(.6,6,8),lit);jet.rotation.x=Math.PI/2;jet.position.set(x,.5,7);root.add(jet);jets.push(jet);}root.userData.jets=jets;return root;}
 const player=sportHover(0x7652bb);scene.add(player);
+const previousPace=recentTimes.length?recentTimes.reduce((a,b)=>a+b,0)/recentTimes.length:savedRace?.records?.bestLap>8?savedRace.records.bestLap*.72:0;function calculateCpuPace(times){if(!times.length)return previousPace?THREE.MathUtils.clamp(length/previousPace*.99,135,345):195;const avg=times.reduce((a,b)=>a+b,0)/times.length;return THREE.MathUtils.clamp(length/(avg*.7+Math.min(...times)*.3)*.99,135,345);}let cpuPace=calculateCpuPace(recentTimes);
 const rivals=Array.from({length:5},(_,i)=>{const mesh=sportHover([0xff49be,0xa57bff,0xffcb53,0x50ffbb,0xff715e][i]);scene.add(mesh);return {mesh,progress:30+i*22,lane:(i%3-1)*20,speed:148+i*5,phase:i*2.2};});
 const traffic=[];for(let i=0;i<6;i++){const mesh=car(i%2?0x7b55de:0x2f86a3);mesh.scale.setScalar(.8);scene.add(mesh);traffic.push({mesh,u:random(),height:60+random()*100,off:(i%2?1:-1)*(70+random()*170)});}
-const keys={left:false,right:false,boost:false,turbo:false};let drivePointer=null,steerPointer=null,steerX=0,touchDriving=mobileDevice,swipeSteer=0;const raceCanvas=$('world');raceCanvas.style.touchAction='none';function clearDrive(){drivePointer=steerPointer=null;swipeSteer=0;keys.left=keys.right=keys.boost=keys.turbo=false;};let state='menu',mode='race',progress=0,speed=0,lane=0,laneV=0,energy=100,time=0,bestLap=Infinity,lapStarted=0,lastLap=0,count=0,padCooldown=0,messageTimer=0,collisionCooldown=0,boosting=false;let renderTime=0,lastNow=performance.now(),ready=0;const laps=3;
+const sectorNames=['NEON DOWNTOWN','SKY FOREST','OCEAN BRIDGE','LIGHT TUNNEL'];
+const sceneryDummy=new THREE.Object3D(),trees=new THREE.InstancedMesh(new THREE.ConeGeometry(8,26,6),new THREE.MeshStandardMaterial({color:0x46b9a0,roughness:.8}),100);
+for(let i=0;i<100;i++){const f=frame(.255+(i/100)*.23),side=i%2?1:-1;sceneryDummy.position.copy(f.p).addScaledVector(f.right,side*(57+(i%5)*13));sceneryDummy.position.y+=6;sceneryDummy.rotation.set(0,i,0);sceneryDummy.scale.setScalar(.7+(i%3)*.25);sceneryDummy.updateMatrix();trees.setMatrixAt(i,sceneryDummy.matrix);}scene.add(trees);
+for(let i=0;i<24;i++){const f=frame(.75+i/24*.23),arch=new THREE.Mesh(new THREE.TorusGeometry(43,.9,5,24,Math.PI),glow(i%2?0xff85da:0x7affed));arch.position.copy(f.p);arch.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(f.right,f.up,f.f));scene.add(arch);}
+const ocean=new THREE.Mesh(new THREE.PlaneGeometry(4700,2200),new THREE.MeshStandardMaterial({color:0x187d9c,metalness:.7,roughness:.22,emissive:0x092e4b}));ocean.rotation.x=-Math.PI/2;const oceanFrame=frame(.62);ocean.position.set(oceanFrame.p.x,oceanFrame.p.y-50,oceanFrame.p.z);scene.add(ocean);
+const raceEvents=[{u:.13,lane:-16,type:'coin',name:'COIN LINE +25 CR'},{u:.34,lane:15,type:'coin',name:'FOREST ORBS +25 CR'},{u:.53,lane:0,type:'jump',name:'SKY JUMP / ENERGY FULL'},{u:.69,lane:-15,type:'coin',name:'OCEAN TREASURE +25 CR'},{u:.86,lane:15,type:'coin',name:'FINAL CHANCE +25 CR'}];
+for(const e of raceEvents){const f=frame(e.u),m=new THREE.Mesh(e.type==='jump'?new THREE.TorusGeometry(10,.7,6,24):new THREE.OctahedronGeometry(3),glow(e.type==='jump'?0x7affdf:0xffcf70));m.position.copy(f.p).addScaledVector(f.right,e.lane).addScaledVector(f.up,5);m.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(f.right,f.up,f.f));scene.add(m);e.mesh=m;}
+const keys={left:false,right:false,boost:false,turbo:false};let drivePointer=null,steerPointer=null,steerX=0,touchDriving=mobileDevice,swipeSteer=0;const raceCanvas=$('world');raceCanvas.style.touchAction='none';function clearDrive(){drivePointer=steerPointer=null;swipeSteer=0;keys.left=keys.right=keys.boost=keys.turbo=false;};let state='menu',mode='race',progress=0,speed=0,lane=0,laneV=0,energy=100,time=0,bestLap=Infinity,lapStarted=0,lastLap=0,count=0,padCooldown=0,messageTimer=0,collisionCooldown=0,boosting=false;let renderTime=0,lastNow=performance.now(),ready=0;const laps=1;
 const fmt=s=>{const ms=Math.floor(Math.max(0,s)*1000);return String(Math.floor(ms/60000)).padStart(2,'0')+':'+String(Math.floor(ms/1000)%60).padStart(2,'0')+'.'+String(ms%1000).padStart(3,'0');};
 function message(text,duration=2){$('message').textContent=text;messageTimer=duration;}
 let audio=null,osc=null,gain=null,sound=false;function toggleSound(){sound=!sound;if(sound&&!audio){try{audio=new (window.AudioContext||window.webkitAudioContext)();osc=audio.createOscillator();gain=audio.createGain();osc.type='sawtooth';const filter=audio.createBiquadFilter();filter.type='lowpass';filter.frequency.value=500;osc.connect(filter);filter.connect(gain);gain.connect(audio.destination);gain.gain.value=0;osc.start();}catch{sound=false;}}if(audio?.state==='suspended')audio.resume();$('sound').textContent=sound?'音 ON':'音 OFF';$('sound').setAttribute('aria-pressed',String(sound));}
 $('sound').onclick=toggleSound;
-function reset(nextMode){rewardId=crypto.randomUUID();mode=nextMode;progress=0;speed=0;lane=0;laneV=0;energy=100;time=0;lapStarted=0;lastLap=0;bestLap=Infinity;padCooldown=0;collisionCooldown=0;count=3.2;ready=0;clearDrive();messageTimer=0;$('message').textContent='';rivals.forEach((r,i)=>{r.progress=30+i*22;r.lane=(i%3-1)*20;r.mesh.visible=mode==='race';});state='countdown';$('menu').hidden=true;$('footer').hidden=true;$('overlay').hidden=true;$('hud').hidden=false;$('pause').hidden=false;document.body.classList.add('racing');$('countdown').textContent='3';$('rank').textContent='6';}
+function reset(nextMode){cpuPace=calculateCpuPace(recentTimes);aiStatus.textContent='1周・約 '+Math.round(length/207)+' 秒 / CPU '+(recentTimes.length||previousPace?'あなたの記録に合わせて調整':'初回スタンダード')+' · 目安 '+Math.round(cpuPace*3.6)+' km/h';eventSeen.clear();for(const e of raceEvents)e.mesh.visible=true;sector=-1;jumpTime=0;rewardId=crypto.randomUUID();mode=nextMode;progress=0;speed=0;lane=0;laneV=0;energy=100;time=0;lapStarted=0;lastLap=0;bestLap=Infinity;padCooldown=0;collisionCooldown=0;count=3.2;ready=0;clearDrive();messageTimer=0;$('message').textContent='';rivals.forEach((r,i)=>{r.progress=30+i*22;r.lane=(i%3-1)*20;r.mesh.visible=mode==='race';});state='countdown';$('menu').hidden=true;$('footer').hidden=true;$('overlay').hidden=true;$('hud').hidden=false;$('pause').hidden=false;document.body.classList.add('racing');$('countdown').textContent='3';$('rank').textContent='6';}
 const requestedAudio=new URLSearchParams(location.search).get('audio');
 let audioChosen=requestedAudio==='on'||requestedAudio==='off';
 if(audioChosen)$('raceAudioGate').hidden=true;
@@ -74,7 +83,7 @@ $('home').onclick=home;
 function pause(on=state!=='paused'){if(on&&state!=='racing')return;if(!on&&state!=='paused')return;state=on?'paused':'racing';clearDrive();$('overlay').hidden=!on;if(on){$('resultTag').textContent='PAUSED';$('resultTitle').textContent='ひと休み';$('resultText').textContent='準備ができたら、再び空へ。';$('resultStats').replaceChildren();$('resume').hidden=false;$('restart').hidden=true;}persistRace();document.body.classList.remove('boosting');}
 $('pause').onclick=()=>pause();document.addEventListener('visibilitychange',()=>{if(document.hidden)pause(true);});
 $('fullscreen').onclick=()=>{if(document.fullscreenElement)document.exitFullscreen?.();else document.documentElement.requestFullscreen?.().catch(()=>{});};
-function finish(){state='finished';const rank=1+rivals.filter(r=>r.progress>progress).length;$('overlay').hidden=false;$('resume').hidden=true;$('restart').hidden=false;$('resultTag').textContent='SKYLINE GRAND PRIX';$('resultTitle').textContent=rank===1?'VICTORY':rank+'位 FINISH';$('resultText').textContent=rank===1?'ネオンの空は、君のもの。':'ブーストパッドと追い風で、次はもっと速く。';$('resultStats').replaceChildren();for(const text of ['TIME '+fmt(time),'BEST LAP '+fmt(bestLap)]){const el=document.createElement('span');el.textContent=text;$('resultStats').append(el);}const reward=awardCredits('race:'+rewardId,rank===1?100:rank<=3?60:30);const rewardNode=document.createElement('p');rewardNode.textContent='レース報酬 +'+reward.amount+' CR / 所持 '+getWallet().balance.toLocaleString('ja-JP')+' CR';$('resultStats').append(rewardNode);records.races++;if(rank===1)records.wins++;records.bestTime=Math.min(records.bestTime||Infinity,time);records.bestLap=Math.min(records.bestLap||Infinity,bestLap);persistRace();refreshRecords();document.body.classList.remove('boosting');}
+function finish(){state='finished';const rank=1+rivals.filter(r=>r.progress>progress).length;$('overlay').hidden=false;$('resume').hidden=true;$('restart').hidden=false;$('resultTag').textContent='SKYLINE GRAND PRIX';$('resultTitle').textContent=rank===1?'VICTORY':rank+'位 FINISH';$('resultText').textContent=rank===1?'ネオンの空は、君のもの。':'ブーストパッドと追い風で、次はもっと速く。';$('resultStats').replaceChildren();for(const text of ['TIME '+fmt(time),'BEST LAP '+fmt(bestLap)]){const el=document.createElement('span');el.textContent=text;$('resultStats').append(el);}recentTimes.push(time);if(recentTimes.length>8)recentTimes.shift();const reward=awardCredits('race:'+rewardId,rank===1?100:rank<=3?60:30);const rewardNode=document.createElement('p');rewardNode.textContent='レース報酬 +'+reward.amount+' CR / 所持 '+getWallet().balance.toLocaleString('ja-JP')+' CR';$('resultStats').append(rewardNode);records.races++;if(rank===1)records.wins++;records.bestTime=Math.min(records.bestTime||Infinity,time);records.bestLap=Math.min(records.bestLap||Infinity,bestLap);persistRace();refreshRecords();document.body.classList.remove('boosting');}
 const bindings={ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',Space:'boost',ShiftLeft:'boost',ShiftRight:'boost',ControlLeft:'turbo',ControlRight:'turbo',MetaLeft:'turbo',MetaRight:'turbo'};
 addEventListener('keydown',e=>{if(bindings[e.code]){if(state==='racing'||state==='countdown')e.preventDefault();keys[bindings[e.code]]=true;}if((e.code==='KeyP'||e.code==='Escape')&&!e.repeat)pause();if(e.code==='KeyR'&&state==='racing'&&!e.repeat)reset(mode);});
 addEventListener('keyup',e=>{if(bindings[e.code])keys[bindings[e.code]]=false;});addEventListener('blur',()=>{clearDrive();pause(true);});
@@ -88,14 +97,15 @@ const positive=value=>Number.isFinite(value)&&value>0?value:null;
 const records={bestTime:positive(savedRace?.records?.bestTime),bestLap:positive(savedRace?.records?.bestLap),
   races:Number.isSafeInteger(savedRace?.records?.races)?Math.max(0,savedRace.records.races):0,
   wins:Number.isSafeInteger(savedRace?.records?.wins)?Math.max(0,savedRace.records.wins):0};
+const aiStatus=document.createElement('p');aiStatus.className='assist';aiStatus.textContent='1周・約 '+Math.round(length/207)+' 秒 / CPU '+(previousPace?'あなたの記録に合わせて調整':'初回スタンダード')+' · 目安 '+Math.round(cpuPace*3.6)+' km/h';$('menu').append(aiStatus);
 const recordStatus=document.createElement('p');recordStatus.className='assist';$('menu').append(recordStatus);
 function refreshRecords(){recordStatus.textContent='保存済み記録： '+records.races+'レース / '+records.wins+'勝'+(records.bestTime?' / ベスト '+fmt(records.bestTime):'')+(records.bestLap?' / 最速ラップ '+fmt(records.bestLap):'');}
 refreshRecords();
 let saveElapsed=0,saveWarning=false;
 function persistRace(){
   const active=['racing','paused','countdown'].includes(state);
-  const run=active?{rewardId,mode,progress,speed,lane,energy,time,bestLap:Number.isFinite(bestLap)?bestLap:null,lapStarted,lastLap,rivals:rivals.map(r=>({progress:r.progress,lane:r.lane,speed:r.speed}))}:(state==='finished'?null:readSave('race')?.run||null);
-  if(!writeSave('race',{records:{...records,bestLap:positive(records.bestLap),bestTime:positive(records.bestTime)},run,sound})&&!saveWarning){saveWarning=true;message('ブラウザに保存できません',3);}
+  const run=active?{rewardId,mode,progress,speed,lane,energy,time,bestLap:Number.isFinite(bestLap)?bestLap:null,lapStarted,lastLap,rivals:rivals.map(r=>({progress:r.progress,lane:r.lane,speed:r.speed})),eventSeen:[...eventSeen]}:(state==='finished'?null:(savedRace?.trackVersion===2?readSave('race')?.run||null:null));
+  if(!writeSave('race',{trackVersion:2,recentTimes,records:{...records,bestLap:positive(records.bestLap),bestTime:positive(records.bestTime)},run,sound})&&!saveWarning){saveWarning=true;message('ブラウザに保存できません',3);}
 }
 function validRun(run){
   if(!run||!['race','practice'].includes(run.mode))return false;
@@ -105,13 +115,13 @@ function validRun(run){
   if(run.mode==='race'&&run.progress>=length*laps)return false;
   return Array.isArray(run.rivals)&&run.rivals.length===5&&run.rivals.every(r=>r&&Number.isFinite(r.progress)&&r.progress>=0&&r.progress<1e8&&Number.isFinite(r.lane)&&Math.abs(r.lane)<=WIDTH&&Number.isFinite(r.speed)&&r.speed>=0&&r.speed<=400);
 }
-if(validRun(savedRace?.run)){
+if(savedRace?.trackVersion===2&&validRun(savedRace?.run)){
   const resumeRace=document.createElement('button');resumeRace.textContent='保存したレースの続きから';resumeRace.style.marginTop='12px';
   resumeRace.onclick=()=>{
     if(!audioChosen){$('raceAudioGate').hidden=false;return;}
     const run=savedRace.run;begin(run.mode);
     rewardId=typeof run.rewardId==='string'&&/^[0-9a-f-]{36}$/i.test(run.rewardId)?run.rewardId:crypto.randomUUID();progress=run.progress;speed=run.speed;lane=run.lane;energy=run.energy;time=run.time;lapStarted=run.lapStarted;lastLap=run.lastLap;bestLap=positive(run.bestLap)||Infinity;
-    run.rivals.forEach((r,i)=>Object.assign(rivals[i],r));
+    eventSeen=new Set(Array.isArray(run.eventSeen)?run.eventSeen.filter(Number.isInteger):[]);run.rivals.forEach((r,i)=>Object.assign(rivals[i],r));
     persistRace();
   };
   $('menu').append(resumeRace);
@@ -125,6 +135,8 @@ function update(dt){renderTime+=dt;boosting=false;saveElapsed+=dt;if(saveElapsed
 if(state==='menu'){const u=(renderTime*.005)%1;progress=u*length;lane=0;speed=0;}
 if(state==='countdown'){count-=dt;$('countdown').textContent=count>0?String(Math.max(1,Math.ceil(count))):'GO';if(count<=0){state='racing';ready=1;message(mode==='practice'?'FREE FLIGHT':'CHASE THE HORIZON',2);}}
 if(state==='racing'){
+const routeU=(progress/length)%1,nextSector=Math.min(3,Math.floor(routeU*4));if(nextSector!==sector){sector=nextSector;message(sectorNames[sector],2);}
+jumpTime=Math.max(0,jumpTime-dt);for(let i=0;i<raceEvents.length;i++){const e=raceEvents[i];e.mesh.visible=!eventSeen.has(i);e.mesh.rotation.y+=dt;if(!eventSeen.has(i)&&progress>=e.u*length){eventSeen.add(i);if(progress-e.u*length<30&&Math.abs(lane-e.lane)<(e.type==='jump'?12:9)){if(e.type==='jump'){jumpTime=1.4;energy=100;padCooldown=2.5;}else awardCredits('race-event:'+rewardId+':'+i,25);message(e.name,1.8);}else message('MISSED · 次のゲートを狙おう',1);}}
 if(ready>0){ready-=dt;if(ready<=0)$('countdown').textContent='';}time+=dt;padCooldown=Math.max(0,padCooldown-dt);collisionCooldown=Math.max(0,collisionCooldown-dt);
 const input=THREE.MathUtils.clamp((keys.right?1:0)-(keys.left?1:0)+swipeSteer,-1,1);swipeSteer=THREE.MathUtils.damp(swipeSteer,0,9,dt);laneV=THREE.MathUtils.damp(laneV,input*29,8,dt);lane+=laneV*dt;lane=THREE.MathUtils.clamp(lane,-WIDTH+4,WIDTH-4);
 // No spinouts: the ship follows the track automatically, even at top speed.
@@ -133,11 +145,11 @@ const driving=!touchDriving||drivePointer!==null;boosting=driving&&((keys.boost&
 energy=THREE.MathUtils.clamp(energy+(boosting&&keys.boost?-24:13)*dt,0,100);progress+=speed*dt;
 for(const pad of pads){let delta=((progress/length-pad.u+.5)%1+1)%1-.5;if(Math.abs(delta)<.0017&&Math.abs(lane-pad.off)<6&&padCooldown<=0){padCooldown=2.5;energy=Math.min(100,energy+23);message('BOOST GATE',1.1);}}
 if(draft&&!boosting)messageTimer<=0&&message('SLIPSTREAM',.5);
-for(const r of rivals){r.speed=155+18*Math.sin(time*.13+r.phase)+(r.progress<progress-180?22:0);r.progress+=r.speed*dt;r.lane=THREE.MathUtils.damp(r.lane,Math.sin(time*.1+r.phase)*23,1.2,dt);if(mode==='race'&&Math.abs(r.progress-progress)<8&&Math.abs(r.lane-lane)<5&&collisionCooldown<=0){speed*=.92;lane+=lane>r.lane?2:-2;collisionCooldown=1;}}
+for(const r of rivals){r.speed=cpuPace*(.94+r.phase*.011)+5*Math.sin(time*.18+r.phase);r.progress+=r.speed*dt;r.lane=THREE.MathUtils.damp(r.lane,Math.sin(time*.1+r.phase)*23,1.2,dt);if(mode==='race'&&Math.abs(r.progress-progress)<8&&Math.abs(r.lane-lane)<5&&collisionCooldown<=0){speed*=.92;lane+=lane>r.lane?2:-2;collisionCooldown=1;}}
 const lap=Math.floor(progress/length);if(lap>lastLap){bestLap=Math.min(bestLap,time-lapStarted);records.bestLap=Math.min(records.bestLap||Infinity,bestLap);lapStarted=time;lastLap=lap;if(mode==='race'&&lap>=laps){finish();}else message(mode==='practice'?'LAP '+(lap+1):lap===2?'FINAL LAP':'LAP '+(lap+1),2);}
 }
 if(state!=='paused'){
-const fr=frame(progress/length);oriented(player,fr,lane,2.3+Math.sin(renderTime*8)*.13);player.rotateZ(-laneV*.009);player.rotateX(Math.sin(renderTime*3)*.009);
+const fr=frame(progress/length);oriented(player,fr,lane,2.3+Math.sin(renderTime*8)*.13+Math.sin(jumpTime/1.4*Math.PI)*9);player.rotateZ(-laneV*.009);player.rotateX(Math.sin(renderTime*3)*.009);
 player.userData.jets.forEach(j=>{j.scale.set(boosting?1.5:1,boosting?2.2:1,boosting?1.5:1);});
 rivals.forEach((r,i)=>{const rf=frame((state==='menu'?progress+45+i*25:r.progress)/length);oriented(r.mesh,rf,r.lane,2.5+Math.sin(renderTime*7+i)*.15);});
 traffic.forEach((r,i)=>{r.u=(r.u+dt*.006)%1;oriented(r.mesh,frame(r.u),r.off,r.height);});
