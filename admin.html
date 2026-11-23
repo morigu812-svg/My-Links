@@ -4193,8 +4193,20 @@ $('closeChat').addEventListener('click', closeMainChat);
   const staffAuthRealtime = staffAuthPilot ? window.createChatRealtime?.(getStaffAuthSession, () => {}) : null;
 
   async function readStaffRoom(token, options) {
-    // GAS validates the session and queries Supabase. No browser-to-Supabase or Render relay is required.
-    return serverCall('getStaffChatMessages', token, staffBrowserId, options);
+    // Summaries and member metadata still use GAS, with Supabase as the only database.
+    if (!Object.prototype.hasOwnProperty.call(options, 'room')) {
+      return serverCall('getStaffChatMessages', token, staffBrowserId, options);
+    }
+    const connection = staffAuthPilot ? staffAuthRealtime : adminChatRealtime;
+    if (!connection || !staffOwnMailbox) throw new Error('Supabaseの管理者チャット接続を準備できませんでした。トーク一覧を再読み込みしてください。');
+    const result = await connection.read({
+      chat_type:'staff', room:options.room, page_size:options.limit, before_cursor:options.beforeRow ?? null
+    });
+    for (const item of result.messages || []) {
+      if (item.senderMailbox) item.author = staffRealtimeNames.get(item.senderMailbox) || item.author || '管理者';
+      if (item.reply?.senderMailbox) item.reply.author = staffRealtimeNames.get(item.reply.senderMailbox) || item.reply.author;
+    }
+    return result;
   }
 
   async function refreshStaffChat(forceFullHistory = false) {
@@ -4685,12 +4697,9 @@ $('closeChat').addEventListener('click', closeMainChat);
           }, requestId, staffBrowserId, ...(staffOwnMailbox ? [recipientId] : []));
         }
       } else {
-        if (target) {
-          result = await serverCall('sendChatReply', body, 'staff', recipientId,
-            target.id, staffBrowserId, crypto.randomUUID());
-        } else {
-          result = await serverCall('sendStaffChatMessage', body, token, staffBrowserId, recipientId);
-        }
+        const connection = staffAuthPilot ? staffAuthRealtime : adminChatRealtime;
+        if (!connection) throw new Error('Supabaseのチャット接続を準備できませんでした。');
+        result = await connection.send('staff', body, recipientId, undefined, target?.id);
       }
       if (!result || !result.ok) throw new Error('送信の完了を確認できませんでした。');
       if (token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
