@@ -1376,7 +1376,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
     <div id="otherHistoryView" hidden>
       <div class="section-heading">
         <div><span class="section-kicker">LINK BASE / ACTIVITY LOG</span><h2 id="otherHistoryTitle"></h2><p id="otherHistoryDescription"></p></div>
-        <div class="click-log-actions"><button id="refreshOtherHistory" class="btn" type="button">↻ 再読み込み</button><button id="deleteOldVisitorCounter" class="btn danger" type="button" hidden>11/13以前の来客記録を削除</button><button id="deleteVisitorLoginLogs" class="btn danger" type="button" hidden>履歴をすべて削除</button></div>
+        <div class="click-log-actions"><button id="refreshOtherHistory" class="btn" type="button">↻ 再読み込み</button><button id="deleteVisitorLoginLogs" class="btn danger" type="button" hidden>履歴をすべて削除</button></div>
       </div>
       <div id="visitorDirectoryTools" class="click-history-tools" hidden><label>利用者を検索<input type="search" id="visitorDirectorySearch" placeholder="名前・ID・学校名・フィルター"></label></div>
       <div id="otherHistoryStatus" role="status" aria-live="polite"></div>
@@ -1667,7 +1667,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
   }
 
   function serverCall(method, ...args) {
-    const protectedMethods = ['getLogDashboard', 'getSecurityEvents', 'getFilterAccessSummary', 'getFilterAccessActivitySummary', 'mergeFilterAccessNames', 'requestVisitorSchoolCorrection', 'requestVisitorFilterCorrection', 'requestVisitorSchoolAndFilterCorrection', 'getVisitorDirectory', 'getClickBrowserNames', 'getOnlineVisitors', 'getBanVisitors', 'getBanAppeals', 'sendChatReply', 'getChatRealtimeSession', 'getLinks', 'getOfficialLinks', 'saveLink', 'deleteLink', 'getLinkReports', 'markLinkReportChecked', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'getVisitorCounterStats', 'deleteVisitorCounterBefore20261114', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getAdminVisitorChatRead', 'markAdminVisitorChatRead', 'getChatMessages', 'deleteVisitorChatMessage', 'getChatScreenshot', 'sendChatMessage', 'sendChatScreenshot', 'getStaffChatMessages', 'getStaffChatAttachment', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendStaffChatAttachment', 'startStaffChatLargeUpload', 'appendStaffChatLargeUploadChunk',
+    const protectedMethods = ['getLogDashboard', 'getSecurityEvents', 'getFilterAccessSummary', 'getFilterAccessActivitySummary', 'mergeFilterAccessNames', 'requestVisitorSchoolCorrection', 'requestVisitorFilterCorrection', 'requestVisitorSchoolAndFilterCorrection', 'getVisitorDirectory', 'getClickBrowserNames', 'getOnlineVisitors', 'getBanVisitors', 'getBanAppeals', 'sendChatReply', 'getChatRealtimeSession', 'getLinks', 'getOfficialLinks', 'saveLink', 'deleteLink', 'getLinkReports', 'markLinkReportChecked', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'getVisitorCounterStats', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getAdminVisitorChatRead', 'markAdminVisitorChatRead', 'getChatMessages', 'deleteVisitorChatMessage', 'getChatScreenshot', 'sendChatMessage', 'sendChatScreenshot', 'getStaffChatMessages', 'getStaffChatAttachment', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendStaffChatAttachment', 'startStaffChatLargeUpload', 'appendStaffChatLargeUploadChunk',
         'finishStaffChatLargeUpload', 'getStaffChatAttachmentChunk', 'deleteStaffChatMessage', 'visitorDirectChatProxy', 'getClickLogs', 'setVisitorBan', 'setClickBrowserName', 'deleteClickLogs', 'deleteClickLog', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
     if (protectedMethods.includes(method)) {
       const token = adminSession.getItem(ADMIN_TOKEN_KEY) || '';
@@ -2705,7 +2705,6 @@ document.getElementById('authSubmit').disabled = false;
     $('otherHistoryView').classList.toggle('visitor-directory-view', other?.key === 'visitorDirectory');
     $('visitorDirectorySearch').value = '';
     $('deleteVisitorLoginLogs').hidden = other?.key !== 'visitorLogins';
-    $('deleteOldVisitorCounter').hidden = other?.key !== 'visitorCounter';
     clickLogPanel.setAttribute('aria-label', other ? other.title : 'クリック履歴');
     if (!other && (!clickLogsLoaded || clickLogsCursor)) void refreshClickLogs(clickLogsLoaded);
   }
@@ -2798,7 +2797,7 @@ document.getElementById('authSubmit').disabled = false;
     "side": "sideVisitorCounter",
     "api": "getVisitorCounterStats",
     "title": "来客数カウンター",
-    "description": "2026年11月14日から集計（日本時間・1ブラウザにつき1日1回）。総来客数には11月13日以前を含めません。古い記録の物理削除もできます。",
+    "description": "2026年11月14日から集計（日本時間・1ブラウザにつき1日1回）。総来客数には11月13日以前を含めません。",
     "columns": ["日付（JST）", "来客数"]
   }
 ];
@@ -3199,30 +3198,6 @@ document.getElementById('authSubmit').disabled = false;
     }
   }
 
-  $('deleteOldVisitorCounter').addEventListener('click', async event => {
-    const button = event.currentTarget;
-    const token = adminSession.getItem(ADMIN_TOKEN_KEY);
-    if (!token || button.disabled || activeHistory?.key !== 'visitorCounter') return;
-    if (!confirm('来客カウンターの2026年11月13日以前の記録を完全に削除しますか？\n11月14日以降の記録は残し、元の利用者ログイン履歴は削除しません。\nこの操作は取り消せません。')) return;
-    button.disabled = true;
-    $('otherHistoryStatus').textContent = '11月13日以前のカウンター記録を削除中…';
-    try {
-      const result = await serverCall('deleteVisitorCounterBefore20261114');
-      if (!result?.ok) throw new Error('削除完了を確認できませんでした。');
-      if (token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
-      await refreshOtherHistory();
-      await refreshAdminVisitorCounter();
-      $('otherHistoryStatus').textContent = '削除完了：11月13日以前の来客記録 ' +
-        Number(result.deleted || 0).toLocaleString('ja-JP') + '件を削除しました。11月14日以降は保持しています。';
-    } catch (error) {
-      if (token === adminSession.getItem(ADMIN_TOKEN_KEY)) {
-        $('otherHistoryStatus').textContent = '削除に失敗しました：' +
-          (error?.message || '通信エラー') + '。GASの再デプロイを確認してください。';
-      }
-    } finally {
-      button.disabled = false;
-    }
-  });
 
   async function refreshLinkReportBadge(){
     if(!adminSession.getItem(ADMIN_TOKEN_KEY))return;

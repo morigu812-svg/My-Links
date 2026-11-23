@@ -3334,37 +3334,7 @@ function backfillVisitorCounterFromLogs(startDate, endDate, adminToken) {
  * 管理者のみ：来客カウンターの2026-11-13以前の行を物理削除する。
  * VisitorLoginLogs（ログイン履歴）は削除しない。再実行しても安全。
  */
-function deleteVisitorCounterBefore20261114(adminToken) {
-  requireAdmin_(adminToken);
-  const lock = LockService.getScriptLock();
-  lock.waitLock(20000);
-  try {
-    requireAdmin_(adminToken);
-    const sheet = visitorCounterSheet_(false);
-    const last = sheet ? sheet.getLastRow() : 0;
-    if (last < 2) return {ok: true, deleted: 0, cutoff: VISITOR_COUNTER_MIN_DATE};
-    const days = sheet.getRange(2, 1, last - 1, 1).getValues();
-    let endIndex = -1, deleted = 0;
-    // 下から連続区間ごとに削除し、残る行番号が変わらないようにする。
-    for (let index = days.length - 1; index >= -1; index--) {
-      const day = index >= 0 ? visitorCounterDateKey_(days[index][0]) : '';
-      const remove = !!day && day < VISITOR_COUNTER_MIN_DATE;
-      if (remove) {
-        if (endIndex < 0) endIndex = index;
-        continue;
-      }
-      if (endIndex < 0) continue;
-      const start = index + 1;
-      const count = endIndex - start + 1;
-      sheet.deleteRows(start + 2, count);
-      deleted += count;
-      endIndex = -1;
-    }
-    return {ok: true, deleted: deleted, cutoff: VISITOR_COUNTER_MIN_DATE};
-  } finally {
-    lock.releaseLock();
-  }
-}
+
 
 /** 利用者には当日と累計、管理者には日付別履歴も返す。 */
 function getVisitorCounterStats(viewerToken) {
