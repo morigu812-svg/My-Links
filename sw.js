@@ -9,7 +9,7 @@
  */
 'use strict';
 
-var CACHE_VERSION = 'link-core-v82';
+var CACHE_VERSION = 'link-core-v83';
 var STATIC_CACHE = 'link-core-static-' + CACHE_VERSION;
 
 /* アプリの殻。相対パスなので、GitHub Pages のプロジェクトサイト
@@ -94,7 +94,7 @@ self.addEventListener('fetch', function (event) {
   var url = new URL(request.url);
 
   // Authenticated GAS responses always require the network.
-  if (isGasUrl(url)) {
+  if ((url.origin === self.location.origin && url.pathname.startsWith('/chat-api/')) || isGasUrl(url)) {
     event.respondWith(fetch(request, {cache:'no-store'}));
     return;
   }

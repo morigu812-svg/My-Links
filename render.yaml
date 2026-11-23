@@ -1,0 +1,19 @@
+services:
+  - type: web
+    runtime: static
+    name: my-links
+    repo: https://github.com/morigu812-svg/My-Links
+    branch: main
+    buildCommand: ""
+    staticPublishPath: .
+    routes:
+      - type: rewrite
+        source: /chat-api/*
+        destination: https://bskmgytpfhmjhrclcohf.supabase.co/*
+    headers:
+      - path: /chat-api/*
+        name: Cache-Control
+        value: no-store, private
+      - path: /chat-api/*
+        name: Vary
+        value: Authorization, apikey

@@ -1,6 +1,33 @@
 /* The database keeps the messages; a protected change stream asks active pages to refresh. */
 (() => {
   const sdkUrl = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.91.0/+esm';
+  // Same-origin XHR transport, matching PULSE's static-site API relay.
+  async function staffRelayRequest(session, rpc, parameters) {
+    if (new URL(session.url).hostname !== 'bskmgytpfhmjhrclcohf.supabase.co') {
+      throw new Error('管理者チャットの接続先と中継設定が一致しません。');
+    }
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', '/chat-api/rest/v1/rpc/link_core_chat_' + rpc, true);
+      xhr.timeout = 15000;
+      xhr.withCredentials = false;
+      xhr.setRequestHeader('apikey', session.key);
+      xhr.setRequestHeader('Authorization', 'Bearer ' + session.token);
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.onload = () => {
+        let data;
+        try { data = JSON.parse(xhr.responseText); }
+        catch (_) { reject(new Error('チャットの中継が未設定、または応答が不正です。Renderの /chat-api/* Rewriteを確認してください。')); return; }
+        if (xhr.status < 200 || xhr.status >= 300) {
+          reject(new Error(data?.message || 'チャット通信に失敗しました（HTTP ' + xhr.status + '）。'));
+        } else resolve(data);
+      };
+      xhr.onerror = () => reject(new Error('チャットの中継に接続できませんでした。'));
+      xhr.ontimeout = () => reject(new Error('チャット通信がタイムアウトしました。送信済みの場合があるため、再送前にトークを再読み込みしてください。'));
+      xhr.onabort = () => reject(new Error('チャット通信が中断されました。'));
+      xhr.send(JSON.stringify(parameters));
+    });
+  }
   window.createChatRealtime = function (issueSession, onChange) {
     let client;
     let channels = [];
@@ -44,6 +71,12 @@
           parameters.destination && !session.recipients?.includes(parameters.destination)))) return fallback(parameters);
       try {
         const rpc = action === 'read' ? 'read_replies' : parameters.target_id ? 'send_reply' : 'send_direct';
+        if (parameters.chat_type === 'staff') {
+          const data = await staffRelayRequest(session, rpc, parameters);
+          if (current !== generation) throw new Error('チャット接続が終了しました。');
+          if (action === 'read') verifiedDirect = true;
+          return data;
+        }
         const response = await fetch(session.url + '/rest/v1/rpc/link_core_chat_' + rpc, {
           method: 'POST',
           headers: {apikey: session.key, Authorization: 'Bearer ' + session.token, 'Content-Type': 'application/json'},
