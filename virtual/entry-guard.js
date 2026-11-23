@@ -14,5 +14,5 @@
    }
   }
  }catch{}
- if(!allowed){document.documentElement.style.visibility='hidden';location.replace(home);}
+ if(!allowed){document.documentElement.style.visibility='hidden';location.replace(new URL('login-required.html',source).href);}
 })();
