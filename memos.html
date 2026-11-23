@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>LINK CORE / MEMOS</title>
+<title>LINK BASE / MEMOS</title>
 <meta name="robots" content="noindex, nofollow">
 <style>
 :root{color-scheme:dark;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#08090c;color:#eceef3}
@@ -54,7 +54,7 @@ a{color:#68eaff}a:hover{color:#fff;text-shadow:0 0 10px #00d9ff55}
 </style>
 </head>
 <body><main class="wrap">
-<div class="brand">LINK CORE / PRIVATE MEMOS</div>
+<div class="brand">LINK BASE / PRIVATE MEMOS</div>
 <section class="panel" id="loginPanel">
 <h1>メモ帳</h1><p>管理者ログイン後、独立したメモを追加・編集・削除できます。</p>
 <form id="loginForm"><label for="password">管理者パスワード</label><input id="password" type="password" autocomplete="current-password" required autofocus><div class="actions"><label for="memoPassword">メモ帳パスワード</label><input id="memoPassword" type="password" autocomplete="current-password" required><button id="loginButton" type="submit">ログイン</button><button class="secondary" type="button" onclick="location.href='./'">リンク一覧へ戻る</button></div><div class="error" id="loginError" role="alert"></div></form>
@@ -66,7 +66,7 @@ a{color:#68eaff}a:hover{color:#fff;text-shadow:0 0 10px #00d9ff55}
 <div class="panel hidden" id="editor" style="margin-top:18px">
 <h2 id="editorHeading">新しいメモ</h2><form id="memoForm"><input id="memoId" type="hidden"><label for="memoTitle">タイトル</label><input id="memoTitle" maxlength="200" required placeholder="メモのタイトル"><label for="memoBody">本文</label><textarea id="memoBody" maxlength="20000" required placeholder="自由にメモを書いてください"></textarea><div class="actions"><button id="saveButton" type="submit">保存</button><button class="secondary" id="cancelButton" type="button">キャンセル</button></div><div class="status" id="saveStatus" role="status"></div></form>
 </div><div class="actions"><button class="secondary" id="logoutButton" type="button">ログアウト</button><button class="secondary" type="button" onclick="location.href='./'">リンク一覧へ戻る</button></div>
-</section><footer style="margin:22px 0;text-align:center;font-size:12px"><a href="./">← LINK CORE</a></footer>
+</section><footer style="margin:22px 0;text-align:center;font-size:12px"><a href="./">← LINK BASE</a></footer>
 </main><iframe id="gasBridge" title="通信" hidden></iframe>
 <script>
 (() => {

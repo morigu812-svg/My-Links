@@ -1,4 +1,4 @@
-/* LINK CORE verified help (no AI API, no model inference).
+/* LINK BASE verified help (no AI API, no model inference).
  * Knowledge items are based on the current README.md, Code.gs and actual UI.
  * Returns deterministic, text-only answers; registered link names are read
  * from the already logged-in parent page only.
@@ -27,7 +27,7 @@
     {
       id: 'folders', title: 'フォルダーとカテゴリ', keywords: ['フォルダ','フォルダー','カテゴリ','階層','分類'],
       test: q => has(q, /フォルダ|フォルダー|カテゴリ|階層|分類する/),
-      answer: 'LINK COREでは「カテゴリ」がフォルダーとして表示されます。画面のフォルダーを押すと中のリンクを表示します。管理者はカテゴリ名を「学習/英語」のように / で区切ると、フォルダーの中にフォルダーを作れます。利用者はフォルダーを開いて閲覧できます。'
+      answer: 'LINK BASEでは「カテゴリ」がフォルダーとして表示されます。画面のフォルダーを押すと中のリンクを表示します。管理者はカテゴリ名を「学習/英語」のように / で区切ると、フォルダーの中にフォルダーを作れます。利用者はフォルダーを開いて閲覧できます。'
     },
     {
       id: 'favorites', title: 'お気に入り', keywords: ['お気に入り','スター','★'],
@@ -37,7 +37,7 @@
     {
       id: 'chat', title: '管理者・利用者チャット', keywords: ['チャット','個人宛','既読','メッセージ','添付'],
       test: q => has(q, /管理者(?:専用)?チャット|利用者チャット|個人宛|既読|メッセージ|添付|チャットの?使い方/),
-      answer: 'LINK COREには2種類のチャットがあります。\n\n・利用者チャット：利用者が管理者へ質問や不具合報告を送れます。\n・管理者専用チャット：管理者同士の連絡に使います。全員宛て・個人宛て、既読確認、ファイル添付（最大2MB）、自分の投稿の削除に対応するコードがあります。\n\n個人宛て・添付などGAS側の新機能は、最新のCode.gsをGASへ反映して再デプロイしていない場合は利用できません。'
+      answer: 'LINK BASEには2種類のチャットがあります。\n\n・利用者チャット：利用者が管理者へ質問や不具合報告を送れます。\n・管理者専用チャット：管理者同士の連絡に使います。全員宛て・個人宛て、既読確認、ファイル添付（最大2MB）、自分の投稿の削除に対応するコードがあります。\n\n個人宛て・添付などGAS側の新機能は、最新のCode.gsをGASへ反映して再デプロイしていない場合は利用できません。'
     },
     {
       id: 'search', title: '検索と更新', keywords: ['検索','見つからない','更新','再読み込み'],
@@ -67,22 +67,22 @@
     {
       id: 'share', title: 'ページの共有', keywords: ['qr','共有','シェア'],
       test: q => has(q, /qrコード|ページを共有|リンクコアを共有|共有する方法/),
-      answer: '利用者画面・管理者画面の「このページを共有」から、利用者向けLINK COREページのQRコードとURLを表示できます。管理者画面のURLをそのまま共有する機能ではありません。'
+      answer: '利用者画面・管理者画面の「このページを共有」から、利用者向けLINK BASEページのQRコードとURLを表示できます。管理者画面のURLをそのまま共有する機能ではありません。'
     },
     {
       id: 'login', title: 'ログイン', keywords: ['ログイン','パスワード','認証'],
       test: q => has(q, /ログイン|パスワード|認証(?:方法|する|できない)/),
-      answer: 'LINK COREは利用者画面と管理者画面にそれぞれログインがあります。利用者はサイトのパスワードでログインし、公開対象のリンクを閲覧します。管理者は別の管理者認証でリンクを編集します。パスワードをAIに入力・共有する必要はありません。'
+      answer: 'LINK BASEは利用者画面と管理者画面にそれぞれログインがあります。利用者はサイトのパスワードでログインし、公開対象のリンクを閲覧します。管理者は別の管理者認証でリンクを編集します。パスワードをAIに入力・共有する必要はありません。'
     },
     {
       id: 'ai', title: 'AIチャット', keywords: ['webllm','aiチャット','aiの仕組み','人工知能'],
       test: q => has(q, /webllm|aiチャット|aiの仕組み|aiは何ができる|aiの使い方/),
-      answer: 'LINK CORE AIは、WebLLMを使って端末のWebGPUで文章を生成するチャットです。APIキー・AI API課金は不要です。モデルは初回起動時にダウンロードが必要です。LINK COREの機能説明や、LINK CORE内から開いたときに取得したリンク名を参考にしますが、サイトやGASを直接操作することはできません。'
+      answer: 'LINK BASE AIは、WebLLMを使って端末のWebGPUで文章を生成するチャットです。APIキー・AI API課金は不要です。モデルは初回起動時にダウンロードが必要です。LINK BASEの機能説明や、LINK BASE内から開いたときに取得したリンク名を参考にしますが、サイトやGASを直接操作することはできません。'
     },
     {
-      id: 'general', title: 'LINK COREの機能', keywords: ['linkcore','リンクコア','このサイト','どんな機能'],
+      id: 'general', title: 'LINK BASEの機能', keywords: ['linkbase','リンクベース','linkcore','リンクコア','このサイト','どんな機能'],
       test: q => has(q, /(?:linkcore|リンクコア|このサイト|このページ).*(?:何|とは|機能|できる|使い方|教えて)|どんな機能|機能一覧/),
-      answer: 'LINK COREは、リンクをフォルダーごとに管理・共有できるWebサイトです。\n\n利用者向け：フォルダー閲覧、お気に入り、リンク検索、最近追加した項目、管理者チャット、QRコード共有。\n管理者向け：リンクの追加・編集・削除、公開範囲、NEWラベル、公式リンク、ゴミ箱と復元、リンク診断、クリック履歴、管理者専用チャット、メモ帳。\n\n知りたい機能名を質問すると、詳しい使い方を案内できます。'
+      answer: 'LINK BASEは、リンクをフォルダーごとに管理・共有できるWebサイトです。\n\n利用者向け：フォルダー閲覧、お気に入り、リンク検索、最近追加した項目、管理者チャット、QRコード共有。\n管理者向け：リンクの追加・編集・削除、公開範囲、NEWラベル、公式リンク、ゴミ箱と復元、リンク診断、クリック履歴、管理者専用チャット、メモ帳。\n\n知りたい機能名を質問すると、詳しい使い方を案内できます。'
     }
   ];
 
@@ -117,7 +117,7 @@
     const q = norm(question);
     if (!q) return null;
     // The question may contain a registered link title. Prioritize exact title lookup,
-    // except for help about LINK CORE's own built-in features.
+    // except for help about LINK BASE's own built-in features.
     if (!has(q, /リンク診断|リンク切れ|ゴミ箱|管理者専用チャット|newラベル/)) {
       const found = catalogAnswer(question, context);
       if (found) return {kind: 'catalog', answer: found, title: '登録リンク情報'};

@@ -8,10 +8,10 @@
 <link rel="dns-prefetch" href="//script.googleusercontent.com">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>LINK CORE Admin</title>
+<title>LINK BASE Admin</title>
 <link rel="icon" type="image/svg+xml" href="./link-core-icon.svg?v=1">
 <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png?v=3">
-<meta name="apple-mobile-web-app-title" content="LINK CORE">
+<meta name="apple-mobile-web-app-title" content="LINK BASE">
 <meta name="theme-color" content="#0b1020">
 <link rel="manifest" href="./manifest.webmanifest">
 <style>
@@ -1174,7 +1174,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
 <body>
 <section id="authGate" class="auth-gate" aria-labelledby="authTitle">
   <form id="authForm" onsubmit="return false" class="auth-card">
-    <div class="auth-mark">LINK CORE / PRIVATE ACCESS</div>
+    <div class="auth-mark">LINK BASE / PRIVATE ACCESS</div>
     <h1 id="authTitle">管理者ログイン</h1>
     <p id="authDescription">リンクの追加・編集・削除を行うには管理者パスワードが必要です。</p>
     <div id="authEmailGroup" hidden><label for="authEmail">メールアドレス</label><input id="authEmail" type="email" autocomplete="username"></div>
@@ -1282,7 +1282,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
   </section>
   <section id="chatOverlay" class="click-log-panel chat-main-panel" aria-label="利用者との共通チャット">
     <div class="section-heading">
-      <div><span class="section-kicker">LINK CORE / CHAT</span><h2>利用者チャット</h2><p>利用者とのメッセージを表示します。</p></div>
+      <div><span class="section-kicker">LINK BASE / CHAT</span><h2>利用者チャット</h2><p>利用者とのメッセージを表示します。</p></div>
       <div class="click-log-actions"><button id="openVisitorDirectAdmin" class="btn" type="button">個人トーク</button><button id="closeChat" class="btn" type="button">リンク一覧に戻る</button></div>
     </div>
     <div id="visitorChatRoom">
@@ -1305,7 +1305,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
   </section>
   <section id="staffChatOverlay" class="click-log-panel chat-main-panel" aria-label="管理者専用チャット">
     <div class="section-heading">
-      <div><span class="section-kicker">LINK CORE / CHAT</span><h2 id="staffTalkTitle">トーク一覧</h2></div>
+      <div><span class="section-kicker">LINK BASE / CHAT</span><h2 id="staffTalkTitle">トーク一覧</h2></div>
       <div class="click-log-actions"><button id="staffBackToTalks" class="btn" type="button" hidden>トーク一覧に戻る</button><button id="closeStaffChat" class="btn" type="button">リンク一覧に戻る</button></div>
     </div>
     <div class="chat-subtitle" id="staffChatStatus" role="status"></div>
@@ -1359,7 +1359,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
   <section id="clickLogPanel" class="click-log-panel" hidden aria-label="クリック履歴">
     <div id="clickLogView">
     <div class="section-heading">
-      <div><span class="section-kicker">LINK CORE / ACTIVITY LOG</span><h2>クリック履歴</h2><p>利用者ページでクリックされたリンクの記録です。最新の500件を先に表示し、残りを500件ずつ自動で読み込みます。</p></div>
+      <div><span class="section-kicker">LINK BASE / ACTIVITY LOG</span><h2>クリック履歴</h2><p>利用者ページでクリックされたリンクの記録です。最新の500件を先に表示し、残りを500件ずつ自動で読み込みます。</p></div>
       <div class="click-log-actions"><button id="refreshClickLogs" class="btn" type="button">↻ 再読み込み</button><button id="deleteClickLogs" class="btn danger" type="button">履歴をすべて削除</button></div>
     </div>
     <div class="click-history-tools"><label>履歴を検索<input id="clickHistorySearch" type="search" placeholder="リンク名・URL・ブラウザ名・ID"></label><label>期間<select id="clickHistoryPeriod"><option value="all">すべて</option><option value="today">今日（日本時間）</option><option value="week">直近7日（日本時間）</option></select></label></div>
@@ -1373,7 +1373,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
     </div>
     <div id="otherHistoryView" hidden>
       <div class="section-heading">
-        <div><span class="section-kicker">LINK CORE / ACTIVITY LOG</span><h2 id="otherHistoryTitle"></h2><p id="otherHistoryDescription"></p></div>
+        <div><span class="section-kicker">LINK BASE / ACTIVITY LOG</span><h2 id="otherHistoryTitle"></h2><p id="otherHistoryDescription"></p></div>
         <div class="click-log-actions"><button id="refreshOtherHistory" class="btn" type="button">↻ 再読み込み</button><button id="deleteOldVisitorCounter" class="btn danger" type="button" hidden>11/13以前の来客記録を削除</button><button id="deleteVisitorLoginLogs" class="btn danger" type="button" hidden>履歴をすべて削除</button></div>
       </div>
       <div id="visitorDirectoryTools" class="click-history-tools" hidden><label>利用者を検索<input type="search" id="visitorDirectorySearch" placeholder="名前・ID・学校名・フィルター"></label></div>
@@ -1386,7 +1386,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
   </section>
   <section id="trashPanel" class="click-log-panel" hidden aria-label="ゴミ箱">
     <div class="section-heading">
-      <div><span class="section-kicker">LINK CORE / TRASH</span><h2>ゴミ箱</h2><p>削除したリンクはここに移動します。復元するか、完全に削除できます。</p></div>
+      <div><span class="section-kicker">LINK BASE / TRASH</span><h2>ゴミ箱</h2><p>削除したリンクはここに移動します。復元するか、完全に削除できます。</p></div>
       <div class="click-log-actions"><button id="refreshTrash" class="btn" type="button">↻ 再読み込み</button><button id="emptyTrash" class="btn danger" type="button">ゴミ箱を空にする</button></div>
     </div>
     <div id="trashStatus" role="status" aria-live="polite"></div>
@@ -1397,7 +1397,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
   </section>
   <section id="diagnosisPanel" class="click-log-panel" hidden aria-label="リンク診断">
     <div class="section-heading">
-      <div><span class="section-kicker">LINK CORE / LINK HEALTH</span><h2>リンク診断</h2><p>重複したURLと、開けなくなったリンクを調べます。リンクの削除や変更はしません。</p></div>
+      <div><span class="section-kicker">LINK BASE / LINK HEALTH</span><h2>リンク診断</h2><p>重複したURLと、開けなくなったリンクを調べます。リンクの削除や変更はしません。</p></div>
       <div class="click-log-actions"><button id="runDiagnosis" class="btn primary" type="button">▶ 診断する</button></div>
     </div>
     <div id="diagnosisStatus" role="status" aria-live="polite"></div>
@@ -1408,7 +1408,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
   </section>
     <section id="officialPanel" class="official-panel" aria-label="公式リンク">
       <div class="official-hero">
-        <div class="official-eyebrow">LINK CORE / QUICK LAUNCHER</div>
+        <div class="official-eyebrow">LINK BASE / QUICK LAUNCHER</div>
         <h2>公式リンク</h2>
         <p>よく使う公式サイトをまとめて、すばやくアクセス。</p>
       </div>
@@ -1425,7 +1425,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
     </section>
   </div>
   </div>
-  <footer class="site-footer"><span><b>LC.</b> LINK CORE</span><span>YOUR LINKS. YOUR FLOW.</span><span class="site-footer-links"><a href="https://github.com/morigu812-svg/My-Links" target="_blank" rel="noopener noreferrer">GitHub</a><a href="https://www.youtube.com/watch?v=vyOpaNZYQPQ" target="_blank" rel="noopener noreferrer">YouTube</a></span></footer>
+  <footer class="site-footer"><span><b>LB.</b> LINK BASE</span><span>YOUR LINKS. YOUR FLOW.</span><span class="site-footer-links"><a href="https://github.com/morigu812-svg/My-Links" target="_blank" rel="noopener noreferrer">GitHub</a><a href="https://www.youtube.com/watch?v=vyOpaNZYQPQ" target="_blank" rel="noopener noreferrer">YouTube</a></span></footer>
 </main>
 
 <div id="undoToast" class="undo-toast" hidden role="status" aria-live="polite"><span id="undoToastText"></span><button id="undoToastRestore" type="button">元に戻す</button><button id="undoToastClose" type="button" aria-label="閉じる">×</button></div>
@@ -1519,7 +1519,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
   </form>
 </dialog>
 <section id="memoOverlay" class="memo-overlay" aria-label="統合メモ帳">
-  <div class="memo-overlay-head"><span class="memo-overlay-title">LINK CORE / メモ帳</span><button id="closeMemoOverlay" class="memo-overlay-close" type="button">← リンク管理に戻る</button></div>
+  <div class="memo-overlay-head"><span class="memo-overlay-title">LINK BASE / メモ帳</span><button id="closeMemoOverlay" class="memo-overlay-close" type="button">← リンク管理に戻る</button></div>
   <iframe id="memoFrame" class="memo-overlay-frame" title="メモ帳" src="about:blank"></iframe>
 </section>
 <script>
@@ -1647,7 +1647,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
   // 初期表示に必須のGASブリッジなので、遅延させず高優先度で読み込む。
   frame.loading = 'eager';
   frame.setAttribute('fetchpriority', 'high');
-  frame.title = 'LINK CORE bridge';
+  frame.title = 'LINK BASE bridge';
   frame.hidden = true;
   frame.src = GAS_URL + '?mode=bridge';
   document.body.appendChild(frame);
@@ -1923,7 +1923,7 @@ function watchSessionExpiry(deadline, onExpired) {
         : '';
       setStatus('読み込み完了（' + result.links.length + '件）｜認証・取得 ' + seconds(fetchMs) +
         '秒・描画 ' + seconds(renderMs) + '秒' + serverSummary, '');
-      console.info('[LINK CORE 性能計測・認証後読み込み]', {
+      console.info('[LINK BASE 性能計測・認証後読み込み]', {
         fetchMs: Math.round(fetchMs),
         renderMs: Math.round(renderMs),
         server: server,
@@ -1931,7 +1931,7 @@ function watchSessionExpiry(deadline, onExpired) {
       });
     } catch (error) {
       setStatus('読み込みに失敗しました：' + (error && error.message ? error.message : String(error)), 'error');
-      console.error('[LINK CORE] 認証後のリンク読み込みに失敗しました', error);
+      console.error('[LINK BASE] 認証後のリンク読み込みに失敗しました', error);
     } finally {
       setBusy(false);
       if (resumeLinkEdit && adminSession.getItem(ADMIN_TOKEN_KEY)) {
@@ -4988,7 +4988,7 @@ $('closeChat').addEventListener('click', closeMainChat);
           '秒／' + (server.cacheHit ? 'HIT' : 'MISS') + '）'
         : '';
       setStatus('読み込み完了（' + result.links.length + '件）｜接続 ' + seconds(bridgeMs) + '秒・取得 ' + seconds(fetchMs) + '秒・描画 ' + seconds(renderMs) + '秒・合計 ' + seconds(totalMs) + '秒' + serverSummary, '');
-      console.info('[LINK CORE 性能計測]', {
+      console.info('[LINK BASE 性能計測]', {
         bridgeMs: Math.round(bridgeMs),
         fetchMs: Math.round(fetchMs),
         renderMs: Math.round(renderMs),
@@ -4998,7 +4998,7 @@ $('closeChat').addEventListener('click', closeMainChat);
       });
     } catch (error) {
       setStatus('読み込みに失敗しました：' + (error && error.message ? error.message : String(error)), 'error');
-      console.error('[LINK CORE] 初期読み込みに失敗しました', error);
+      console.error('[LINK BASE] 初期読み込みに失敗しました', error);
     } finally {
       setBusy(false);
     }
@@ -5094,7 +5094,7 @@ body,.finder-window,.finder-toolbar,.finder-layout,.finder-content,.sidebar,
 #finderWindow .finder-toolbar .traffic-lights>span:nth-child(3){background:#28c840!important}
 .new-badge[hidden]{display:none!important}
 
-/* LINK CORE Link cards */
+/* LINK BASE Link cards */
 .lc-link-card{display:flex;flex-direction:column;overflow:hidden;min-width:0;padding:0!important;border:1px solid #28485c!important;border-radius:14px!important;background:linear-gradient(145deg,#101c2c,#0b1422)!important;box-shadow:0 4px 16px rgba(0,0,0,.18)!important;transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
 .lc-link-card:hover{transform:translateY(-2px);border-color:#35d9ff!important;box-shadow:0 8px 24px rgba(0,210,255,.12)!important}
 .lc-link-info{display:flex;align-items:flex-start;gap:10px;padding:13px 14px 14px;min-width:0}
@@ -5149,7 +5149,7 @@ body,.finder-window,.finder-toolbar,.finder-layout,.finder-content,.sidebar,
 }
 </style>
 <style id="lc-share-style">
-/* LINK CORE 閲覧ページ共有（QRコード表示）。閲覧画面の共有スタイルと同じ構成。
+/* LINK BASE 閲覧ページ共有（QRコード表示）。閲覧画面の共有スタイルと同じ構成。
    管理画面には html.light-mode が無いため、ライト用ルールは省いてある。
    ダイアログはこのページの仕組みと同じダーク配色で、夜間モードでもそのまま使える。 */
 .share-btn{display:grid;place-items:center;width:29px;height:25px;padding:0;border-radius:5px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.06);color:#bfeeff;font:inherit;font-size:15px;line-height:1;cursor:pointer;box-shadow:none}
@@ -5176,7 +5176,7 @@ body,.finder-window,.finder-toolbar,.finder-layout,.finder-content,.sidebar,
 </style>
 <div id="lc-page-guide-overlay" aria-hidden="true">
  <section id="lc-page-guide-dialog" role="dialog" aria-modal="true" aria-labelledby="lc-page-guide-title">
-  <header id="lc-page-guide-head"><div><small>LINK CORE</small><h2 id="lc-page-guide-title">このページの仕組み</h2></div><button id="lc-page-guide-close" type="button" aria-label="閉じる">×</button></header>
+  <header id="lc-page-guide-head"><div><small>LINK BASE</small><h2 id="lc-page-guide-title">このページの仕組み</h2></div><button id="lc-page-guide-close" type="button" aria-label="閉じる">×</button></header>
   <div id="lc-page-guide-content">
     <p>画面の配信は GitHub Pages、ログインやデータの処理は Google Apps Script、保存先は Google スプレッドシートです。「リンクを更新」を押すと、次の順で処理が進みます。</p>
     <article class="lc-page-guide-entry"><h3>1. GitHub Pages が画面を配信する</h3><p>GitHub Pages は <code>index.html</code>（利用者画面）、<code>admin.html</code>（管理者画面）、<code>memos.html</code>（メモ帳）を配信します。見た目やボタンの操作は、ブラウザ上で HTML・CSS・JavaScript が担当します。</p></article>
@@ -5190,7 +5190,7 @@ body,.finder-window,.finder-toolbar,.finder-layout,.finder-content,.sidebar,
 
 <div id="lc-share-overlay" aria-hidden="true">
  <section id="lc-share-dialog" role="dialog" aria-modal="true" aria-labelledby="lc-share-title">
-  <header id="lc-share-head"><div><small>LINK CORE / SHARE</small><h2 id="lc-share-title">閲覧ページを共有</h2></div><button id="lc-share-close" type="button" aria-label="閉じる">×</button></header>
+  <header id="lc-share-head"><div><small>LINK BASE / SHARE</small><h2 id="lc-share-title">閲覧ページを共有</h2></div><button id="lc-share-close" type="button" aria-label="閉じる">×</button></header>
   <div id="lc-share-body">
    <p class="lc-share-desc">スマートフォンのカメラで読み取ると、閲覧ページ（My Desktop）が開きます。このQRコードは管理者画面ではなく、友達に渡す閲覧ページのものです。</p>
    <div id="lc-share-qr-wrap"><div id="lc-share-qr" role="img" aria-label="閲覧ページのQRコード"></div></div>
@@ -7522,7 +7522,7 @@ var qrcode = function() {
 </script>
 
 <script id="lc-share-script">
-/* LINK CORE 閲覧ページ共有（QRコード表示）— 管理者画面版。
+/* LINK BASE 閲覧ページ共有（QRコード表示）— 管理者画面版。
    閲覧画面の共有スクリプトと同じ構成だが、QRにするURLは管理者画面ではなく
    閲覧ページ（index.html）のURL。管理者画面のURLを共有すると友達に
    管理者パスワードを求めてしまうため、実行時にファイル名を置き換える。 */

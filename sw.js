@@ -1,4 +1,4 @@
-/* LINK CORE Service Worker
+/* LINK BASE Service Worker
  * 方針：
  * - 同一オリジンの静的ファイル（HTML / アイコン / manifest）は cache-first。
  *   オフラインでも直近の画面が開ける。初回はオンラインで取得してキャッシュする。
@@ -9,7 +9,7 @@
  */
 'use strict';
 
-var CACHE_VERSION = 'link-core-v79';
+var CACHE_VERSION = 'link-core-v80';
 var STATIC_CACHE = 'link-core-static-' + CACHE_VERSION;
 
 /* アプリの殻。相対パスなので、GitHub Pages のプロジェクトサイト
@@ -76,7 +76,7 @@ self.addEventListener('activate', function (event) {
     caches.keys().then(function (keys) {
       return Promise.all(keys.map(function (key) {
         // WebLLM等がCache APIに保存するモデルデータは削除しない。
-        // LINK COREが管理する古いキャッシュだけ削除する。
+        // LINK BASEが管理する古いキャッシュだけ削除する。
         if ((key.indexOf('link-core-static-') === 0 || key.indexOf('link-core-data-') === 0) &&
             key !== STATIC_CACHE) return caches.delete(key);
         return Promise.resolve();

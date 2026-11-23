@@ -1,4 +1,4 @@
-const APP_TITLE = 'LINK CORE';
+const APP_TITLE = 'LINK BASE';
 // DAILY CORE と同じスプレッドシートを使う（スクリプトプロパティに登録済みのID）
 const SPREADSHEET_PROPERTY = 'DAILY_CORE_SPREADSHEET_ID';
 const SHEET_NAME = 'Links';
@@ -305,7 +305,7 @@ function getAdminSetupStatus() {
     getLinksForToken_(null, false);
   } catch (error) {
     // キャッシュ準備に失敗しても、ログイン画面と認証処理は通常どおり続行する。
-    console.warn('LINK CORE cache warm-up failed:', error);
+    console.warn('LINK BASE cache warm-up failed:', error);
   }
   return {
     configured: !!PropertiesService.getScriptProperties().getProperty('LINK_CORE_ADMIN_PASSWORD')
@@ -706,7 +706,7 @@ function authenticateAdmin(password, includeLinks) {
       const { links, categories } = getLinksForToken_(token, true);
       return { ok: true, token: token, expiresIn: SESSION_TTL_SECONDS, links: links, categories: categories };
     } catch (error) {
-      console.warn('LINK CORE initial admin links failed:', error);
+      console.warn('LINK BASE initial admin links failed:', error);
       // 一覧の一時エラーで認証成功を取り消さない。管理画面から再取得できる。
     }
   }
@@ -1584,7 +1584,7 @@ function deleteMemo(id, memoToken, adminToken) {
 }
 
 
-/* LINK CORE shared chat. Existing Links / OfficialLinks / Memos sheets remain untouched. */
+/* LINK BASE shared chat. Existing Links / OfficialLinks / Memos sheets remain untouched. */
 const CHAT_SHEET_NAME = 'ChatMessages';
 const CHAT_HEADERS = ['ID', '投稿者', 'メッセージ', '送信日時'];
 const CHAT_MAX_MESSAGES = 200;
@@ -1925,7 +1925,7 @@ function postPublicChat_(message, viewerToken, image) {
 }
 
 
-/* LINK CORE click history. Only authenticated visitors can write; only admins can read. */
+/* LINK BASE click history. Only authenticated visitors can write; only admins can read. */
 const CLICK_LOG_SHEET_NAME = 'ClickLogs';
 const CLICK_LOG_HEADERS = ['ID', 'リンクID', 'リンク名', 'URL', 'クリック日時', 'ブラウザID'];
 function ensureClickLogSheet_() {
@@ -1977,7 +1977,7 @@ function recordLinkClick(linkId, browserId, visitorToken) {
     }
   } catch (error) {
     const detail = error && error.message ? error.message : String(error);
-    console.error('[LINK CORE] recordLinkClick failed at ' + stage + ': ' + detail);
+    console.error('[LINK BASE] recordLinkClick failed at ' + stage + ': ' + detail);
     throw new Error('クリック履歴の保存処理（' + stage + '）で失敗しました：' + detail);
   }
 }
@@ -2125,7 +2125,7 @@ function deleteClickLog(logId, adminToken) {
 }
 
 
-/* LINK CORE notice read receipts. One receipt per browser and notice. */
+/* LINK BASE notice read receipts. One receipt per browser and notice. */
 const NOTICE_READ_SHEET_NAME = 'NoticeReads';
 function ensureNoticeReadSheet_() {
   const id = PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY);

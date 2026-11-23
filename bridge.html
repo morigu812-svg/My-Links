@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>LINK CORE Bridge</title>
+  <title>LINK BASE Bridge</title>
 </head>
 <body>
 <script>
@@ -14,7 +14,7 @@
   const ALLOWED_ORIGINS = [
     'https://morigu812-svg.github.io',
     'https://my-links-phdf.onrender.com',
-    'https://my-links-fzej.onrender.com' // LINK CORE Render版
+    'https://my-links-fzej.onrender.com' // LINK BASE Render版
   ];
   const ALLOWED_METHODS = new Set([
     'getAdminSetupStatus',
@@ -122,7 +122,7 @@
         'args=' + (Array.isArray(args) ? 'array' : typeof args),
         'origin=' + event.origin
       ].join(', ');
-      console.error('[LINK CORE Bridge] Invalid request: ' + detail);
+      console.error('[LINK BASE Bridge] Invalid request: ' + detail);
       send(event.source, {
         type: 'DAILY_CORE_RESPONSE', id, ok: false,
         error: '不正なリクエストです。[' + detail + ']'
