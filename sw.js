@@ -2,18 +2,15 @@
  * 方針：
  * - 同一オリジンの静的ファイル（HTML / アイコン / manifest）は cache-first。
  *   オフラインでも直近の画面が開ける。初回はオンラインで取得してキャッシュする。
- * - Google Apps Script（script.google.com / script.googleusercontent.com）への
- *   通信は network-first。リンク一覧・メモ・チャット等のデータは常に最新を優先し、
- *   オフライン時はキャッシュがあればそれを返し、なければ fetch の失敗をそのまま返す。
+ * - Google Apps Scriptへの通信はネットワークのみ。認証された応答は保存しない。
  * - キャッシュ名にバージョンを付け、activate 時に古いキャッシュを削除する。
  * - skipWaiting / clients.claim は、更新を次の訪問まで待たせず即座に反映するために使う。
  *   ただし update はデプロイ直後に一度だけ起きる想定。頻繁な更新はしないこと。
  */
 'use strict';
 
-var CACHE_VERSION = 'link-core-v77';
+var CACHE_VERSION = 'link-core-v78';
 var STATIC_CACHE = 'link-core-static-' + CACHE_VERSION;
-var DATA_CACHE = 'link-core-data-' + CACHE_VERSION;
 
 /* アプリの殻。相対パスなので、GitHub Pages のプロジェクトサイト
    （例：https://<user>.github.io/My-Links/）でもカスタムドメインでも動く。 */
@@ -81,7 +78,7 @@ self.addEventListener('activate', function (event) {
         // WebLLM等がCache APIに保存するモデルデータは削除しない。
         // LINK COREが管理する古いキャッシュだけ削除する。
         if ((key.indexOf('link-core-static-') === 0 || key.indexOf('link-core-data-') === 0) &&
-            key !== STATIC_CACHE && key !== DATA_CACHE) return caches.delete(key);
+            key !== STATIC_CACHE) return caches.delete(key);
         return Promise.resolve();
       }));
     }).then(function () {
@@ -96,20 +93,9 @@ self.addEventListener('fetch', function (event) {
 
   var url = new URL(request.url);
 
-  /* GAS（データ）は network-first。 */
+  // Authenticated GAS responses always require the network.
   if (isGasUrl(url)) {
-    event.respondWith(
-      fetch(request).then(function (response) {
-        /* 成功した GET の応答だけをキャッシュする。 */
-        if (response && response.ok) {
-          var copy = response.clone();
-          caches.open(DATA_CACHE).then(function (cache) { cache.put(request, copy); });
-        }
-        return response;
-      }).catch(function () {
-        return caches.match(request);
-      })
-    );
+    event.respondWith(fetch(request, {cache:'no-store'}));
     return;
   }
 

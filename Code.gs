@@ -378,24 +378,30 @@ function authenticateVisitor(password, browserId, browserSecret) {
     recordAuthFailure_(rateState);
     throw new Error('サイトのパスワードが違います。');
   }
+  let directBound = false;
+  if (supabaseChatMode_() === 'supabase') {
+    const inbox = privateChatBrowserId_(browserSecret);
+    if (!inbox) throw new Error('ブラウザの識別情報を確認できません。サイトデータの保存を許可して再試行してください。');
+    let bound;
+    try {
+      bound = supabaseChatRequest_('post', 'rpc/link_core_bind_visitor_chat', {browser:browserId, inbox_id:inbox});
+    } catch (_) {
+      throw new Error('ブラウザの本人確認に接続できませんでした。時間をおいて再試行してください。');
+    }
+    if (bound !== true) {
+      recordAuthFailure_(rateState);
+      throw new Error('ブラウザの識別情報が一致しません。同じブラウザからログインしてください。');
+    }
+    directBound = true;
+  }
   clearAuthFailures_(rateState);
   const token = Utilities.getUuid() + Utilities.getUuid();
   storeSession_('VISITOR', token, generation);
-  CacheService.getScriptCache().put('LINK_CORE_VISITOR_BROWSER_' + token, browserId, SESSION_TTL_SECONDS);
-  if (/^[A-Za-z0-9_-]{8,100}$/.test(String(browserId || ''))) {
-    CacheService.getScriptCache().put('LINK_CORE_VISITOR_PROFILE_' + token, browserId, SESSION_TTL_SECONDS);
-  }
-  if (supabaseChatMode_() === 'supabase' && /^[A-Za-z0-9_-]{8,100}$/.test(String(browserId || ''))) {
-    const inbox = privateChatBrowserId_(browserSecret);
-    if (inbox) {
-      try {
-        const bound = supabaseChatRequest_('post', 'rpc/link_core_bind_visitor_chat', {browser:browserId, inbox_id:inbox});
-        if (bound === true) CacheService.getScriptCache().put('LINK_CORE_VISITOR_DM_' + token, browserId, SESSION_TTL_SECONDS);
-      } catch (_) {
-        console.warn('利用者の個人トークを登録できませんでした。');
-      }
-    }
-  }
+  const bindings = {};
+  bindings['LINK_CORE_VISITOR_BROWSER_' + token] = browserId;
+  bindings['LINK_CORE_VISITOR_PROFILE_' + token] = browserId;
+  if (directBound) bindings['LINK_CORE_VISITOR_DM_' + token] = browserId;
+  CacheService.getScriptCache().putAll(bindings, SESSION_TTL_SECONDS);
 
   // 認証直後のリンク取得を同じ応答にまとめ、ブラウザーとの往復を1回減らす。
   const profile = getVisitorChatProfile(browserId, token);
@@ -419,7 +425,7 @@ function sessionGeneration_() {
 }
 
 function isSessionValid_(role, token) {
-  if (typeof token !== 'string' || !token) return false;
+  if (typeof token !== 'string' || !/^(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}){2}$/i.test(token)) return false;
   const savedGeneration = CacheService.getScriptCache().get('LINK_CORE_' + role + '_' + token);
   if (!savedGeneration) return false;
   const [generation, expiresAt] = savedGeneration.split(':');
@@ -816,7 +822,7 @@ function submitLinkReport(url, browserId, visitorToken) {
   if (!/^https?:\/\/[^\s/@?#]+(?:[/?#]|$)/i.test(value) || /[\s\u0000-\u001f]/.test(value)) {
     throw new Error('URLの形式が正しくありません。');
   }
-  const browser = /^[A-Za-z0-9_-]{8,100}$/.test(String(browserId || '')) ? String(browserId) : '';
+  const browser = visitorProfileBrowser_(browserId, visitorToken);
   const lock = LockService.getScriptLock(); lock.waitLock(10000);
   try { linkReportSheet_(true).appendRow([Utilities.getUuid(), new Date(), safeCell_(value), safeCell_(browser), '']); }
   finally { lock.releaseLock(); }
@@ -2147,14 +2153,15 @@ function markNoticeRead(viewerToken, noticeId, browserId) {
   requireLinkViewer_(viewerToken);
   const id=cleanText_(noticeId,80),browser=cleanText_(browserId,100);
   if(!id||!/^[A-Za-z0-9_-]{8,100}$/.test(browser))throw new Error('既読情報が不正です。');
+  if (!isSessionValid_('ADMIN', viewerToken)) visitorProfileBrowser_(browser, viewerToken);
   const lock=LockService.getScriptLock();lock.waitLock(10000);
   try{
     const sheet=ensureNoticeReadSheet_(),last=sheet.getLastRow();
     let rows=last>=2?sheet.getRange(2,1,last-1,2).getDisplayValues():[];
-    if(rows.some(row=>row[0]===id&&row[1]===browser))return {added:false,count:rows.filter(row=>row[0]===id).length};
+    if(rows.some(row=>row[0]===id&&row[1]===browser))return isSessionValid_('ADMIN',viewerToken) ? {added:false,count:rows.filter(row=>row[0]===id).length} : {added:false};
     sheet.appendRow([id,browser,new Date()]);
     rows=sheet.getRange(2,1,sheet.getLastRow()-1,2).getDisplayValues();
-    return {added:true,count:rows.filter(row=>row[0]===id).length};
+    return isSessionValid_('ADMIN',viewerToken) ? {added:true,count:rows.filter(row=>row[0]===id).length} : {added:true};
   }finally{lock.releaseLock();}
 }
 
@@ -2657,7 +2664,7 @@ function staffAttachmentFileIsInFolder_(file) {
 function validateStaffAttachmentMeta_(payload) {
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) throw new Error('添付データが不正です。');
   const filename = String(payload.name || '').replace(/[\\/]/g, '_').replace(/[\x00-\x1f\x7f]/g, '').trim();
-  if (!filename || filename.length > 150 || filename.charAt(0) === '.') throw new Error('ファイル名を確認してください（150文字以内）。');
+  if (!filename || filename.length > 150 || filename.charAt(0) === '.' || /[:<>"|?*]/.test(filename)) throw new Error('ファイル名を確認してください（150文字以内）。');
   const ext = filename.includes('.') ? filename.split('.').pop().toLowerCase() : '';
   const mime = STAFF_ATTACHMENT_MIME[ext];
   if (!mime) throw new Error('このファイル形式は添付できません。');
@@ -2687,21 +2694,7 @@ function validateStaffAttachment_(payload) {
       !/^[A-Za-z0-9+/]+={0,2}$/.test(encoded)) throw new Error('添付データの形式が不正です。');
   const bytes = Utilities.base64Decode(encoded);
   if (bytes.length !== expectedSize) throw new Error('ファイルサイズが一致しません。');
-  const b = index => bytes[index] & 255;
-  const ascii = (start, length) => bytes.slice(start, start + length).map(x => String.fromCharCode(x & 255)).join('');
-  if (ext === 'pdf' && ascii(0, 5) !== '%PDF-') throw new Error('PDFの内容を確認してください。');
-  if (ext === 'png' && (bytes.length < 8 || [137,80,78,71,13,10,26,10].some((n,i) => b(i) !== n))) throw new Error('PNGの内容を確認してください。');
-  if ((ext === 'jpg' || ext === 'jpeg') && (bytes.length < 3 || b(0) !== 255 || b(1) !== 216 || b(2) !== 255)) throw new Error('JPEGの内容を確認してください。');
-  if (ext === 'gif' && ascii(0, 4) !== 'GIF8') throw new Error('GIFの内容を確認してください。');
-  if (ext === 'webp' && (ascii(0, 4) !== 'RIFF' || ascii(8, 4) !== 'WEBP')) throw new Error('WebPの内容を確認してください。');
-  if (['docx','xlsx','pptx'].includes(ext) && !(b(0) === 80 && b(1) === 75)) throw new Error('Officeファイルの内容を確認してください。');
-  if (['mp4', 'mov', 'm4v'].includes(ext) &&
-      !(ascii(4, 4) === 'ftyp' || (ext === 'mov' && ascii(4, 4) === 'moov'))) {
-    throw new Error('動画ファイルの内容を確認してください。');
-  }
-  if (ext === 'webm' && (bytes.length < 4 || [26,69,223,163].some((n,i) => b(i) !== n))) {
-    throw new Error('WebMの内容を確認してください。');
-  }
+  validateAttachmentSignature_(bytes, ext);
   return {filename, mime, bytes, size:expectedSize};
 }
 
@@ -2914,6 +2907,7 @@ function appendStaffChatLargeUploadChunk(requestId, browserId, offset, base64, a
         (offset + bytes.length < state.size && bytes.length % (256 * 1024) !== 0)) {
       throw new Error('分割データの容量が不正です。');
     }
+    if (offset === 0) validateAttachmentSignature_(bytes, state.filename.split('.').pop().toLowerCase());
     let response;
     try {
       response = UrlFetchApp.fetch(state.sessionUrl, {
@@ -4178,6 +4172,7 @@ function visitorDmUpload_(parameters, peer, author, token) {
     const bytes = Utilities.base64Decode(encoded);
     if (!bytes.length || bytes.length > STAFF_ATTACHMENT_CHUNK_BYTES || offset + bytes.length > state.size ||
         (offset + bytes.length < state.size && bytes.length % (256 * 1024) !== 0)) throw new Error('添付のサイズが不正です。');
+    if (offset === 0) validateAttachmentSignature_(bytes, state.filename.split('.').pop().toLowerCase());
     try {
       const response = UrlFetchApp.fetch(state.sessionUrl,{method:'put',contentType:state.mime,payload:bytes,followRedirects:false,
         headers:{Authorization:'Bearer ' + ScriptApp.getOAuthToken(),
@@ -4280,4 +4275,22 @@ function mergeFilterAccessNames(source, target, adminToken) {
     removeChunkedJsonCache_('LC_FILTER_ACCESS_ADMIN_V1');
     return {ok:true};
   } finally { lock.releaseLock(); }
+}
+
+function validateAttachmentSignature_(bytes, ext) {
+  const b = index => bytes[index] & 255;
+  const ascii = (start, length) => bytes.slice(start, start + length).map(x => String.fromCharCode(x & 255)).join('');
+  if (ext === 'pdf' && ascii(0, 5) !== '%PDF-') throw new Error('PDFの内容を確認してください。');
+  if (ext === 'png' && (bytes.length < 8 || [137,80,78,71,13,10,26,10].some((n,i) => b(i) !== n))) throw new Error('PNGの内容を確認してください。');
+  if ((ext === 'jpg' || ext === 'jpeg') && (bytes.length < 3 || b(0) !== 255 || b(1) !== 216 || b(2) !== 255)) throw new Error('JPEGの内容を確認してください。');
+  if (ext === 'gif' && ascii(0, 4) !== 'GIF8') throw new Error('GIFの内容を確認してください。');
+  if (ext === 'webp' && (ascii(0, 4) !== 'RIFF' || ascii(8, 4) !== 'WEBP')) throw new Error('WebPの内容を確認してください。');
+  if (['docx','xlsx','pptx'].includes(ext) && !(b(0) === 80 && b(1) === 75)) throw new Error('Officeファイルの内容を確認してください。');
+  if (['mp4', 'mov', 'm4v'].includes(ext) &&
+      !(ascii(4, 4) === 'ftyp' || (ext === 'mov' && ascii(4, 4) === 'moov'))) {
+    throw new Error('動画ファイルの内容を確認してください。');
+  }
+  if (ext === 'webm' && (bytes.length < 4 || [26,69,223,163].some((n,i) => b(i) !== n))) {
+    throw new Error('WebMの内容を確認してください。');
+  }
 }

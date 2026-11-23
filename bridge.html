@@ -112,9 +112,9 @@
 
     const { id, method, args } = request;
     // 診断情報を返し、古いフロントエンドや別デプロイ版との不一致を特定できるようにする。
-    const validId = typeof id === 'string' && id.length > 0;
+    const validId = typeof id === 'string' && id.length > 0 && id.length <= 128;
     const validMethod = typeof method === 'string' && ALLOWED_METHODS.has(method);
-    const validArgs = Array.isArray(args);
+    const validArgs = Array.isArray(args) && args.length <= 12;
     if (!validId || !validMethod || !validArgs) {
       const detail = [
         'id=' + (typeof id),
