@@ -1238,6 +1238,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
         <div class="sidebar-log-items">
           <button class="side-item" type="button" id="sideClickLogs"><span>◷</span> クリック履歴</button>
           <button class="side-item" type="button" id="sideVisitorLogins"><span>◷</span> 利用者ログイン履歴</button>
+          <button class="side-item" type="button" id="sideSecurityEvents"><span aria-hidden="true">🛡</span> セキュリティ検知</button>
           <button class="side-item" type="button" id="sideLinkOperations"><span>◷</span> リンク操作履歴</button>
           <button class="side-item" type="button" id="sideVisitorCounter"><span>▥</span> 来客数カウンター</button>
         </div>
@@ -1665,7 +1666,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
   }
 
   function serverCall(method, ...args) {
-    const protectedMethods = ['getFilterAccessSummary', 'mergeFilterAccessNames', 'requestVisitorSchoolCorrection', 'requestVisitorFilterCorrection', 'requestVisitorSchoolAndFilterCorrection', 'getVisitorDirectory', 'getClickBrowserNames', 'getOnlineVisitors', 'getBanVisitors', 'getBanAppeals', 'sendChatReply', 'getChatRealtimeSession', 'getLinks', 'getOfficialLinks', 'saveLink', 'deleteLink', 'getLinkReports', 'markLinkReportChecked', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'getVisitorCounterStats', 'deleteVisitorCounterBefore20261114', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getAdminVisitorChatRead', 'markAdminVisitorChatRead', 'getChatMessages', 'deleteVisitorChatMessage', 'getChatScreenshot', 'sendChatMessage', 'sendChatScreenshot', 'getStaffChatMessages', 'getStaffChatAttachment', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendStaffChatAttachment', 'startStaffChatLargeUpload', 'appendStaffChatLargeUploadChunk',
+    const protectedMethods = ['getSecurityEvents', 'getFilterAccessSummary', 'mergeFilterAccessNames', 'requestVisitorSchoolCorrection', 'requestVisitorFilterCorrection', 'requestVisitorSchoolAndFilterCorrection', 'getVisitorDirectory', 'getClickBrowserNames', 'getOnlineVisitors', 'getBanVisitors', 'getBanAppeals', 'sendChatReply', 'getChatRealtimeSession', 'getLinks', 'getOfficialLinks', 'saveLink', 'deleteLink', 'getLinkReports', 'markLinkReportChecked', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'getVisitorCounterStats', 'deleteVisitorCounterBefore20261114', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getAdminVisitorChatRead', 'markAdminVisitorChatRead', 'getChatMessages', 'deleteVisitorChatMessage', 'getChatScreenshot', 'sendChatMessage', 'sendChatScreenshot', 'getStaffChatMessages', 'getStaffChatAttachment', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendStaffChatAttachment', 'startStaffChatLargeUpload', 'appendStaffChatLargeUploadChunk',
         'finishStaffChatLargeUpload', 'getStaffChatAttachmentChunk', 'deleteStaffChatMessage', 'visitorDirectChatProxy', 'getClickLogs', 'setVisitorBan', 'setClickBrowserName', 'deleteClickLogs', 'deleteClickLog', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
     if (protectedMethods.includes(method)) {
       const token = adminSession.getItem(ADMIN_TOKEN_KEY) || '';
@@ -2760,6 +2761,7 @@ document.getElementById('authSubmit').disabled = false;
     return panel;
   });
   const otherHistories = [
+    {key:'securityEvents',side:'sideSecurityEvents',api:'getSecurityEvents',title:'セキュリティ検知',description:'認証失敗・試行制限・権限のない操作・識別情報の不一致を表示します。期限切れや入力ミスも含むため、不正アクセスの確定を示すものではありません。同じ種類・対象・匿名識別子の記録は10分間隔にまとめます。直近200件。',columns:['日時','重要度','対象','検知内容','匿名識別子','失敗回数']},
     {key:'visitorDirectory',side:'sideVisitorDirectory',api:'getVisitorDirectory',title:'利用者一覧',description:'ブラウザIDごとに表示します。ログイン日数は保存されている履歴を日本時間で集計します。',columns:['利用者・登録情報','状態・最終ログイン','操作・詳細']},
   {key:'onlineVisitors',side:'sideOnlineVisitors',api:'getOnlineVisitors',title:'オンラインの利用者',description:'利用者ページを表示中のブラウザです。30秒ごとに更新し、90秒通信がない場合はオフラインになります。同じブラウザの複数タブは1人として数えます。',columns:['利用者・ブラウザID','学校名','フィルターの種類','最終接続（日本時間）','状態']},
   {key:'banAppeals', side:'sideBanAppeals', api:'getBanAppeals', title:'異議申し立て', description:'利用停止の見直しを希望する利用者から届いた申し立てです（直近200件）。', columns:['受信日時','ブラウザID','理由','現在の状態','操作']},
@@ -3100,6 +3102,10 @@ document.getElementById('authSubmit').disabled = false;
         if (history.key === 'banAppeals') {
           cells.push(log.browserId, log.message, log.banned ? '利用停止中' : '利用停止なし');
           row.classList.add('ban-appeal-row');
+        }
+        if (history.key === 'securityEvents') {
+          cells.push(log.severity, log.scope, log.description, log.actor, log.failures || '—');
+          if (log.severity === '警告') row.style.color = '#ffbd83';
         }
         if (history.key === 'linkOperations') cells.push(log.action, log.title || log.linkId);
         if (history.key === 'linkReports') cells.push(log.url, log.browserId || '未記録');

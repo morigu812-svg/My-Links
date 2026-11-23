@@ -334,7 +334,7 @@ function getAuthRateState_(scope) {
     scope + ':' + userKey
   );
   const suffix = digest.map(byte => ('0' + ((byte + 256) % 256).toString(16)).slice(-2)).join('').slice(0, 32);
-  return { cache: CacheService.getScriptCache(), key: 'LINK_CORE_AUTH_' + scope + '_' + suffix };
+  return { cache: CacheService.getScriptCache(), key: 'LINK_CORE_AUTH_' + scope + '_' + suffix, scope:scope };
 }
 
 function checkAuthRateLimit_(state) {
@@ -343,6 +343,7 @@ function checkAuthRateLimit_(state) {
   let data = {};
   try { data = JSON.parse(raw) || {}; } catch (_) {}
   if (Number(data.lockedUntil || 0) > Date.now()) {
+    securityEvent_('auth_locked', state.scope || 'AUTH');
     throw new Error('認証の試行回数が上限に達しました。15分ほど待ってから再試行してください。');
   }
 }
@@ -350,15 +351,18 @@ function checkAuthRateLimit_(state) {
 function recordAuthFailure_(state) {
   const lock = LockService.getScriptLock();
   lock.waitLock(3000);
+  let failureCount = 0;
   try {
     let data = {};
     try { data = JSON.parse(state.cache.get(state.key) || '{}') || {}; } catch (_) {}
     const count = Number(data.count || 0) + 1;
+    failureCount = count;
     const lockedUntil = count >= 5 ? Date.now() + 15 * 60 * 1000 : 0;
     state.cache.put(state.key, JSON.stringify({ count, lockedUntil }), 15 * 60);
   } finally {
     lock.releaseLock();
   }
+  securityEvent_(failureCount >= 5 ? 'auth_repeated' : 'auth_failed', state.scope || 'AUTH', failureCount);
 }
 
 function clearAuthFailures_(state) {
@@ -389,6 +393,7 @@ function authenticateVisitor(password, browserId, browserSecret) {
       throw new Error('ブラウザの本人確認に接続できませんでした。時間をおいて再試行してください。');
     }
     if (bound !== true) {
+      securityEvent_('identity_mismatch', 'VISITOR');
       recordAuthFailure_(rateState);
       throw new Error('ブラウザの識別情報が一致しません。同じブラウザからログインしてください。');
     }
@@ -655,6 +660,7 @@ function requireLinkViewer_(token) {
     const browser = CacheService.getScriptCache().get('LINK_CORE_VISITOR_BROWSER_' + token);
     if (isVisitorBanned_(browser)) throw new Error('このブラウザは利用を停止されています。管理者にお問い合わせください。');
   }
+  securityEvent_('viewer_denied', 'VISITOR');
   throw new Error('閲覧にはサイトのパスワード認証が必要です。');
 }
 
@@ -720,6 +726,7 @@ function authenticateAdmin(password, includeLinks) {
 function requireAdmin_(token) {
   if (typeof token !== 'string' || !token ||
       !isSessionValid_('ADMIN', token)) {
+    securityEvent_('admin_denied', 'ADMIN');
     throw new Error('管理者ログインが必要です。ログインし直してください。');
   }
 }
@@ -4091,7 +4098,10 @@ function visitorProfileBrowser_(browserId, token) {
   if (!isSessionValid_('VISITOR', token)) throw new Error('利用者ログインが必要です。');
   const bound = CacheService.getScriptCache().get('LINK_CORE_VISITOR_BROWSER_' + token);
   if (!/^[A-Za-z0-9_-]{8,100}$/.test(String(bound || ''))) throw new Error('ログイン情報を確認できません。再ログインしてください。');
-  if (browserId && browserId !== bound) throw new Error('ブラウザIDがログイン情報と一致しません。再ログインしてください。');
+  if (browserId && browserId !== bound) {
+    securityEvent_('identity_mismatch', 'VISITOR');
+    throw new Error('ブラウザIDがログイン情報と一致しません。再ログインしてください。');
+  }
   return bound;
 }
 
@@ -4307,4 +4317,58 @@ function validateAttachmentSignature_(bytes, ext) {
 function requireStaffSupabase_() {
   if (supabaseChatMode_() !== 'supabase') throw new Error('管理者チャットはSupabase専用です。チャット履歴の移行とLINK_CORE_CHAT_BACKENDのsupabase設定を完了してください。');
   supabaseChatConfig_();
+}
+
+/* Security observations are indicators, not proof of an intrusion.
+ * No caller-provided message, password, JWT or session token is persisted.
+ */
+function securityEvent_(code, scope, count) {
+  const definitions = {
+    auth_failed:['注意','認証に失敗'],
+    auth_repeated:['警告','認証失敗が連続（15分の試行制限）'],
+    auth_locked:['警告','認証の試行制限中に再試行'],
+    admin_denied:['確認','管理者認証がない・期限切れの操作'],
+    viewer_denied:['確認','閲覧認証がない・期限切れの操作'],
+    identity_mismatch:['警告','ログイン済み情報とブラウザの識別情報が不一致']
+  };
+  if (!Object.prototype.hasOwnProperty.call(definitions, code)) return;
+  if (!['ADMIN','VISITOR','MEMO','AUTH'].includes(scope)) scope = 'AUTH';
+  let lock, acquired = false;
+  try {
+    const state = getAuthRateState_('SECURITY');
+    const actor = state.key.slice(-32);
+    const key = 'LINK_CORE_SEC_EVENT_' + code + '_' + scope + '_' + actor;
+    if (state.cache.get(key)) return;
+    console.warn('LINK_BASE_SECURITY', JSON.stringify({code:code,scope:scope,actor:actor}));
+    lock = LockService.getScriptLock();
+    acquired = lock.tryLock(100);
+    if (!acquired) return;
+    if (state.cache.get(key)) return;
+    const spreadsheetId = PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY);
+    if (!spreadsheetId) return;
+    const ss = SpreadsheetApp.openById(spreadsheetId);
+    const sheet = ss.getSheetByName('SecurityEvents') || ss.insertSheet('SecurityEvents');
+    if (!sheet.getLastRow()) sheet.appendRow(['日時','重要度','種別','対象','説明','送信元の匿名識別子','検知時の失敗回数']);
+    const times = Number.isSafeInteger(count) && count > 0 ? Math.min(count,100000) : '';
+    sheet.appendRow([new Date(),definitions[code][0],code,scope,definitions[code][1],actor,times]);
+    state.cache.put(key,'1',600);
+  } catch (_) {
+    // Security logging must never grant access or replace the original rejection.
+    console.warn('LINK_BASE_SECURITY_LOG_UNAVAILABLE');
+  } finally {
+    if (acquired) lock.releaseLock();
+  }
+}
+
+function getSecurityEvents(adminToken) {
+  requireAdmin_(adminToken);
+  const ss = SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY));
+  const sheet = ss.getSheetByName('SecurityEvents');
+  const last = sheet ? sheet.getLastRow() : 0;
+  if (last < 2) return {logs:[]};
+  const first = Math.max(2,last-199);
+  return {logs:sheet.getRange(first,1,last-first+1,7).getValues().reverse().map(row=>({
+    date:toIso_(row[0]),severity:String(row[1]),code:String(row[2]),scope:String(row[3]),
+    description:String(row[4]),actor:String(row[5]),failures:Number(row[6]) || 0
+  }))};
 }
