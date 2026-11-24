@@ -8,3 +8,11 @@
 #touch #left,#touch #right{display:none}#touch{pointer-events:none}#touch #boost{pointer-events:auto}#resultStats{flex-wrap:wrap}
 
 body.walking,body.walking *,body.racing,body.racing *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-text-size-adjust:100%;text-size-adjust:100%}body.walking,body.racing{touch-action:none}body.walking input,body.walking textarea,body.racing input,body.racing textarea{-webkit-user-select:text;user-select:text}
+
+/* Non-interactive HUD text must never intercept driving gestures. */
+body.racing #hud,body.racing #hud *,body.racing #countdown,body.racing #message{pointer-events:none}
+body.racing #boost,body.racing #pause,body.racing #sound,body.racing #fullscreen,body.racing a{pointer-events:auto}
+#raceTutorial{position:fixed;top:24%;left:50%;transform:translateX(-50%);z-index:12;width:min(440px,90vw);padding:18px 22px;border:1px solid #60efff88;border-radius:15px;background:#091a35ed;color:#efffff;text-align:center;pointer-events:none}
+#raceTutorial[hidden]{display:none}#raceTutorial small{color:#80eaf4}#raceTutorial h2{font-size:22px;margin:9px 0}#raceTutorial p{font-size:14px;line-height:1.6;margin:8px 0}.tutorial-track{height:5px;background:#203752;border-radius:5px;overflow:hidden}.tutorial-track i{display:block;height:100%;width:0;background:#6dffdc}#tutorialFinish{pointer-events:auto;margin-top:12px}
+body:has(#overlay:not([hidden])) #raceTutorial{display:none}
+@media(max-height:550px){#raceTutorial{top:22%;padding:10px 18px}#raceTutorial h2{font-size:18px}}

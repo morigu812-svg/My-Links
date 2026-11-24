@@ -76,21 +76,32 @@ let audioChosen=requestedAudio==='on'||requestedAudio==='off';
 if(audioChosen)$('raceAudioGate').hidden=true;
 $('raceSoundOn').onclick=()=>{audioChosen=true;if(!sound)toggleSound();$('raceAudioGate').hidden=true;};
 $('raceSoundOff').onclick=()=>{audioChosen=true;if(sound)toggleSound();$('raceAudioGate').hidden=true;};
-function begin(mode){if(!audioChosen){$('raceAudioGate').hidden=false;return;}if(requestedAudio==='on'&&!sound)toggleSound();reset(mode);}
-$('start').onclick=()=>begin('race');$('practice').onclick=()=>begin('practice');$('restart').onclick=()=>reset(mode);$('resume').onclick=()=>pause(false);
-function home(){clearDrive();persistRace();state='menu';$('overlay').hidden=true;$('hud').hidden=true;$('menu').hidden=false;$('footer').hidden=false;$('pause').hidden=true;$('countdown').textContent='';document.body.classList.remove('racing','boosting');keys.boost=false;rivals.forEach(r=>r.mesh.visible=true);}
+
+let tutorialDone=savedRace?.tutorialVersion===1,tutorialActive=false,tutorialStep=0,tutorialHeld=0,tutorialNext='race';
+const tutorialPanel=document.createElement('section');tutorialPanel.id='raceTutorial';tutorialPanel.hidden=true;tutorialPanel.innerHTML='<small>操作チュートリアル <span id="tutorialCount"></span></small><h2 id="tutorialTitle"></h2><p id="tutorialHelp"></p><div class="tutorial-track"><i id="tutorialProgress"></i></div><button id="tutorialFinish" hidden>レースをはじめる</button>';document.body.append(tutorialPanel);
+const touchLessons=[['左側を長押しして加速','画面の左半分を1秒間押し続けよう。',()=>drivePointer!==null,1],['指を離して停止','左側の指を離すと車が止まります。',()=>drivePointer===null,.6],['左へスワイプ','右半分を左へスワイプしよう。文字の上でも操作できます。',()=>swipeSteer<-.2,.02],['右へスワイプ','右半分を右へスワイプしよう。',()=>swipeSteer>.2,.02],['ブーストを使う','左側を押しながら、右下のBOOSTを長押ししよう。',()=>drivePointer!==null&&keys.boost,.5]];
+const pcLessons=[['ターボで加速','Control または Command を1秒間押してみよう。',()=>keys.turbo,1],['ターボを解除','Control / Command を離すと通常速度に戻ります。',()=>!keys.turbo,.6],['左へ移動','A または ← を押し続けよう。',()=>keys.left,.5],['右へ移動','D または → を押し続けよう。',()=>keys.right,.5],['ブーストを使う','Space を押し続けよう。',()=>keys.boost,.5]];
+function tutorialPaint(){const lessons=touchDriving?touchLessons:pcLessons;$('tutorialCount').textContent=Math.min(5,tutorialStep+1)+' / 5';$('tutorialTitle').textContent=lessons[tutorialStep]?.[0]||'操作マスター！';$('tutorialHelp').textContent=lessons[tutorialStep]?.[1]||'準備完了。次は本番で走ってみよう。';$('tutorialFinish').hidden=tutorialStep<5;}
+function startTutorial(next){tutorialNext=next;tutorialActive=true;tutorialStep=0;tutorialHeld=0;reset('practice');state='racing';count=0;ready=0;$('countdown').textContent='';tutorialPanel.hidden=false;tutorialPaint();}
+function tutorialUpdate(dt){if(!tutorialActive||state!=='racing'||tutorialStep>=5)return;const lesson=(touchDriving?touchLessons:pcLessons)[tutorialStep];tutorialHeld=lesson[2]()?tutorialHeld+dt:0;$('tutorialProgress').style.width=Math.min(100,tutorialHeld/lesson[3]*100)+'%';if(tutorialHeld>=lesson[3]){tutorialStep++;tutorialHeld=0;tutorialPaint();}}
+$('tutorialFinish').onclick=()=>{if(tutorialStep<5)return;tutorialDone=true;tutorialActive=false;tutorialPanel.hidden=true;persistRace();reset(tutorialNext);};
+const tutorialAgain=document.createElement('button');tutorialAgain.textContent='操作チュートリアル';tutorialAgain.onclick=()=>{if(!audioChosen){$('raceAudioGate').hidden=false;return;}startTutorial('race');};$('menu').append(tutorialAgain);
+
+function begin(mode){if(!audioChosen){$('raceAudioGate').hidden=false;return;}if(requestedAudio==='on'&&!sound)toggleSound();if(!tutorialDone){startTutorial(mode);return;}reset(mode);}
+$('start').onclick=()=>begin('race');$('practice').onclick=()=>begin('practice');$('restart').onclick=()=>tutorialActive?startTutorial(tutorialNext):reset(mode);$('resume').onclick=()=>pause(false);
+function home(){clearDrive();persistRace();tutorialActive=false;tutorialPanel.hidden=true;state='menu';$('overlay').hidden=true;$('hud').hidden=true;$('menu').hidden=false;$('footer').hidden=false;$('pause').hidden=true;$('countdown').textContent='';document.body.classList.remove('racing','boosting');keys.boost=false;rivals.forEach(r=>r.mesh.visible=true);}
 $('home').onclick=home;
 function pause(on=state!=='paused'){if(on&&!['racing','countdown'].includes(state))return;if(!on&&state!=='paused')return;if(on)pausedFrom=state;state=on?'paused':pausedFrom;clearDrive();$('overlay').hidden=!on;if(on){$('resultTag').textContent='PAUSED';$('resultTitle').textContent='ひと休み';$('resultText').textContent='準備ができたら、再び空へ。';$('resultStats').replaceChildren();$('resume').hidden=false;$('restart').hidden=true;}persistRace();document.body.classList.remove('boosting');}
 $('pause').onclick=()=>pause();document.addEventListener('visibilitychange',()=>{if(document.hidden)pause(true);});
 $('fullscreen').onclick=()=>{if(document.fullscreenElement)document.exitFullscreen?.();else document.documentElement.requestFullscreen?.().catch(()=>{});};
 function finish(){if(state==='finished')return;state='finished';const rank=1+rivals.filter(r=>r.progress>progress).length;$('overlay').hidden=false;$('resume').hidden=true;$('restart').hidden=false;$('resultTag').textContent='SKYLINE GRAND PRIX';$('resultTitle').textContent=rank===1?'VICTORY':rank+'位 FINISH';$('resultText').textContent=rank===1?'ネオンの空は、君のもの。':'ブーストパッドと追い風で、次はもっと速く。';$('resultStats').replaceChildren();for(const text of ['TIME '+fmt(time),'BEST LAP '+fmt(bestLap)]){const el=document.createElement('span');el.textContent=text;$('resultStats').append(el);}recentTimes.push(time);if(recentTimes.length>8)recentTimes.shift();const reward=awardCredits('race:'+rewardId,rank===1?100:rank<=3?60:30);const rewardNode=document.createElement('p');rewardNode.textContent='レース報酬 +'+reward.amount+' CR / 所持 '+getWallet().balance.toLocaleString('ja-JP')+' CR';$('resultStats').append(rewardNode);records.races++;if(rank===1)records.wins++;records.bestTime=Math.min(records.bestTime||Infinity,time);records.bestLap=Math.min(records.bestLap||Infinity,bestLap);persistRace();refreshRecords();document.body.classList.remove('boosting');}
 const bindings={ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',Space:'boost',ShiftLeft:'boost',ShiftRight:'boost',ControlLeft:'turbo',ControlRight:'turbo',MetaLeft:'turbo',MetaRight:'turbo'};
-addEventListener('keydown',e=>{if(bindings[e.code]){if(state==='racing'||state==='countdown')e.preventDefault();keys[bindings[e.code]]=true;}if((e.code==='KeyP'||e.code==='Escape')&&!e.repeat)pause();if(e.code==='KeyR'&&state==='racing'&&!e.repeat)reset(mode);});
+addEventListener('keydown',e=>{if(bindings[e.code]){if(state==='racing'||state==='countdown')e.preventDefault();keys[bindings[e.code]]=true;}if((e.code==='KeyP'||e.code==='Escape')&&!e.repeat)pause();if(e.code==='KeyR'&&state==='racing'&&!e.repeat){if(tutorialActive)startTutorial(tutorialNext);else reset(mode);}});
 addEventListener('keyup',e=>{if(bindings[e.code])keys[bindings[e.code]]=false;});addEventListener('blur',()=>{clearDrive();pause(true);});
-raceCanvas.addEventListener('pointerdown',e=>{if(!['racing','countdown'].includes(state)||e.pointerType==='mouse')return;e.preventDefault();touchDriving=true;if(e.clientX<innerWidth/2){if(drivePointer!==null)return;drivePointer=e.pointerId;}else{if(steerPointer!==null)return;steerPointer=e.pointerId;steerX=e.clientX;}raceCanvas.setPointerCapture(e.pointerId);});
-raceCanvas.addEventListener('pointermove',e=>{if(e.pointerId!==steerPointer)return;e.preventDefault();swipeSteer=THREE.MathUtils.clamp(swipeSteer+(e.clientX-steerX)*.25,-12,12);steerX=e.clientX;});
+document.addEventListener('pointerdown',e=>{if(!['racing','countdown'].includes(state)||e.pointerType==='mouse'||e.target.closest?.('button,a,input,textarea'))return;e.preventDefault();touchDriving=true;if(e.clientX<innerWidth/2){if(drivePointer!==null)return;drivePointer=e.pointerId;}else{if(steerPointer!==null)return;steerPointer=e.pointerId;steerX=e.clientX;}raceCanvas.setPointerCapture(e.pointerId);});
+document.addEventListener('pointermove',e=>{if(e.pointerId!==steerPointer)return;e.preventDefault();swipeSteer=THREE.MathUtils.clamp(swipeSteer+(e.clientX-steerX)*.25,-12,12);steerX=e.clientX;});
 function releaseDrive(e){if(e.pointerId===drivePointer){drivePointer=null;speed=0;}if(e.pointerId===steerPointer){steerPointer=null;swipeSteer=0;}}
-for(const name of ['pointerup','pointercancel','lostpointercapture'])raceCanvas.addEventListener(name,releaseDrive);
+for(const name of ['pointerup','pointercancel','lostpointercapture'])document.addEventListener(name,releaseDrive);
 const boostButton=$('boost');boostButton.onpointerdown=e=>{e.preventDefault();keys.boost=true;boostButton.setPointerCapture(e.pointerId);};for(const name of ['pointerup','pointercancel','lostpointercapture'])boostButton.addEventListener(name,()=>keys.boost=false);
 
 const positive=value=>Number.isFinite(value)&&value>0?value:null;
@@ -103,9 +114,9 @@ function refreshRecords(){recordStatus.textContent='保存済み記録： '+reco
 refreshRecords();
 let saveElapsed=0,saveWarning=false;
 function persistRace(){
-  const active=['racing','paused','countdown'].includes(state),latestSave=readSave('race');
+  const active=!tutorialActive&&['racing','paused','countdown'].includes(state),latestSave=readSave('race');
   const run=active?{rewardId,mode,progress,speed,lane,energy,time,bestLap:Number.isFinite(bestLap)?bestLap:null,lapStarted,lastLap,phase:state==='paused'?pausedFrom:state,countdown:count,rivals:rivals.map(r=>({progress:r.progress,lane:r.lane,speed:r.speed})),eventSeen:[...eventSeen]}:(state==='finished'?null:(latestSave?.trackVersion===2?latestSave.run||null:null));
-  if(!writeSave('race',{trackVersion:2,recentTimes,records:{...records,bestLap:positive(records.bestLap),bestTime:positive(records.bestTime)},run,sound})&&!saveWarning){saveWarning=true;message('ブラウザに保存できません',3);}
+  if(!writeSave('race',{tutorialVersion:tutorialDone?1:0,trackVersion:2,recentTimes,records:{...records,bestLap:positive(records.bestLap),bestTime:positive(records.bestTime)},run,sound})&&!saveWarning){saveWarning=true;message('ブラウザに保存できません',3);}
 }
 function validRun(run){
   if(!run||!['race','practice'].includes(run.mode))return false;
@@ -119,7 +130,7 @@ if(savedRace?.trackVersion===2&&validRun(savedRace?.run)){
   const resumeRace=document.createElement('button');resumeRace.textContent='保存したレースの続きから';resumeRace.style.marginTop='12px';
   resumeRace.onclick=()=>{
     if(!audioChosen){$('raceAudioGate').hidden=false;return;}
-    const run=readSave('race')?.run;if(!validRun(run)){message('再開できるレースはありません。',3);return;}begin(run.mode);
+    const run=readSave('race')?.run;if(!validRun(run)){message('再開できるレースはありません。',3);return;}if(!tutorialDone){begin(run.mode);return;}begin(run.mode);
     rewardId=typeof run.rewardId==='string'&&/^[0-9a-f-]{36}$/i.test(run.rewardId)?run.rewardId:crypto.randomUUID();progress=run.progress;speed=run.speed;lane=run.lane;energy=run.energy;time=run.time;lapStarted=run.lapStarted;lastLap=run.lastLap;bestLap=positive(run.bestLap)||Infinity;
     state=run.phase==='countdown'?'countdown':'racing';count=state==='countdown'&&Number.isFinite(run.countdown)?THREE.MathUtils.clamp(run.countdown,0,3.2):0;ready=state==='racing'?1:0;$('countdown').textContent=state==='countdown'?String(Math.max(1,Math.ceil(count))):'';eventSeen=new Set(Array.isArray(run.eventSeen)?run.eventSeen.filter(Number.isInteger):[]);run.rivals.forEach((r,i)=>Object.assign(rivals[i],r));
     persistRace();
@@ -135,8 +146,9 @@ function update(dt){renderTime+=dt;boosting=false;saveElapsed+=dt;if(saveElapsed
 if(state==='menu'){const u=(renderTime*.005)%1;progress=u*length;lane=0;speed=0;}
 if(state==='countdown'){count-=dt;$('countdown').textContent=count>0?String(Math.max(1,Math.ceil(count))):'GO';if(count<=0){state='racing';ready=1;message(mode==='practice'?'FREE FLIGHT':'CHASE THE HORIZON',2);}}
 if(state==='racing'){
+tutorialUpdate(dt);
 const routeU=(progress/length)%1,nextSector=Math.min(3,Math.floor(routeU*4));if(nextSector!==sector){sector=nextSector;message(sectorNames[sector],2);}
-jumpTime=Math.max(0,jumpTime-dt);for(let i=0;i<raceEvents.length;i++){const e=raceEvents[i];e.mesh.visible=!eventSeen.has(i);e.mesh.rotation.y+=dt;const eventProgress=(Math.floor(progress/length)+e.u)*length;if(!eventSeen.has(i)&&progress>=eventProgress){eventSeen.add(i);if(progress-eventProgress<30&&Math.abs(lane-e.lane)<(e.type==='jump'?12:9)){if(e.type==='jump'){jumpTime=1.4;energy=100;padCooldown=2.5;}else awardCredits('race-event:'+rewardId+':'+Math.floor(progress/length)+':'+i,25);message(e.name,1.8);}else message('MISSED · 次のゲートを狙おう',1);}}
+jumpTime=Math.max(0,jumpTime-dt);for(let i=0;i<raceEvents.length;i++){const e=raceEvents[i];e.mesh.visible=!eventSeen.has(i);e.mesh.rotation.y+=dt;const eventProgress=(Math.floor(progress/length)+e.u)*length;if(!eventSeen.has(i)&&progress>=eventProgress){eventSeen.add(i);if(progress-eventProgress<30&&Math.abs(lane-e.lane)<(e.type==='jump'?12:9)){if(e.type==='jump'){jumpTime=1.4;energy=100;padCooldown=2.5;}else if(!tutorialActive)awardCredits('race-event:'+rewardId+':'+Math.floor(progress/length)+':'+i,25);message(e.name,1.8);}else message('MISSED · 次のゲートを狙おう',1);}}
 if(ready>0){ready-=dt;if(ready<=0)$('countdown').textContent='';}time+=dt;padCooldown=Math.max(0,padCooldown-dt);collisionCooldown=Math.max(0,collisionCooldown-dt);
 const input=THREE.MathUtils.clamp((keys.right?1:0)-(keys.left?1:0)+swipeSteer,-1,1);swipeSteer=THREE.MathUtils.damp(swipeSteer,0,9,dt);laneV=THREE.MathUtils.damp(laneV,input*29,8,dt);lane+=laneV*dt;lane=THREE.MathUtils.clamp(lane,-WIDTH+4,WIDTH-4);
 // No spinouts: the ship follows the track automatically, even at top speed.
