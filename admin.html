@@ -4004,8 +4004,26 @@ $('closeChat').addEventListener('click', closeMainChat);
     staffMessages.replaceChildren(notice);
   }
 
+
+  function staffReadReceipt(item, room) {
+    const raw = item.readCount ?? item.read_count;
+    const count = raw !== null && raw !== undefined && Number.isFinite(Number(raw))
+      ? Math.max(0, Math.floor(Number(raw))) : null;
+    if (room && item.own) {
+      // Older read RPCs return a reader count but omit peerRead. A private room has one peer.
+      const read = typeof item.peerRead === 'boolean' ? item.peerRead
+        : count === null ? null : count > 0;
+      return {read, text:read === null ? '送信済み' : read ? '✓ 既読' : '未読',
+        title:read === null ? '相手の既読情報を確認中です' : read ? '相手がこのメッセージを読みました' : '相手はまだ読んでいません'};
+    }
+    if (room) return null;
+    return {read:count === null ? null : count > 0,
+      text:count === null ? '既読情報を確認中' : '既読 ' + count + '人',
+      title:'このメッセージを読んだ管理者の人数'};
+  }
+
   function renderStaffMessages(messages, token) {
-      const key = JSON.stringify(messages.map(item => [item.id, item.readCount, item.peerRead, item.unread, item.own, item.author, item.reply, item.attachment?.name]));
+      const key = JSON.stringify(messages.map(item => [item.id, item.readCount, item.read_count, item.peerRead, item.unread, item.own, item.author, item.reply, item.attachment?.name]));
       if (key !== staffRenderKey) {
         const generation = staffOpenGeneration;
         if (holdChatRenderWhileMenuOpen(staffMessages, () => {
@@ -4015,17 +4033,16 @@ $('closeChat').addEventListener('click', closeMainChat);
         closeStaffMessageActions();
         staffImagePreviews.keep(messages.filter(item => item.attachment).map(item => item.id));
         const cards = buildChatBubbles(messages, (item, card, bubble, line) => {
-          // 個人トークの送信済みメッセージだけ、相手本人の既読状態を表示する。
-          // 共有チャットの人数カウンターとは区別し、相手の既読データを変更しない。
-          if (staffActiveRoom && item.own && typeof item.peerRead === 'boolean') {
+          const receiptState = staffReadReceipt(item, staffActiveRoom);
+          if (receiptState) {
             const meta = card.querySelector('.staff-message-meta');
             if (meta) {
               const receipt = document.createElement('span');
               receipt.className = 'staff-peer-read-receipt';
-              receipt.dataset.read = String(item.peerRead);
-              receipt.textContent = item.peerRead ? '✓ 既読' : '未読';
-              receipt.setAttribute('aria-label', item.peerRead ? '相手が既読' : '相手は未読');
-              receipt.title = item.peerRead ? 'このメッセージは相手が読みました' : 'このメッセージはまだ相手が読んでいません';
+              receipt.dataset.read = String(receiptState.read);
+              receipt.textContent = receiptState.text;
+              receipt.setAttribute('aria-label', receiptState.text);
+              receipt.title = receiptState.title;
               meta.append(receipt);
             }
           }
@@ -4167,7 +4184,7 @@ $('closeChat').addEventListener('click', closeMainChat);
           }
           addChatReplyAction(action, staffReply, item);
           if (action.childElementCount) attachChatMessageActions(line, action);
-        }, {groupIncoming: Boolean(staffActiveRoom), showRead: staffActiveRoom === ''});
+        }, {groupIncoming: Boolean(staffActiveRoom), showRead: false});
         const scrollArea = staffMessages.closest('.chat-table-wrap');
         const beforeHeight = scrollArea?.scrollHeight || 0;
         const wasNearBottom = !scrollArea ||
