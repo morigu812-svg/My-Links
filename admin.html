@@ -1170,7 +1170,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
 <link rel="stylesheet" href="./filter-access.css?v=7">
 <script src="./filter-access.js?v=8"></script>
 <meta name="referrer" content="no-referrer">
-<link rel="stylesheet" href="./log-dashboard.css?v=3"><script src="./log-dashboard.js?v=4"></script><style>#linkViewsDialog{width:min(800px,94vw);max-height:85dvh;overflow:auto;background:#0e1d30;color:#e3f4ff;border:1px solid #356079;border-radius:14px;padding:22px}#linkViewsDialog::backdrop{background:#0009}.views-heading{display:flex;justify-content:space-between;align-items:center}.link-view-row{display:grid;grid-template-columns:minmax(0,1fr) 80px 150px;gap:12px;align-items:center;padding:15px 0;border-bottom:1px solid #2b4156}.link-view-row strong{overflow-wrap:anywhere}.link-view-row input{width:auto}#linkViewsSearch{margin:8px;width:min(330px,90%)}@media(max-width:550px){.link-view-row{grid-template-columns:1fr auto}.link-view-row label{grid-column:1/-1}}</style></head>
+<link rel="stylesheet" href="./log-dashboard.css?v=3"><script src="./log-dashboard.js?v=4"></script><style>#linkViewsDialog{width:min(800px,94vw);max-height:85dvh;overflow:auto;background:#0e1d30;color:#e3f4ff;border:1px solid #356079;border-radius:14px;padding:22px}#linkViewsDialog::backdrop{background:#0009}.views-heading{display:flex;justify-content:space-between;align-items:center}.link-view-row{display:grid;grid-template-columns:minmax(0,1fr) 80px 150px;gap:12px;align-items:center;padding:15px 0;border-bottom:1px solid #2b4156}.link-view-row strong{overflow-wrap:anywhere}.link-view-row input{width:auto}#linkViewsSearch{margin:8px;width:min(330px,90%)}@media(max-width:550px){.link-view-row{grid-template-columns:1fr auto}.link-view-row label{grid-column:1/-1}}</style><style>.click-estimated-duration{display:block;margin-top:6px;color:#8edbc5;font-size:11px;white-space:normal}</style></head>
 <body>
 <section id="authGate" class="auth-gate" aria-labelledby="authTitle">
   <form id="authForm" onsubmit="return false" class="auth-card">
@@ -2578,6 +2578,13 @@ document.getElementById('authSubmit').disabled = false;
   $('clickHistoryPeriod').addEventListener('change', updateClickHistory);
   const clickHistoryDateFormat = new Intl.DateTimeFormat('ja-JP', {timeZone:'Asia/Tokyo', year:'numeric', month:'2-digit', day:'2-digit'});
   const clickHistoryTimeFormat = new Intl.DateTimeFormat('ja-JP', {timeZone:'Asia/Tokyo', hour:'2-digit', minute:'2-digit', hourCycle:'h23'});
+
+  function estimatedVisitLabel(log) {
+    if(!Number.isFinite(log.estimatedViewSeconds))return '推定閲覧：未確定';
+    const seconds=Math.max(0,Math.round(log.estimatedViewSeconds));
+    return '推定閲覧：約'+(seconds>=3600?Math.floor(seconds/3600)+'時間'+Math.floor(seconds%3600/60)+'分':seconds>=60?Math.floor(seconds/60)+'分'+seconds%60+'秒':seconds+'秒');
+  }
+
   function renderClickLogs(logs, remember = true){
     if (remember) { clickHistoryLogs = logs; updateClickHistory(); return; }
     const body=$('clickLogRows');body.replaceChildren();
@@ -2595,6 +2602,7 @@ document.getElementById('authSubmit').disabled = false;
         clock.textContent = clickHistoryTimeFormat.format(date);
         time.append(day, clock);
       }
+      const duration=document.createElement('small');duration.className='click-estimated-duration';duration.textContent=estimatedVisitLabel(log);duration.title='LINK BASEから離れて戻るまでの推定時間です。別タブ・アプリの利用時間を含む場合があります。戻っていない記録や過去の記録は未確定です。';time.append(duration);
       const title = document.createElement('td');
       title.dataset.label = 'リンク';
       title.className = 'click-entry-title';
@@ -2930,7 +2938,7 @@ document.getElementById('authSubmit').disabled = false;
           rows.append(...result.logs.map(item => {
             const row = document.createElement('tr');
             row.insertCell().textContent = item.title || item.url || '名称未登録';
-            row.insertCell().textContent = directoryDate(item.clickedAt);
+            const timingCell=row.insertCell();timingCell.textContent = directoryDate(item.clickedAt);const duration=document.createElement('small');duration.style.display='block';duration.textContent=estimatedVisitLabel(item);timingCell.append(duration);
             return row;
           }));
           cursor = result.nextCursor;

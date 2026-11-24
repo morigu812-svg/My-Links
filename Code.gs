@@ -1943,7 +1943,7 @@ function postPublicChat_(message, viewerToken, image) {
 
 /* LINK BASE click history. Only authenticated visitors can write; only admins can read. */
 const CLICK_LOG_SHEET_NAME = 'ClickLogs';
-const CLICK_LOG_HEADERS = ['ID', 'リンクID', 'リンク名', 'URL', 'クリック日時', 'ブラウザID'];
+const CLICK_LOG_HEADERS = ['ID', 'リンクID', 'リンク名', 'URL', 'クリック日時', 'ブラウザID', '推定閲覧秒数', '戻った日時'];
 function ensureClickLogSheet_() {
   const id = PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY);
   if (!id) throw new Error('スプレッドシートIDが未設定です。');
@@ -1958,7 +1958,7 @@ function ensureClickLogSheet_() {
   if (sheet.getLastColumn() < CLICK_LOG_HEADERS.length) sheet.getRange(1, 1, 1, CLICK_LOG_HEADERS.length).setValues([CLICK_LOG_HEADERS]);
   return sheet;
 }
-function recordLinkClick(linkId, browserId, visitorToken) {
+function recordLinkClick(linkId, browserId, visitorToken, visitId) {
   let stage = '利用者認証';
   try {
     if (typeof visitorToken !== 'string' || !visitorToken ||
@@ -1981,15 +1981,21 @@ function recordLinkClick(linkId, browserId, visitorToken) {
       throw new Error('対象リンクが見つからないか、利用者に公開されていません。');
     }
 
+    if (visitId !== undefined && (typeof visitId !== 'string' || !/^[0-9a-f-]{36}$/i.test(visitId))) throw new Error('閲覧記録IDが不正です。');
     stage = 'ClickLogsシートへの保存';
     const lock = LockService.getScriptLock();
     lock.waitLock(10000);
     try {
       const viewSheet = linkViewsSheet_();
       const logSheet = ensureClickLogSheet_();
-      logSheet.appendRow([Utilities.getUuid(), safeCell_(selected.id), safeCell_(selected.title), safeCell_(selected.url), new Date(), safeCell_(browser)]);
+      const logId = visitId || Utilities.getUuid();
+      if (visitId && logSheet.getLastRow()>1) {
+        const existing = logSheet.getRange(2,1,logSheet.getLastRow()-1,1).createTextFinder(logId).matchEntireCell(true).matchCase(true).findNext();
+        if(existing){const values=logSheet.getRange(existing.getRow(),2,1,5).getDisplayValues()[0];if(values[0]!==id||values[4]!==browser)throw new Error('閲覧記録IDが一致しません。');return {ok:true,visitId:logId,title:selected.title};}
+      }
+      logSheet.appendRow([logId, safeCell_(selected.id), safeCell_(selected.title), safeCell_(selected.url), new Date(), safeCell_(browser), '', '']);
       incrementLinkView_(viewSheet, selected.id);
-      return {ok: true, title: selected.title, savedAt: new Date().toISOString()};
+      return {ok: true, visitId:logId, title: selected.title, savedAt: new Date().toISOString()};
     } finally {
       lock.releaseLock();
     }
@@ -2066,7 +2072,7 @@ function getClickLogs(options, adminToken) {
     const upper = Math.min(last, beforeRow - 1);
     if (upper < 2) return empty;
     const first = browser ? 2 : Math.max(2, upper - pageSize + 1);
-    const rows = sheet.getRange(first, 1, upper - first + 1, CLICK_LOG_HEADERS.length).getValues();
+    const rows = sheet.getRange(first, 1, upper - first + 1, Math.min(CLICK_LOG_HEADERS.length, sheet.getMaxColumns())).getValues();
     let selected = rows;
     // Use a matching row as the cursor anchor for a filtered page.
     let nextCursor = first > 2 ? {beforeRow:first, anchor:String(rows[0][0] || '')} : null;
@@ -2091,6 +2097,8 @@ function getClickLogs(options, adminToken) {
       return {
         id:String(row[0] || ''), linkId:String(row[1] || ''), title:String(row[2] || ''),
         url:String(row[3] || ''), clickedAt:toIso_(row[4]), browserId:browserId,
+        estimatedViewSeconds:row[6]!=='' && row[6]!==undefined && Number.isFinite(Number(row[6])) ? Number(row[6]) : null,
+        returnedAt:row[7] ? toIso_(row[7]) : '',
         browserName:names.get(browserId) || '',
         banned:/^[A-Za-z0-9_-]{8,100}$/.test(browserId) && properties['LINK_CORE_BAN_' + browserId] === '1'
       };
@@ -4602,4 +4610,25 @@ function setLinkViewVisibility(linkId,visible,adminToken){
     else sheet.appendRow([safeCell_(id),0,visible]);
     invalidateLinkViews_(); return {ok:true,public:visible};
   } finally {lock.releaseLock();}
+}
+
+/** An estimate of time away from LINK BASE, never a claim of activity inside the linked website. */
+function completeLinkVisit(visitId, seconds, browserId, visitorToken) {
+  const browser=visitorProfileBrowser_(browserId,visitorToken);
+  if(typeof visitId!=='string'||!/^[0-9a-f-]{36}$/i.test(visitId)||
+    typeof seconds!=='number'||!Number.isFinite(seconds)||seconds<0||seconds>86400)throw new Error('閲覧時間が不正です。');
+  const lock=LockService.getScriptLock();lock.waitLock(10000);
+  try{
+    visitorProfileBrowser_(browser,visitorToken);
+    const sheet=ensureClickLogSheet_(),last=sheet.getLastRow();
+    const found=last<2?null:sheet.getRange(2,1,last-1,1).createTextFinder(visitId).matchEntireCell(true).matchCase(true).findNext();
+    if(!found)return {ok:true,missing:true};
+    const row=sheet.getRange(found.getRow(),1,1,8).getValues()[0];
+    if(String(row[5])!==browser)throw new Error('閲覧記録のブラウザIDが一致しません。');
+    if(row[6]!==''&&row[6]!==undefined)return {ok:true};
+    const elapsed=(Date.now()-new Date(row[4]).getTime())/1000;
+    if(!Number.isFinite(elapsed)||seconds>elapsed+30)throw new Error('閲覧時間が記録日時と一致しません。');
+    sheet.getRange(found.getRow(),7,1,2).setValues([[Math.round(seconds),new Date()]]);
+    return {ok:true};
+  }finally{lock.releaseLock();}
 }
