@@ -481,7 +481,7 @@ html body #chatScreenshot:disabled{opacity:.55;cursor:wait}
 html body #chatScreenshotControls{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 html body #chatScreenshotStatus{flex-basis:100%}
 @media(max-width:650px){html body #chatScreenshot{min-height:44px}}
-</style></head>
+</style><style>#visitorNicknameBadge{border:1px solid #38728f;border-radius:7px;background:#102a43;color:inherit;font:inherit;font-size:11px;padding:5px 8px;cursor:pointer}.visitor-view-count{margin-top:6px;font-size:11px;color:#95b5c8}</style></head>
 <body>
 <main class="wrap">
 <div class="click-log-notice" id="clickLogNotice" role="status" aria-live="polite"></div>
@@ -534,7 +534,7 @@ html body #chatScreenshotStatus{flex-basis:100%}
   </div>
 </section>
 <section class="finder-window hidden" id="linksPanel">
-  <div class="finder-toolbar"><div class="traffic-lights" aria-label="ウィンドウ操作"><span class="traffic-red" aria-hidden="true"></span><span class="traffic-yellow" aria-hidden="true"></span><span class="traffic-green" aria-hidden="true"></span></div><div class="finder-title"><span class="folder-glyph">▰</span> My Desktop <span class="toolbar-chevron">›</span><span id="visitorOnlineCount" role="status">オンライン人数を確認中…</span></div><div class="toolbar-tools"><span>▤</span><span>☷</span><button class="share-btn" type="button" id="toolbarShareBtn" aria-label="このページを共有する" title="このページを共有する">⤴</button></div><div class="toolbar-search" role="search"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="検索" aria-label="リンクを検索（/ キーで移動）" autocomplete="off" enterkeyhint="search"><button class="lc-search-clear" type="button" aria-label="検索をクリア" hidden>×</button><kbd aria-hidden="true">/</kbd></div></div>
+  <div class="finder-toolbar"><div class="traffic-lights" aria-label="ウィンドウ操作"><span class="traffic-red" aria-hidden="true"></span><span class="traffic-yellow" aria-hidden="true"></span><span class="traffic-green" aria-hidden="true"></span></div><div class="finder-title"><span class="folder-glyph">▰</span> My Desktop <span class="toolbar-chevron">›</span><button id="visitorNicknameBadge" type="button" aria-haspopup="dialog">ニックネーム設定</button><span id="visitorOnlineCount" role="status">オンライン人数を確認中…</span></div><div class="toolbar-tools"><span>▤</span><span>☷</span><button class="share-btn" type="button" id="toolbarShareBtn" aria-label="このページを共有する" title="このページを共有する">⤴</button></div><div class="toolbar-search" role="search"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="検索" aria-label="リンクを検索（/ キーで移動）" autocomplete="off" enterkeyhint="search"><button class="lc-search-clear" type="button" aria-label="検索をクリア" hidden>×</button><kbd aria-hidden="true">/</kbd></div></div>
   <div class="finder-layout"><aside class="sidebar" aria-label="サイドバー">
 <button class="side-item" type="button" data-view="desktop"><span>▣</span> My Desktop</button>
 <div class="side-label">よく使う項目</div>
@@ -947,6 +947,8 @@ function showVisitorLogin(message){
   visitorToken='';
   if($('chatProfileDialog').open)$('chatProfileDialog').close();
   visitorChatProfile=null;
+  document.getElementById('visitorNicknameDialog')?.close();
+  document.querySelectorAll('.visitor-view-count').forEach(node=>node.remove());
   links=[];
   categories=[];
   favoriteIds=new Set();
@@ -1155,6 +1157,36 @@ function schoolProfileValue(){
  return '学校名非公開：'+$('chatProfilePrefecture').value+'／'+$('chatProfileSchoolType').value;
 }
 
+
+const visitorViewCounts=new Map();
+function paintVisitorViewCounts(){
+ document.querySelectorAll('#list [data-link-id]').forEach(card=>{
+  let node=card.querySelector('.visitor-view-count');const count=visitorViewCounts.get(card.dataset.linkId);
+  if(!Number.isFinite(count)){node?.remove();return;}
+  if(!node){node=document.createElement('div');node.className='visitor-view-count';card.querySelector('.lc-link-main')?.append(node);}
+  node.textContent='閲覧数 '+count.toLocaleString('ja-JP')+'回';
+ });
+}
+let viewCountsRequest=0;
+async function refreshLinkViewCounts(){
+ const token=visitorToken,request=++viewCountsRequest;if(!token)return;
+ try{const result=await call('getLinkViewCounts',token);if(token!==visitorToken||request!==viewCountsRequest)return;visitorViewCounts.clear();for(const item of result.links||[]){if(Number.isFinite(item.count))visitorViewCounts.set(String(item.id),item.count);}paintVisitorViewCounts();}
+ catch(error){if(token===visitorToken&&isVisitorAuthError(error))showVisitorLogin();}
+}
+const nicknameDialog=document.createElement('dialog');nicknameDialog.id='visitorNicknameDialog';nicknameDialog.className='chat-profile-dialog';nicknameDialog.innerHTML='<form><h2>ニックネームを設定</h2><p>このブラウザの利用者名として保存します。</p><label>ニックネーム<input id="visitorNicknameInput" maxlength="24" required autocomplete="nickname"></label><p id="visitorNicknameStatus" role="status"></p><button type="submit">保存</button><button type="button" id="visitorNicknameCancel">キャンセル</button></form>';document.body.append(nicknameDialog);
+function paintVisitorNickname(){const name=visitorChatProfile?.nickname||'';$('visitorNicknameBadge').textContent=name?name+'としてログイン中':'ニックネーム設定';}
+$('visitorNicknameBadge').onclick=()=>{if(!visitorToken)return;$('visitorNicknameInput').value=visitorChatProfile?.nickname||'';$('visitorNicknameStatus').textContent='';nicknameDialog.showModal();};
+$('visitorNicknameCancel').onclick=()=>nicknameDialog.close();
+nicknameDialog.querySelector('form').onsubmit=async event=>{
+ event.preventDefault();const button=event.currentTarget.querySelector('[type="submit"]'),token=visitorToken;
+ if(button.disabled||!token)return;button.disabled=true;$('visitorNicknameStatus').textContent='保存中…';
+ try{const result=await call('setVisitorNickname',getNoticeBrowserId(),$('visitorNicknameInput').value,token);if(token!==visitorToken)return;visitorChatProfile={...visitorChatProfile,nickname:result.nickname};paintVisitorNickname();nicknameDialog.close();}
+ catch(error){$('visitorNicknameStatus').textContent=error.message||'保存できませんでした。';}
+ finally{button.disabled=false;}
+};
+new MutationObserver(paintVisitorViewCounts).observe($('list'),{childList:true});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&visitorToken)void refreshLinkViewCounts();});
+
 async function ensureVisitorChatProfile(edit=false,mandatory=false){
  if(!visitorToken)return false;
  const token=visitorToken;
@@ -1198,7 +1230,7 @@ async function ensureVisitorChatProfile(edit=false,mandatory=false){
      const result=await call('saveVisitorChatProfile',getNoticeBrowserId(),schoolProfileValue(),$('chatProfileFilter').value,token);
      if(token!==visitorToken)throw new Error('ログインし直してください。');
      if(!result?.school?.trim()||!result?.filter?.trim())throw new Error('学校名とフィルターの保存を確認できませんでした。');
-     visitorChatProfile=result;cleanup();dialog.close();resolve(true);
+     visitorChatProfile={...visitorChatProfile,...result};cleanup();dialog.close();resolve(true);
     }catch(error){$('chatProfileStatus').textContent=error.message||'保存できませんでした。';}
     finally{button.disabled=false;cancel.disabled=false;}
    };
@@ -1331,7 +1363,7 @@ $('list').addEventListener('click',event=>{
  if(clickLogPending.has(String(link.id)))return;
  clickLogPending.add(String(link.id));
  call('recordLinkClick',link.id,getNoticeBrowserId(),visitorToken)
-  .then(result=>{if(!result||!result.ok)throw new Error('GASから保存完了の応答がありませんでした。');})
+  .then(result=>{if(!result||!result.ok)throw new Error('GASから保存完了の応答がありませんでした。');const id=String(link.id);if(visitorViewCounts.has(id)){visitorViewCounts.set(id,visitorViewCounts.get(id)+1);paintVisitorViewCounts();}})
   .catch(error=>{
     const message=error&&error.message?error.message:String(error||'不明なエラー');
     console.error('[LINK BASE] click log failed', {linkId:link.id,title:link.title,error});
@@ -1411,6 +1443,7 @@ async function finishVisitorLogin(auth, expiresAt) {
   const initialData=auth.profileRequired===false && Array.isArray(auth.links) ? auth : await call('getLinks',auth.token);
   if(visitorToken!==auth.token)return;
   if(initialData.profileRequired)throw new Error('利用者情報の保存を確認できません。もう一度ログインしてください。');
+  visitorViewCounts.clear();
   applyVisitorLinks(initialData);
   writeNoticeStorage('linkBaseRegisteredBrowserV1',JSON.stringify({browserId:getNoticeBrowserId(),registered:true}));
   void refreshVisitorOnline();
@@ -1423,6 +1456,8 @@ async function finishVisitorLogin(auth, expiresAt) {
   $('sitePassword').value='';
   $('loginError').textContent='';
   render();
+  paintVisitorNickname();
+  void refreshLinkViewCounts();
   void refreshVisitorCounter();
   void loadVisitorFavorites(visitorToken);
 }
@@ -1530,6 +1565,7 @@ $('refreshLinks').addEventListener('click',async()=>{
    return selectedCategory==='__uncategorized__'?!path:path===selectedCategory||path.startsWith(selectedCategory+'/');
   }))selectedCategory='';
   render();
+  void refreshLinkViewCounts();
   $('loadStatus').textContent='リンク一覧を更新しました。';
   if(!favoritesReady)void loadVisitorFavorites(token);
  }catch(error){

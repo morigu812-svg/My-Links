@@ -421,6 +421,17 @@ function authenticateVisitor(password, browserId, browserSecret) {
 const SESSION_TTL_SECONDS = 30 * 60;
 const SESSION_GENERATION_PROPERTY = 'LINK_CORE_SESSION_GENERATION';
 
+function visitorSessionGeneration_() {
+  return sessionGeneration_() + '|' + (PropertiesService.getScriptProperties().getProperty('LINK_CORE_VISITOR_GENERATION') || 'yes');
+}
+
+function logoutAllVisitors(adminToken) {
+  requireAdmin_(adminToken);
+  const lock = LockService.getScriptLock(); lock.waitLock(10000);
+  try { requireAdmin_(adminToken); PropertiesService.getScriptProperties().setProperty('LINK_CORE_VISITOR_GENERATION', Utilities.getUuid()); return {ok:true}; }
+  finally { lock.releaseLock(); }
+}
+
 function sessionGeneration_() {
   return PropertiesService.getScriptProperties().getProperty(SESSION_GENERATION_PROPERTY) || 'yes';
 }
@@ -430,7 +441,7 @@ function isSessionValid_(role, token) {
   const savedGeneration = CacheService.getScriptCache().get('LINK_CORE_' + role + '_' + token);
   if (!savedGeneration) return false;
   const [generation, expiresAt] = savedGeneration.split(':');
-  if (!(Number(expiresAt) > Date.now() && generation === sessionGeneration_())) return false;
+  if (!(Number(expiresAt) > Date.now() && generation === (role === 'VISITOR' ? visitorSessionGeneration_() : sessionGeneration_()))) return false;
   if (role === 'VISITOR') {
     const browser = CacheService.getScriptCache().get('LINK_CORE_VISITOR_BROWSER_' + token);
     return !!browser && !isVisitorBanned_(browser);
@@ -616,7 +627,7 @@ function getVisitorDirectory(options, adminToken) {
 function storeSession_(role, token, generation) {
   const expiresAt = Date.now() + SESSION_TTL_SECONDS * 1000;
   CacheService.getScriptCache().put('LINK_CORE_' + role + '_' + token,
-    generation + ':' + expiresAt, SESSION_TTL_SECONDS);
+    (role === 'VISITOR' ? visitorSessionGeneration_() : generation) + ':' + expiresAt, SESSION_TTL_SECONDS);
 }
 
 function logoutCurrentSession(token) {
@@ -1816,6 +1827,7 @@ function getVisitorChatProfile(browserId, visitorToken) {
   if (filterRequest) observed['LINK_CORE_FILTER_CORRECTION_' + visitorToken] = filterRequest;
   if (schoolRequest || filterRequest) CacheService.getScriptCache().putAll(observed, SESSION_TTL_SECONDS);
   return {
+    nickname:sheet.getRange(found.getRow(),7).getDisplayValue(),
     school:schoolRequest ? '' : school, filter:filterRequest ? '' : filter,
     schoolCorrectionRequired:!!schoolRequest, filterCorrectionRequired:!!filterRequest
   };
@@ -1973,8 +1985,10 @@ function recordLinkClick(linkId, browserId, visitorToken) {
     const lock = LockService.getScriptLock();
     lock.waitLock(10000);
     try {
+      const viewSheet = linkViewsSheet_();
       const logSheet = ensureClickLogSheet_();
       logSheet.appendRow([Utilities.getUuid(), safeCell_(selected.id), safeCell_(selected.title), safeCell_(selected.url), new Date(), safeCell_(browser)]);
+      incrementLinkView_(viewSheet, selected.id);
       return {ok: true, title: selected.title, savedAt: new Date().toISOString()};
     } finally {
       lock.releaseLock();
@@ -4512,4 +4526,80 @@ function getLogDashboard(adminToken) {
 function activeBanCount_() {
   const settings = PropertiesService.getScriptProperties().getProperties();
   return Object.keys(settings).filter(key=>key.startsWith('LINK_CORE_BAN_') && settings[key]==='1').length;
+}
+
+
+/** Nicknames are bound to the authenticated browser, independent of admin-assigned names. */
+function setVisitorNickname(browserId, nickname, visitorToken) {
+  browserId = visitorProfileBrowser_(browserId, visitorToken);
+  const name = typeof nickname === 'string' ? nickname.trim() : '';
+  if (!name || name.length > 24 || /[\x00-\x1F\x7F]/.test(name)) throw new Error('ニックネームは1〜24文字で入力してください。');
+  const lock = LockService.getScriptLock(); lock.waitLock(10000);
+  try {
+    browserId = visitorProfileBrowser_(browserId, visitorToken);
+    const sheet = visitorChatProfileSheet_(), last = sheet.getLastRow();
+    const found = last < 2 ? null : sheet.getRange(2,1,last-1,1).createTextFinder(browserId).matchEntireCell(true).matchCase(true).findNext();
+    if (!found) throw new Error('先に学校情報とフィルターを設定してください。');
+    sheet.getRange(1,7).setValue('ニックネーム');
+    sheet.getRange(found.getRow(),7).setValue(safeCell_(name));
+    return {nickname:name};
+  } finally { lock.releaseLock(); }
+}
+
+/** Called under the script lock. Seed once from retained click logs, then keep totals independently. */
+function linkViewsSheet_() {
+  const ss = SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY));
+  let sheet = ss.getSheetByName('LinkViewCounts');
+  if (sheet) return sheet;
+  sheet = ss.insertSheet('LinkViewCounts');
+  sheet.appendRow(['リンクID','閲覧数','公開']);
+  const logs = ss.getSheetByName(CLICK_LOG_SHEET_NAME), counts = new Map();
+  if (logs && logs.getLastRow()>1) logs.getRange(2,2,logs.getLastRow()-1,1).getDisplayValues().forEach(row=>{
+    const id=String(row[0]); if(id) counts.set(id,(counts.get(id)||0)+1);
+  });
+  const rows=Array.from(counts,([id,count])=>[safeCell_(id),count,true]);
+  if(rows.length)sheet.getRange(2,1,rows.length,3).setValues(rows);
+  return sheet;
+}
+function linkViewsSnapshot_() {
+  const cache=CacheService.getScriptCache(), saved=readChunkedJsonCache_('LINK_CORE_VIEWS_V1');
+  if(saved)return saved;
+  const lock=LockService.getScriptLock();lock.waitLock(10000);
+  try {
+    const sheet=linkViewsSheet_(), result={entries:[]};
+    if(sheet.getLastRow()>1) result.entries=sheet.getRange(2,1,sheet.getLastRow()-1,3).getValues().map(row=>({id:String(row[0]),count:Math.max(0,Number(row[1])||0),public:row[2]!==false&&String(row[2]).toLowerCase()!=='false'}));
+    writeChunkedJsonCache_('LINK_CORE_VIEWS_V1',result,30);
+    return result;
+  } finally {lock.releaseLock();}
+}
+function invalidateLinkViews_(){CacheService.getScriptCache().remove('LINK_CORE_VIEWS_V1_META');}
+function incrementLinkView_(sheet,id){
+  const last=sheet.getLastRow(),found=last<2?null:sheet.getRange(2,1,last-1,1).createTextFinder(id).matchEntireCell(true).matchCase(true).findNext();
+  if(found){const cell=sheet.getRange(found.getRow(),2);cell.setValue(Math.max(0,Number(cell.getValue())||0)+1);}
+  else sheet.appendRow([safeCell_(id),1,true]);
+  invalidateLinkViews_();
+}
+function getLinkViewCounts(viewerToken) {
+  requireLinkViewer_(viewerToken);
+  const admin=isSessionValid_('ADMIN',viewerToken);
+  const available=getLinksForToken_(viewerToken,admin).links;
+  const stats=new Map(linkViewsSnapshot_().entries.map(item=>[item.id,item]));
+  return {links:available.map(link=>{
+    const item=stats.get(String(link.id))||{count:0,public:true};
+    return admin?{id:link.id,title:link.title,count:item.count,public:item.public}:{id:link.id,...(item.public?{count:item.count}:{})};
+  })};
+}
+function setLinkViewVisibility(linkId,visible,adminToken){
+  requireAdmin_(adminToken);
+  if(typeof visible!=='boolean')throw new Error('公開設定が不正です。');
+  const id=String(linkId||'');
+  if(!getLinksForToken_(adminToken,true).links.some(link=>String(link.id)===id))throw new Error('リンクが見つかりません。');
+  const lock=LockService.getScriptLock();lock.waitLock(10000);
+  try {
+    requireAdmin_(adminToken);
+    const sheet=linkViewsSheet_(),last=sheet.getLastRow(),found=last<2?null:sheet.getRange(2,1,last-1,1).createTextFinder(id).matchEntireCell(true).matchCase(true).findNext();
+    if(found)sheet.getRange(found.getRow(),3).setValue(visible);
+    else sheet.appendRow([safeCell_(id),0,visible]);
+    invalidateLinkViews_(); return {ok:true,public:visible};
+  } finally {lock.releaseLock();}
 }

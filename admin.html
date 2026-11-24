@@ -1170,7 +1170,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
 <link rel="stylesheet" href="./filter-access.css?v=7">
 <script src="./filter-access.js?v=8"></script>
 <meta name="referrer" content="no-referrer">
-<link rel="stylesheet" href="./log-dashboard.css?v=3"><script src="./log-dashboard.js?v=4"></script></head>
+<link rel="stylesheet" href="./log-dashboard.css?v=3"><script src="./log-dashboard.js?v=4"></script><style>#linkViewsDialog{width:min(800px,94vw);max-height:85dvh;overflow:auto;background:#0e1d30;color:#e3f4ff;border:1px solid #356079;border-radius:14px;padding:22px}#linkViewsDialog::backdrop{background:#0009}.views-heading{display:flex;justify-content:space-between;align-items:center}.link-view-row{display:grid;grid-template-columns:minmax(0,1fr) 80px 150px;gap:12px;align-items:center;padding:15px 0;border-bottom:1px solid #2b4156}.link-view-row strong{overflow-wrap:anywhere}.link-view-row input{width:auto}#linkViewsSearch{margin:8px;width:min(330px,90%)}@media(max-width:550px){.link-view-row{grid-template-columns:1fr auto}.link-view-row label{grid-column:1/-1}}</style></head>
 <body>
 <section id="authGate" class="auth-gate" aria-labelledby="authTitle">
   <form id="authForm" onsubmit="return false" class="auth-card">
@@ -1256,7 +1256,9 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
 
       <div class="side-label">アカウント</div>
       <button class="side-item" type="button" id="adminLogout"><span aria-hidden="true">⎋</span> ログアウト</button>
-      <button class="side-item side-danger" type="button" id="logoutAllBrowsers"><span aria-hidden="true">⚠</span> 全ブラウザをログアウト</button>
+      <button class="side-item side-danger" type="button" id="logoutAllVisitors"><span aria-hidden="true">↪</span> 利用者を全員ログアウト</button>
+<button class="side-item" type="button" id="linkViewsSettings"><span aria-hidden="true">◉</span> 閲覧数・公開設定</button>
+<button class="side-item side-danger" type="button" id="logoutAllBrowsers"><span aria-hidden="true">⚠</span> 全ブラウザをログアウト</button>
           <div class="side-label">カテゴリ</div>
       <div id="sideCats" class="side-cats"></div>
     </aside>
@@ -1669,7 +1671,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
 
   function serverCall(method, ...args) {
     const protectedMethods = ['getLogDashboard', 'getSecurityEvents', 'getFilterAccessSummary', 'getFilterAccessActivitySummary', 'mergeFilterAccessNames', 'requestVisitorSchoolCorrection', 'requestVisitorFilterCorrection', 'requestVisitorSchoolAndFilterCorrection', 'getVisitorDirectory', 'getClickBrowserNames', 'getOnlineVisitors', 'getBanVisitors', 'getBanAppeals', 'sendChatReply', 'getChatRealtimeSession', 'getLinks', 'getOfficialLinks', 'saveLink', 'deleteLink', 'getLinkReports', 'markLinkReportChecked', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'getVisitorCounterStats', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getAdminVisitorChatRead', 'markAdminVisitorChatRead', 'getChatMessages', 'deleteVisitorChatMessage', 'getChatScreenshot', 'sendChatMessage', 'sendChatScreenshot', 'getStaffChatMessages', 'getStaffChatAttachment', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendStaffChatAttachment', 'startStaffChatLargeUpload', 'appendStaffChatLargeUploadChunk',
-        'finishStaffChatLargeUpload', 'getStaffChatAttachmentChunk', 'deleteStaffChatMessage', 'visitorDirectChatProxy', 'getClickLogs', 'setVisitorBan', 'setClickBrowserName', 'deleteClickLogs', 'deleteClickLog', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutCurrentSession'];
+        'finishStaffChatLargeUpload', 'getStaffChatAttachmentChunk', 'deleteStaffChatMessage', 'visitorDirectChatProxy', 'getClickLogs', 'setVisitorBan', 'setClickBrowserName', 'deleteClickLogs', 'deleteClickLog', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutAllVisitors', 'getLinkViewCounts', 'setLinkViewVisibility', 'logoutCurrentSession'];
     if (protectedMethods.includes(method)) {
       const token = adminSession.getItem(ADMIN_TOKEN_KEY) || '';
       // 呼び出し元（埋め込みメモ帳など）が既にトークンを渡している場合は二重追加しない。
@@ -1783,6 +1785,36 @@ function watchSessionExpiry(deadline, onExpired) {
     if (authGate) authGate.classList.add('is-hidden');
     void refreshAdminVisitorCounter();
   }
+
+
+  $('logoutAllVisitors').onclick=async event=>{
+    const button=event.currentTarget;if(button.disabled||!confirm('利用者全員をログアウトしますか？管理者はログインを維持します。'))return;
+    button.disabled=true;
+    try{const result=await serverCall('logoutAllVisitors');if(!result?.ok)throw new Error('完了を確認できませんでした。');alert('利用者全員のセッションを無効にしました。開いている画面は次回の認証確認（通常30秒以内）でログイン画面に戻ります。');}
+    catch(error){alert(error.message||'ログアウトに失敗しました。');}finally{button.disabled=false;}
+  };
+  const viewsDialog=document.createElement('dialog');viewsDialog.id='linkViewsDialog';viewsDialog.innerHTML='<div class="views-heading"><h2>サイト別の閲覧数</h2><button type="button" data-close>閉じる</button></div><p>利用者がリンクを開いた回数です。公開をOFFにすると、利用者には件数を返しません。</p><label>サイトを検索 <input type="search" id="linkViewsSearch" placeholder="サイト名"></label><p id="linkViewsStatus" role="status"></p><div id="linkViewsRows"></div>';document.body.append(viewsDialog);
+  viewsDialog.querySelector('[data-close]').onclick=()=>viewsDialog.close();
+  let adminViewItems=[];
+  function paintAdminViews(){
+    const host=$('linkViewsRows'),q=$('linkViewsSearch').value.trim().toLowerCase();host.replaceChildren();
+    const items=adminViewItems.filter(item=>String(item.title).toLowerCase().includes(q));
+    if(!items.length){host.textContent='該当するサイトがありません。';return;}
+    for(const item of items){
+      const row=document.createElement('div');row.className='link-view-row';
+      const title=document.createElement('strong');title.textContent=item.title;
+      const count=document.createElement('span');count.textContent=item.count.toLocaleString('ja-JP')+'回';
+      const label=document.createElement('label'),check=document.createElement('input');check.type='checkbox';check.checked=item.public;check.setAttribute('aria-label',item.title+'の閲覧数を公開');label.append(check,document.createTextNode(' 利用者に公開'));
+      check.onchange=async()=>{const previous=item.public;check.disabled=true;$('linkViewsStatus').textContent='公開設定を保存中…';try{const result=await serverCall('setLinkViewVisibility',item.id,check.checked);if(!result?.ok)throw new Error('保存を確認できませんでした。');item.public=result.public;$('linkViewsStatus').textContent='保存しました。';}catch(error){check.checked=previous;$('linkViewsStatus').textContent=error.message||'保存できませんでした。';}finally{check.disabled=false;}};
+      row.append(title,count,label);host.append(row);
+    }
+  }
+  $('linkViewsSearch').oninput=paintAdminViews;
+  $('linkViewsSettings').onclick=async event=>{
+    const button=event.currentTarget;if(button.disabled)return;button.disabled=true;viewsDialog.showModal();$('linkViewsRows').replaceChildren();$('linkViewsStatus').textContent='閲覧数を読み込み中…';
+    try{const result=await serverCall('getLinkViewCounts');adminViewItems=result.links||[];paintAdminViews();$('linkViewsStatus').textContent='現存する過去のクリック履歴も初回集計に含みます。履歴削除で累計閲覧数は減りません。';}
+    catch(error){$('linkViewsStatus').textContent=error.message||'取得できませんでした。';}finally{button.disabled=false;}
+  };
 
   $('logoutAllBrowsers').addEventListener('click', async event => {
     const button = event.currentTarget;
