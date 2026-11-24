@@ -374,12 +374,10 @@ function authenticateVisitor(password, browserId, browserSecret) {
   if (!/^[A-Za-z0-9_-]{8,100}$/.test(String(browserId || ''))) throw new Error('ブラウザIDを確認できません。');
   if (isVisitorBanned_(browserId)) throw new Error('このブラウザは利用を停止されています。管理者にお問い合わせください。');
   const generation = sessionGeneration_();
-  const rateState = getAuthRateState_('VISITOR');
-  checkAuthRateLimit_(rateState);
   const expected = PropertiesService.getScriptProperties().getProperty('LINK_CORE_VISITOR_PASSWORD');
   if (!expected) throw new Error('利用者用パスワードが未設定です。管理者が設定を完了するまでお待ちください。');
   if (typeof password !== 'string' || !password || password !== expected) {
-    recordAuthFailure_(rateState);
+    securityEvent_('auth_failed', 'VISITOR');
     throw new Error('サイトのパスワードが違います。');
   }
   let directBound = false;
@@ -394,12 +392,11 @@ function authenticateVisitor(password, browserId, browserSecret) {
     }
     if (bound !== true) {
       securityEvent_('identity_mismatch', 'VISITOR');
-      recordAuthFailure_(rateState);
+      securityEvent_('auth_failed', 'VISITOR');
       throw new Error('ブラウザの識別情報が一致しません。同じブラウザからログインしてください。');
     }
     directBound = true;
   }
-  clearAuthFailures_(rateState);
   const token = Utilities.getUuid() + Utilities.getUuid();
   storeSession_('VISITOR', token, generation);
   const bindings = {};
