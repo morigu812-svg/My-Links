@@ -414,7 +414,7 @@ function authenticateVisitor(password, browserId, browserSecret) {
   recordVisitorLogin_(browserId);
 
   return {
-    ok: true, token: token, browserId:browserId, profile:profile, expiresIn: SESSION_TTL_SECONDS,
+    ok: true, token: token, browserId:browserId, profile:profile, warning:visitorWarning_(browserId), expiresIn: SESSION_TTL_SECONDS,
     links: initialLinks.links, categories: initialLinks.categories, replyRequired:!!initialLinks.replyRequired, profileRequired:!!initialLinks.profileRequired
   };
 }
@@ -645,11 +645,11 @@ function logoutCurrentSession(token) {
 
 function checkViewerSession(token, browserId) {
   if (token === '' && typeof browserId === 'string') {
-    return {ok: true, banned: isVisitorBanned_(browserId), downtime:visitorDowntimeState_(browserId)};
+    return {ok: true, banned: isVisitorBanned_(browserId), downtime:visitorDowntimeState_(browserId), warning:visitorWarning_(browserId)};
   }
   requireLinkViewer_(token);
   const browser=CacheService.getScriptCache().get('LINK_CORE_VISITOR_BROWSER_'+token);
-  return { ok: true, downtime:browser?visitorDowntimeState_(browser):null };
+  return { ok: true, downtime:browser?visitorDowntimeState_(browser):null, warning:browser?visitorWarning_(browser):null };
 }
 
 function logoutAllBrowsers(adminToken) {
@@ -4698,5 +4698,44 @@ function saveVisitorDowntime(browserId,enabled,start,end,adminToken){
     SpreadsheetApp.flush();
     CacheService.getScriptCache().remove('LINK_CORE_DOWNTIME_'+browserId);
     return {ok:true,config:{enabled,start,end},state:downtimeWindow_({enabled,start,end},Date.now())};
+  }finally{lock.releaseLock();}
+}
+
+/** Administrator-issued notices; warnings do not automatically ban a visitor. */
+function visitorWarningSheet_(create){
+  const ss=SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY));
+  let sheet=ss.getSheetByName('VisitorWarnings');
+  if(!sheet&&create){sheet=ss.insertSheet('VisitorWarnings');sheet.appendRow(['ブラウザID','警告ID','警告文','発行日時','有効']);}
+  return sheet;
+}
+function visitorWarning_(browserId){
+  if(!/^[A-Za-z0-9_-]{8,100}$/.test(String(browserId||'')))return null;
+  const cache=CacheService.getScriptCache(),key='LINK_CORE_WARNING_'+browserId;
+  const saved=cache.get(key);if(saved){try{return JSON.parse(saved).warning||null;}catch(_){}}
+  const sheet=visitorWarningSheet_(false),last=sheet?sheet.getLastRow():0;
+  const found=last<2?null:sheet.getRange(2,1,last-1,1).createTextFinder(browserId).matchEntireCell(true).matchCase(true).findNext();
+  const row=found?sheet.getRange(found.getRow(),2,1,4).getDisplayValues()[0]:[];
+  const warning=String(row[3]).toLowerCase()==='true'?{id:String(row[0]),message:String(row[1]),issuedAt:String(row[2])}:null;
+  cache.put(key,JSON.stringify({warning}),30);return warning;
+}
+function getVisitorWarning(browserId,adminToken){
+  requireAdmin_(adminToken);
+  if(!/^[A-Za-z0-9_-]{8,100}$/.test(String(browserId||'')))throw new Error('ブラウザIDが不正です。');
+  return {warning:visitorWarning_(browserId)};
+}
+function setVisitorWarning(browserId,message,enabled,adminToken){
+  requireAdmin_(adminToken);
+  if(!/^[A-Za-z0-9_-]{8,100}$/.test(String(browserId||''))||typeof enabled!=='boolean')throw new Error('ブラウザIDまたは設定が不正です。');
+  const text=typeof message==='string'?message.trim():'';
+  if(enabled&&(!text||text.length>500||/[\x00-\x1f\x7f]/.test(text)))throw new Error('警告文は改行なしの1〜500文字で入力してください。');
+  const lock=LockService.getScriptLock();lock.waitLock(10000);
+  try{
+    requireAdmin_(adminToken);
+    const sheet=visitorWarningSheet_(true),last=sheet.getLastRow();
+    const found=last<2?null:sheet.getRange(2,1,last-1,1).createTextFinder(browserId).matchEntireCell(true).matchCase(true).findNext();
+    const id=Utilities.getUuid(),stamp=new Date();
+    sheet.getRange(found?found.getRow():last+1,1,1,5).setValues([[browserId,id,safeCell_(text),stamp,enabled]]);
+    SpreadsheetApp.flush();CacheService.getScriptCache().remove('LINK_CORE_WARNING_'+browserId);
+    return {ok:true,warning:enabled?{id,message:text,issuedAt:stamp.toISOString()}:null};
   }finally{lock.releaseLock();}
 }
