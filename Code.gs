@@ -4476,7 +4476,7 @@ function getSecurityEvents(adminToken) {
 /** Aggregates only anonymous totals. Reads at most the last 50,000 rows per source. */
 function getLogDashboard(adminToken) {
   requireAdmin_(adminToken);
-  const cacheKey = 'LINK_BASE_LOG_DASHBOARD_V2';
+  const cacheKey = 'LINK_BASE_LOG_DASHBOARD_V3_' + (PropertiesService.getScriptProperties().getProperty('LINK_BASE_PAGE_GROUP_VERSION')||'0');
   const cached = readChunkedJsonCache_(cacheKey);
   if (cached) return cached;
   const ss = SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY));
@@ -4490,6 +4490,7 @@ function getLogDashboard(adminToken) {
   }
   const truncated = [], missing = [], links = new Map(), events = new Map(), visitKeys = new Set();
   const profiles = visitorChatProfilesByBrowser_(ss);
+  const pageGroups=linkPageGroups_(ss);
   const schools = new Map(), filters = new Map(), operations = new Map(), severities = new Map();
   const hours = Array.from({length:24},(_,hour)=>({label:String(hour).padStart(2,'0')+'時',count:0}));
   function add(map,label) {const key=String(label || '未登録');map.set(key,(map.get(key)||0)+1);}
@@ -4516,8 +4517,9 @@ function getLogDashboard(adminToken) {
   rows(CLICK_LOG_SHEET_NAME,6,row=>{
     const day=byDay[dateKey(row[4])];if(!day)return;
     day.clicks++;classify(row[5],row[4]);
-    const key=String(row[1] || row[2] || '名称未記録');
-    const item=links.get(key) || {label:String(row[2] || '名称未記録'),count:0};
+    const page=linkPageIdentity_(row[1],row[2],pageGroups);
+    const key=page.key;
+    const item=links.get(key) || {label:page.label,count:0};
     item.count++;links.set(key,item);
   });
   rows(VISITOR_COUNTER_SHEET,2,row=>{
@@ -4537,7 +4539,7 @@ function getLogDashboard(adminToken) {
   rows('BAN異議申し立て',3,row=>{const day=byDay[dateKey(row[0])];if(day)day.appeals++;});
   const ranks=map=>Array.from(map,([label,count])=>({label:label,count:count})).sort((a,b)=>b.count-a.count).slice(0,10);
   const totals=days.reduce((sum,day)=>{['logins','clicks','visitors','security','operations','reports','appeals'].forEach(key=>sum[key]+=day[key]);return sum;},{logins:0,clicks:0,visitors:0,security:0,operations:0,reports:0,appeals:0});
-  const result={days:days,totals:totals,
+  const result={days:days,totals:totals,pageCount:links.size,pageGrouping:true,
     topLinks:Array.from(links.values()).sort((a,b)=>b.count-a.count).slice(0,10),
     securityTypes:Array.from(events,([label,count])=>({label:label,count:count})).sort((a,b)=>b.count-a.count),
     schoolActivity:ranks(schools),filterActivity:ranks(filters),hourlyActivity:hours,operationTypes:ranks(operations),securityLevels:ranks(severities),
@@ -4751,5 +4753,59 @@ function setVisitorWarning(browserId,message,enabled,adminToken){
     sheet.getRange(found?found.getRow():last+1,1,1,5).setValues([[browserId,id,safeCell_(text),stamp,enabled]]);
     SpreadsheetApp.flush();CacheService.getScriptCache().remove('LINK_CORE_WARNING_'+browserId);
     return {ok:true,warning:enabled?{id,message:text,issuedAt:stamp.toISOString()}:null};
+  }finally{lock.releaseLock();}
+}
+
+
+/** Explicitly assigned page identities, independent of link titles, URLs and click history. */
+function linkPageGroups_(spreadsheet){
+  const ss=spreadsheet||SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY));
+  const sheet=ss.getSheetByName('LinkPageGroups'),last=sheet?sheet.getLastRow():0;
+  const groups=new Map();
+  if(last>1)sheet.getRange(2,1,last-1,2).getDisplayValues().forEach(row=>{
+    const id=String(row[0]||'').trim(),name=String(row[1]||'').trim();
+    if(id&&name)groups.set(id,name);
+  });
+  return groups;
+}
+function linkPageIdentity_(id,title,groups){
+  const linkId=String(id||''),name=groups.get(linkId);
+  return name?{key:'group:'+name,label:name}:{key:'link:'+(linkId||String(title||'名称未記録')),label:String(title||'名称未記録')};
+}
+function getLinkPageGroups(adminToken){
+  requireAdmin_(adminToken);
+  const ss=SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY));
+  const groups=linkPageGroups_(ss),current=getLinksForToken_(adminToken,true).links;
+  const stats=new Map(linkViewsSnapshot_().entries.map(item=>[item.id,item.count]));
+  const ids=new Set(current.map(link=>String(link.id)));
+  const links=current.map(link=>({id:String(link.id),title:String(link.title||''),url:String(link.url||''),group:groups.get(String(link.id))||'',count:stats.get(String(link.id))||0}));
+  groups.forEach((group,id)=>{if(!ids.has(id))links.push({id,title:'削除済みリンク（'+id+'）',url:'',group,count:stats.get(id)||0,deleted:true});});
+  return {links,groups:Array.from(new Set(groups.values())).sort((a,b)=>a.localeCompare(b,'ja'))};
+}
+function setLinkPageGroup(linkIds,groupName,adminToken){
+  requireAdmin_(adminToken);
+  if(!Array.isArray(linkIds)||!linkIds.length||linkIds.length>200||linkIds.some(id=>typeof id!=='string'||!id||id.length>200||/[\x00-\x1f\x7f]/.test(id)))throw new Error('リンクを1〜200件選択してください。');
+  if(typeof groupName!=='string')throw new Error('集計ページ名を入力してください。');
+  const group=groupName.trim();
+  if(group.length>80||/[\x00-\x1f\x7f]/.test(group))throw new Error('集計ページ名は改行なしの80文字以内で入力してください。');
+  const available=new Set(getLinksForToken_(adminToken,true).links.map(link=>String(link.id)));
+  const lock=LockService.getScriptLock();lock.waitLock(10000);
+  try{
+    requireAdmin_(adminToken);
+    const ss=SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY));
+    const groups=linkPageGroups_(ss);
+    for(const id of linkIds)if(!available.has(id)&&!groups.has(id))throw new Error('対象リンクが見つかりません。リンク一覧を更新してください。');
+    for(const id of new Set(linkIds)){if(group)groups.set(id,group);else groups.delete(id);}
+    let sheet=ss.getSheetByName('LinkPageGroups');
+    if(!sheet)sheet=ss.insertSheet('LinkPageGroups');
+    const rows=Array.from(groups,([id,name])=>[safeCell_(id),safeCell_(name)]);
+    const previous=Math.max(0,sheet.getLastRow()-1);
+    sheet.getRange(1,1,1,2).setValues([['リンクID','集計ページ名']]);
+    if(rows.length+1>sheet.getMaxRows())sheet.insertRowsAfter(sheet.getMaxRows(),rows.length+1-sheet.getMaxRows());
+    if(rows.length)sheet.getRange(2,1,rows.length,2).setValues(rows);
+    if(previous>rows.length)sheet.getRange(rows.length+2,1,previous-rows.length,2).clearContent();
+    SpreadsheetApp.flush();
+    PropertiesService.getScriptProperties().setProperty('LINK_BASE_PAGE_GROUP_VERSION',Utilities.getUuid());
+    return {ok:true,group,updated:new Set(linkIds).size};
   }finally{lock.releaseLock();}
 }

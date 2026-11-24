@@ -26,6 +26,7 @@
     const root=make('div',undefined,'log-dashboard');
     const description=make('p','直近30日・日本時間。集計は最大60秒キャッシュします。日別来客数の合計は延べブラウザ日数です。同じブラウザの別日の訪問は重複します。');
     root.append(description);
+    if(data.pageGrouping)root.append(make('p','同じページの集計設定を反映しています。集計対象は '+Number(data.pageCount||0).toLocaleString('ja-JP')+'ページ。クリック総数は合算し、元の履歴は変更しません。','log-dashboard-note'));
     const sources=new Set(['VisitorLoginLogs','ClickLogs','VisitorCounterVisits']);
     const truncated=(data.truncated||[]).filter(name=>sources.has(name));
     const missing=(data.missing||[]).filter(name=>sources.has(name));
@@ -64,7 +65,7 @@
       items.forEach(item=>{const row=make('div',undefined,'log-dashboard-rank');row.append(make('span',item.label),make('b',item.count.toLocaleString('ja-JP')+'件'));const meter=make('div',undefined,'log-dashboard-meter');const fill=make('span');fill.style.width=(item.count/max*100)+'%';meter.append(fill);row.append(meter);section.append(row);});
       grid.append(section);
     }
-    ranking('クリックの多いリンク TOP 10',data.topLinks);
+    ranking(data.pageGrouping?'クリックの多いページ TOP 10（同じページを合算）':'クリックの多いリンク TOP 10',data.topLinks);
     ranking('学校別の操作数（現在の登録情報）',data.schoolActivity);
     ranking('フィルター別の操作数（現在の登録情報）',data.filterActivity);
     ranking('時間帯別の操作数（日本時間）',data.hourlyActivity);

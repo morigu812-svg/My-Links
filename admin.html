@@ -1170,7 +1170,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
 <link rel="stylesheet" href="./filter-access.css?v=7">
 <script src="./filter-access.js?v=8"></script>
 <meta name="referrer" content="no-referrer">
-<link rel="stylesheet" href="./log-dashboard.css?v=3"><script src="./log-dashboard.js?v=4"></script><style>#linkViewsDialog{width:min(800px,94vw);max-height:85dvh;overflow:auto;background:#0e1d30;color:#e3f4ff;border:1px solid #356079;border-radius:14px;padding:22px}#linkViewsDialog::backdrop{background:#0009}.views-heading{display:flex;justify-content:space-between;align-items:center}.link-view-row{display:grid;grid-template-columns:minmax(0,1fr) 80px 150px;gap:12px;align-items:center;padding:15px 0;border-bottom:1px solid #2b4156}.link-view-row strong{overflow-wrap:anywhere}.link-view-row input{width:auto}#linkViewsSearch{margin:8px;width:min(330px,90%)}@media(max-width:550px){.link-view-row{grid-template-columns:1fr auto}.link-view-row label{grid-column:1/-1}}</style><style>.click-estimated-duration{display:block;margin-top:6px;color:#8edbc5;font-size:11px;white-space:normal}</style><style>#downtimeSettingsDialog,#downtimePeopleDialog{width:min(560px,94vw);max-height:85dvh;overflow:auto;padding:24px;border:1px solid #3c6986;border-radius:15px;background:#102135;color:#e4f5ff}#downtimeSettingsDialog::backdrop,#downtimePeopleDialog::backdrop{background:#000b}#downtimeSettingsDialog label,#downtimePeopleDialog label{display:block;margin:15px 0}#downtimeSettingsDialog input[type=time],#downtimePeopleDialog input[type=search]{display:block;margin-top:8px;padding:9px;background:#071423;color:inherit;border:1px solid #41637e;border-radius:7px}#downtimeSettingsDialog p,#downtimePeopleDialog p{font-size:12px;line-height:1.8;color:#acc8dc}</style><style>#visitorWarningSettings{width:min(560px,94vw);max-height:85dvh;overflow:auto;padding:25px;border:1px solid #d39336;border-radius:14px;background:#102135;color:#edf6ff}#visitorWarningSettings::backdrop{background:#000b}#visitorWarningSettings p{font-size:12px;line-height:1.8;color:#c4d2df}#visitorWarningSettings label{display:block;margin:15px 0}#visitorWarningSettings input,#visitorWarningSettings textarea{display:block;width:100%;margin-top:8px;background:#081423;color:inherit;padding:10px;border:1px solid #47657b;border-radius:7px}#warningSend{background:#a04815;color:#fff;border:1px solid #e7a23a}</style><style>
+<link rel="stylesheet" href="./log-dashboard.css?v=3"><script src="./log-dashboard.js?v=5"></script><style>#linkViewsDialog{width:min(800px,94vw);max-height:85dvh;overflow:auto;background:#0e1d30;color:#e3f4ff;border:1px solid #356079;border-radius:14px;padding:22px}#linkViewsDialog::backdrop{background:#0009}.views-heading{display:flex;justify-content:space-between;align-items:center}.link-view-row{display:grid;grid-template-columns:minmax(0,1fr) 80px 150px;gap:12px;align-items:center;padding:15px 0;border-bottom:1px solid #2b4156}.link-view-row strong{overflow-wrap:anywhere}.link-view-row input{width:auto}#linkViewsSearch{margin:8px;width:min(330px,90%)}@media(max-width:550px){.link-view-row{grid-template-columns:1fr auto}.link-view-row label{grid-column:1/-1}}</style><style>.click-estimated-duration{display:block;margin-top:6px;color:#8edbc5;font-size:11px;white-space:normal}</style><style>#downtimeSettingsDialog,#downtimePeopleDialog{width:min(560px,94vw);max-height:85dvh;overflow:auto;padding:24px;border:1px solid #3c6986;border-radius:15px;background:#102135;color:#e4f5ff}#downtimeSettingsDialog::backdrop,#downtimePeopleDialog::backdrop{background:#000b}#downtimeSettingsDialog label,#downtimePeopleDialog label{display:block;margin:15px 0}#downtimeSettingsDialog input[type=time],#downtimePeopleDialog input[type=search]{display:block;margin-top:8px;padding:9px;background:#071423;color:inherit;border:1px solid #41637e;border-radius:7px}#downtimeSettingsDialog p,#downtimePeopleDialog p{font-size:12px;line-height:1.8;color:#acc8dc}</style><style>#visitorWarningSettings{width:min(560px,94vw);max-height:85dvh;overflow:auto;padding:25px;border:1px solid #d39336;border-radius:14px;background:#102135;color:#edf6ff}#visitorWarningSettings::backdrop{background:#000b}#visitorWarningSettings p{font-size:12px;line-height:1.8;color:#c4d2df}#visitorWarningSettings label{display:block;margin:15px 0}#visitorWarningSettings input,#visitorWarningSettings textarea{display:block;width:100%;margin-top:8px;background:#081423;color:inherit;padding:10px;border:1px solid #47657b;border-radius:7px}#warningSend{background:#a04815;color:#fff;border:1px solid #e7a23a}</style><style>
 /* Settings live inside the right-hand content pane and use the common button shape. */
 .finder-content>.admin-settings-page{display:block!important;position:static!important;width:100%!important;max-width:none!important;max-height:none!important;min-width:0;margin:0!important;padding:26px!important;border:0!important;border-radius:0!important;background:transparent!important;color:inherit!important;overflow:visible!important;box-shadow:none!important}
 .finder-content>.admin-settings-page[hidden]{display:none!important}
@@ -1183,7 +1183,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
 .admin-settings-page input:not([type=checkbox]),.admin-settings-page textarea{max-width:100%;box-sizing:border-box;border-radius:9px!important}
 #sideVirtualGame{text-decoration:none}
 @media(max-width:600px){.finder-content>.admin-settings-page{padding:18px 14px!important}.admin-settings-page h2{font-size:21px}.admin-settings-page button.btn{white-space:normal}}
-</style></head>
+</style><style>.page-group-toolbar,.page-group-editor{display:flex;align-items:end;gap:12px;flex-wrap:wrap;margin:20px 0}.page-group-toolbar label,.page-group-editor label{flex:1;min-width:210px}.page-group-toolbar input,.page-group-editor input{display:block;width:100%;margin-top:8px;padding:10px;background:#0c1b2d;border:1px solid #426680;color:inherit}.page-group-table-wrap{overflow:auto;max-height:55dvh;border:1px solid #345168;border-radius:10px}.page-group-table-wrap table{width:100%;border-collapse:collapse}.page-group-table-wrap th,.page-group-table-wrap td{padding:12px;text-align:left;border-bottom:1px solid #2b435a;vertical-align:top}.page-group-table-wrap td strong,.page-group-table-wrap td small{display:block;overflow-wrap:anywhere;max-width:420px}.page-group-table-wrap td small{margin-top:5px;font-size:11px;color:#9db5c9}.page-group-table-wrap input[type=checkbox]{width:18px;height:18px}.page-group-total{display:flex;justify-content:space-between;gap:20px;padding:12px;border-bottom:1px solid #2b435a}.page-group-total span{overflow-wrap:anywhere}@media(max-width:600px){.page-group-table-wrap th,.page-group-table-wrap td{padding:9px}.page-group-editor{align-items:stretch}.page-group-editor button{flex:1}}</style></head>
 <body>
 <section id="authGate" class="auth-gate" aria-labelledby="authTitle">
   <form id="authForm" onsubmit="return false" class="auth-card">
@@ -1255,6 +1255,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
         <div class="sidebar-log-items">
           <button class="side-item" type="button" id="sideClickLogs"><span>◷</span> クリック履歴</button>
           <button class="side-item" type="button" id="sideVisitorLogins"><span>◷</span> 利用者ログイン履歴</button>
+          <button class="side-item" type="button" id="sidePageGroups"><span aria-hidden="true">▦</span> 同じページの集計設定</button>
           <button class="side-item" type="button" id="linkViewsSettings"><span aria-hidden="true">◉</span> 閲覧数・公開設定</button>
           <button class="side-item" type="button" id="sideLogDashboard"><span aria-hidden="true">▥</span> ログ分析</button>
           <button class="side-item" type="button" id="sideSecurityEvents"><span aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4.5 6v5c0 4.5 3 8 7.5 10 4.5-2 7.5-5.5 7.5-10V6L12 3Z"/><path d="m9 12 2 2 4-5"/></svg></span> セキュリティ検知</button>
@@ -1686,7 +1687,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
   }
 
   function serverCall(method, ...args) {
-    const protectedMethods = ['getLogDashboard', 'getSecurityEvents', 'getFilterAccessSummary', 'getFilterAccessActivitySummary', 'mergeFilterAccessNames', 'requestVisitorSchoolCorrection', 'requestVisitorFilterCorrection', 'requestVisitorSchoolAndFilterCorrection', 'getVisitorDirectory', 'getClickBrowserNames', 'getOnlineVisitors', 'getBanVisitors', 'getBanAppeals', 'sendChatReply', 'getChatRealtimeSession', 'getLinks', 'getOfficialLinks', 'saveLink', 'deleteLink', 'getLinkReports', 'markLinkReportChecked', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'getVisitorCounterStats', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getAdminVisitorChatRead', 'markAdminVisitorChatRead', 'getChatMessages', 'deleteVisitorChatMessage', 'getChatScreenshot', 'sendChatMessage', 'sendChatScreenshot', 'getStaffChatMessages', 'getStaffChatAttachment', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendStaffChatAttachment', 'startStaffChatLargeUpload', 'appendStaffChatLargeUploadChunk',
+    const protectedMethods = ['getLogDashboard', 'getLinkPageGroups', 'setLinkPageGroup', 'getSecurityEvents', 'getFilterAccessSummary', 'getFilterAccessActivitySummary', 'mergeFilterAccessNames', 'requestVisitorSchoolCorrection', 'requestVisitorFilterCorrection', 'requestVisitorSchoolAndFilterCorrection', 'getVisitorDirectory', 'getClickBrowserNames', 'getOnlineVisitors', 'getBanVisitors', 'getBanAppeals', 'sendChatReply', 'getChatRealtimeSession', 'getLinks', 'getOfficialLinks', 'saveLink', 'deleteLink', 'getLinkReports', 'markLinkReportChecked', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'getVisitorCounterStats', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getAdminVisitorChatRead', 'markAdminVisitorChatRead', 'getChatMessages', 'deleteVisitorChatMessage', 'getChatScreenshot', 'sendChatMessage', 'sendChatScreenshot', 'getStaffChatMessages', 'getStaffChatAttachment', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendStaffChatAttachment', 'startStaffChatLargeUpload', 'appendStaffChatLargeUploadChunk',
         'finishStaffChatLargeUpload', 'getStaffChatAttachmentChunk', 'deleteStaffChatMessage', 'visitorDirectChatProxy', 'getClickLogs', 'setVisitorBan', 'setClickBrowserName', 'deleteClickLogs', 'deleteClickLog', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutAllVisitors', 'getVisitorDowntime', 'saveVisitorDowntime', 'getVisitorWarning', 'setVisitorWarning', 'getLinkViewCounts', 'setLinkViewVisibility', 'logoutCurrentSession'];
     if (protectedMethods.includes(method)) {
       const token = adminSession.getItem(ADMIN_TOKEN_KEY) || '';
@@ -1828,6 +1829,89 @@ function watchSessionExpiry(deadline, onExpired) {
     panel.querySelectorAll('button').forEach(button=>button.classList.add('btn'));
     document.querySelector('.finder-content').append(panel);
   }
+
+
+  const pageGroupsPanel=document.createElement('section');pageGroupsPanel.id='pageGroupsPanel';
+  pageGroupsPanel.innerHTML='<h2>同じページの集計設定</h2><p>URLが違っても同じページを開くリンクを選び、共通の集計ページ名を設定します。過去のログ分析にも適用します。</p><p>例：リンクAが3回、Bが5回なら、同じページとして8回に合算します。クリック履歴やリンク先URLは変更しません。</p><div class="page-group-toolbar"><label>リンクを検索<input id="pageGroupSearch" type="search" placeholder="タイトル・URL・集計ページ名"></label><button id="pageGroupsReload" type="button">再読み込み</button></div><div class="page-group-editor"><label>集計ページ名<input id="pageGroupName" maxlength="80" list="pageGroupNames" placeholder="例：いつものゲーム"><datalist id="pageGroupNames"></datalist></label><button id="pageGroupSave" type="button">選択したリンクをまとめる</button><button id="pageGroupRemove" type="button">選択したリンクの設定を解除</button><button id="pageGroupClear" type="button">選択をクリア</button></div><p id="pageGroupStatus" role="status"></p><p id="pageGroupSelected"></p><div class="page-group-table-wrap"><table><thead><tr><th><input id="pageGroupSelectVisible" type="checkbox" aria-label="検索結果のリンクを選択"></th><th>リンク</th><th>集計ページ名</th><th>個別の閲覧数</th></tr></thead><tbody id="pageGroupRows"></tbody></table></div><h3>ページごとの累計閲覧数</h3><p>下の件数は保存済みの閲覧数の合計です。ログ分析のランキングは直近30日のクリックで集計します。</p><div id="pageGroupTotals"></div>';
+  mountAdminSettingsPanel(pageGroupsPanel,'同じページの集計設定','sidePageGroups');
+  let pageGroupLinks=[],pageGroupSelected=new Set(),pageGroupBusy=false,pageGroupLoad=0;
+  function filteredPageGroupLinks(){
+    const q=$('pageGroupSearch').value.trim().toLowerCase();
+    return pageGroupLinks.filter(link=>[link.title,link.url,link.group,link.id].join(' ').toLowerCase().includes(q));
+  }
+  function syncPageGroupSelection(){
+    $('pageGroupSelected').textContent='選択中：'+pageGroupSelected.size+'件（1回につき200件まで）';
+    const visible=filteredPageGroupLinks(),selected=visible.filter(link=>pageGroupSelected.has(link.id)).length;
+    $('pageGroupSelectVisible').checked=visible.length>0&&selected===visible.length;
+    $('pageGroupSelectVisible').indeterminate=selected>0&&selected<visible.length;
+    for(const id of ['pageGroupSave','pageGroupRemove'])$(id).disabled=pageGroupBusy||!pageGroupSelected.size;
+  }
+  function paintPageGroups(){
+    const host=$('pageGroupRows');host.replaceChildren();
+    for(const link of filteredPageGroupLinks()){
+      const row=document.createElement('tr'),select=document.createElement('td'),check=document.createElement('input');
+      check.type='checkbox';check.checked=pageGroupSelected.has(link.id);check.disabled=pageGroupBusy;check.setAttribute('aria-label',link.title+'を選択');
+      check.onchange=()=>{if(check.checked&&pageGroupSelected.size>=200){check.checked=false;$('pageGroupStatus').textContent='一度に選択できるのは200件までです。';return;}if(check.checked)pageGroupSelected.add(link.id);else pageGroupSelected.delete(link.id);syncPageGroupSelection();};
+      select.append(check);
+      const title=document.createElement('td'),name=document.createElement('strong'),url=document.createElement('small');name.textContent=link.title||'名称未設定';url.textContent=link.url||'元のリンクは削除されています';title.append(name,url);
+      const group=document.createElement('td');group.textContent=link.group||'個別に集計';
+      const count=document.createElement('td');count.textContent=Number(link.count||0).toLocaleString('ja-JP')+'回';row.append(select,title,group,count);host.append(row);
+    }
+    if(!host.childElementCount){const row=document.createElement('tr'),cell=document.createElement('td');cell.colSpan=4;cell.textContent='対象リンクがありません。';row.append(cell);host.append(row);}
+    syncPageGroupSelection();
+    const totals=new Map();
+    for(const link of pageGroupLinks){
+      const key=link.group?'group:'+link.group:'link:'+link.id;
+      const item=totals.get(key)||{name:link.group||link.title,count:0,members:0};
+      item.count+=Number(link.count)||0;item.members++;totals.set(key,item);
+    }
+    const totalHost=$('pageGroupTotals');totalHost.replaceChildren();
+    for(const item of Array.from(totals.values()).sort((a,b)=>b.count-a.count)){
+      const row=document.createElement('div');row.className='page-group-total';
+      const name=document.createElement('span');name.textContent=item.name+'（'+item.members+'リンク）';
+      const count=document.createElement('strong');count.textContent=item.count.toLocaleString('ja-JP')+'回';row.append(name,count);totalHost.append(row);
+    }
+  }
+  function setPageGroupBusy(on){
+    pageGroupBusy=on;
+    for(const id of ['pageGroupsReload','pageGroupSearch','pageGroupName','pageGroupClear','pageGroupSelectVisible'])$(id).disabled=on;
+    document.querySelectorAll('#pageGroupRows input').forEach(input=>input.disabled=on);
+    syncPageGroupSelection();
+  }
+  async function loadPageGroups(){
+    if(pageGroupBusy)return;
+    const request=++pageGroupLoad;setPageGroupBusy(true);$('pageGroupStatus').textContent='リンクと集計設定を読み込み中…';
+    try{
+      const result=await serverCall('getLinkPageGroups');if(request!==pageGroupLoad)return;
+      pageGroupLinks=Array.isArray(result.links)?result.links:[];
+      pageGroupSelected=new Set(Array.from(pageGroupSelected).filter(id=>pageGroupLinks.some(link=>link.id===id)));
+      $('pageGroupNames').replaceChildren(...(result.groups||[]).map(name=>{const option=document.createElement('option');option.value=name;return option;}));
+      paintPageGroups();$('pageGroupStatus').textContent='同じ集計ページ名を付けたリンクを合算します。';return true;
+    }catch(error){$('pageGroupStatus').textContent=error.message||'読み込めませんでした。';return false;}
+    finally{if(request===pageGroupLoad)setPageGroupBusy(false);}
+  }
+  $('sidePageGroups').onclick=()=>{pageGroupsPanel.showModal();void loadPageGroups();};
+  $('pageGroupsReload').onclick=()=>void loadPageGroups();
+  $('pageGroupSearch').oninput=paintPageGroups;
+  $('pageGroupClear').onclick=()=>{pageGroupSelected.clear();paintPageGroups();};
+  $('pageGroupSelectVisible').onchange=()=>{
+    const selected=$('pageGroupSelectVisible').checked;
+    for(const link of filteredPageGroupLinks()){if(selected){if(pageGroupSelected.size>=200)break;pageGroupSelected.add(link.id);}else pageGroupSelected.delete(link.id);}
+    paintPageGroups();
+  };
+  async function savePageGroup(remove){
+    if(pageGroupBusy||!pageGroupSelected.size)return;
+    const group=remove?'':$('pageGroupName').value.trim(),ids=Array.from(pageGroupSelected);
+    if(!remove&&!group){$('pageGroupStatus').textContent='集計ページ名を入力してください。';$('pageGroupName').focus();return;}
+    if(!confirm(ids.length+'件のリンクを'+(remove?'個別の集計に戻しますか？':'「'+group+'」として合算しますか？')))return;
+    setPageGroupBusy(true);$('pageGroupStatus').textContent='保存中…';
+    try{
+      const result=await serverCall('setLinkPageGroup',ids,group);if(!result?.ok)throw new Error('保存を確認できませんでした。');
+      pageGroupSelected.clear();setPageGroupBusy(false);const loaded=await loadPageGroups();if(loaded)$('pageGroupStatus').textContent='保存しました。ログ分析を開き直すと、過去の記録にも適用されます。';
+    }catch(error){$('pageGroupStatus').textContent=error.message||'保存できませんでした。';}
+    finally{setPageGroupBusy(false);}
+  }
+  $('pageGroupSave').onclick=()=>void savePageGroup(false);$('pageGroupRemove').onclick=()=>void savePageGroup(true);
 
   const warningSettings=document.createElement('section');warningSettings.id='visitorWarningSettings';warningSettings.innerHTML='<form id="visitorWarningForm"><h2>⚠️ 利用者に警告</h2><p>対象のブラウザIDを指定してください。ログインの失敗だけで不正アクセスと断定する機能ではありません。</p><label>ブラウザID<input id="warningBrowserId" required pattern="[A-Za-z0-9_-]{8,100}" maxlength="100" autocomplete="off"></label><label>警告文<textarea id="warningMessage" required maxlength="500" rows="4">ログインの失敗が繰り返されています。パスワードの推測や不正な操作は行わないでください。心当たりがない場合やログインできない場合は、管理者に確認してください。</textarea></label><p id="warningSettingsStatus" role="status"></p><button type="button" id="warningCheck">現在の警告を確認</button><button type="submit" id="warningSend">⚠️ 警告</button><button type="button" id="warningClear">警告を解除</button><button type="button" id="warningSettingsClose">閉じる</button></form>';mountAdminSettingsPanel(warningSettings,'警告','sideVisitorWarning');
   $('sideVisitorWarning').onclick=()=>{if(!warningSettings.open){$('warningSettingsStatus').textContent='';warningSettings.showModal();}};
@@ -2592,7 +2676,7 @@ document.getElementById('authSubmit').disabled = false;
   }
   function hideMainChats() {
     document.querySelectorAll('.admin-settings-page').forEach(panel=>{panel.hidden=true;panel.classList.remove('open');});
-    for(const id of ['sideVisitorWarning','sideVisitorDowntime','linkViewsSettings'])$(id)?.classList.remove('selected');
+    for(const id of ['sideVisitorWarning','sideVisitorDowntime','linkViewsSettings','sidePageGroups'])$(id)?.classList.remove('selected');
     $('chatOverlay').classList.remove('open');
     $('staffChatOverlay').classList.remove('open');
     adminVisitorDirectChat?.close();
