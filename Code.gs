@@ -380,6 +380,7 @@ function authenticateVisitor(password, browserId, browserSecret) {
     securityEvent_('auth_failed', 'VISITOR');
     throw new Error('サイトのパスワードが違います。');
   }
+  requireVisitorTimeAllowed_(browserId);
   let directBound = false;
   if (supabaseChatMode_() === 'supabase') {
     const inbox = privateChatBrowserId_(browserSecret);
@@ -444,7 +445,9 @@ function isSessionValid_(role, token) {
   if (!(Number(expiresAt) > Date.now() && generation === (role === 'VISITOR' ? visitorSessionGeneration_() : sessionGeneration_()))) return false;
   if (role === 'VISITOR') {
     const browser = CacheService.getScriptCache().get('LINK_CORE_VISITOR_BROWSER_' + token);
-    return !!browser && !isVisitorBanned_(browser);
+    if(!browser || isVisitorBanned_(browser))return false;
+    requireVisitorTimeAllowed_(browser);
+    return true;
   }
   return true;
 }
@@ -642,10 +645,11 @@ function logoutCurrentSession(token) {
 
 function checkViewerSession(token, browserId) {
   if (token === '' && typeof browserId === 'string') {
-    return {ok: true, banned: isVisitorBanned_(browserId)};
+    return {ok: true, banned: isVisitorBanned_(browserId), downtime:visitorDowntimeState_(browserId)};
   }
   requireLinkViewer_(token);
-  return { ok: true };
+  const browser=CacheService.getScriptCache().get('LINK_CORE_VISITOR_BROWSER_'+token);
+  return { ok: true, downtime:browser?visitorDowntimeState_(browser):null };
 }
 
 function logoutAllBrowsers(adminToken) {
@@ -3676,7 +3680,12 @@ function getChatRealtimeSession(viewerToken, browserSecret, staffBrowserId) {
     }
   }
   const now = Math.floor(Date.now() / 1000);
-  const exp = now + 120;
+  let exp = now + 120;
+  if(!topics.includes('lc-chat-direct-admin')){
+    const browser=CacheService.getScriptCache().get('LINK_CORE_VISITOR_BROWSER_'+viewerToken);
+    const downtime=visitorDowntimeState_(browser);
+    if(downtime.nextStart> Date.now())exp=Math.min(exp,Math.floor(downtime.nextStart/1000));
+  }
   const encode = value => Utilities.base64EncodeWebSafe(value).replace(/=+$/, '');
   const header = encode(JSON.stringify({alg:'HS256', typ:'JWT'}));
   const claims = encode(JSON.stringify(Object.assign({role:'authenticated', aud:'authenticated', sub:Utilities.getUuid(),
@@ -4630,5 +4639,64 @@ function completeLinkVisit(visitId, seconds, browserId, visitorToken) {
     if(!Number.isFinite(elapsed)||seconds>elapsed+30)throw new Error('閲覧時間が記録日時と一致しません。');
     sheet.getRange(found.getRow(),7,1,2).setValues([[Math.round(seconds),new Date()]]);
     return {ok:true};
+  }finally{lock.releaseLock();}
+}
+
+
+/** Daily downtime is evaluated by the server in Japan time, independently of device clocks. */
+function downtimeWindow_(config, now) {
+  const stamp=Number(now);
+  if(!config || !config.enabled)return {active:false};
+  const parse=value=>{const m=/^(\d{2}):(\d{2})$/.exec(String(value||''));return m&&Number(m[1])<24&&Number(m[2])<60?Number(m[1])*60+Number(m[2]):null;};
+  const start=parse(config.start),end=parse(config.end);
+  if(start===null||end===null||start===end)return {active:false};
+  const japan=new Date(stamp+9*3600000),minute=japan.getUTCHours()*60+japan.getUTCMinutes();
+  const active=start<end?minute>=start&&minute<end:minute>=start||minute<end;
+  const remaining=(end-minute+1440)%1440;
+  const nextStart=stamp+((start-minute+1440)%1440)*60000-japan.getUTCSeconds()*1000-japan.getUTCMilliseconds();
+  return {active,nextStart,until:active?stamp+remaining*60000-japan.getUTCSeconds()*1000-japan.getUTCMilliseconds():null,start:config.start,end:config.end,timeZone:'Asia/Tokyo'};
+}
+function visitorDowntimeSheet_() {
+  const ss=SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY));
+  const sheet=ss.getSheetByName('VisitorDowntime')||ss.insertSheet('VisitorDowntime');
+  if(!sheet.getLastRow())sheet.appendRow(['ブラウザID','有効','休止開始','休止終了']);
+  return sheet;
+}
+function visitorDowntimeConfig_(browserId) {
+  if(!/^[A-Za-z0-9_-]{8,100}$/.test(String(browserId||'')))return {enabled:false,start:'22:00',end:'07:00'};
+  const cache=CacheService.getScriptCache(),key='LINK_CORE_DOWNTIME_'+browserId;
+  const cached=cache.get(key);if(cached){try{return JSON.parse(cached);}catch(_){}}
+  // Checking unconfigured visitors does not create a sheet or add profile properties.
+  const ss=SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY));
+  const sheet=ss.getSheetByName('VisitorDowntime'),last=sheet?sheet.getLastRow():0;
+  const found=last<2?null:sheet.getRange(2,1,last-1,1).createTextFinder(browserId).matchEntireCell(true).matchCase(true).findNext();
+  const row=found?sheet.getRange(found.getRow(),2,1,3).getDisplayValues()[0]:[];
+  const config={enabled:String(row[0]).toLowerCase()==='true',start:row[1]||'22:00',end:row[2]||'07:00'};
+  cache.put(key,JSON.stringify(config),30);return config;
+}
+function visitorDowntimeState_(browserId){return downtimeWindow_(visitorDowntimeConfig_(browserId),Date.now());}
+function requireVisitorTimeAllowed_(browserId){
+  const state=visitorDowntimeState_(browserId);
+  if(state.active)throw new Error('LINK_BASE_DOWNTIME:'+state.until+' 現在は休止時間です。');
+}
+function getVisitorDowntime(browserId,adminToken){
+  requireAdmin_(adminToken);
+  if(!/^[A-Za-z0-9_-]{8,100}$/.test(String(browserId||'')))throw new Error('ブラウザIDが不正です。');
+  return {config:visitorDowntimeConfig_(browserId),state:visitorDowntimeState_(browserId)};
+}
+function saveVisitorDowntime(browserId,enabled,start,end,adminToken){
+  requireAdmin_(adminToken);
+  if(!/^[A-Za-z0-9_-]{8,100}$/.test(String(browserId||''))||typeof enabled!=='boolean')throw new Error('利用者または設定が不正です。');
+  const valid=value=>typeof value==='string'&&/^([01]\d|2[0-3]):[0-5]\d$/.test(value);
+  if(!valid(start)||!valid(end)||start===end)throw new Error('開始・終了は異なる時刻を設定してください。');
+  const lock=LockService.getScriptLock();lock.waitLock(10000);
+  try{
+    requireAdmin_(adminToken);
+    const sheet=visitorDowntimeSheet_(),last=sheet.getLastRow();
+    const found=last<2?null:sheet.getRange(2,1,last-1,1).createTextFinder(browserId).matchEntireCell(true).matchCase(true).findNext();
+    sheet.getRange(found?found.getRow():last+1,1,1,4).setValues([[browserId,enabled,start,end]]);
+    SpreadsheetApp.flush();
+    CacheService.getScriptCache().remove('LINK_CORE_DOWNTIME_'+browserId);
+    return {ok:true,config:{enabled,start,end},state:downtimeWindow_({enabled,start,end},Date.now())};
   }finally{lock.releaseLock();}
 }

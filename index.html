@@ -487,7 +487,7 @@ html body #chatScreenshot:disabled{opacity:.55;cursor:wait}
 html body #chatScreenshotControls{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 html body #chatScreenshotStatus{flex-basis:100%}
 @media(max-width:650px){html body #chatScreenshot{min-height:44px}}
-</style><style>#visitorNicknameBadge{border:1px solid #38728f;border-radius:7px;background:#102a43;color:inherit;font:inherit;font-size:11px;padding:5px 8px;cursor:pointer}.visitor-view-count{margin-top:6px;font-size:11px;color:#95b5c8}</style></head>
+</style><style>#visitorNicknameBadge{border:1px solid #38728f;border-radius:7px;background:#102a43;color:inherit;font:inherit;font-size:11px;padding:5px 8px;cursor:pointer}.visitor-view-count{margin-top:6px;font-size:11px;color:#95b5c8}</style><style>#visitorDowntimeDialog{z-index:2147483647;max-width:430px}#visitorDowntimeDialog::backdrop{background:#050b16f5}#visitorDowntimeUntil{font-weight:700;color:#71e8c1}</style></head>
 <body>
 <main class="wrap">
 <div class="click-log-notice" id="clickLogNotice" role="status" aria-live="polite"></div>
@@ -658,7 +658,7 @@ function call(method, ...args) {
       clearTimeout(timer);
       reject(error);
     }
-  }));
+  })).catch(error=>{handleVisitorDowntime(error);throw error;});
 }
 const $=id=>document.getElementById(id);
 let clickNoticeTimer=0;
@@ -673,6 +673,35 @@ function showClickLogNotice(message,isError){
 }
 
 let links=[],categories=[],view='all',selectedCategory='',visitorToken='';
+
+const visitorDowntimeDialog=document.createElement('dialog');visitorDowntimeDialog.id='visitorDowntimeDialog';visitorDowntimeDialog.className='chat-profile-dialog';visitorDowntimeDialog.innerHTML='<h2>現在は休止時間です</h2><p>管理者が設定した時間帯のため、LINK BASEは利用できません。</p><p id="visitorDowntimeUntil"></p><p id="visitorDowntimeStatus" role="status"></p><button type="button" id="visitorDowntimeRetry">もう一度確認</button>';
+document.body.append(visitorDowntimeDialog);
+visitorDowntimeDialog.addEventListener('cancel',event=>event.preventDefault());
+function handleVisitorDowntime(error){
+ const match=/LINK_BASE_DOWNTIME:(\d+)/.exec(error?.message||'');if(!match)return false;
+ const date=new Date(Number(match[1]));$('visitorDowntimeUntil').textContent='再開予定：'+date.toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'})+'（日本時間）';
+ $('visitorDowntimeStatus').textContent='';
+ document.querySelectorAll('dialog[open]').forEach(dialog=>{if(dialog!==visitorDowntimeDialog)dialog.close();});
+ document.querySelectorAll('#chatOverlay.open').forEach(node=>node.classList.remove('open'));
+ if(!visitorDowntimeDialog.open)visitorDowntimeDialog.showModal();
+ return true;
+}
+let checkingDowntime=false;
+async function checkVisitorDowntime(){
+ if(!visitorDowntimeDialog.open||checkingDowntime||document.hidden)return;
+ checkingDowntime=true;$('visitorDowntimeRetry').disabled=true;
+ try{
+  const result=await call('checkViewerSession','',getNoticeBrowserId());
+  if(result.banned){visitorDowntimeDialog.close();showVisitorBan();return;}
+  if(result.downtime?.active){handleVisitorDowntime(new Error('LINK_BASE_DOWNTIME:'+result.downtime.until));}
+  else{visitorDowntimeDialog.close();location.reload();}
+ }catch(error){$('visitorDowntimeStatus').textContent=error.message||'確認できませんでした。';}
+ finally{checkingDowntime=false;$('visitorDowntimeRetry').disabled=false;}
+}
+$('visitorDowntimeRetry').onclick=()=>void checkVisitorDowntime();
+setInterval(()=>void checkVisitorDowntime(),30000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)void checkVisitorDowntime();});
+
 let favoriteIds=new Set(), favoritesReady=false;
 let pendingFavorites=new Set();
 const isVisitorFavorite=id=>favoriteIds.has(String(id));
@@ -1527,6 +1556,7 @@ async function checkVisitorBanStatus() {
   try {
     const status = await call('checkViewerSession', '', getNoticeBrowserId());
     if (status?.banned && !visitorToken) showVisitorBan();
+    else if(status?.downtime?.active)handleVisitorDowntime(new Error('LINK_BASE_DOWNTIME:'+status.downtime.until));
   } catch (_) {
     // Older GAS deployments still detect bans on login.
   }

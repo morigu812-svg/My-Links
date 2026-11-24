@@ -1170,7 +1170,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
 <link rel="stylesheet" href="./filter-access.css?v=7">
 <script src="./filter-access.js?v=8"></script>
 <meta name="referrer" content="no-referrer">
-<link rel="stylesheet" href="./log-dashboard.css?v=3"><script src="./log-dashboard.js?v=4"></script><style>#linkViewsDialog{width:min(800px,94vw);max-height:85dvh;overflow:auto;background:#0e1d30;color:#e3f4ff;border:1px solid #356079;border-radius:14px;padding:22px}#linkViewsDialog::backdrop{background:#0009}.views-heading{display:flex;justify-content:space-between;align-items:center}.link-view-row{display:grid;grid-template-columns:minmax(0,1fr) 80px 150px;gap:12px;align-items:center;padding:15px 0;border-bottom:1px solid #2b4156}.link-view-row strong{overflow-wrap:anywhere}.link-view-row input{width:auto}#linkViewsSearch{margin:8px;width:min(330px,90%)}@media(max-width:550px){.link-view-row{grid-template-columns:1fr auto}.link-view-row label{grid-column:1/-1}}</style><style>.click-estimated-duration{display:block;margin-top:6px;color:#8edbc5;font-size:11px;white-space:normal}</style></head>
+<link rel="stylesheet" href="./log-dashboard.css?v=3"><script src="./log-dashboard.js?v=4"></script><style>#linkViewsDialog{width:min(800px,94vw);max-height:85dvh;overflow:auto;background:#0e1d30;color:#e3f4ff;border:1px solid #356079;border-radius:14px;padding:22px}#linkViewsDialog::backdrop{background:#0009}.views-heading{display:flex;justify-content:space-between;align-items:center}.link-view-row{display:grid;grid-template-columns:minmax(0,1fr) 80px 150px;gap:12px;align-items:center;padding:15px 0;border-bottom:1px solid #2b4156}.link-view-row strong{overflow-wrap:anywhere}.link-view-row input{width:auto}#linkViewsSearch{margin:8px;width:min(330px,90%)}@media(max-width:550px){.link-view-row{grid-template-columns:1fr auto}.link-view-row label{grid-column:1/-1}}</style><style>.click-estimated-duration{display:block;margin-top:6px;color:#8edbc5;font-size:11px;white-space:normal}</style><style>#downtimeSettingsDialog,#downtimePeopleDialog{width:min(560px,94vw);max-height:85dvh;overflow:auto;padding:24px;border:1px solid #3c6986;border-radius:15px;background:#102135;color:#e4f5ff}#downtimeSettingsDialog::backdrop,#downtimePeopleDialog::backdrop{background:#000b}#downtimeSettingsDialog label,#downtimePeopleDialog label{display:block;margin:15px 0}#downtimeSettingsDialog input[type=time],#downtimePeopleDialog input[type=search]{display:block;margin-top:8px;padding:9px;background:#071423;color:inherit;border:1px solid #41637e;border-radius:7px}#downtimeSettingsDialog p,#downtimePeopleDialog p{font-size:12px;line-height:1.8;color:#acc8dc}</style></head>
 <body>
 <section id="authGate" class="auth-gate" aria-labelledby="authTitle">
   <form id="authForm" onsubmit="return false" class="auth-card">
@@ -1228,6 +1228,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
         <summary class="side-item"><span class="side-folder-mini" aria-hidden="true"><svg class="folder-icon" viewBox="0 0 64 52" aria-hidden="true"><path d="M4 10a5 5 0 0 1 5-5h17l7 7h22a5 5 0 0 1 5 5v4H4z" fill="currentColor" opacity=".72"/><path d="M4 17a5 5 0 0 1 5-5h46a5 5 0 0 1 5 5v27a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z" fill="currentColor"/><path d="M4 22h56" stroke="#fff" stroke-opacity=".35" stroke-width="2"/></svg></span> 利用者・報告 <span class="log-folder-chevron" aria-hidden="true">›</span></summary>
         <div class="sidebar-log-items">
           <button class="side-item" type="button" id="sideFilterAccess"><span aria-hidden="true">▥</span> フィルター別アクセス状況</button>
+          <button class="side-item" type="button" id="sideVisitorDowntime"><span aria-hidden="true">◷</span> 休止時間</button>
           <button class="side-item" type="button" id="sideVisitorDirectory"><span aria-hidden="true">▤</span> 利用者一覧</button>
           <button class="side-item" type="button" id="sideOnlineVisitors"><span aria-hidden="true">●</span> オンラインの利用者</button>
           <button class="side-item" type="button" id="sideBanAppeals" hidden><span aria-hidden="true">⚑</span> 異議申し立て</button>
@@ -1671,7 +1672,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
 
   function serverCall(method, ...args) {
     const protectedMethods = ['getLogDashboard', 'getSecurityEvents', 'getFilterAccessSummary', 'getFilterAccessActivitySummary', 'mergeFilterAccessNames', 'requestVisitorSchoolCorrection', 'requestVisitorFilterCorrection', 'requestVisitorSchoolAndFilterCorrection', 'getVisitorDirectory', 'getClickBrowserNames', 'getOnlineVisitors', 'getBanVisitors', 'getBanAppeals', 'sendChatReply', 'getChatRealtimeSession', 'getLinks', 'getOfficialLinks', 'saveLink', 'deleteLink', 'getLinkReports', 'markLinkReportChecked', 'getLinkOperationLogs', 'getVisitorLoginLogs', 'getVisitorCounterStats', 'deleteVisitorLoginLog', 'deleteVisitorLoginLogs', 'saveOfficialLink', 'deleteOfficialLink', 'authenticateMemo', 'getMemos', 'saveMemo', 'deleteMemo', 'getAdminVisitorChatRead', 'markAdminVisitorChatRead', 'getChatMessages', 'deleteVisitorChatMessage', 'getChatScreenshot', 'sendChatMessage', 'sendChatScreenshot', 'getStaffChatMessages', 'getStaffChatAttachment', 'setStaffNickname', 'sendStaffChatMessage', 'markStaffChatRead', 'sendStaffChatAttachment', 'startStaffChatLargeUpload', 'appendStaffChatLargeUploadChunk',
-        'finishStaffChatLargeUpload', 'getStaffChatAttachmentChunk', 'deleteStaffChatMessage', 'visitorDirectChatProxy', 'getClickLogs', 'setVisitorBan', 'setClickBrowserName', 'deleteClickLogs', 'deleteClickLog', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutAllVisitors', 'getLinkViewCounts', 'setLinkViewVisibility', 'logoutCurrentSession'];
+        'finishStaffChatLargeUpload', 'getStaffChatAttachmentChunk', 'deleteStaffChatMessage', 'visitorDirectChatProxy', 'getClickLogs', 'setVisitorBan', 'setClickBrowserName', 'deleteClickLogs', 'deleteClickLog', 'getTrash', 'restoreTrash', 'deleteTrashPermanently', 'emptyTrash', 'diagnoseLinks', 'logoutAllBrowsers', 'logoutAllVisitors', 'getVisitorDowntime', 'saveVisitorDowntime', 'getLinkViewCounts', 'setLinkViewVisibility', 'logoutCurrentSession'];
     if (protectedMethods.includes(method)) {
       const token = adminSession.getItem(ADMIN_TOKEN_KEY) || '';
       // 呼び出し元（埋め込みメモ帳など）が既にトークンを渡している場合は二重追加しない。
@@ -1793,6 +1794,47 @@ function watchSessionExpiry(deadline, onExpired) {
     try{const result=await serverCall('logoutAllVisitors');if(!result?.ok)throw new Error('完了を確認できませんでした。');alert('利用者全員のセッションを無効にしました。開いている画面は次回の認証確認（通常30秒以内）でログイン画面に戻ります。');}
     catch(error){alert(error.message||'ログアウトに失敗しました。');}finally{button.disabled=false;}
   };
+
+  const downtimeDialog=document.createElement('dialog');downtimeDialog.id='downtimeSettingsDialog';downtimeDialog.className='chat-profile-dialog';downtimeDialog.innerHTML='<form id="downtimeForm"><h2>利用者の休止時間</h2><p id="downtimePerson"></p><p>毎日、指定した時間帯はLINK BASEを利用できません。日本時間で設定します。</p><label><input id="downtimeEnabled" type="checkbox"> 休止時間を有効にする</label><label>開始時刻<input id="downtimeStart" type="time" required value="22:00"></label><label>終了時刻<input id="downtimeEnd" type="time" required value="07:00"></label><p>例：22:00〜07:00は翌朝7時まで。開始と終了を同じ時刻にはできません。</p><p id="downtimeSaveStatus" role="status"></p><button type="submit" id="downtimeSave">保存</button><button type="button" id="downtimeCancel">閉じる</button></form>';document.body.append(downtimeDialog);
+
+  const downtimePeople=document.createElement('dialog');downtimePeople.id='downtimePeopleDialog';downtimePeople.className='chat-profile-dialog';downtimePeople.innerHTML='<h2>休止時間を設定する利用者</h2><label>利用者を検索<input type="search" id="downtimeSearch" placeholder="名前・ブラウザID・学校名"></label><p id="downtimePeopleStatus" role="status"></p><div id="downtimePeopleRows"></div><button type="button" id="downtimePeopleClose">閉じる</button>';document.body.append(downtimePeople);
+  let downtimeUsers=[];
+  $('downtimePeopleClose').onclick=()=>downtimePeople.close();
+  function paintDowntimeUsers(){
+    const host=$('downtimePeopleRows'),q=$('downtimeSearch').value.trim().toLowerCase();host.replaceChildren();
+    for(const log of downtimeUsers.filter(item=>[item.browserName,item.browserId,item.school].join(' ').toLowerCase().includes(q))){
+      const button=document.createElement('button');button.type='button';button.className='btn';button.style.cssText='display:block;width:100%;margin:8px 0;text-align:left;overflow-wrap:anywhere';button.textContent=(log.browserName||'名前未設定')+' / '+log.browserId;button.onclick=()=>{downtimePeople.close();void openDowntimeSettings(log);};host.append(button);
+    }
+    if(!host.childElementCount)host.textContent='該当する利用者がいません。';
+  }
+  $('downtimeSearch').oninput=paintDowntimeUsers;
+  $('sideVisitorDowntime').onclick=async event=>{
+    const button=event.currentTarget;if(button.disabled)return;button.disabled=true;downtimePeople.showModal();$('downtimePeopleRows').replaceChildren();$('downtimePeopleStatus').textContent='利用者を読み込み中…';
+    try{const result=await serverCall('getVisitorDirectory',{});downtimeUsers=result.logs||[];$('downtimeSearch').value='';paintDowntimeUsers();$('downtimePeopleStatus').textContent='利用者を選ぶと、休止時間の確認・変更ができます。';}
+    catch(error){$('downtimePeopleStatus').textContent=error.message||'取得できませんでした。';}
+    finally{button.disabled=false;}
+  };
+
+  let downtimeBrowser='',downtimeLoading=false;
+  $('downtimeCancel').onclick=()=>downtimeDialog.close();
+  async function openDowntimeSettings(log){
+    if(downtimeLoading)return;downtimeLoading=true;downtimeBrowser=log.browserId;
+    $('downtimePerson').textContent=(log.browserName||'利用者')+' / ID: '+log.browserId;
+    $('downtimeSaveStatus').textContent='読み込み中…';$('downtimeSave').disabled=true;
+    downtimeDialog.showModal();
+    try{const result=await serverCall('getVisitorDowntime',log.browserId);$('downtimeEnabled').checked=!!result.config.enabled;$('downtimeStart').value=result.config.start;$('downtimeEnd').value=result.config.end;$('downtimeSaveStatus').textContent=result.state.active?'現在、休止時間中です。':'';}
+    catch(error){$('downtimeSaveStatus').textContent=error.message||'取得できませんでした。';return;}
+    finally{downtimeLoading=false;}
+    $('downtimeSave').disabled=false;
+  }
+  $('downtimeForm').onsubmit=async event=>{
+    event.preventDefault();const button=$('downtimeSave');if(button.disabled)return;
+    button.disabled=true;$('downtimeSaveStatus').textContent='保存中…';
+    try{const result=await serverCall('saveVisitorDowntime',downtimeBrowser,$('downtimeEnabled').checked,$('downtimeStart').value,$('downtimeEnd').value);if(!result?.ok)throw new Error('保存を確認できませんでした。');$('downtimeSaveStatus').textContent='保存しました。'+(result.config.enabled?' 毎日 '+result.config.start+'〜'+result.config.end+'（日本時間）':' 休止時間は無効です。');}
+    catch(error){$('downtimeSaveStatus').textContent=error.message||'保存できませんでした。';}
+    finally{button.disabled=false;}
+  };
+
   const viewsDialog=document.createElement('dialog');viewsDialog.id='linkViewsDialog';viewsDialog.innerHTML='<div class="views-heading"><h2>サイト別の閲覧数</h2><button type="button" data-close>閉じる</button></div><p>利用者がリンクを開いた回数です。公開をOFFにすると、利用者には件数を返しません。</p><label>サイトを検索 <input type="search" id="linkViewsSearch" placeholder="サイト名"></label><p id="linkViewsStatus" role="status"></p><div id="linkViewsRows"></div>';document.body.append(viewsDialog);
   viewsDialog.querySelector('[data-close]').onclick=()=>viewsDialog.close();
   let adminViewItems=[];
@@ -3144,6 +3186,7 @@ document.getElementById('authSubmit').disabled = false;
           const shortcuts = document.createElement('div');
           shortcuts.className = 'directory-corrections';
           shortcuts.append(direct);
+
           addHistoryBanButton(shortcuts, log, history);
           shortcuts.append(visitorClickHistory(log));
           actions.append(shortcuts, details);
