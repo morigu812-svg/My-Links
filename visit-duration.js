@@ -4,11 +4,16 @@
     try {if(!storage)storage=window.sessionStorage;} catch (_) {}
     const key = "linkBaseVisitDurationV1", maxAge = 86400000;
     const valid = x => x && /^[0-9a-f-]{36}$/i.test(x.id) && /^[A-Za-z0-9_-]{8,100}$/.test(x.browser) && Number.isFinite(x.clicked) && now() >= x.clicked && now() - x.clicked <= maxAge;
-    let active = null, queue = [], sending = false;
+    let active = null, queue = [], sending = false, retryTimer;
     try {const saved = JSON.parse(storage.getItem(key) || "{}");active = valid(saved.active) ? saved.active : null;queue = Array.isArray(saved.queue) ? saved.queue.filter(x => valid(x) && Number.isFinite(x.seconds) && x.seconds >= 0 && x.seconds <= 86400).slice(-20) : [];} catch (_) {}
     function save() {try {storage.setItem(key, JSON.stringify({active, queue}));} catch (_) {}}
+    function scheduleRetry(){
+      clearTimeout(retryTimer);retryTimer=undefined;
+      if(queue.length&&!document.hidden&&getToken())retryTimer=setTimeout(()=>{retryTimer=undefined;void flush();},30000);
+    }
     async function flush() {
-      if(sending || !getToken()) return;
+      if(sending || document.hidden || !getToken()) return;
+      clearTimeout(retryTimer);retryTimer=undefined;
       sending = true;
       try {
         for(const item of queue.slice()) {
@@ -17,7 +22,7 @@
           const token = getToken();if(!token)break;
           try {const result = await send("completeLinkVisit",item.id,item.seconds,item.browser,token);if(!result?.ok)break;queue = queue.filter(x => x !== item);save();} catch (_) {break;}
         }
-      } finally {sending = false;}
+      } finally {sending = false;scheduleRetry();}
     }
     function returned() {
       if(document.hidden) return;
@@ -35,6 +40,7 @@
     window.addEventListener("pagehide",left);
     window.addEventListener("pageshow",returned);
     window.addEventListener("focus",returned);
+    window.addEventListener("online",()=>void flush());
     return {
       begin(id) {returned();active = {id,browser:getBrowserId(),clicked:now(),registered:false};save();},
       registered(id, result) {if(result?.visitId === id){if(active?.id === id)active.registered=true;for(const item of queue)if(item.id===id)item.registered=true;save();void flush();}else {if(active?.id === id)active = null;queue = queue.filter(x => x.id !== id);save();}},

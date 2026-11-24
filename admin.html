@@ -1243,7 +1243,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
         <div class="sidebar-log-items">
           <button class="side-item" type="button" id="sideFilterAccess"><span aria-hidden="true">▥</span> フィルター別アクセス状況</button>
           <button class="side-item" type="button" id="sideVisitorWarning"><span aria-hidden="true">⚠️</span> 警告</button>
-          <button class="side-item" type="button" id="sideVisitorDowntime"><span aria-hidden="true">◷</span> 休止時間</button>
+          <button class="side-item" type="button" id="sideVisitorDowntime"><span aria-hidden="true">⌛</span> 休止時間</button>
           <button class="side-item" type="button" id="sideVisitorDirectory"><span aria-hidden="true">▤</span> 利用者一覧</button>
           <button class="side-item" type="button" id="sideOnlineVisitors"><span aria-hidden="true">●</span> オンラインの利用者</button>
           <button class="side-item" type="button" id="sideBanAppeals" hidden><span aria-hidden="true">⚑</span> 異議申し立て</button>
@@ -1867,24 +1867,39 @@ function watchSessionExpiry(deadline, onExpired) {
     finally{button.disabled=false;}
   };
 
-  let downtimeBrowser='',downtimeLoading=false;
+  let downtimeBrowser='',downtimeRequest=0,downtimeSaveRequest=0;
   $('downtimeCancel').onclick=()=>downtimePeople.showModal();
+
   async function openDowntimeSettings(log){
-    if(downtimeLoading)return;downtimeLoading=true;downtimeBrowser=log.browserId;
+    const request=++downtimeRequest;downtimeBrowser=log.browserId;
+    const current=()=>request===downtimeRequest&&downtimeBrowser===log.browserId&&downtimeDialog.open;
     $('downtimePerson').textContent=(log.browserName||'利用者')+' / ID: '+log.browserId;
     $('downtimeSaveStatus').textContent='読み込み中…';$('downtimeSave').disabled=true;
+    for(const id of ['downtimeEnabled','downtimeStart','downtimeEnd'])$(id).disabled=true;
     downtimeDialog.showModal();
-    try{const result=await serverCall('getVisitorDowntime',log.browserId);$('downtimeEnabled').checked=!!result.config.enabled;$('downtimeStart').value=result.config.start;$('downtimeEnd').value=result.config.end;$('downtimeSaveStatus').textContent=result.state.active?'現在、休止時間中です。':'';}
-    catch(error){$('downtimeSaveStatus').textContent=error.message||'取得できませんでした。';return;}
-    finally{downtimeLoading=false;}
-    $('downtimeSave').disabled=false;
+    try{
+      const result=await serverCall('getVisitorDowntime',log.browserId);
+      if(!current())return;
+      $('downtimeEnabled').checked=!!result.config.enabled;
+      $('downtimeStart').value=result.config.start;$('downtimeEnd').value=result.config.end;
+      $('downtimeSaveStatus').textContent=result.state.active?'現在、休止時間中です。':'';
+      $('downtimeSave').disabled=false;
+    }catch(error){if(current())$('downtimeSaveStatus').textContent=error.message||'取得できませんでした。';}
+    finally{if(current())for(const id of ['downtimeEnabled','downtimeStart','downtimeEnd'])$(id).disabled=false;}
   }
   $('downtimeForm').onsubmit=async event=>{
     event.preventDefault();const button=$('downtimeSave');if(button.disabled)return;
+    const request=++downtimeSaveRequest,target=downtimeBrowser,editRequest=downtimeRequest;
+    const current=()=>request===downtimeSaveRequest&&editRequest===downtimeRequest&&downtimeBrowser===target&&downtimeDialog.open;
+    const enabled=$('downtimeEnabled').checked,start=$('downtimeStart').value,end=$('downtimeEnd').value;
     button.disabled=true;$('downtimeSaveStatus').textContent='保存中…';
-    try{const result=await serverCall('saveVisitorDowntime',downtimeBrowser,$('downtimeEnabled').checked,$('downtimeStart').value,$('downtimeEnd').value);if(!result?.ok)throw new Error('保存を確認できませんでした。');$('downtimeSaveStatus').textContent='保存しました。'+(result.config.enabled?' 毎日 '+result.config.start+'〜'+result.config.end+'（日本時間）':' 休止時間は無効です。');}
-    catch(error){$('downtimeSaveStatus').textContent=error.message||'保存できませんでした。';}
-    finally{button.disabled=false;}
+    try{
+      const result=await serverCall('saveVisitorDowntime',target,enabled,start,end);
+      if(!current())return;
+      if(!result?.ok)throw new Error('保存を確認できませんでした。');
+      $('downtimeSaveStatus').textContent='保存しました。'+(result.config.enabled?' 毎日 '+result.config.start+'〜'+result.config.end+'（日本時間）':' 休止時間は無効です。');
+    }catch(error){if(current())$('downtimeSaveStatus').textContent=error.message||'保存できませんでした。';}
+    finally{if(current())button.disabled=false;}
   };
 
   const viewsDialog=document.createElement('section');viewsDialog.id='linkViewsDialog';viewsDialog.innerHTML='<div class="views-heading"><h2>サイト別の閲覧数</h2><button type="button" data-close>閉じる</button></div><p>利用者がリンクを開いた回数です。公開をOFFにすると、利用者には件数を返しません。</p><label>サイトを検索 <input type="search" id="linkViewsSearch" placeholder="サイト名"></label><p id="linkViewsStatus" role="status"></p><div id="linkViewsRows"></div>';mountAdminSettingsPanel(viewsDialog,'閲覧数・公開設定','linkViewsSettings');
@@ -3368,9 +3383,18 @@ document.getElementById('authSubmit').disabled = false;
   }
 
 
+  let linkReportBadgeBusy=false;
   async function refreshLinkReportBadge(){
-    if(!adminSession.getItem(ADMIN_TOKEN_KEY))return;
-    try{const result=await serverCall('getLinkReports');const badge=$('linkReportBadge');const count=Number(result.unread)||0;badge.textContent=String(count);badge.hidden=!count;}catch(error){console.warn('リンク報告を確認できませんでした',error);}
+    const token=adminSession.getItem(ADMIN_TOKEN_KEY);
+    if(!token||document.hidden||linkReportBadgeBusy)return;
+    linkReportBadgeBusy=true;
+    try{
+      const result=await serverCall('getLinkReports',{summary:true});
+      if(token!==adminSession.getItem(ADMIN_TOKEN_KEY))return;
+      const badge=$('linkReportBadge'),count=Number(result.unread)||0;
+      badge.textContent=String(count);badge.hidden=!count;
+    }catch(error){console.warn('リンク報告を確認できませんでした',error);}
+    finally{linkReportBadgeBusy=false;}
   }
   setInterval(()=>{if(!document.hidden)void refreshLinkReportBadge()},30000);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)void refreshLinkReportBadge()});

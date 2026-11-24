@@ -452,7 +452,7 @@ a.admin{color:#68ddff!important}
 #linksPanel .link-feed-privacy-note a:focus-visible{outline:2px solid #35d9ff;outline-offset:3px}
 </style>
 <link rel="stylesheet" href="./chat-reply.css">
-<script src="./visit-duration.js?v=1"></script>
+<script src="./visit-duration.js?v=2"></script>
 <script src="./chat-reply.js"></script>
 <link rel="stylesheet" href="./chat-preview.css">
 <script src="./chat-preview.js"></script>
@@ -639,7 +639,9 @@ function waitForBridge() {
     bridgeReady.then(() => { clearTimeout(timer); resolve(); });
   });
 }
+let visitorWarningResponseSequence=0;
 function call(method, ...args) {
+  const warningSequence=(method==='checkViewerSession'||method==='authenticateVisitor')?++visitorWarningResponseSequence:0;
   return waitForBridge().then(() => new Promise((resolve, reject) => {
     const id = (crypto.randomUUID && crypto.randomUUID()) || String(Date.now() + Math.random());
     const timer = setTimeout(() => {
@@ -658,7 +660,7 @@ function call(method, ...args) {
       clearTimeout(timer);
       reject(error);
     }
-  })).then(value=>{if((method==='checkViewerSession'||method==='authenticateVisitor')&&value&&Object.prototype.hasOwnProperty.call(value,'warning'))applyVisitorWarning(value.warning);return value;}).catch(error=>{handleVisitorDowntime(error);throw error;});
+  })).then(value=>{if(warningSequence&&warningSequence===visitorWarningResponseSequence&&value&&Object.prototype.hasOwnProperty.call(value,'warning'))applyVisitorWarning(value.warning);return value;}).catch(error=>{handleVisitorDowntime(error);throw error;});
 }
 const $=id=>document.getElementById(id);
 let clickNoticeTimer=0;
@@ -763,7 +765,7 @@ window.getLinkCoreAiContext = () => ({
 let visitorOnlineBusy = false;
 async function refreshVisitorOnline(active = !document.hidden) {
  const token = visitorToken;
- if (!token || visitorOnlineBusy) return;
+ if (!token || visitorOnlineBusy || visitorDowntimeDialog.open) return;
  visitorOnlineBusy = true;
  try {
   const result = await call('pulseVisitorOnline', active, token);
@@ -911,7 +913,7 @@ let viewerSessionCheckAvailable = true;
 
 async function checkActiveViewerSession() {
   const token = visitorToken;
-  if (!token || checkingViewerSession || !viewerSessionCheckAvailable || document.hidden) return;
+  if (!token || checkingViewerSession || !viewerSessionCheckAvailable || document.hidden || visitorDowntimeDialog.open) return;
   checkingViewerSession = true;
   try {
     await call('checkViewerSession', token);
@@ -1051,7 +1053,7 @@ function sendViewerChat(message, token) {
  };
  return viewerChatRealtime?.send('public', message, '', fallback, target?.id) ?? fallback();
 }
-async function refreshChat(){if(!visitorToken||chatLoading)return;chatLoading=true;try{const token=visitorToken;const r=await readViewerChat(token);if(token!==visitorToken)return;renderChat(Array.isArray(r.messages)?r.messages.filter(item => !item.private):[]);chatLoaded=true;}catch(e){if(isVisitorAuthError(e))showVisitorLogin('ログインの有効期限が切れました。もう一度サイトのパスワードを入力してください。');else{viewerMessagesKey='';chatMessages.textContent='読み込みに失敗しました：'+(e.message||'通信エラー');}}finally{chatLoading=false;}}
+async function refreshChat(){if(!visitorToken||chatLoading||visitorDowntimeDialog.open)return;chatLoading=true;try{const token=visitorToken;const r=await readViewerChat(token);if(token!==visitorToken)return;renderChat(Array.isArray(r.messages)?r.messages.filter(item => !item.private):[]);chatLoaded=true;}catch(e){if(isVisitorAuthError(e))showVisitorLogin('ログインの有効期限が切れました。もう一度サイトのパスワードを入力してください。');else{viewerMessagesKey='';chatMessages.textContent='読み込みに失敗しました：'+(e.message||'通信エラー');}}finally{chatLoading=false;}}
 const viewerChatRealtime = window.createChatRealtime?.(
   async () => {
     const token = visitorToken;
@@ -1150,13 +1152,13 @@ visitorDmNotice.addEventListener('click', () => {
  visitorDmNotice.hidden = true;
 });
 async function checkVisitorDmNotice() {
- if (!visitorToken || document.hidden) { visitorDmNotice.hidden = true; return; }
+ if (!visitorToken || document.hidden || visitorDowntimeDialog.open) { visitorDmNotice.hidden = true; return; }
  if (visitorDmChecking) return;
  const token = visitorToken;
  visitorDmChecking = true;
  try {
   prepareVisitorDmRead();
-  const result = await call('visitorDirectChatProxy', {operation:'read',browser:''}, token);
+  const result = await call('visitorDirectChatProxy', {operation:'read',browser:'',summary:true}, token);
   if (token !== visitorToken || document.hidden) return;
   setVisitorReplyGate(!!result.replyRequired);
   const incoming = (result.messages || []).filter(item => !item.own);
@@ -1222,11 +1224,19 @@ function paintVisitorViewCounts(){
   node.textContent='閲覧数 '+count.toLocaleString('ja-JP')+'回';
  });
 }
-let viewCountsRequest=0;
-async function refreshLinkViewCounts(){
- const token=visitorToken,request=++viewCountsRequest;if(!token)return;
- try{const result=await call('getLinkViewCounts',token);if(token!==visitorToken||request!==viewCountsRequest)return;visitorViewCounts.clear();for(const item of result.links||[]){if(Number.isFinite(item.count))visitorViewCounts.set(String(item.id),item.count);}paintVisitorViewCounts();}
- catch(error){if(token===visitorToken&&isVisitorAuthError(error))showVisitorLogin();}
+let viewCountsRequest=0,viewCountsBusyToken='',viewCountsFetchedToken='',viewCountsFetchedAt=0;
+async function refreshLinkViewCounts(force=false){
+ const token=visitorToken;if(!token||viewCountsBusyToken===token||visitorDowntimeDialog.open)return;
+ if(!force&&viewCountsFetchedToken===token&&Date.now()-viewCountsFetchedAt<30000)return;
+ const request=++viewCountsRequest;viewCountsBusyToken=token;
+ try{
+  const result=await call('getLinkViewCounts',token);
+  if(token!==visitorToken||request!==viewCountsRequest)return;
+  visitorViewCounts.clear();
+  for(const item of result.links||[])if(Number.isFinite(item.count))visitorViewCounts.set(String(item.id),item.count);
+  viewCountsFetchedToken=token;viewCountsFetchedAt=Date.now();paintVisitorViewCounts();
+ }catch(error){if(token===visitorToken&&isVisitorAuthError(error))showVisitorLogin();}
+ finally{if(viewCountsBusyToken===token)viewCountsBusyToken='';}
 }
 const nicknameDialog=document.createElement('dialog');nicknameDialog.id='visitorNicknameDialog';nicknameDialog.className='chat-profile-dialog';nicknameDialog.innerHTML='<form><h2>ニックネームを設定</h2><p>このブラウザの利用者名として保存します。</p><label>ニックネーム<input id="visitorNicknameInput" maxlength="24" required autocomplete="nickname"></label><p id="visitorNicknameStatus" role="status"></p><button type="submit">保存</button><button type="button" id="visitorNicknameCancel">キャンセル</button></form>';document.body.append(nicknameDialog);
 function paintVisitorNickname(){const name=visitorChatProfile?.nickname||'';$('visitorNicknameBadge').textContent=name?name+'としてログイン中':'ニックネーム設定';}
@@ -1571,15 +1581,17 @@ $('visitorBanAppealForm').addEventListener('submit', async event => {
   }
 });
 $('visitorBanRetry').addEventListener('click', () => location.reload());
+let checkingVisitorBanStatus=false;
 async function checkVisitorBanStatus() {
-  if (visitorToken || !$('visitorBanPanel').hidden) return;
+  if (visitorToken || !$('visitorBanPanel').hidden || checkingVisitorBanStatus || visitorDowntimeDialog.open) return;
+  checkingVisitorBanStatus=true;
   try {
     const status = await call('checkViewerSession', '', getNoticeBrowserId());
     if (status?.banned && !visitorToken) showVisitorBan();
     else if(status?.downtime?.active)handleVisitorDowntime(new Error('LINK_BASE_DOWNTIME:'+status.downtime.until));
   } catch (_) {
     // Older GAS deployments still detect bans on login.
-  }
+  } finally {checkingVisitorBanStatus=false;}
 }
 setInterval(()=>{if(!visitorToken&&!document.hidden)void checkVisitorBanStatus();},30000);
 async function restoreVisitorSession() {
@@ -1627,7 +1639,7 @@ $('refreshLinks').addEventListener('click',async()=>{
    return selectedCategory==='__uncategorized__'?!path:path===selectedCategory||path.startsWith(selectedCategory+'/');
   }))selectedCategory='';
   render();
-  void refreshLinkViewCounts();
+  void refreshLinkViewCounts(true);
   $('loadStatus').textContent='リンク一覧を更新しました。';
   if(!favoritesReady)void loadVisitorFavorites(token);
  }catch(error){

@@ -846,14 +846,17 @@ function submitLinkReport(url, browserId, visitorToken) {
   finally { lock.releaseLock(); }
   return {ok:true};
 }
-function getLinkReports(adminToken) {
+function getLinkReports(options, adminToken) {
+  if(typeof options==='string'&&adminToken===undefined){adminToken=options;options={};}
   requireAdmin_(adminToken);
   const bannedCount = activeBanCount_();
   const sheet = linkReportSheet_(false);
   if (!sheet || sheet.getLastRow() < 2) return {reports:[], unread:0, bannedCount};
   const last = sheet.getLastRow();
   const rows = sheet.getRange(2, 1, last - 1, 5).getValues();
-  return {bannedCount, unread:rows.filter(row=>row[0] && !row[4]).length,
+  const unread=rows.filter(row=>row[0] && !row[4]).length;
+  if(options?.summary===true)return {bannedCount,unread};
+  return {bannedCount, unread,
     reports:rows.slice(-200).reverse().filter(row=>row[0]).map(row=>({id:String(row[0]), date:toIso_(row[1]), url:String(row[2]), browserId:String(row[3]), checked:!!row[4]}))};
 }
 function markLinkReportChecked(id, adminToken) {
@@ -3859,16 +3862,19 @@ function visitorDirectChatProxy(parameters, viewerToken) {
   }
   if (operation === 'read') {
     const pending = visitorRequiredReplies_(peer);
-    const query = base + (beforeCursor ? '&seq=lt.' + beforeCursor : '') + '&select=id,author,body,created_at,seq,readers,reply_to,file_name,file_mime,file_size&order=seq.desc&limit=101';
+    const summary=parameters.summary===true;
+    const fields=summary?'id,author,seq':'id,author,body,created_at,seq,readers,reply_to,file_name,file_mime,file_size';
+    const query = base + (beforeCursor ? '&seq=lt.' + beforeCursor : '') + '&select='+fields+'&order=seq.desc&limit=101';
     const rows = supabaseChatRequest_('get', query);
     const more = rows.length > 100;
     const page = rows.slice(0,100);
     // Required messages must remain reachable even when older than the latest page.
-    const requiredRows = pending.length ? supabaseChatRequest_('get', base + '&id=in.(' + pending.join(',') + ')&select=id,author,body,created_at,seq,readers,reply_to,file_name,file_mime,file_size&order=seq.asc') : [];
+    const requiredRows = pending.length ? supabaseChatRequest_('get', base + '&id=in.(' + pending.join(',') + ')&select='+fields+'&order=seq.asc') : [];
     const present = new Set(page.map(row => row.id));
     const messages = page.slice().reverse();
     requiredRows.forEach(row => { if (!present.has(row.id)) messages.unshift(row); });
     messages.sort((a,b) => a.seq - b.seq);
+    if(summary)return {replyRequired:pending.length>0,requiredReplyIds:pending,messages:messages.map(row=>({id:row.id,own:row.author===author}))};
     const visibleIds = parameters.receipt_ids || [];
     if (!Array.isArray(visibleIds) || visibleIds.length > 100 ||
         visibleIds.some(id => typeof id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))) {
@@ -4016,7 +4022,7 @@ function getOnlineVisitors(adminToken) {
   return visitorOnlineSnapshot_('', '', false, true);
 }
 function visitorOnlineSnapshot_(token, browser, active, includeNames, omitProfiles) {
-  const generation = sessionGeneration_();
+  const generation = visitorSessionGeneration_();
   const key = 'LINK_CORE_VISITOR_ONLINE_V1_' + generation;
   const lock = LockService.getScriptLock();
   lock.waitLock(5000);
@@ -4656,8 +4662,16 @@ function downtimeWindow_(config, now) {
   const nextStart=stamp+((start-minute+1440)%1440)*60000-japan.getUTCSeconds()*1000-japan.getUTCMilliseconds();
   return {active,nextStart,until:active?stamp+remaining*60000-japan.getUTCSeconds()*1000-japan.getUTCMilliseconds():null,start:config.start,end:config.end,timeZone:'Asia/Tokyo'};
 }
+
+let visitorAccessSpreadsheetHandle_;
+function visitorAccessSpreadsheet_(){
+  const id=PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY);
+  if(!visitorAccessSpreadsheetHandle_||visitorAccessSpreadsheetHandle_.id!==id)visitorAccessSpreadsheetHandle_={id,sheet:SpreadsheetApp.openById(id)};
+  return visitorAccessSpreadsheetHandle_.sheet;
+}
+
 function visitorDowntimeSheet_() {
-  const ss=SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY));
+  const ss=visitorAccessSpreadsheet_();
   const sheet=ss.getSheetByName('VisitorDowntime')||ss.insertSheet('VisitorDowntime');
   if(!sheet.getLastRow())sheet.appendRow(['ブラウザID','有効','休止開始','休止終了']);
   return sheet;
@@ -4667,7 +4681,7 @@ function visitorDowntimeConfig_(browserId) {
   const cache=CacheService.getScriptCache(),key='LINK_CORE_DOWNTIME_'+browserId;
   const cached=cache.get(key);if(cached){try{return JSON.parse(cached);}catch(_){}}
   // Checking unconfigured visitors does not create a sheet or add profile properties.
-  const ss=SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY));
+  const ss=visitorAccessSpreadsheet_();
   const sheet=ss.getSheetByName('VisitorDowntime'),last=sheet?sheet.getLastRow():0;
   const found=last<2?null:sheet.getRange(2,1,last-1,1).createTextFinder(browserId).matchEntireCell(true).matchCase(true).findNext();
   const row=found?sheet.getRange(found.getRow(),2,1,3).getDisplayValues()[0]:[];
@@ -4703,7 +4717,7 @@ function saveVisitorDowntime(browserId,enabled,start,end,adminToken){
 
 /** Administrator-issued notices; warnings do not automatically ban a visitor. */
 function visitorWarningSheet_(create){
-  const ss=SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY));
+  const ss=visitorAccessSpreadsheet_();
   let sheet=ss.getSheetByName('VisitorWarnings');
   if(!sheet&&create){sheet=ss.insertSheet('VisitorWarnings');sheet.appendRow(['ブラウザID','警告ID','警告文','発行日時','有効']);}
   return sheet;
