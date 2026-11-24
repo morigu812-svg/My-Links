@@ -1170,7 +1170,20 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
 <link rel="stylesheet" href="./filter-access.css?v=7">
 <script src="./filter-access.js?v=8"></script>
 <meta name="referrer" content="no-referrer">
-<link rel="stylesheet" href="./log-dashboard.css?v=3"><script src="./log-dashboard.js?v=4"></script><style>#linkViewsDialog{width:min(800px,94vw);max-height:85dvh;overflow:auto;background:#0e1d30;color:#e3f4ff;border:1px solid #356079;border-radius:14px;padding:22px}#linkViewsDialog::backdrop{background:#0009}.views-heading{display:flex;justify-content:space-between;align-items:center}.link-view-row{display:grid;grid-template-columns:minmax(0,1fr) 80px 150px;gap:12px;align-items:center;padding:15px 0;border-bottom:1px solid #2b4156}.link-view-row strong{overflow-wrap:anywhere}.link-view-row input{width:auto}#linkViewsSearch{margin:8px;width:min(330px,90%)}@media(max-width:550px){.link-view-row{grid-template-columns:1fr auto}.link-view-row label{grid-column:1/-1}}</style><style>.click-estimated-duration{display:block;margin-top:6px;color:#8edbc5;font-size:11px;white-space:normal}</style><style>#downtimeSettingsDialog,#downtimePeopleDialog{width:min(560px,94vw);max-height:85dvh;overflow:auto;padding:24px;border:1px solid #3c6986;border-radius:15px;background:#102135;color:#e4f5ff}#downtimeSettingsDialog::backdrop,#downtimePeopleDialog::backdrop{background:#000b}#downtimeSettingsDialog label,#downtimePeopleDialog label{display:block;margin:15px 0}#downtimeSettingsDialog input[type=time],#downtimePeopleDialog input[type=search]{display:block;margin-top:8px;padding:9px;background:#071423;color:inherit;border:1px solid #41637e;border-radius:7px}#downtimeSettingsDialog p,#downtimePeopleDialog p{font-size:12px;line-height:1.8;color:#acc8dc}</style><style>#visitorWarningSettings{width:min(560px,94vw);max-height:85dvh;overflow:auto;padding:25px;border:1px solid #d39336;border-radius:14px;background:#102135;color:#edf6ff}#visitorWarningSettings::backdrop{background:#000b}#visitorWarningSettings p{font-size:12px;line-height:1.8;color:#c4d2df}#visitorWarningSettings label{display:block;margin:15px 0}#visitorWarningSettings input,#visitorWarningSettings textarea{display:block;width:100%;margin-top:8px;background:#081423;color:inherit;padding:10px;border:1px solid #47657b;border-radius:7px}#warningSend{background:#a04815;color:#fff;border:1px solid #e7a23a}</style></head>
+<link rel="stylesheet" href="./log-dashboard.css?v=3"><script src="./log-dashboard.js?v=4"></script><style>#linkViewsDialog{width:min(800px,94vw);max-height:85dvh;overflow:auto;background:#0e1d30;color:#e3f4ff;border:1px solid #356079;border-radius:14px;padding:22px}#linkViewsDialog::backdrop{background:#0009}.views-heading{display:flex;justify-content:space-between;align-items:center}.link-view-row{display:grid;grid-template-columns:minmax(0,1fr) 80px 150px;gap:12px;align-items:center;padding:15px 0;border-bottom:1px solid #2b4156}.link-view-row strong{overflow-wrap:anywhere}.link-view-row input{width:auto}#linkViewsSearch{margin:8px;width:min(330px,90%)}@media(max-width:550px){.link-view-row{grid-template-columns:1fr auto}.link-view-row label{grid-column:1/-1}}</style><style>.click-estimated-duration{display:block;margin-top:6px;color:#8edbc5;font-size:11px;white-space:normal}</style><style>#downtimeSettingsDialog,#downtimePeopleDialog{width:min(560px,94vw);max-height:85dvh;overflow:auto;padding:24px;border:1px solid #3c6986;border-radius:15px;background:#102135;color:#e4f5ff}#downtimeSettingsDialog::backdrop,#downtimePeopleDialog::backdrop{background:#000b}#downtimeSettingsDialog label,#downtimePeopleDialog label{display:block;margin:15px 0}#downtimeSettingsDialog input[type=time],#downtimePeopleDialog input[type=search]{display:block;margin-top:8px;padding:9px;background:#071423;color:inherit;border:1px solid #41637e;border-radius:7px}#downtimeSettingsDialog p,#downtimePeopleDialog p{font-size:12px;line-height:1.8;color:#acc8dc}</style><style>#visitorWarningSettings{width:min(560px,94vw);max-height:85dvh;overflow:auto;padding:25px;border:1px solid #d39336;border-radius:14px;background:#102135;color:#edf6ff}#visitorWarningSettings::backdrop{background:#000b}#visitorWarningSettings p{font-size:12px;line-height:1.8;color:#c4d2df}#visitorWarningSettings label{display:block;margin:15px 0}#visitorWarningSettings input,#visitorWarningSettings textarea{display:block;width:100%;margin-top:8px;background:#081423;color:inherit;padding:10px;border:1px solid #47657b;border-radius:7px}#warningSend{background:#a04815;color:#fff;border:1px solid #e7a23a}</style><style>
+/* Settings live inside the right-hand content pane and use the common button shape. */
+.finder-content>.admin-settings-page{display:block!important;position:static!important;width:100%!important;max-width:none!important;max-height:none!important;min-width:0;margin:0!important;padding:26px!important;border:0!important;border-radius:0!important;background:transparent!important;color:inherit!important;overflow:visible!important;box-shadow:none!important}
+.finder-content>.admin-settings-page[hidden]{display:none!important}
+.admin-settings-page form{max-width:760px}
+.admin-settings-page h2{margin:0 0 16px;font-size:24px;line-height:1.5}
+.admin-settings-page p{line-height:1.8}
+.admin-settings-page button.btn{min-height:40px;padding:10px 15px!important;border-radius:9px!important;border-width:1px!important;font:inherit;font-size:13px;line-height:1.4;box-shadow:none;cursor:pointer;margin:4px 6px 4px 0}
+.admin-settings-page button.btn:disabled{cursor:wait;opacity:.55}
+.admin-settings-page button.btn:focus-visible{outline:2px solid #35d9ff;outline-offset:3px}
+.admin-settings-page input:not([type=checkbox]),.admin-settings-page textarea{max-width:100%;box-sizing:border-box;border-radius:9px!important}
+#sideVirtualGame{text-decoration:none}
+@media(max-width:600px){.finder-content>.admin-settings-page{padding:18px 14px!important}.admin-settings-page h2{font-size:21px}.admin-settings-page button.btn{white-space:normal}}
+</style></head>
 <body>
 <section id="authGate" class="auth-gate" aria-labelledby="authTitle">
   <form id="authForm" onsubmit="return false" class="auth-card">
@@ -1211,6 +1224,8 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
 
 
 
+      <a class="side-item" id="sideVirtualGame" href="./virtual/"><span aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h10l4 8a3 3 0 0 1-5 3l-2-2h-4l-2 2a3 3 0 0 1-5-3l4-8Z"/><path d="M7 10v4m-2-2h4m7-1h.01M18 13h.01"/></svg></span> LINK BASE GAMES</a>
+
       <div class="side-label">連絡</div>
       <details class="sidebar-log-folder" id="sidebarChatFolder">
         <summary class="side-item"><span class="side-folder-mini" aria-hidden="true"><svg class="folder-icon" viewBox="0 0 64 52" aria-hidden="true"><path d="M4 10a5 5 0 0 1 5-5h17l7 7h22a5 5 0 0 1 5 5v4H4z" fill="currentColor" opacity=".72"/><path d="M4 17a5 5 0 0 1 5-5h46a5 5 0 0 1 5 5v27a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z" fill="currentColor"/><path d="M4 22h56" stroke="#fff" stroke-opacity=".35" stroke-width="2"/></svg></span> チャット <span class="log-folder-chevron" aria-hidden="true">›</span></summary>
@@ -1221,7 +1236,6 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
         </div>
       </details>
       <button class="side-item" type="button" id="sideMemos"><span>▤</span> メモ帳</button>
-      <a class="side-item" id="sideVirtualGame" href="./virtual/"><span aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h10l4 8a3 3 0 0 1-5 3l-2-2h-4l-2 2a3 3 0 0 1-5-3l4-8Z"/><path d="M7 10v4m-2-2h4m7-1h.01M18 13h.01"/></svg></span> LINK BASE GAMES</a>
 
       <div class="side-label">管理</div>
       <details class="sidebar-log-folder">
@@ -1797,7 +1811,25 @@ function watchSessionExpiry(deadline, onExpired) {
   };
 
 
-  const warningSettings=document.createElement('dialog');warningSettings.id='visitorWarningSettings';warningSettings.innerHTML='<form id="visitorWarningForm"><h2>⚠️ 利用者に警告</h2><p>対象のブラウザIDを指定してください。ログインの失敗だけで不正アクセスと断定する機能ではありません。</p><label>ブラウザID<input id="warningBrowserId" required pattern="[A-Za-z0-9_-]{8,100}" maxlength="100" autocomplete="off"></label><label>警告文<textarea id="warningMessage" required maxlength="500" rows="4">ログインの失敗が繰り返されています。パスワードの推測や不正な操作は行わないでください。心当たりがない場合やログインできない場合は、管理者に確認してください。</textarea></label><p id="warningSettingsStatus" role="status"></p><button type="button" id="warningCheck">現在の警告を確認</button><button type="submit" id="warningSend">⚠️ 警告</button><button type="button" id="warningClear">警告を解除</button><button type="button" id="warningSettingsClose">閉じる</button></form>';document.body.append(warningSettings);
+
+  function mountAdminSettingsPanel(panel, title, sidebarId) {
+    panel.classList.add('admin-settings-page');
+    panel.setAttribute('aria-label',title);
+    panel.hidden=true;
+    Object.defineProperty(panel,'open',{get:()=>!panel.hidden});
+    panel.showModal=()=>{
+      openMainChat(panel,title);
+      document.querySelectorAll('.sidebar .side-item.selected').forEach(button=>button.classList.remove('selected'));
+      $(sidebarId)?.classList.add('selected');
+      panel.hidden=false;
+      panel.querySelector('input:not([disabled]),button')?.focus({preventScroll:true});
+    };
+    panel.close=()=>closeMainChat();
+    panel.querySelectorAll('button').forEach(button=>button.classList.add('btn'));
+    document.querySelector('.finder-content').append(panel);
+  }
+
+  const warningSettings=document.createElement('section');warningSettings.id='visitorWarningSettings';warningSettings.innerHTML='<form id="visitorWarningForm"><h2>⚠️ 利用者に警告</h2><p>対象のブラウザIDを指定してください。ログインの失敗だけで不正アクセスと断定する機能ではありません。</p><label>ブラウザID<input id="warningBrowserId" required pattern="[A-Za-z0-9_-]{8,100}" maxlength="100" autocomplete="off"></label><label>警告文<textarea id="warningMessage" required maxlength="500" rows="4">ログインの失敗が繰り返されています。パスワードの推測や不正な操作は行わないでください。心当たりがない場合やログインできない場合は、管理者に確認してください。</textarea></label><p id="warningSettingsStatus" role="status"></p><button type="button" id="warningCheck">現在の警告を確認</button><button type="submit" id="warningSend">⚠️ 警告</button><button type="button" id="warningClear">警告を解除</button><button type="button" id="warningSettingsClose">閉じる</button></form>';mountAdminSettingsPanel(warningSettings,'警告','sideVisitorWarning');
   $('sideVisitorWarning').onclick=()=>{if(!warningSettings.open){$('warningSettingsStatus').textContent='';warningSettings.showModal();}};
   $('warningSettingsClose').onclick=()=>warningSettings.close();
   let warningBusy=false;
@@ -1815,9 +1847,9 @@ function watchSessionExpiry(deadline, onExpired) {
   $('visitorWarningForm').onsubmit=event=>{event.preventDefault();void warningAction('send');};
   $('warningCheck').onclick=()=>void warningAction('check');$('warningClear').onclick=()=>void warningAction('clear');
 
-  const downtimeDialog=document.createElement('dialog');downtimeDialog.id='downtimeSettingsDialog';downtimeDialog.className='chat-profile-dialog';downtimeDialog.innerHTML='<form id="downtimeForm"><h2>利用者の休止時間</h2><p id="downtimePerson"></p><p>毎日、指定した時間帯はLINK BASEを利用できません。日本時間で設定します。</p><label><input id="downtimeEnabled" type="checkbox"> 休止時間を有効にする</label><label>開始時刻<input id="downtimeStart" type="time" required value="22:00"></label><label>終了時刻<input id="downtimeEnd" type="time" required value="07:00"></label><p>例：22:00〜07:00は翌朝7時まで。開始と終了を同じ時刻にはできません。</p><p id="downtimeSaveStatus" role="status"></p><button type="submit" id="downtimeSave">保存</button><button type="button" id="downtimeCancel">閉じる</button></form>';document.body.append(downtimeDialog);
+  const downtimeDialog=document.createElement('section');downtimeDialog.id='downtimeSettingsDialog';downtimeDialog.className='chat-profile-dialog';downtimeDialog.innerHTML='<form id="downtimeForm"><h2>利用者の休止時間</h2><p id="downtimePerson"></p><p>毎日、指定した時間帯はLINK BASEを利用できません。日本時間で設定します。</p><label><input id="downtimeEnabled" type="checkbox"> 休止時間を有効にする</label><label>開始時刻<input id="downtimeStart" type="time" required value="22:00"></label><label>終了時刻<input id="downtimeEnd" type="time" required value="07:00"></label><p>例：22:00〜07:00は翌朝7時まで。開始と終了を同じ時刻にはできません。</p><p id="downtimeSaveStatus" role="status"></p><button type="submit" id="downtimeSave">保存</button><button type="button" id="downtimeCancel">利用者選択に戻る</button></form>';mountAdminSettingsPanel(downtimeDialog,'休止時間','sideVisitorDowntime');
 
-  const downtimePeople=document.createElement('dialog');downtimePeople.id='downtimePeopleDialog';downtimePeople.className='chat-profile-dialog';downtimePeople.innerHTML='<h2>休止時間を設定する利用者</h2><label>利用者を検索<input type="search" id="downtimeSearch" placeholder="名前・ブラウザID・学校名"></label><p id="downtimePeopleStatus" role="status"></p><div id="downtimePeopleRows"></div><button type="button" id="downtimePeopleClose">閉じる</button>';document.body.append(downtimePeople);
+  const downtimePeople=document.createElement('section');downtimePeople.id='downtimePeopleDialog';downtimePeople.className='chat-profile-dialog';downtimePeople.innerHTML='<h2>休止時間を設定する利用者</h2><label>利用者を検索<input type="search" id="downtimeSearch" placeholder="名前・ブラウザID・学校名"></label><p id="downtimePeopleStatus" role="status"></p><div id="downtimePeopleRows"></div><button type="button" id="downtimePeopleClose">閉じる</button>';mountAdminSettingsPanel(downtimePeople,'休止時間','sideVisitorDowntime');
   let downtimeUsers=[];
   $('downtimePeopleClose').onclick=()=>downtimePeople.close();
   function paintDowntimeUsers(){
@@ -1836,7 +1868,7 @@ function watchSessionExpiry(deadline, onExpired) {
   };
 
   let downtimeBrowser='',downtimeLoading=false;
-  $('downtimeCancel').onclick=()=>downtimeDialog.close();
+  $('downtimeCancel').onclick=()=>downtimePeople.showModal();
   async function openDowntimeSettings(log){
     if(downtimeLoading)return;downtimeLoading=true;downtimeBrowser=log.browserId;
     $('downtimePerson').textContent=(log.browserName||'利用者')+' / ID: '+log.browserId;
@@ -1855,7 +1887,7 @@ function watchSessionExpiry(deadline, onExpired) {
     finally{button.disabled=false;}
   };
 
-  const viewsDialog=document.createElement('dialog');viewsDialog.id='linkViewsDialog';viewsDialog.innerHTML='<div class="views-heading"><h2>サイト別の閲覧数</h2><button type="button" data-close>閉じる</button></div><p>利用者がリンクを開いた回数です。公開をOFFにすると、利用者には件数を返しません。</p><label>サイトを検索 <input type="search" id="linkViewsSearch" placeholder="サイト名"></label><p id="linkViewsStatus" role="status"></p><div id="linkViewsRows"></div>';document.body.append(viewsDialog);
+  const viewsDialog=document.createElement('section');viewsDialog.id='linkViewsDialog';viewsDialog.innerHTML='<div class="views-heading"><h2>サイト別の閲覧数</h2><button type="button" data-close>閉じる</button></div><p>利用者がリンクを開いた回数です。公開をOFFにすると、利用者には件数を返しません。</p><label>サイトを検索 <input type="search" id="linkViewsSearch" placeholder="サイト名"></label><p id="linkViewsStatus" role="status"></p><div id="linkViewsRows"></div>';mountAdminSettingsPanel(viewsDialog,'閲覧数・公開設定','linkViewsSettings');
   viewsDialog.querySelector('[data-close]').onclick=()=>viewsDialog.close();
   let adminViewItems=[];
   function paintAdminViews(){
@@ -2544,6 +2576,8 @@ document.getElementById('authSubmit').disabled = false;
     }
   }
   function hideMainChats() {
+    document.querySelectorAll('.admin-settings-page').forEach(panel=>{panel.hidden=true;panel.classList.remove('open');});
+    for(const id of ['sideVisitorWarning','sideVisitorDowntime','linkViewsSettings'])$(id)?.classList.remove('selected');
     $('chatOverlay').classList.remove('open');
     $('staffChatOverlay').classList.remove('open');
     adminVisitorDirectChat?.close();
