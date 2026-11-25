@@ -1,7 +1,7 @@
 (()=>{'use strict';
 const $=id=>document.getElementById(id),GAS_URL='https://script.google.com/macros/s/AKfycbwr6gUhjgC_zcazwXqDKOqHqiWt1t-NOjrz3IiOjP-NVaXvAJpKOKQ8Ez6It1qKvkxzFw/exec';
 let token='',expiry=0;try{token=sessionStorage.getItem('linkCoreAuditToken')||'';expiry=Number(sessionStorage.getItem('linkCoreAuditExpiresAt'))||0;}catch{}
-let overviewAt=0;let activeType='',logs=[],cursor=null,generation=0,loading=false,verified=false,bridgeOrigin='',bridgeReadyResolve;const pending=new Map(),ready=new Promise(resolve=>{bridgeReadyResolve=resolve});
+let overviewAt=0;let activeType='',logs=[],cursor=null,generation=0,loading=false,verified=false,bridgeWindow=null,bridgeOrigin='',bridgeReadyResolve;const pending=new Map(),ready=new Promise(resolve=>{bridgeReadyResolve=resolve});
 const types={login:'管理者ログイン',logout:'ログアウト',link:'リンククリック',click:'ボタン操作',navigate:'画面表示',operation:'操作要求'};
 const labels={sideClickLogs:'クリック履歴を表示',sideVisitorLogins:'利用者ログイン履歴を表示',sideStaffChat:'管理者チャットを表示',sideChat:'利用者チャットを表示',sideVisitorPersonalChat:'利用者個人チャットを表示',sideMemos:'メモ帳を表示',sideAdd:'リンクを追加',sideLogDashboard:'ログ分析を表示',sideVisitorDirectory:'利用者一覧を表示',sideOnlineVisitors:'オンラインの利用者を表示',sideVisitorWarning:'警告画面を表示',sideVisitorDowntime:'休止時間画面を表示',sideFilterAccess:'フィルター別アクセス状況を表示',sideVirtualGame:'LINK BASE GAMESを開く',saveLink:'リンク保存の要求',deleteLink:'リンク削除の要求',restoreTrash:'ごみ箱から復元の要求',deleteTrashPermanently:'完全削除の要求',emptyTrash:'ごみ箱を空にする要求',setVisitorBan:'BAN設定の要求',setVisitorWarning:'警告設定の要求',saveVisitorDowntime:'休止時間変更の要求',setStaffNickname:'管理者名変更の要求',setClickBrowserName:'ブラウザ名変更の要求',deleteClickLogs:'クリック履歴全削除の要求',deleteClickLog:'クリック履歴削除の要求',logoutAllBrowsers:'全員ログアウトの要求',logoutAllVisitors:'利用者全員ログアウトの要求',saveOfficialLink:'公式リンク保存の要求',deleteOfficialLink:'公式リンク削除の要求',setLinkViewVisibility:'閲覧数公開設定の要求',setLinkPageGroup:'集計グループ設定の要求',deleteStaffChatMessage:'管理者チャット削除の要求',deleteVisitorChatMessage:'利用者チャット削除の要求'};
 function text(node,value){node.textContent=String(value??'')}
@@ -9,9 +9,27 @@ function status(value,error=false){text($('auditStatus'),value);$('auditStatus')
 function wipe(){generation++;verified=false;token='';logs=[];$('auditRows').replaceChildren();$('auditExport').disabled=true;for(const id of ['auditTotal','auditActors','auditLinks'])text($(id),'—');try{sessionStorage.removeItem('linkCoreAuditToken');sessionStorage.removeItem('linkCoreAuditExpiresAt')}catch{}}
 function returnToLogin(){wipe();location.replace('./admin.html?v=audit-role2')}
 if(!/^[0-9a-f-]{72}$/i.test(token)||expiry<=Date.now()){returnToLogin();return;}
-const frame=document.createElement('iframe');frame.hidden=true;frame.title='LINK BASE audit bridge';frame.src=GAS_URL+'?mode=bridge';document.body.append(frame);
-addEventListener('message',event=>{if(event.source!==frame.contentWindow)return;let u;try{u=new URL(event.origin)}catch{return}if(u.protocol!=='https:'||!(u.hostname==='script.google.com'||u.hostname==='script.googleusercontent.com'||u.hostname.endsWith('.googleusercontent.com')))return;const data=event.data;if(data?.type==='DAILY_CORE_BRIDGE_READY'){if(!bridgeOrigin){bridgeOrigin=event.origin;bridgeReadyResolve()}return}if(event.origin!==bridgeOrigin||data?.type!=='DAILY_CORE_RESPONSE')return;const item=pending.get(data.id);if(!item)return;pending.delete(data.id);clearTimeout(item.timer);data.ok?item.resolve(data.result):item.reject(new Error(data.error||'通信に失敗しました'));});
-async function call(method,...args){if(!token||Date.now()>=expiry){returnToLogin();throw Error('監査セッションの期限が切れました。')}let readyTimer;await Promise.race([ready,new Promise((_,reject)=>{readyTimer=setTimeout(()=>reject(Error('接続の準備ができません。GASのデプロイ版を確認してください。')),30000)})]).finally(()=>clearTimeout(readyTimer));return new Promise((resolve,reject)=>{const id=crypto.randomUUID(),timer=setTimeout(()=>{pending.delete(id);reject(Error('応答待ちがタイムアウトしました。再試行してください。'))},30000);pending.set(id,{resolve,reject,timer});frame.contentWindow.postMessage({type:'DAILY_CORE_REQUEST',id,method,args:[...args,token]},bridgeOrigin);}).catch(error=>{if(/監査用ログイン|有効期限/.test(error.message))returnToLogin();throw error});}
+const frame=document.createElement('iframe');frame.hidden=true;frame.loading='eager';frame.title='LINK BASE audit bridge';
+function isBridgeFrame(source){
+  const visited=new Set();
+  try { while(source&&source!==window&&!visited.has(source)){if(source===frame.contentWindow)return true;visited.add(source);const parent=source.parent;if(parent===source)break;source=parent;} } catch (_) { return false; }
+  return false;
+}
+addEventListener('message',event=>{
+  let u;try{u=new URL(event.origin)}catch{return}
+  if(u.protocol!=='https:'||!(u.hostname==='script.google.com'||u.hostname==='script.googleusercontent.com'||u.hostname.endsWith('.googleusercontent.com')))return;
+  const data=event.data;if(!data||typeof data!=='object')return;
+  if(data.type==='DAILY_CORE_BRIDGE_READY'){
+    if(bridgeWindow||!isBridgeFrame(event.source))return;
+    bridgeWindow=event.source;bridgeOrigin=event.origin;bridgeReadyResolve();return;
+  }
+  if(event.source!==bridgeWindow||event.origin!==bridgeOrigin||data.type!=='DAILY_CORE_RESPONSE')return;
+  const item=pending.get(data.id);if(!item)return;pending.delete(data.id);clearTimeout(item.timer);
+  data.ok?item.resolve(data.result):item.reject(new Error(data.error||'通信に失敗しました'));
+});
+// Install the listener before navigation; GAS sends READY from its nested sandbox frame.
+frame.src=GAS_URL+'?mode=bridge';document.body.append(frame);
+async function call(method,...args){if(!token||Date.now()>=expiry){returnToLogin();throw Error('監査セッションの期限が切れました。')}let readyTimer;await Promise.race([ready,new Promise((_,reject)=>{readyTimer=setTimeout(()=>reject(Error('接続の準備ができません。GASのデプロイ版を確認してください。')),30000)})]).finally(()=>clearTimeout(readyTimer));return new Promise((resolve,reject)=>{const id=crypto.randomUUID(),timer=setTimeout(()=>{pending.delete(id);reject(Error('応答待ちがタイムアウトしました。再試行してください。'))},30000);pending.set(id,{resolve,reject,timer});bridgeWindow.postMessage({type:'DAILY_CORE_REQUEST',id,method,args:[...args,token]},bridgeOrigin);}).catch(error=>{if(/監査用ログイン|有効期限/.test(error.message))returnToLogin();throw error});}
 function date(value){const d=new Date(value);return Number.isNaN(d.getTime())?'—':new Intl.DateTimeFormat('ja-JP',{timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(d)}
 function renderRows(){const body=$('auditRows');body.replaceChildren();for(const entry of logs){const row=document.createElement('tr');let cell=document.createElement('td');text(cell,date(entry.date));row.append(cell);cell=document.createElement('td');text(cell,entry.name||'管理者');const browser=document.createElement('small');text(browser,entry.browserId);cell.append(browser);row.append(cell);cell=document.createElement('td');const tag=document.createElement('span');tag.className='audit-type';text(tag,types[entry.type]||entry.type);cell.append(tag);row.append(cell);cell=document.createElement('td');text(cell,entry.action);row.append(cell);cell=document.createElement('td');text(cell,labels[entry.target]||entry.target);if(/^https?:\/\//i.test(entry.url)){const a=document.createElement('a');a.href=entry.url;a.target='_blank';a.rel='noopener noreferrer';text(a,entry.url);cell.append(a)}row.append(cell);body.append(row)}$('auditExport').disabled=!logs.length;}
 function options(){return {type:activeType,browserId:$('auditActor').value,query:$('auditSearch').value.trim(),start:$('auditStart').value,end:$('auditEnd').value}}
@@ -24,4 +42,5 @@ $('auditExport').onclick=()=>{if(!verified||!logs.length||Date.now()>=expiry)ret
 function checkExpiry(){if(Date.now()>=expiry)returnToLogin()}setTimeout(checkExpiry,Math.max(0,expiry-Date.now()));document.addEventListener('visibilitychange',checkExpiry);addEventListener('pageshow',checkExpiry);
 (async()=>{try{const result=await call('checkAdminAuditSession');if(!result?.ok||result.role!=='audit')throw Error('監査権限を確認できません。');verified=true;await load(true)}catch(e){status(e.message,true)}})();
 })();
+
 
