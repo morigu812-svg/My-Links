@@ -227,7 +227,8 @@ html body .visitor-dm .visitor-dm-actions[open] {padding:5px;border:1px solid #3
 html body .visitor-dm .visitor-dm-actions button {margin:4px}
 html body .visitor-dm .visitor-dm-attachment {max-width:100%;white-space:normal;overflow-wrap:anywhere;text-align:left}
 html body .visitor-dm img,html body .visitor-dm video {display:block;max-width:100%;max-height:340px;border-radius:10px;margin-bottom:8px}
-html body .visitor-dm .visitor-dm-presence {margin:0;color:#9fe7cf;font-size:12px}
+html body .visitor-dm .visitor-dm-presence {margin:0;color:#a0b3c5!important;font-size:12px}
+html body .visitor-dm .visitor-dm-presence[data-state="online"] {color:#73e5a4!important;font-weight:700}
 html body .visitor-dm .visitor-dm-required-toggle {margin-top:4px}
 @media(max-width:600px){html body .visitor-dm .visitor-dm-message{max-width:95%}html body .visitor-dm .visitor-dm-compose-tools button{font-size:12px}}
 

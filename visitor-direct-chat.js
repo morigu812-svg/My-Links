@@ -106,8 +106,11 @@
       const current = generation;
       try {
         const result = await request({operation:'presence',browser});
-        if (panel.open && current === generation) presence.textContent = result.online ? '● 相手はオンラインです' : '相手はオフラインです';
-      } catch (_) { if (current === generation) presence.textContent = '接続状況を確認できません'; }
+        if (panel.open && current === generation) {
+          presence.dataset.state = result.online ? 'online' : 'offline';
+          presence.textContent = result.online ? '● 相手はオンラインです' : '相手はオフラインです';
+        }
+      } catch (_) { if (panel.open && current === generation) { presence.dataset.state = 'unknown'; presence.textContent = '接続状況を確認できません'; } }
     }
     function asBase64(blob) {
       return new Promise((resolve,reject) => {
@@ -443,6 +446,9 @@
       replyTo = null; manualReply = null; sendId = null; clearAttachment(); replyStatus.textContent = ''; replyStatus.hidden = true;
       input.placeholder = 'メッセージを入力…'; send.textContent = '送信';
       const isList = browser === null;
+      presence.hidden = isList;
+      presence.dataset.state = 'checking';
+      presence.textContent = '接続状況を確認中…';
       title.textContent = isList ? '利用者との個人トーク' :
         isAdmin ? (resolveBrowserName(browser) ? resolveBrowserName(browser) + 'とのトーク' : '名前を確認中…') : '管理者との個人トーク';
       rooms.hidden = !isList;
