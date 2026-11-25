@@ -2794,6 +2794,35 @@ document.getElementById('authSubmit').disabled = false;
   let clickHistoryLogs = [];
   let clickLogsCursor = null;
   let clickLogsRevision = 0;
+  const clickHistoryPageSize = 100;
+  let clickHistoryPage = 0, clickHistoryFiltered = [], clickHistorySearchTimer;
+  const clickHistoryPager = document.createElement('nav');
+  clickHistoryPager.className = 'click-log-actions';
+  clickHistoryPager.setAttribute('aria-label', 'クリック履歴のページ');
+  const clickHistoryPrevious = document.createElement('button'), clickHistoryNext = document.createElement('button'), clickHistoryPageLabel = document.createElement('span');
+  clickHistoryPrevious.type = clickHistoryNext.type = 'button';
+  clickHistoryPrevious.className = clickHistoryNext.className = 'btn';
+  clickHistoryPrevious.textContent = '前の100件'; clickHistoryNext.textContent = '次の100件';
+  clickHistoryPageLabel.setAttribute('aria-live', 'polite');
+  clickHistoryPager.append(clickHistoryPrevious, clickHistoryPageLabel, clickHistoryNext);
+  $('clickLogRows').closest('.click-log-table-wrap').after(clickHistoryPager);
+  function showClickHistoryPage() {
+    const pages = Math.max(1, Math.ceil(clickHistoryFiltered.length / clickHistoryPageSize));
+    clickHistoryPage = Math.max(0, Math.min(clickHistoryPage, pages - 1));
+    const start = clickHistoryPage * clickHistoryPageSize;
+    renderClickLogs(clickHistoryFiltered.slice(start, start + clickHistoryPageSize), false);
+    clickHistoryPrevious.disabled = clickHistoryPage === 0;
+    clickHistoryNext.disabled = clickHistoryPage >= pages - 1;
+    clickHistoryPageLabel.textContent = clickHistoryFiltered.length ? (start + 1) + '〜' + Math.min(start + clickHistoryPageSize, clickHistoryFiltered.length) + '件 ／ ' + clickHistoryFiltered.length + '件' : '0件';
+    clickHistoryPager.hidden = clickHistoryFiltered.length <= clickHistoryPageSize;
+  }
+  function moveClickHistoryPage(delta) {
+    clickHistoryPage += delta; showClickHistoryPage();
+    const wrap = $('clickLogRows').closest('.click-log-table-wrap');
+    wrap.scrollTop = 0; wrap.scrollIntoView({block:'start'});
+  }
+  clickHistoryPrevious.addEventListener('click', () => moveClickHistoryPage(-1));
+  clickHistoryNext.addEventListener('click', () => moveClickHistoryPage(1));
   function updateClickHistory() {
     const query = $('clickHistorySearch').value.trim().toLocaleLowerCase();
     const period = $('clickHistoryPeriod').value;
@@ -2807,13 +2836,17 @@ document.getElementById('authSubmit').disabled = false;
       const matchesPeriod = period === 'all' || (day !== null && day <= today && day >= today - (period === 'week' ? 6 : 0));
       return matchesPeriod && [log.title,log.url,log.browserName,log.browserId].some(value => String(value || '').toLocaleLowerCase().includes(query));
     });
-    renderClickLogs(visible, false);
+    clickHistoryFiltered = visible;
+    showClickHistoryPage();
     const browsers = new Set(visible.map(log => log.browserId).filter(Boolean));
     const links = new Set(visible.map(log => log.url).filter(Boolean));
     $('clickHistorySummary').textContent = visible.length + '件のクリック ／ ' + browsers.size + 'ブラウザ ／ ' + links.size + 'リンク';
   }
-  $('clickHistorySearch').addEventListener('input', updateClickHistory);
-  $('clickHistoryPeriod').addEventListener('change', updateClickHistory);
+  $('clickHistorySearch').addEventListener('input', () => {
+    clearTimeout(clickHistorySearchTimer);
+    clickHistorySearchTimer = setTimeout(() => {clickHistoryPage = 0; updateClickHistory();}, 180);
+  });
+  $('clickHistoryPeriod').addEventListener('change', () => {clearTimeout(clickHistorySearchTimer); clickHistoryPage = 0; updateClickHistory();});
   const clickHistoryDateFormat = new Intl.DateTimeFormat('ja-JP', {timeZone:'Asia/Tokyo', year:'numeric', month:'2-digit', day:'2-digit'});
   const clickHistoryTimeFormat = new Intl.DateTimeFormat('ja-JP', {timeZone:'Asia/Tokyo', hour:'2-digit', minute:'2-digit', hourCycle:'h23'});
 
@@ -2826,6 +2859,7 @@ document.getElementById('authSubmit').disabled = false;
   function renderClickLogs(logs, remember = true){
     if (remember) { clickHistoryLogs = logs; updateClickHistory(); return; }
     const body=$('clickLogRows');body.replaceChildren();
+    const fragment = document.createDocumentFragment();
     if(!logs.length){const tr=document.createElement('tr');const td=document.createElement('td');td.colSpan=4;td.className='click-log-empty';td.textContent=clickHistoryLogs.length?'条件に一致する履歴はありません。':'まだクリック履歴はありません。';tr.appendChild(td);body.appendChild(tr);return;}
     logs.forEach(log=>{
       const tr=document.createElement('tr');tr.className='click-entry';const time=document.createElement('td');time.dataset.label='クリック日時';const date=new Date(log.clickedAt);
@@ -2916,8 +2950,9 @@ document.getElementById('authSubmit').disabled = false;
         });
         actionMenu.append(ban);
       }
-      tr.append(title,browserCell,time,actionCell);body.appendChild(tr);
+      tr.append(title,browserCell,time,actionCell);fragment.appendChild(tr);
     });
+    body.appendChild(fragment);
   }
   async function refreshClickLogs(addMore = false){
     addMore = addMore === true;
@@ -2934,6 +2969,7 @@ document.getElementById('authSubmit').disabled = false;
     moreButton.disabled = true;
     moreButton.hidden = true;
     status.textContent = addMore ? '以前の履歴を読み込んでいます…' : '履歴を読み込んでいます…';
+    if (!addMore) clickHistoryPage = 0;
     let cursor = addMore ? clickLogsCursor : null;
     let restarted = false;
     try {
