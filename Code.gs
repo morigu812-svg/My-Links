@@ -4652,17 +4652,32 @@ function completeLinkVisit(visitId, seconds, browserId, visitorToken) {
 
 
 /** Daily downtime is evaluated by the server in Japan time, independently of device clocks. */
+
+/** Normalize Sheets' localized/displayed clock values to the minute-based API format. */
+function normalizeDowntimeTime_(value){
+  let text=String(value==null?'':value).trim().replace(/：/g,':');
+  const prefix=/^(午前|午後)\s*/.exec(text);
+  if(prefix)text=text.slice(prefix[0].length)+' '+prefix[1];
+  const match=/^(?:\d{4}[/-]\d{1,2}[/-]\d{1,2}\s+)?(\d{1,2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?\s*(AM|PM|午前|午後)?$/i.exec(text);
+  if(!match)return '';
+  let hour=Number(match[1]);const minute=Number(match[2]),second=Number(match[3]||0),period=(match[4]||'').toUpperCase();
+  if(minute>59||second>59)return '';
+  if(period){if(hour<1||hour>12)return '';hour=hour%12+(/^(PM|午後)$/.test(period)?12:0);}
+  if(hour>23)return '';
+  return String(hour).padStart(2,'0')+':'+String(minute).padStart(2,'0');
+}
+
 function downtimeWindow_(config, now) {
   const stamp=Number(now);
   if(!config || !config.enabled)return {active:false};
-  const parse=value=>{const m=/^(\d{2}):(\d{2})$/.exec(String(value||''));return m&&Number(m[1])<24&&Number(m[2])<60?Number(m[1])*60+Number(m[2]):null;};
+  const parse=value=>{const m=/^(\d{2}):(\d{2})$/.exec(normalizeDowntimeTime_(value));return m&&Number(m[1])<24&&Number(m[2])<60?Number(m[1])*60+Number(m[2]):null;};
   const start=parse(config.start),end=parse(config.end);
-  if(start===null||end===null||start===end)return {active:false};
+  if(start===null||end===null||start===end)return {active:false,invalid:true};
   const japan=new Date(stamp+9*3600000),minute=japan.getUTCHours()*60+japan.getUTCMinutes();
   const active=start<end?minute>=start&&minute<end:minute>=start||minute<end;
   const remaining=(end-minute+1440)%1440;
   const nextStart=stamp+((start-minute+1440)%1440)*60000-japan.getUTCSeconds()*1000-japan.getUTCMilliseconds();
-  return {active,nextStart,until:active?stamp+remaining*60000-japan.getUTCSeconds()*1000-japan.getUTCMilliseconds():null,start:config.start,end:config.end,timeZone:'Asia/Tokyo'};
+  return {active,nextStart,until:active?stamp+remaining*60000-japan.getUTCSeconds()*1000-japan.getUTCMilliseconds():null,start:normalizeDowntimeTime_(config.start),end:normalizeDowntimeTime_(config.end),timeZone:'Asia/Tokyo'};
 }
 
 let visitorAccessSpreadsheetHandle_;
@@ -4680,19 +4695,20 @@ function visitorDowntimeSheet_() {
 }
 function visitorDowntimeConfig_(browserId) {
   if(!/^[A-Za-z0-9_-]{8,100}$/.test(String(browserId||'')))return {enabled:false,start:'22:00',end:'07:00'};
-  const cache=CacheService.getScriptCache(),key='LINK_CORE_DOWNTIME_'+browserId;
+  const cache=CacheService.getScriptCache(),key='LINK_CORE_DOWNTIME_V2_'+browserId;
   const cached=cache.get(key);if(cached){try{return JSON.parse(cached);}catch(_){}}
   // Checking unconfigured visitors does not create a sheet or add profile properties.
   const ss=visitorAccessSpreadsheet_();
   const sheet=ss.getSheetByName('VisitorDowntime'),last=sheet?sheet.getLastRow():0;
   const found=last<2?null:sheet.getRange(2,1,last-1,1).createTextFinder(browserId).matchEntireCell(true).matchCase(true).findNext();
   const row=found?sheet.getRange(found.getRow(),2,1,3).getDisplayValues()[0]:[];
-  const config={enabled:String(row[0]).toLowerCase()==='true',start:row[1]||'22:00',end:row[2]||'07:00'};
+  const config=found?{enabled:String(row[0]).trim().toLowerCase()==='true',start:normalizeDowntimeTime_(row[1]),end:normalizeDowntimeTime_(row[2])}:{enabled:false,start:'22:00',end:'07:00'};
   cache.put(key,JSON.stringify(config),30);return config;
 }
 function visitorDowntimeState_(browserId){return downtimeWindow_(visitorDowntimeConfig_(browserId),Date.now());}
 function requireVisitorTimeAllowed_(browserId){
   const state=visitorDowntimeState_(browserId);
+  if(state.invalid)throw new Error('LINK_BASE_DOWNTIME_CONFIG_ERROR 休止時間の設定を読み取れません。管理者に時刻の再設定を依頼してください。');
   if(state.active)throw new Error('LINK_BASE_DOWNTIME:'+state.until+' 現在は休止時間です。');
 }
 function getVisitorDowntime(browserId,adminToken){
@@ -4703,6 +4719,7 @@ function getVisitorDowntime(browserId,adminToken){
 function saveVisitorDowntime(browserId,enabled,start,end,adminToken){
   requireAdmin_(adminToken);
   if(!/^[A-Za-z0-9_-]{8,100}$/.test(String(browserId||''))||typeof enabled!=='boolean')throw new Error('利用者または設定が不正です。');
+  start=normalizeDowntimeTime_(start);end=normalizeDowntimeTime_(end);
   const valid=value=>typeof value==='string'&&/^([01]\d|2[0-3]):[0-5]\d$/.test(value);
   if(!valid(start)||!valid(end)||start===end)throw new Error('開始・終了は異なる時刻を設定してください。');
   const lock=LockService.getScriptLock();lock.waitLock(10000);
@@ -4710,9 +4727,11 @@ function saveVisitorDowntime(browserId,enabled,start,end,adminToken){
     requireAdmin_(adminToken);
     const sheet=visitorDowntimeSheet_(),last=sheet.getLastRow();
     const found=last<2?null:sheet.getRange(2,1,last-1,1).createTextFinder(browserId).matchEntireCell(true).matchCase(true).findNext();
-    sheet.getRange(found?found.getRow():last+1,1,1,4).setValues([[browserId,enabled,start,end]]);
+    const targetRow=found?found.getRow():last+1;
+    sheet.getRange(targetRow,3,1,2).setNumberFormat('@');
+    sheet.getRange(targetRow,1,1,4).setValues([[browserId,enabled,start,end]]);
     SpreadsheetApp.flush();
-    CacheService.getScriptCache().remove('LINK_CORE_DOWNTIME_'+browserId);
+    CacheService.getScriptCache().remove('LINK_CORE_DOWNTIME_V2_'+browserId);
     return {ok:true,config:{enabled,start,end},state:downtimeWindow_({enabled,start,end},Date.now())};
   }finally{lock.releaseLock();}
 }

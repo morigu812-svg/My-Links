@@ -699,8 +699,9 @@ const visitorDowntimeDialog=document.createElement('dialog');visitorDowntimeDial
 document.body.append(visitorDowntimeDialog);
 visitorDowntimeDialog.addEventListener('cancel',event=>event.preventDefault());
 function handleVisitorDowntime(error){
- const match=/LINK_BASE_DOWNTIME:(\d+)/.exec(error?.message||'');if(!match)return false;
- const date=new Date(Number(match[1]));$('visitorDowntimeUntil').textContent='再開予定：'+date.toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'})+'（日本時間）';
+ const invalid=/LINK_BASE_DOWNTIME_CONFIG_ERROR/.test(error?.message||'');
+ const match=/LINK_BASE_DOWNTIME:(\d+)/.exec(error?.message||'');if(!match&&!invalid)return false;
+ const date=match?new Date(Number(match[1])):null;$('visitorDowntimeUntil').textContent=invalid?'管理者に休止時間の再設定を依頼してください。':'再開予定：'+date.toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'})+'（日本時間）';
  $('visitorDowntimeStatus').textContent='';
  document.querySelectorAll('dialog[open]').forEach(dialog=>{if(dialog!==visitorDowntimeDialog&&dialog!==visitorWarningDialog)dialog.close();});
  document.querySelectorAll('#chatOverlay.open').forEach(node=>node.classList.remove('open'));
@@ -715,7 +716,8 @@ async function checkVisitorDowntime(){
  try{
   const result=await call('checkViewerSession','',getNoticeBrowserId());
   if(result.banned){visitorDowntimeDialog.close();showVisitorBan();return;}
-  if(result.downtime?.active){handleVisitorDowntime(new Error('LINK_BASE_DOWNTIME:'+result.downtime.until));}
+  if(result.downtime?.invalid){handleVisitorDowntime(new Error('LINK_BASE_DOWNTIME_CONFIG_ERROR'));}
+  else if(result.downtime?.active){handleVisitorDowntime(new Error('LINK_BASE_DOWNTIME:'+result.downtime.until));}
   else{visitorDowntimeDialog.close();location.reload();}
  }catch(error){$('visitorDowntimeStatus').textContent=error.message||'確認できませんでした。';}
  finally{checkingDowntime=false;$('visitorDowntimeRetry').disabled=false;}
@@ -1588,6 +1590,7 @@ async function checkVisitorBanStatus() {
   try {
     const status = await call('checkViewerSession', '', getNoticeBrowserId());
     if (status?.banned && !visitorToken) showVisitorBan();
+    else if(status?.downtime?.invalid)handleVisitorDowntime(new Error('LINK_BASE_DOWNTIME_CONFIG_ERROR'));
     else if(status?.downtime?.active)handleVisitorDowntime(new Error('LINK_BASE_DOWNTIME:'+status.downtime.until));
   } catch (_) {
     // Older GAS deployments still detect bans on login.

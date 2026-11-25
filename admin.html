@@ -1966,7 +1966,7 @@ function watchSessionExpiry(deadline, onExpired) {
       if(!current())return;
       $('downtimeEnabled').checked=!!result.config.enabled;
       $('downtimeStart').value=result.config.start;$('downtimeEnd').value=result.config.end;
-      $('downtimeSaveStatus').textContent=result.state.active?'現在、休止時間中です。':'';
+      $('downtimeSaveStatus').textContent=result.state.invalid?'保存されている時刻を読み取れません。開始・終了時刻を入力して保存し直してください。':result.state.active?'現在、休止時間中です。':'';
       $('downtimeSave').disabled=false;
     }catch(error){if(current())$('downtimeSaveStatus').textContent=error.message||'取得できませんでした。';}
     finally{if(current())for(const id of ['downtimeEnabled','downtimeStart','downtimeEnd'])$(id).disabled=false;}

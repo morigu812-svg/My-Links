@@ -24,10 +24,10 @@
    if(event.data?.type==='DAILY_CORE_BRIDGE_READY'){origin=event.origin;check();return;}
    if(event.data?.type!=='DAILY_CORE_RESPONSE'||event.data.id!==pending)return;
    pending='';
-   if(!event.data.ok){if(/LINK_BASE_DOWNTIME:/.test(event.data.error||''))lock();else if(token){token='';check();}return;}
+   if(!event.data.ok){if(/LINK_BASE_DOWNTIME(?::|_CONFIG_ERROR)/.test(event.data.error||''))lock();else if(token){token='';check();}return;}
    let unacknowledged=false;const warning=event.data.result?.warning;
    if(warning?.id){try{unacknowledged=localStorage.getItem('linkBaseAcknowledgedWarningV1:'+browser)!==warning.id;}catch{unacknowledged=true;}}
-   if(event.data.result?.banned||event.data.result?.downtime?.active||unacknowledged)lock();
+   if(event.data.result?.banned||event.data.result?.downtime?.active||event.data.result?.downtime?.invalid||unacknowledged)lock();
  });
  setInterval(check,30000);document.addEventListener('visibilitychange',check);
 })();
