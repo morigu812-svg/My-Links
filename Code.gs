@@ -1852,13 +1852,13 @@ function getVisitorChatProfile(browserId, visitorToken) {
   if (last < 2) return {school:'', filter:''};
   const found = sheet.getRange(2,1,last-1,1).createTextFinder(browserId).matchEntireCell(true).matchCase(true).findNext();
   if (!found) return {school:'', filter:''};
-  const [school, filter,, schoolRequest, filterRequest] = sheet.getRange(found.getRow(),2,1,5).getDisplayValues()[0];
+  const [school, filter,, schoolRequest, filterRequest, nickname] = sheet.getRange(found.getRow(),2,1,6).getDisplayValues()[0];
   const observed = {};
   if (schoolRequest) observed['LINK_CORE_SCHOOL_CORRECTION_' + visitorToken] = schoolRequest;
   if (filterRequest) observed['LINK_CORE_FILTER_CORRECTION_' + visitorToken] = filterRequest;
   if (schoolRequest || filterRequest) CacheService.getScriptCache().putAll(observed, SESSION_TTL_SECONDS);
   return {
-    nickname:sheet.getRange(found.getRow(),7).getDisplayValue(),
+    nickname:nickname || '',
     school:schoolRequest ? '' : school, filter:filterRequest ? '' : filter,
     schoolCorrectionRequired:!!schoolRequest, filterCorrectionRequired:!!filterRequest
   };
@@ -3271,7 +3271,14 @@ function recordVisitorCounter_(browserId, lockedSpreadsheet) {
     // Search this browser's history rather than transferring every visitor's rows.
     const matches = last > 1 ? sheet.getRange(2, 2, last - 1, 1)
       .createTextFinder(digest).matchEntireCell(true).matchCase(true).findAll() : [];
-    const counted = matches.some(cell => visitorCounterDateKey_(sheet.getRange(cell.getRow(), 1).getValue()) === day);
+    // One date read for the matching span instead of a remote request per visit.
+    let counted = false;
+    if (matches.length) {
+      const rowNumbers = matches.map(cell => cell.getRow());
+      const first = rowNumbers.reduce((a,b) => Math.min(a,b)), lastMatch = rowNumbers.reduce((a,b) => Math.max(a,b));
+      const dates = sheet.getRange(first, 1, lastMatch - first + 1, 1).getValues();
+      counted = rowNumbers.some(row => visitorCounterDateKey_(dates[row - first][0]) === day);
+    }
     if (!counted) sheet.appendRow([day, digest, new Date()]);
     // Cache is only an optimization. A miss always checks the persisted records under the lock.
     cache.put(cacheKey, '1', 21600);
