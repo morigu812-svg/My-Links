@@ -9,7 +9,7 @@
  */
 'use strict';
 
-var CACHE_VERSION = 'link-core-v133';
+var CACHE_VERSION = 'link-core-v134';
 var STATIC_CACHE = 'link-core-static-' + CACHE_VERSION;
 
 /* アプリの殻。相対パスなので、GitHub Pages のプロジェクトサイト
@@ -139,4 +139,5 @@ self.addEventListener('fetch', function (event) {
 
   /* それ以外（Google Fonts 等の外部リソース）は Service Worker を通さない。 */
 });
+
 

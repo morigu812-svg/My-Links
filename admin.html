@@ -1189,7 +1189,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
   <form id="authForm" onsubmit="return false" class="auth-card">
     <div class="auth-mark">LINK BASE / PRIVATE ACCESS</div>
     <h1 id="authTitle">管理者ログイン</h1>
-    <p id="authDescription">通常の管理者パスワード、または管理者アクティビティを表示する専用パスワードを入力してください。</p>
+    <p id="authDescription">管理者パスワードを入力してください。</p>
     <div id="authEmailGroup" hidden><label for="authEmail">メールアドレス</label><input id="authEmail" type="email" autocomplete="username"></div>
     <label id="passwordLabel" for="authPassword">管理者パスワード</label>
     <input id="authPassword" type="password" autocomplete="current-password" required autofocus>
@@ -1202,7 +1202,6 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
       <input id="visitorPasswordConfirm" type="password" autocomplete="new-password">
     </div>
     <button id="authSubmit" type="submit" disabled>管理者としてログイン</button>
-    <button id="passwordOnlyLogin" type="button" class="btn" hidden>専用パスワードでログイン</button>
     <div id="authError" class="auth-error" role="alert" aria-live="polite">ログイン画面を準備しています。表示が変わらない場合はページを再読み込みしてください。</div>
   </form>
 </section>
@@ -1743,10 +1742,17 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
   const authTitle = $('authTitle');
   const authDescription = $('authDescription');
   const authSubmit = $('authSubmit');
-  let forcePasswordLogin = false;
-  if (staffAuthPilot) $('passwordOnlyLogin').hidden=false;
-  $('passwordOnlyLogin').onclick=()=>{forcePasswordLogin=true;$('authEmailGroup').hidden=true;$('authEmail').required=false;authDescription.textContent='管理者パスワード、または管理者アクティビティの専用パスワードを入力してください。';authField.focus();};
-
+  function updatePasswordPrefixMode() {
+    if (!staffAuthPilot) return;
+    const audit = authField.value.startsWith('K:');
+    $('authEmailGroup').hidden = audit;
+    $('authEmail').required = !audit;
+    authDescription.textContent = audit
+      ? '管理者アクティビティのパスワードを確認します。'
+      : 'Supabaseに登録したメールアドレスとパスワードを入力してください。';
+  }
+  authField.addEventListener('input', updatePasswordPrefixMode);
+  authField.addEventListener('change', updatePasswordPrefixMode);
 
 function watchSessionExpiry(deadline, onExpired) {
   function checkExpiry() {
@@ -2126,7 +2132,7 @@ function watchSessionExpiry(deadline, onExpired) {
     const loginStartedAtEpoch = Date.now();
     let authResult;
     try {
-      if (staffAuthPilot && !forcePasswordLogin) {
+      if (staffAuthPilot && !authField.value.startsWith('K:')) {
         const client = await getStaffAuthClient();
         const {data, error} = await client.auth.signInWithPassword({
           email: $('authEmail').value.trim(), password: authField.value
@@ -8217,5 +8223,6 @@ html body .sidebar .side-danger:hover{background:rgba(255,90,110,.14)!important}
 <script src="./admin-bgm.js?v=2" defer></script>
 </body>
 </html>
+
 
 
