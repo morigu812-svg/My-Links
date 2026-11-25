@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="ja">
-<head>
+<head><link rel="preconnect" href="https://script.google.com"><link rel="preconnect" href="https://script.googleusercontent.com">
 <link rel="preconnect" href="https://script.google.com">
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1534,6 +1534,19 @@ async function finishVisitorLogin(auth, expiresAt) {
   void refreshVisitorCounter();
   void loadVisitorFavorites(visitorToken);
 }
+// Begin password-independent preparation as soon as the login markup is ready.
+let visitorLoginPreparation;
+function prepareVisitorLogin() {
+ if (!visitorLoginPreparation) {
+  const browserId = getNoticeBrowserId();
+  const identity = visitorIdentitySecret();
+  // The bridge already navigates eagerly; start observing readiness without blocking the page.
+  void waitForBridge().catch(() => {});
+  visitorLoginPreparation = identity.then(secret => ({browserId, secret}));
+ }
+ return visitorLoginPreparation;
+}
+void prepareVisitorLogin();
 $('loginForm').addEventListener('submit',async event=>{
  event.preventDefault();
  const button=$('loginButton'), password=$('sitePassword');
@@ -1547,7 +1560,8 @@ $('loginForm').addEventListener('submit',async event=>{
  $('loginRetry').classList.add('hidden');
  try{
   const loginStartedAt = Date.now();
-  const auth=await call('authenticateVisitor', password.value, getNoticeBrowserId(), await visitorIdentitySecret());
+  const prepared=await prepareVisitorLogin();
+  const auth=await call('authenticateVisitor', password.value, prepared.browserId, prepared.secret);
   if(!auth||!auth.token)throw new Error('閲覧用トークンを取得できませんでした。');
   await finishVisitorLogin(auth, loginStartedAt + Math.min(auth.expiresIn || 1800,1800)*1000);
  }catch(error){
@@ -1626,7 +1640,8 @@ async function restoreVisitorSession() {
    : 'ログイン状態を復元できませんでした。再読み込みするか、ログインし直してください。';
  } finally { $('loginButton').disabled=false; }
 }
-document.addEventListener('DOMContentLoaded',()=>{void restoreVisitorSession();},{once:true});
+// All login markup is above this script; do not wait for later page resources.
+queueMicrotask(()=>{void restoreVisitorSession();});
   $('loginRetry').addEventListener('click',()=>$('loginForm').requestSubmit());
 
 $('refreshLinks').addEventListener('click',async()=>{
