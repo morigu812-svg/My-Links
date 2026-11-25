@@ -773,7 +773,10 @@ async function refreshVisitorOnline(active = !document.hidden) {
  try {
   const result = await call('pulseVisitorOnline', active, token);
   if (token !== visitorToken) return;
-  $('visitorOnlineCount').textContent = Number(result.count).toLocaleString('ja-JP') + '人の利用者がオンライン';
+  const count = Number(result.count);
+  $('visitorOnlineCount').textContent = active && count === 1
+    ? '自分だけがオンライン'
+    : count.toLocaleString('ja-JP') + '人の利用者がオンライン';
  } catch (_) {
   if (token === visitorToken) $('visitorOnlineCount').textContent = 'オンライン人数を確認できません';
  } finally { visitorOnlineBusy = false; }
