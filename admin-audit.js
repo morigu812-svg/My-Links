@@ -7,7 +7,7 @@ const labels={sideClickLogs:'クリック履歴を表示',sideVisitorLogins:'利
 function text(node,value){node.textContent=String(value??'')}
 function status(value,error=false){text($('auditStatus'),value);$('auditStatus').classList.toggle('error',error)}
 function wipe(){generation++;verified=false;token='';logs=[];$('auditRows').replaceChildren();$('auditExport').disabled=true;for(const id of ['auditTotal','auditActors','auditLinks'])text($(id),'—');try{sessionStorage.removeItem('linkCoreAuditToken');sessionStorage.removeItem('linkCoreAuditExpiresAt')}catch{}}
-function returnToLogin(){wipe();location.replace('./admin.html')}
+function returnToLogin(){wipe();location.replace('./admin.html?v=audit-role2')}
 if(!/^[0-9a-f-]{72}$/i.test(token)||expiry<=Date.now()){returnToLogin();return;}
 const frame=document.createElement('iframe');frame.hidden=true;frame.title='LINK BASE audit bridge';frame.src=GAS_URL+'?mode=bridge';document.body.append(frame);
 addEventListener('message',event=>{if(event.source!==frame.contentWindow)return;let u;try{u=new URL(event.origin)}catch{return}if(u.protocol!=='https:'||!(u.hostname==='script.google.com'||u.hostname==='script.googleusercontent.com'||u.hostname.endsWith('.googleusercontent.com')))return;const data=event.data;if(data?.type==='DAILY_CORE_BRIDGE_READY'){if(!bridgeOrigin){bridgeOrigin=event.origin;bridgeReadyResolve()}return}if(event.origin!==bridgeOrigin||data?.type!=='DAILY_CORE_RESPONSE')return;const item=pending.get(data.id);if(!item)return;pending.delete(data.id);clearTimeout(item.timer);data.ok?item.resolve(data.result):item.reject(new Error(data.error||'通信に失敗しました'));});
@@ -24,3 +24,4 @@ $('auditExport').onclick=()=>{if(!verified||!logs.length||Date.now()>=expiry)ret
 function checkExpiry(){if(Date.now()>=expiry)returnToLogin()}setTimeout(checkExpiry,Math.max(0,expiry-Date.now()));document.addEventListener('visibilitychange',checkExpiry);addEventListener('pageshow',checkExpiry);
 (async()=>{try{const result=await call('checkAdminAuditSession');if(!result?.ok||result.role!=='audit')throw Error('監査権限を確認できません。');verified=true;await load(true)}catch(e){status(e.message,true)}})();
 })();
+

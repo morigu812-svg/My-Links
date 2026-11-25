@@ -1767,6 +1767,30 @@ function watchSessionExpiry(deadline, onExpired) {
 
   const ADMIN_EXPIRY_KEY = 'linkCoreAdminExpiresAt';
   let stopAdminExpiry = () => {};
+  const ADMIN_ROLE_PROTOCOL_KEY = 'linkCoreAdminRoleProtocol';
+
+  function handoffAdminAuditSession(result, startedAt) {
+    if (result.role !== 'audit') return false;
+    const seconds=Number(result.expiresIn);
+    const lifetime=Number.isFinite(seconds)&&seconds>0?Math.min(seconds,1800):1800;
+    const deadline=startedAt+lifetime*1000;
+    if (!Number.isFinite(deadline)||deadline<=Date.now()) throw new Error('認証に時間がかかりました。もう一度ログインしてください。');
+    try {
+      sessionStorage.setItem('linkCoreAuditToken',result.token);
+      sessionStorage.setItem('linkCoreAuditExpiresAt',String(deadline));
+      if(sessionStorage.getItem('linkCoreAuditToken')!==result.token||Number(sessionStorage.getItem('linkCoreAuditExpiresAt'))!==deadline)throw new Error('保存を確認できません。');
+    } catch (_) { throw new Error('監査画面を開くには、このサイトのセッションストレージを有効にしてください。'); }
+    stopAdminExpiry();
+    adminSession.removeItem(ADMIN_TOKEN_KEY);
+    adminSession.removeItem(AUTH_KEY);
+    adminSession.removeItem(ADMIN_EXPIRY_KEY);
+    adminSession.removeItem(ADMIN_ROLE_PROTOCOL_KEY);
+    document.body.classList.add('auth-locked');
+    authField.value='';
+    location.replace('./admin-audit.html?v=audit-role2');
+    return true;
+  }
+
 
   function reloadAfterAdminLogout() {
     adminChatRealtime?.stop();
@@ -1787,6 +1811,12 @@ function watchSessionExpiry(deadline, onExpired) {
     finally { reloadAfterAdminLogout(); }
   });
 
+  // Discard pre-role-routing state once, including audit tokens saved as normal admin tokens by an older page.
+  if (adminSession.getItem(ADMIN_ROLE_PROTOCOL_KEY) !== '2') {
+    adminSession.removeItem(ADMIN_TOKEN_KEY);
+    adminSession.removeItem(AUTH_KEY);
+    adminSession.removeItem(ADMIN_EXPIRY_KEY);
+  }
   const savedExpiry = Number(adminSession.getItem(ADMIN_EXPIRY_KEY));
   if (staffAuthPilot) {
     adminSession.removeItem(AUTH_KEY);
@@ -1796,7 +1826,7 @@ function watchSessionExpiry(deadline, onExpired) {
     $('authDescription').textContent = 'Supabaseに登録したメールアドレスとパスワードを入力してください。';
     $('passwordLabel').textContent = 'パスワード';
   }
-  if (adminSession.getItem(ADMIN_TOKEN_KEY) && savedExpiry <= Date.now()) {
+  if (adminSession.getItem(ADMIN_TOKEN_KEY) && (!Number.isFinite(savedExpiry) || savedExpiry <= Date.now())) {
     adminSession.removeItem(ADMIN_TOKEN_KEY);
     adminSession.removeItem(AUTH_KEY);
     adminSession.removeItem(ADMIN_EXPIRY_KEY);
@@ -2109,21 +2139,16 @@ function watchSessionExpiry(deadline, onExpired) {
         }
         if (error) throw new Error('Supabaseログインに失敗しました（' + (error.code || error.status || error.name) + '）。');
         if (!data.session) throw new Error('Supabaseからログイン情報を受け取れませんでした。');
-        authResult = await serverCall('authenticateAdminWithSupabase', data.session.access_token, {browserId:originalStaffBrowserId||staffBrowserId,identityId:staffBrowserId});
+        authResult = await serverCall('authenticateAdminWithSupabase', data.session.access_token, {browserId:originalStaffBrowserId||staffBrowserId,identityId:staffBrowserId,supportsAuditLogin:true});
       } else {
-        authResult = await serverCall('authenticateAdmin', authField.value, true, {browserId:originalStaffBrowserId||staffBrowserId,identityId:staffBrowserId});
+        authResult = await serverCall('authenticateAdmin', authField.value, true, {browserId:originalStaffBrowserId||staffBrowserId,identityId:staffBrowserId,supportsAuditLogin:true});
       }
       if (!authResult || !authResult.token) throw new Error('認証トークンを受け取れませんでした。');
-      if (authResult.role === 'audit') {
-        const auditExpiry=loginStartedAtEpoch+Math.min(authResult.expiresIn||1800,1800)*1000;
-        try { sessionStorage.setItem('linkCoreAuditToken',authResult.token);sessionStorage.setItem('linkCoreAuditExpiresAt',String(auditExpiry)); }
-        catch (_) { throw new Error('監査画面を開くには、このサイトのセッションストレージを有効にしてください。'); }
-        adminSession.removeItem(ADMIN_TOKEN_KEY);adminSession.removeItem(AUTH_KEY);adminSession.removeItem(ADMIN_EXPIRY_KEY);
-        authField.value='';location.assign('./admin-audit.html');return;
-      }
+      if (handoffAdminAuditSession(authResult,loginStartedAtEpoch)) return;
       const expiry = loginStartedAtEpoch + Math.min(authResult.expiresIn || 1800, 1800) * 1000;
       adminSession.setItem(ADMIN_EXPIRY_KEY, String(expiry));
       adminSession.setItem(ADMIN_TOKEN_KEY, authResult.token);
+      adminSession.setItem(ADMIN_ROLE_PROTOCOL_KEY, '2');
       stopAdminExpiry();
       stopAdminExpiry = watchSessionExpiry(expiry, reloadAfterAdminLogout);
       adminSession.setItem(AUTH_KEY, 'yes');
@@ -8192,4 +8217,5 @@ html body .sidebar .side-danger:hover{background:rgba(255,90,110,.14)!important}
 <script src="./admin-bgm.js?v=2" defer></script>
 </body>
 </html>
+
 

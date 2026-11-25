@@ -713,6 +713,9 @@ function authenticateAdmin(password, includeLinks, activityContext) {
   const auditPassword = properties.getProperty(ADMIN_AUDIT_PASSWORD_PROPERTY);
   if (typeof password === 'string' && password && auditPassword && password === auditPassword) {
     if (auditPassword === properties.getProperty('LINK_CORE_ADMIN_PASSWORD')) throw new Error('通常管理者と監査用のパスワードは別の値に設定してください。');
+    if (!activityContext || activityContext.supportsAuditLogin !== true) {
+      throw new Error('この管理者画面は監査用ログインに未対応の古い版です。管理者ページを再読み込みしてから専用パスワードを入力してください。');
+    }
     clearAuthFailures_(rateState);
     const auditToken = Utilities.getUuid() + Utilities.getUuid();
     storeSession_('AUDIT', auditToken, auditGeneration_());
@@ -4878,3 +4881,4 @@ function getAdminActivityLogs(options,token){
  if(next===null)next=first;return {logs,nextCursor:next>2?next:null,hasMore:next>2,total:last-1};
 }
 function getAdminActivityOverview(token){requireAdminAudit_(token);const id=PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY);const sheet=SpreadsheetApp.openById(id).getSheetByName(ADMIN_ACTIVITY_SHEET);const last=sheet?sheet.getLastRow():0;if(last<2)return {total:0,sample:0,admins:[],counts:{}};const first=Math.max(2,last-1999),rows=sheet.getRange(first,1,last-first+1,9).getValues(),admins={},counts={};rows.forEach(r=>{const browser=String(r[2]);admins[browser]={browserId:browser,name:String(r[3]||'管理者')};counts[String(r[4])]=(counts[String(r[4])]||0)+1;});return {total:last-1,sample:rows.length,admins:Object.keys(admins).map(k=>admins[k]),counts};}
+
