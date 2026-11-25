@@ -24,3 +24,23 @@ test('legacy normal-admin login still returns its links without an audit capabil
 test('audit password without K prefix does not issue an audit session',()=>{const {context:c,cache}=harness();assert.throws(()=>c.authenticateAdmin('audit-test-password',true,{supportsAuditLogin:true}),/管理者パスワードが違います/);assert(![...cache.keys()].some(k=>k.startsWith('LINK_CORE_AUDIT_')));});
 test('K prefix is case-sensitive and a wrong prefixed password never falls back to normal admin login',()=>{const {context:c}=harness();assert.throws(()=>c.authenticateAdmin('k:audit-test-password',true,{supportsAuditLogin:true}));assert.throws(()=>c.authenticateAdmin('K:normal-test-password',true,{supportsAuditLogin:true}));assert.throws(()=>c.authenticateAdmin('K:',true,{supportsAuditLogin:true}));});
 test('K prefix is stripped once, preserving a prefix in the actual secret if configured',()=>{const {context:c,props}=harness();props.set('LINK_CORE_SUPER_ADMIN_PASSWORD','K:inside-secret');const result=c.authenticateAdmin('K:K:inside-secret',true,{supportsAuditLogin:true});assert.equal(result.role,'audit');});
+
+test('only super admin can rename a browser; history, search and overview use the label',()=>{
+ const {context:c,sheets}=harness(),browserId='staff-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+ const normal=c.authenticateAdmin('normal-test-password',false,{browserId}).token;
+ const audit=c.authenticateAdmin('K:audit-test-password',true,{supportsAuditLogin:true}).token;
+ assert.throws(()=>c.setAdminActivityNickname(browserId,'新しい名前',normal));
+ assert.throws(()=>c.setAdminActivityNickname(browserId,'新しい名前',''));
+ const original=JSON.stringify(sheets.get('AdminActivityLogs').rows);
+ c.setAdminActivityNickname(browserId,' 新しい名前 ',audit);
+ assert.equal(c.getAdminActivityLogs({},audit).logs[0].name,'新しい名前');
+ assert.equal(c.getAdminActivityLogs({query:'新しい名前'},audit).logs.length,1);
+ assert.equal(c.getAdminActivityOverview(audit).admins[0].name,'新しい名前');
+ assert.equal(JSON.stringify(sheets.get('AdminActivityLogs').rows),original);
+ c.recordAdminActivities([{id:crypto.randomUUID(),type:'click',target:'sideChat'}],normal);
+ assert(c.getAdminActivityLogs({},audit).logs.every(x=>x.name==='新しい名前'));
+});
+test('nickname validation rejects malformed IDs, blank, long and control-character names',()=>{
+ const {context:c}=harness(),token=c.authenticateAdmin('K:audit-test-password',true,{supportsAuditLogin:true}).token;
+ for(const [id,name] of [['../bad','名前'],['staff-valid-id','   '],['staff-valid-id','a'.repeat(25)],['staff-valid-id','a\nb']])assert.throws(()=>c.setAdminActivityNickname(id,name,token));
+});
