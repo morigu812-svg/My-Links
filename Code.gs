@@ -427,7 +427,7 @@ function visitorSessionGeneration_() {
 }
 
 function logoutAllVisitors(adminToken) {
-  requireAdmin_(adminToken);
+  requireAdmin_(adminToken, 'logoutAllVisitors');
   const lock = LockService.getScriptLock(); lock.waitLock(10000);
   try { requireAdmin_(adminToken); PropertiesService.getScriptProperties().setProperty('LINK_CORE_VISITOR_GENERATION', Utilities.getUuid()); return {ok:true}; }
   finally { lock.releaseLock(); }
@@ -442,7 +442,7 @@ function isSessionValid_(role, token) {
   const savedGeneration = CacheService.getScriptCache().get('LINK_CORE_' + role + '_' + token);
   if (!savedGeneration) return false;
   const [generation, expiresAt] = savedGeneration.split(':');
-  if (!(Number(expiresAt) > Date.now() && generation === (role === 'VISITOR' ? visitorSessionGeneration_() : sessionGeneration_()))) return false;
+  if (!(Number(expiresAt) > Date.now() && generation === (role === 'VISITOR' ? visitorSessionGeneration_() : role === 'AUDIT' ? auditGeneration_() : sessionGeneration_()))) return false;
   if (role === 'VISITOR') {
     const browser = CacheService.getScriptCache().get('LINK_CORE_VISITOR_BROWSER_' + token);
     if(!browser || isVisitorBanned_(browser))return false;
@@ -457,7 +457,7 @@ function isVisitorBanned_(browserId) {
   return PropertiesService.getScriptProperties().getProperty('LINK_CORE_BAN_' + browserId) === '1';
 }
 function setVisitorBan(browserId, banned, adminToken) {
-  requireAdmin_(adminToken);
+  requireAdmin_(adminToken, 'setVisitorBan');
   if (!/^[A-Za-z0-9_-]{8,100}$/.test(String(browserId || '')) || typeof banned !== 'boolean') throw new Error('ブラウザIDまたは設定が不正です。');
   const props = PropertiesService.getScriptProperties();
   const key = 'LINK_CORE_BAN_' + browserId;
@@ -635,11 +635,12 @@ function storeSession_(role, token, generation) {
 
 function logoutCurrentSession(token) {
   requireLinkViewer_(token);
+  if (isSessionValid_('ADMIN',token)) auditAdminOperation_(token,'logout');
   const browser = CacheService.getScriptCache().get('LINK_CORE_VISITOR_BROWSER_' + token);
   if (browser) {
     try { visitorOnlineSnapshot_(token, browser, false, false); } catch (_) { /* Session revocation must still succeed. */ }
   }
-  CacheService.getScriptCache().removeAll(['LINK_CORE_ADMIN_' + token, 'LINK_CORE_VISITOR_' + token, 'LINK_CORE_VISITOR_DM_' + token, 'LINK_CORE_VISITOR_PROFILE_' + token, 'LINK_CORE_PROFILE_READY_' + token, 'LINK_CORE_VISITOR_BROWSER_' + token]);
+  CacheService.getScriptCache().removeAll(['LINK_CORE_ADMIN_' + token, 'LINK_CORE_ADMIN_ACTIVITY_' + token, 'LINK_CORE_VISITOR_' + token, 'LINK_CORE_VISITOR_DM_' + token, 'LINK_CORE_VISITOR_PROFILE_' + token, 'LINK_CORE_PROFILE_READY_' + token, 'LINK_CORE_VISITOR_BROWSER_' + token]);
   return { ok: true };
 }
 
@@ -656,7 +657,7 @@ function logoutAllBrowsers(adminToken) {
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
-    requireAdmin_(adminToken);
+    requireAdmin_(adminToken, 'logoutAllBrowsers');
     PropertiesService.getScriptProperties().setProperty(SESSION_GENERATION_PROPERTY, Utilities.getUuid());
     return { ok: true };
   } finally {
@@ -676,7 +677,7 @@ function requireLinkViewer_(token) {
   throw new Error('閲覧にはサイトのパスワード認証が必要です。');
 }
 
-function authenticateAdminWithSupabase(accessToken) {
+function authenticateAdminWithSupabase(accessToken, activityContext) {
   const generation = sessionGeneration_();
   const rateState = getAuthRateState_('ADMIN');
   checkAuthRateLimit_(rateState);
@@ -700,13 +701,23 @@ function authenticateAdminWithSupabase(accessToken) {
   clearAuthFailures_(rateState);
   const token = Utilities.getUuid() + Utilities.getUuid();
   storeSession_('ADMIN', token, generation);
+  auditAdminLogin_(token, activityContext, 'Supabase認証');
   return {ok:true, token, expiresIn:SESSION_TTL_SECONDS};
 }
 
-function authenticateAdmin(password, includeLinks) {
+function authenticateAdmin(password, includeLinks, activityContext) {
   const generation = sessionGeneration_();
   const rateState = getAuthRateState_('ADMIN');
   checkAuthRateLimit_(rateState);
+  const properties = PropertiesService.getScriptProperties();
+  const auditPassword = properties.getProperty(ADMIN_AUDIT_PASSWORD_PROPERTY);
+  if (typeof password === 'string' && password && auditPassword && password === auditPassword) {
+    if (auditPassword === properties.getProperty('LINK_CORE_ADMIN_PASSWORD')) throw new Error('通常管理者と監査用のパスワードは別の値に設定してください。');
+    clearAuthFailures_(rateState);
+    const auditToken = Utilities.getUuid() + Utilities.getUuid();
+    storeSession_('AUDIT', auditToken, auditGeneration_());
+    return {ok:true, role:'audit', token:auditToken, expiresIn:SESSION_TTL_SECONDS};
+  }
   const expected = PropertiesService.getScriptProperties().getProperty('LINK_CORE_ADMIN_PASSWORD');
   if (!expected) throw new Error('管理者パスワードが未設定です。Apps Script のスクリプト プロパティに LINK_CORE_ADMIN_PASSWORD を登録してください。');
   if (typeof password !== 'string' || !password || password !== expected) {
@@ -716,6 +727,7 @@ function authenticateAdmin(password, includeLinks) {
   clearAuthFailures_(rateState);
   const token = Utilities.getUuid() + Utilities.getUuid();
   storeSession_('ADMIN', token, generation);
+  auditAdminLogin_(token, activityContext, 'パスワード認証');
 
   // 管理画面だけ、認証成功後に一覧を同じ応答で返す。メモ帳はトークンだけ受け取る。
   if (includeLinks === true) {
@@ -735,12 +747,13 @@ function authenticateAdmin(password, includeLinks) {
 }
 
 /** 書き込み系関数は必ずサーバー側で管理者トークンを検証する。 */
-function requireAdmin_(token) {
+function requireAdmin_(token, activityMethod) {
   if (typeof token !== 'string' || !token ||
       !isSessionValid_('ADMIN', token)) {
     securityEvent_('admin_denied', 'ADMIN');
     throw new Error('管理者ログインが必要です。ログインし直してください。');
   }
+  if (activityMethod) auditAdminOperation_(token, activityMethod);
 }
 
 function visitorChatReadSheet_() {
@@ -860,7 +873,7 @@ function getLinkReports(options, adminToken) {
     reports:rows.slice(-200).reverse().filter(row=>row[0]).map(row=>({id:String(row[0]), date:toIso_(row[1]), url:String(row[2]), browserId:String(row[3]), checked:!!row[4]}))};
 }
 function markLinkReportChecked(id, adminToken) {
-  requireAdmin_(adminToken);
+  requireAdmin_(adminToken, 'markLinkReportChecked');
   if (!/^[0-9a-f-]{36}$/i.test(String(id || ''))) throw new Error('報告IDが不正です。');
   const lock = LockService.getScriptLock(); lock.waitLock(10000);
   try {
@@ -941,7 +954,7 @@ function getLinks(viewerToken) {
  * リンクを新規作成または更新する。
  */
 function saveLink(input, adminToken) {
-  requireAdmin_(adminToken);
+  requireAdmin_(adminToken, 'saveLink');
   if (!input || typeof input !== 'object') {
     throw new Error('リンクの入力内容がありません。');
   }
@@ -1086,7 +1099,7 @@ function setVisitorFavorite(linkId, favorite, secret, token) {
  * 管理画面の「元に戻す」は restoreTrash で Trash から Links へ戻す。
  */
 function deleteLink(id, adminToken) {
-  requireAdmin_(adminToken);
+  requireAdmin_(adminToken, 'deleteLink');
   const linkId = cleanText_(id, 200);
   if (!linkId) throw new Error('削除するリンクIDがありません。');
 
@@ -1228,7 +1241,7 @@ function getTrash(adminToken) {
  * 戻り値は getLinks と同じ形（{links, categories}）で、管理画面の apply() がそのまま使える。
  */
 function restoreTrash(id, adminToken) {
-  requireAdmin_(adminToken);
+  requireAdmin_(adminToken, 'restoreTrash');
   const trashId = cleanText_(id, 200);
   if (!trashId) throw new Error('復元するリンクIDがありません。');
 
@@ -1284,7 +1297,7 @@ function restoreTrash(id, adminToken) {
 
 /** ゴミ箱の1件を完全に削除する（復元不可）。管理者のみ。 */
 function deleteTrashPermanently(id, adminToken) {
-  requireAdmin_(adminToken);
+  requireAdmin_(adminToken, 'deleteTrashPermanently');
   const trashId = cleanText_(id, 200);
   if (!trashId) throw new Error('削除するリンクIDがありません。');
 
@@ -1312,7 +1325,7 @@ function deleteTrashPermanently(id, adminToken) {
 
 /** ゴミ箱をすべて空にする（復元不可）。管理者のみ。 */
 function emptyTrash(adminToken) {
-  requireAdmin_(adminToken);
+  requireAdmin_(adminToken, 'emptyTrash');
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
@@ -1388,7 +1401,7 @@ function getOfficialLinks(viewerToken) {
 }
 
 function saveOfficialLink(input, adminToken) {
-  requireAdmin_(adminToken);
+  requireAdmin_(adminToken, 'saveOfficialLink');
   if (!input || typeof input !== 'object') throw new Error('公式リンクの入力内容がありません。');
   const id = cleanText_(input.id, 200) || Utilities.getUuid();
   const name = cleanText_(input.name, 200), url = normalizeUrl_(input.url);
@@ -1425,7 +1438,7 @@ function saveOfficialLink(input, adminToken) {
 }
 
 function deleteOfficialLink(id, adminToken) {
-  requireAdmin_(adminToken);
+  requireAdmin_(adminToken, 'deleteOfficialLink');
   const linkId = cleanText_(id, 200);
   if (!linkId) throw new Error('削除する公式リンクIDがありません。');
   const lock = LockService.getScriptLock();
@@ -1531,6 +1544,7 @@ function getMemos(memoToken, adminToken) {
 
 function saveMemo(input, memoToken, adminToken) {
   requireMemo_(memoToken, adminToken);
+  auditAdminOperation_(adminToken, 'saveMemo');
   if (!input || typeof input !== 'object') throw new Error('メモの入力内容がありません。');
   const title = cleanText_(input.title, 200);
   const body = cleanText_(input.body, 20000);
@@ -1579,6 +1593,7 @@ function saveMemo(input, memoToken, adminToken) {
 
 function deleteMemo(id, memoToken, adminToken) {
   requireMemo_(memoToken, adminToken);
+  auditAdminOperation_(adminToken, 'deleteMemo');
   const memoId = cleanText_(id, 200);
   if (!memoId) throw new Error('削除するメモIDがありません。');
   const lock = LockService.getScriptLock();
@@ -1653,7 +1668,7 @@ function privateChatSheet_(create) {
 
 
 function deleteVisitorChatMessage(messageId, isPrivate, adminToken) {
-  requireAdmin_(adminToken);
+  requireAdmin_(adminToken, 'deleteVisitorChatMessage');
   if (typeof messageId !== 'string' || !messageId || messageId.length > 200 ||
       typeof isPrivate !== 'boolean') throw new Error('メッセージIDが不正です。');
   const lock = LockService.getScriptLock();
@@ -1788,7 +1803,7 @@ function requestVisitorSchoolAndFilterCorrection(browserId, adminToken) {
 }
 
 function requestVisitorProfileCorrection_(browserId, fields, adminToken) {
-  requireAdmin_(adminToken);
+  requireAdmin_(adminToken, 'requestVisitorProfileCorrection_');
   if (typeof browserId !== 'string' || !/^[A-Za-z0-9_-]{8,100}$/.test(browserId)) throw new Error('ブラウザIDが不正です。');
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
@@ -2013,7 +2028,7 @@ function recordLinkClick(linkId, browserId, visitorToken, visitId) {
   }
 }
 function setClickBrowserName(browserId, name, adminToken) {
-  requireAdmin_(adminToken);
+  requireAdmin_(adminToken, 'setClickBrowserName');
   const id = cleanText_(browserId, 100);
   const label = cleanText_(name, 40);
   if (!/^[A-Za-z0-9_-]{8,100}$/.test(id)) throw new Error('ブラウザIDが不正です。');
@@ -2117,7 +2132,7 @@ function getClickLogs(options, adminToken) {
 
 /* 管理者によるクリック履歴の全削除 */
 function deleteClickLogs(adminToken) {
-  requireAdmin_(adminToken);
+  requireAdmin_(adminToken, 'deleteClickLogs');
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
@@ -2134,7 +2149,7 @@ function deleteClickLogs(adminToken) {
 
 /* 管理者によるクリック履歴の個別削除 */
 function deleteClickLog(logId, adminToken) {
-  requireAdmin_(adminToken);
+  requireAdmin_(adminToken, 'deleteClickLog');
   const id = cleanText_(logId, 200);
   if (!id) throw new Error('削除対象の履歴IDがありません。');
   const lock = LockService.getScriptLock();
@@ -3089,7 +3104,7 @@ function getStaffChatAttachmentChunk(messageId, offset, browserOrToken, adminTok
 }
 
 function deleteStaffChatMessage(id, browserId, adminToken) {
-  requireAdmin_(adminToken);
+  requireAdmin_(adminToken, 'deleteStaffChatMessage');
   requireStaffSupabase_();
   if (typeof id !== 'string' || !/^[0-9a-f-]{36}$/i.test(id) || !validStaffBrowserId_(browserId)) {
     throw new Error('投稿を確認できません。');
@@ -3492,7 +3507,7 @@ function visitorLoginLogSheet_() {
 }
 
 function deleteVisitorLoginLog(id, adminToken) {
-  requireAdmin_(adminToken);
+  requireAdmin_(adminToken, 'deleteVisitorLoginLog');
   if (typeof id !== 'string' || !/^[0-9a-f-]{36}$/i.test(id)) throw new Error('履歴IDが不正です。');
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
@@ -3511,7 +3526,7 @@ function deleteVisitorLoginLog(id, adminToken) {
 }
 
 function deleteVisitorLoginLogs(adminToken) {
-  requireAdmin_(adminToken);
+  requireAdmin_(adminToken, 'deleteVisitorLoginLogs');
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
@@ -3526,7 +3541,7 @@ function deleteVisitorLoginLogs(adminToken) {
 }
 
 function setStaffNickname(browserId, nickname, adminToken) {
-  requireAdmin_(adminToken);
+  requireAdmin_(adminToken, 'setStaffNickname');
   if (!validStaffBrowserId_(browserId)) throw new Error('連携IDが不正です。');
   const name = typeof nickname === 'string' ? nickname.trim() : '';
   if (!name || name.length > 24 || /[\x00-\x1F\x7F]/.test(name)) throw new Error('ニックネームは1〜24文字で入力してください。');
@@ -4375,7 +4390,7 @@ function getFilterAccessActivitySummary(adminToken) {
 }
 
 function mergeFilterAccessNames(source, target, adminToken) {
-  requireAdmin_(adminToken);
+  requireAdmin_(adminToken, 'mergeFilterAccessNames');
   source = cleanText_(source,80); target = cleanText_(target,80);
   if (!source || !target || /[\u0000-\u001f]/.test(source+target)) throw new Error('フィルター名を入力してください。');
   const lock = LockService.getScriptLock(); lock.waitLock(10000);
@@ -4615,7 +4630,7 @@ function getLinkViewCounts(viewerToken) {
   })};
 }
 function setLinkViewVisibility(linkId,visible,adminToken){
-  requireAdmin_(adminToken);
+  requireAdmin_(adminToken, 'setLinkViewVisibility');
   if(typeof visible!=='boolean')throw new Error('公開設定が不正です。');
   const id=String(linkId||'');
   if(!getLinksForToken_(adminToken,true).links.some(link=>String(link.id)===id))throw new Error('リンクが見つかりません。');
@@ -4717,7 +4732,7 @@ function getVisitorDowntime(browserId,adminToken){
   return {config:visitorDowntimeConfig_(browserId),state:visitorDowntimeState_(browserId)};
 }
 function saveVisitorDowntime(browserId,enabled,start,end,adminToken){
-  requireAdmin_(adminToken);
+  requireAdmin_(adminToken, 'saveVisitorDowntime');
   if(!/^[A-Za-z0-9_-]{8,100}$/.test(String(browserId||''))||typeof enabled!=='boolean')throw new Error('利用者または設定が不正です。');
   start=normalizeDowntimeTime_(start);end=normalizeDowntimeTime_(end);
   const valid=value=>typeof value==='string'&&/^([01]\d|2[0-3]):[0-5]\d$/.test(value);
@@ -4759,7 +4774,7 @@ function getVisitorWarning(browserId,adminToken){
   return {warning:visitorWarning_(browserId)};
 }
 function setVisitorWarning(browserId,message,enabled,adminToken){
-  requireAdmin_(adminToken);
+  requireAdmin_(adminToken, 'setVisitorWarning');
   if(!/^[A-Za-z0-9_-]{8,100}$/.test(String(browserId||''))||typeof enabled!=='boolean')throw new Error('ブラウザIDまたは設定が不正です。');
   const text=typeof message==='string'?message.trim():'';
   if(enabled&&(!text||text.length>500||/[\x00-\x1f\x7f]/.test(text)))throw new Error('警告文は改行なしの1〜500文字で入力してください。');
@@ -4802,7 +4817,7 @@ function getLinkPageGroups(adminToken){
   return {links,groups:Array.from(new Set(groups.values())).sort((a,b)=>a.localeCompare(b,'ja'))};
 }
 function setLinkPageGroup(linkIds,groupName,adminToken){
-  requireAdmin_(adminToken);
+  requireAdmin_(adminToken, 'setLinkPageGroup');
   if(!Array.isArray(linkIds)||!linkIds.length||linkIds.length>200||linkIds.some(id=>typeof id!=='string'||!id||id.length>200||/[\x00-\x1f\x7f]/.test(id)))throw new Error('リンクを1〜200件選択してください。');
   if(typeof groupName!=='string')throw new Error('集計ページ名を入力してください。');
   const group=groupName.trim();
@@ -4828,3 +4843,38 @@ function setLinkPageGroup(linkIds,groupName,adminToken){
     return {ok:true,group,updated:new Set(linkIds).size};
   }finally{lock.releaseLock();}
 }
+
+
+
+/* Admin activity audit. Separate role, tokens, storage and read APIs. */
+const ADMIN_AUDIT_PASSWORD_PROPERTY = 'LINK_CORE_SUPER_ADMIN_PASSWORD';
+const ADMIN_ACTIVITY_SHEET = 'AdminActivityLogs';
+const ADMIN_ACTIVITY_HEADERS = ['ID','記録日時','管理者ブラウザID','管理者名','種別','操作','対象','URL','セッション識別'];
+function auditGeneration_(){const value=PropertiesService.getScriptProperties().getProperty(ADMIN_AUDIT_PASSWORD_PROPERTY)||'';return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,value,Utilities.Charset.UTF_8).map(b=>(b&255).toString(16).padStart(2,'0')).join('');}
+function requireAdminAudit_(token){if(!isSessionValid_('AUDIT',token))throw new Error('監査用ログインの有効期限が切れました。専用パスワードでログインし直してください。');}
+function checkAdminAuditSession(token){requireAdminAudit_(token);return {ok:true,role:'audit'};}
+function logoutAdminAuditSession(token){requireAdminAudit_(token);CacheService.getScriptCache().remove('LINK_CORE_AUDIT_'+token);return {ok:true};}
+function auditShortText_(value,max){return String(value||'').replace(/[\x00-\x1f\x7f]/g,' ').slice(0,max);}
+function activityActor_(token){let actor=null;try{actor=JSON.parse(CacheService.getScriptCache().get('LINK_CORE_ADMIN_ACTIVITY_'+token)||'null');}catch(_){}if(!actor)return null;const name=PropertiesService.getScriptProperties().getProperty('LINK_CORE_STAFF_NAME_'+actor.identityId);actor.name=auditShortText_(name||actor.name||'管理者',40);return actor;}
+function bindAdminActivitySession_(token,context){let existing=activityActor_(token);if(existing)return existing;context=context&&typeof context==='object'?context:{};const valid=v=>typeof v==='string'&&/^[A-Za-z0-9_-]{8,100}$/.test(v);const browserId=valid(context.browserId)?context.browserId:'admin-'+Utilities.getUuid();const identityId=valid(context.identityId)?context.identityId:browserId;const name=PropertiesService.getScriptProperties().getProperty('LINK_CORE_STAFF_NAME_'+identityId)||'管理者';const actor={browserId,identityId,name:auditShortText_(name,40),sessionId:Utilities.getUuid()};CacheService.getScriptCache().put('LINK_CORE_ADMIN_ACTIVITY_'+token,JSON.stringify(actor),SESSION_TTL_SECONDS);return actor;}
+function ensureAdminActivitySheet_(){const id=PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY);if(!id)throw new Error('スプレッドシートIDが未設定です。');const ss=SpreadsheetApp.openById(id);const sheet=ss.getSheetByName(ADMIN_ACTIVITY_SHEET)||ss.insertSheet(ADMIN_ACTIVITY_SHEET);if(sheet.getLastRow()===0)sheet.getRange(1,1,1,ADMIN_ACTIVITY_HEADERS.length).setValues([ADMIN_ACTIVITY_HEADERS]);return sheet;}
+function appendAdminActivities_(actor,items){if(!actor||!items.length)return;const lock=LockService.getScriptLock();lock.waitLock(5000);try{const sheet=ensureAdminActivitySheet_();if(items.some(e=>e.id)&&sheet.getLastRow()>1){const last=sheet.getLastRow(),first=Math.max(2,last-499),seen=new Set(sheet.getRange(first,1,last-first+1,1).getValues().map(r=>String(r[0])));items=items.filter(e=>!e.id||!seen.has(e.id));}if(!items.length)return;const now=new Date();const rows=items.map(e=>[e.id||Utilities.getUuid(),now,safeCell_(actor.browserId),safeCell_(actor.name),safeCell_(e.type),safeCell_(e.action),safeCell_(e.target||''),safeCell_(e.url||''),actor.sessionId]);sheet.getRange(sheet.getLastRow()+1,1,rows.length,ADMIN_ACTIVITY_HEADERS.length).setValues(rows);}finally{lock.releaseLock();}}
+function auditAdminLogin_(token,context,method){try{const actor=bindAdminActivitySession_(token,context);appendAdminActivities_(actor,[{type:'login',action:'管理者ログイン',target:method}]);}catch(error){console.error('Admin activity login record failed: '+error.message);}}
+function attachAdminActivitySession(context,token){requireAdmin_(token);const actor=bindAdminActivitySession_(token,context);return {ok:true};}
+function auditAdminOperation_(token,method){try{const actor=activityActor_(token)||bindAdminActivitySession_(token,{});appendAdminActivities_(actor,[{type:method==='logout'?'logout':'operation',action:method==='logout'?'管理者ログアウト':'操作要求',target:auditShortText_(method,80)}]);}catch(error){console.error('Admin activity operation record failed: '+error.message);}}
+function auditSafeUrl_(value){return String(value||'').replace(/[?#].*$/,'').replace(/^(https?:\/\/)[^/@]+@/i,'$1').slice(0,1000);}
+function recordAdminActivities(events,token){
+ requireAdmin_(token);if(!Array.isArray(events)||events.length>30)throw new Error('操作記録の件数が不正です。');const actor=activityActor_(token);if(!actor)throw new Error('管理者の操作記録セッションが未登録です。');
+ const cache=CacheService.getScriptCache(),rateKey='LINK_CORE_ACTIVITY_RATE_'+actor.sessionId+'_'+Math.floor(Date.now()/60000);const used=Number(cache.get(rateKey)||0);if(used+events.length>300)throw new Error('操作記録が多すぎます。少し待って再送してください。');
+ const valid=events.map(e=>{if(!e||typeof e.id!=='string'||!/^[0-9a-f-]{36}$/i.test(e.id)||!['click','link','navigate'].includes(e.type))throw new Error('操作記録の形式が不正です。');return {id:e.id,type:e.type,target:auditShortText_(e.target,100),linkId:auditShortText_(e.linkId,200)};});
+ const dedupeKey='LINK_CORE_ACTIVITY_IDS_'+actor.sessionId;let seen=[];try{seen=JSON.parse(cache.get(dedupeKey)||'[]');}catch(_){}const batchSeen=new Set(seen);const filtered=valid.filter(e=>{if(batchSeen.has(e.id))return false;batchSeen.add(e.id);return true;});let links=[];if(filtered.some(e=>e.type==='link'))links=getLinksForToken_(token,true).links;
+ const rows=filtered.map(e=>{if(e.type==='link'){const link=links.find(l=>l.id===e.linkId);if(!link)return {id:e.id,type:'click',action:'リンクを開く（対象不明）',target:e.linkId};return {id:e.id,type:'link',action:'リンクを開く',target:auditShortText_(link.title,200),url:auditSafeUrl_(link.url)};}return {id:e.id,type:e.type,action:e.type==='navigate'?'画面を表示':'ボタン操作',target:e.target};});
+ appendAdminActivities_(actor,rows);cache.put(dedupeKey,JSON.stringify([...batchSeen].slice(-240)),SESSION_TTL_SECONDS);cache.put(rateKey,String(used+rows.length),60);return {ok:true,saved:rows.length};
+}
+function getAdminActivityLogs(options,token){
+ requireAdminAudit_(token);options=options||{};const cursor=options.beforeRow;if(cursor!=null&&(!Number.isSafeInteger(cursor)||cursor<2))throw new Error('読み込み位置が不正です。');const type=String(options.type||'');if(type&&!['login','logout','operation','click','link','navigate'].includes(type))throw new Error('種別が不正です。');const actor=String(options.browserId||'');if(actor&&!/^[A-Za-z0-9_-]{8,100}$/.test(actor))throw new Error('管理者ブラウザIDが不正です。');const query=auditShortText_(options.query,80).toLowerCase();const start=String(options.start||''),end=String(options.end||'');if((start&&!/^\d{4}-\d{2}-\d{2}$/.test(start))||(end&&!/^\d{4}-\d{2}-\d{2}$/.test(end))||(start&&end&&start>end))throw new Error('日付の範囲が不正です。');
+ const id=PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY);const sheet=SpreadsheetApp.openById(id).getSheetByName(ADMIN_ACTIVITY_SHEET);const last=sheet?sheet.getLastRow():0;if(last<2)return {logs:[],nextCursor:null,hasMore:false,total:0};const before=Math.min(cursor||last+1,last+1),first=Math.max(2,before-1000);if(before<=2)return {logs:[],nextCursor:null,hasMore:false,total:last-1};const rows=sheet.getRange(first,1,before-first,9).getValues();const logs=[];let next=null;
+ for(let i=rows.length-1;i>=0;i--){const row=rows[i];const day=row[1] instanceof Date?Utilities.formatDate(row[1],'Asia/Tokyo','yyyy-MM-dd'):String(row[1]).slice(0,10);if(type&&row[4]!==type||actor&&row[2]!==actor||start&&day<start||end&&day>end)continue;const item={id:String(row[0]),date:toIso_(row[1]),browserId:String(row[2]),name:String(row[3]),type:String(row[4]),action:String(row[5]),target:String(row[6]),url:String(row[7]),sessionId:String(row[8])};if(query&&![item.name,item.browserId,item.action,item.target,item.url].join(' ').toLowerCase().includes(query))continue;logs.push(item);if(logs.length>=100){next=first+i;break;}}
+ if(next===null)next=first;return {logs,nextCursor:next>2?next:null,hasMore:next>2,total:last-1};
+}
+function getAdminActivityOverview(token){requireAdminAudit_(token);const id=PropertiesService.getScriptProperties().getProperty(SPREADSHEET_PROPERTY);const sheet=SpreadsheetApp.openById(id).getSheetByName(ADMIN_ACTIVITY_SHEET);const last=sheet?sheet.getLastRow():0;if(last<2)return {total:0,sample:0,admins:[],counts:{}};const first=Math.max(2,last-1999),rows=sheet.getRange(first,1,last-first+1,9).getValues(),admins={},counts={};rows.forEach(r=>{const browser=String(r[2]);admins[browser]={browserId:browser,name:String(r[3]||'管理者')};counts[String(r[4])]=(counts[String(r[4])]||0)+1;});return {total:last-1,sample:rows.length,admins:Object.keys(admins).map(k=>admins[k]),counts};}
