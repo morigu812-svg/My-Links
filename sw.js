@@ -9,7 +9,7 @@
  */
 'use strict';
 
-var CACHE_VERSION = 'link-core-v130';
+var CACHE_VERSION = 'link-core-v131';
 var STATIC_CACHE = 'link-core-static-' + CACHE_VERSION;
 
 /* アプリの殻。相対パスなので、GitHub Pages のプロジェクトサイト
@@ -59,7 +59,7 @@ function isStaticAsset(request) {
   var path = url.pathname;
   return STATIC_ASSETS.some(function (asset) {
     return url.href === new URL(asset, self.location).href;
-  }) || /\.(?:html|css|js|svg|png|jpg|jpeg|webp|ico|webmanifest|json)$/.test(path);
+  }) || /\.(?:html|css|mjs|js|svg|png|jpg|jpeg|webp|ico|webmanifest|json)$/.test(path);
 }
 
 self.addEventListener('install', function (event) {
