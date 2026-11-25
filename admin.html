@@ -2637,9 +2637,18 @@ document.getElementById('authSubmit').disabled = false;
 
   let visitorChatRenderKey = '';
   let visitorChatRevision = 0;
+  let visitorChatScrollOnOpen = false;
+  function scrollVisitorChatToLatest() {
+    if (!chatOverlay.classList.contains('open')) return;
+    const area = chatMessages.closest('.chat-table-wrap');
+    if (area) area.scrollTop = area.scrollHeight;
+  }
   function renderChatMessages(messages) {
     const key = JSON.stringify(messages);
-    if (key === visitorChatRenderKey) return;
+    if (key === visitorChatRenderKey) {
+      if (visitorChatScrollOnOpen) {scrollVisitorChatToLatest(); visitorChatScrollOnOpen = false;}
+      return;
+    }
     const token = adminSession.getItem(ADMIN_TOKEN_KEY);
     if (holdChatRenderWhileMenuOpen(chatMessages, () => {
       if (token === adminSession.getItem(ADMIN_TOKEN_KEY) && chatOverlay.classList.contains('open')) {
@@ -2661,7 +2670,10 @@ document.getElementById('authSubmit').disabled = false;
       notice.textContent = 'まだメッセージはありません。';
       chatMessages.replaceChildren(notice);
     }
-    if (nearBottom) scrollArea.scrollTop = scrollArea.scrollHeight;
+    if (nearBottom || visitorChatScrollOnOpen) {
+      scrollVisitorChatToLatest();
+      if (chatOverlay.classList.contains('open')) visitorChatScrollOnOpen = false;
+    }
   }
   function updateAdminChatBadge() {
     const badge = $('chatUnreadBadge');
@@ -2742,7 +2754,7 @@ document.getElementById('authSubmit').disabled = false;
     hideMainChats();
     document.querySelector('[data-view="all"]').click();
   }
-  function openAdminChat(){if(!adminSession.getItem(ADMIN_TOKEN_KEY)){alert('先に管理者ログインをしてください。');return;}openMainChat(chatOverlay, '利用者チャット');void loadVisitorChatRead().then(()=>{updateVisitorChatUnread(lastVisitorChatMessages);void refreshAdminChat()}).catch(error=>{$('visitorChatStatus').textContent='既読の取得に失敗しました：'+error.message});}
+  function openAdminChat(){if(!adminSession.getItem(ADMIN_TOKEN_KEY)){alert('先に管理者ログインをしてください。');return;}visitorChatScrollOnOpen=true;openMainChat(chatOverlay, '利用者チャット');scrollVisitorChatToLatest();requestAnimationFrame(scrollVisitorChatToLatest);void loadVisitorChatRead().then(()=>{updateVisitorChatUnread(lastVisitorChatMessages);void refreshAdminChat()}).catch(error=>{$('visitorChatStatus').textContent='既読の取得に失敗しました：'+error.message});}
   $('sideChat').addEventListener('click',openAdminChat);
   $('visitorChatNotice').addEventListener('click', openAdminChat);
   const clickLogPanel=$('clickLogPanel');
