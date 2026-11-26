@@ -470,5 +470,29 @@
     "displayTitle": "問題ランダム機構",
     "adopted": null,
     "prompt": "Use case: stylized-concept. Create ONE finished landscape 16:9 website directory thumbnail, premium detailed editorial 3D art, coherent composition, very legible at small size. Subject based on a real page just inspected: A neat stack of reusable study flashcards with question marks and answer cards, shuffle arrows and a small numbered progress ring. Quiz sets, random question presentation and sharing, not a dice game. Exact sole title text: \"問題ランダム機構\". Do not include extra words, invented claims, emoji, watermark, tiny illegible text, or actual personal data. This is a representative illustration, not a screenshot. Make the site's actual purpose recognizable immediately."
+  },
+  {
+    "id": "32f93179-1a13-44c0-9db3-70a3cbdd017e",
+    "index": 27,
+    "title": "プロキシ",
+    "displayTitle": "dogeub",
+    "adopted": false,
+    "prompt": "Create a polished 16:9 website thumbnail for dogeub, a browser start page actually observed: deep navy dotted backdrop, white dogeub wordmark and lightning motif, centered wide search/address bar, four small round shortcut symbols below for search, movies, chat, code; Apps Games Settings at top right. Premium crisp dark browser interface illustration with subtle cyan lighting and layered glass panels. Exact main text 'dogeub', small 'Static v5.1.1'. No emoji, no invented claims, no extra promotional copy."
+  },
+  {
+    "id": "1ac5263d-84cc-4559-899a-cf53b53142f9",
+    "index": 38,
+    "title": "Padletポータルワールド",
+    "displayTitle": "Padletポータルワールド",
+    "adopted": false,
+    "prompt": "Create a polished 16:9 thumbnail for a Japanese Padlet community directory called 'Padletポータルワールド'. Based on observed site: deep ocean navy with luminous translucent jellyfish, clean white vertical community cards with little landscape artwork headers and short abstract text lines, each represents a different community room; interconnected floating portals evoke discovering rooms. Main title 'Padletポータルワールド' in clear Japanese typography. Elegant editorial digital illustration, high quality, legible at small size, no emoji, no copied user posts, no people or private names, no QR codes."
+  },
+  {
+    "id": "0427e29c-32db-4bc7-aab4-59552a5a20a5",
+    "index": 76,
+    "title": "edu-stable-5.1.1",
+    "displayTitle": "edu-stable 5.1.1",
+    "adopted": false,
+    "prompt": "Create a polished 16:9 website thumbnail for 'edu-stable 5.1.1', a browser start portal actually observed with dogeub branding, dark navy dotted canvas, centered white lightning-like brand emblem above search/address field, four round shortcut controls representing search movie chat code and Apps Games Settings navigation. Main title 'edu-stable 5.1.1'. Sleek dimensional dark UI illustration, soft blue highlights, precise sophisticated design, no emoji, no invented capability claims. Distinct composition with diagonal floating browser panel filling frame."
   }
 ]
