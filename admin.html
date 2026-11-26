@@ -2719,6 +2719,7 @@ document.getElementById('authSubmit').disabled = false;
       updateVisitorChatUnread(messages);
       $('visitorChatStatus').textContent = '';
     } catch (error) {
+      if(token!==adminSession.getItem(ADMIN_TOKEN_KEY)||revision!==visitorChatRevision)return;
       if (chatOverlay.classList.contains('open')) $('visitorChatStatus').textContent = '読み込みに失敗しました：' + (error.message || '通信エラー');
     } finally {
       chatLoading = false;
@@ -3689,15 +3690,18 @@ document.getElementById('authSubmit').disabled = false;
     });
   }
   async function refreshTrash(){
-    if(trashLoading)return;trashLoading=true;
+    const token=adminSession.getItem(ADMIN_TOKEN_KEY);
+    if(!token||trashLoading)return;trashLoading=true;
     const button=$('refreshTrash');if(button)button.disabled=true;
     $('trashStatus').textContent='ゴミ箱を読み込んでいます…';
     try{
       const result=await serverCall('getTrash');
+      if(token!==adminSession.getItem(ADMIN_TOKEN_KEY))return;
       const items=Array.isArray(result.trash)?result.trash:[];
       renderTrash(items);trashLoaded=true;
       $('trashStatus').textContent=items.length+' 件の削除済みリンクがあります。';
     }catch(error){
+      if(token!==adminSession.getItem(ADMIN_TOKEN_KEY))return;
       const body=$('trashRows');body.replaceChildren();
       const tr=document.createElement('tr');const td=document.createElement('td');
       td.colSpan=5;td.className='click-log-empty';td.textContent='読み込みに失敗しました。時間をおいて「再読み込み」を押してください。';
@@ -3849,7 +3853,8 @@ document.getElementById('authSubmit').disabled = false;
   }
   async function runDiagnosis(){
     if(diagnosisRunning)return;
-    if(!adminSession.getItem(ADMIN_TOKEN_KEY)){alert('先に管理者ログインをしてください。');return;}
+    const token=adminSession.getItem(ADMIN_TOKEN_KEY);
+    if(!token){alert('先に管理者ログインをしてください。');return;}
     diagnosisRunning=true;
     const button=$('runDiagnosis');if(button)button.disabled=true;
     diagnosisResults=[];diagnosisDuplicates=[];diagnosisTotalUrls=0;
@@ -3859,22 +3864,27 @@ document.getElementById('authSubmit').disabled = false;
     diagTr.appendChild(diagTd);diagBody.appendChild(diagTr);
     const linksById={};
     state.links.forEach(function(link){linksById[link.id]=link;});
-    let offset=0;let done=false;let failed=false;let failMessage='';
+    let offset=0;let done=false;let failed=false;let failMessage='';const seenOffsets=new Set();
     $('diagnosisStatus').textContent='診断しています…';
     try{
       while(!done){
+        if(token!==adminSession.getItem(ADMIN_TOKEN_KEY))return;
+        if(seenOffsets.has(offset))throw new Error('診断の取得位置が繰り返されています。再実行してください。');
+        seenOffsets.add(offset);
         const result=await serverCall('diagnoseLinks',offset);
+        if(token!==adminSession.getItem(ADMIN_TOKEN_KEY))return;
         diagnosisDuplicates=Array.isArray(result.duplicates)?result.duplicates:[];
         diagnosisTotalUrls=Number(result.totalUrls||0);
         diagnosisResults=diagnosisResults.concat(diagnosisRowsFromResults(Array.isArray(result.results)?result.results:[],linksById));
         renderDiagnosis();
         $('diagnosisStatus').textContent='診断中… '+Math.min(Number(result.checked||0),diagnosisTotalUrls)+'/'+diagnosisTotalUrls+'件のURLを確認中';
         if(result.done||result.nextOffset==null||result.nextOffset<0){done=true;}
-        else{offset=result.nextOffset;}
+        else{if(!Number.isSafeInteger(result.nextOffset)||result.nextOffset<=offset)throw new Error('診断の取得位置が不正です。再実行してください。');offset=result.nextOffset;}
       }
     }catch(error){
       // バッチ単位で失敗しても、ここまでの結果は残す。最初から1件も取れていない場合は
       // 空の表示と誤読されないよう、エラー行に置き換える（ゴミ箱と同じ方針）。
+      if(token!==adminSession.getItem(ADMIN_TOKEN_KEY))return;
       failed=true;failMessage=error.message||'通信エラー';
       if(!diagnosisResults.length)renderDiagnosisError(failMessage);
     }finally{diagnosisRunning=false;if(button)button.disabled=false;}
@@ -3956,7 +3966,8 @@ $('closeChat').addEventListener('click', closeMainChat);
   chatForm.addEventListener('submit', async event => {
     event.preventDefault();
     if (chatSend.disabled) return;
-    const message = chatInput.value.trim();
+    const body = chatInput.value;
+    const message = body.trim();
     if (!message) return;
     const token = adminSession.getItem(ADMIN_TOKEN_KEY);
     if (!token) return;
@@ -3971,7 +3982,7 @@ $('closeChat').addEventListener('click', closeMainChat);
       await (adminChatRealtime?.send('public', message, '', fallback, target?.id) ?? fallback());
       if (token !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
       if (adminVisitorReply?.target === target) adminVisitorReply?.clear();
-      chatInput.value = '';
+      if(chatInput.value===body)chatInput.value = '';
       updateChatSendStatus('visitorChatSendStatus', '送信しました。');
       await refreshAdminChat();
     } catch (error) {

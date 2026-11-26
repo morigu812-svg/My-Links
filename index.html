@@ -763,6 +763,7 @@ async function refreshVisitorOnline(active = !document.hidden) {
   const result = await call('pulseVisitorOnline', active, token);
   if (token !== visitorToken) return;
   const count = Number(result.count);
+  if(!Number.isFinite(count)||count<0)throw new Error('オンライン人数の形式が不正です。');
   $('visitorOnlineCount').textContent = active && count === 1
     ? '自分だけがオンライン'
     : count.toLocaleString('ja-JP') + '人の利用者がオンライン';
@@ -1055,7 +1056,13 @@ function sendViewerChat(message, token) {
  };
  return viewerChatRealtime?.send('public', message, '', fallback, target?.id) ?? fallback();
 }
-async function refreshChat(){if(!visitorToken||chatLoading||visitorDowntimeDialog.open)return;chatLoading=true;try{const token=visitorToken;const r=await readViewerChat(token);if(token!==visitorToken)return;renderChat(Array.isArray(r.messages)?r.messages.filter(item => !item.private):[]);chatLoaded=true;}catch(e){if(isVisitorAuthError(e))showVisitorLogin('ログインの有効期限が切れました。もう一度サイトのパスワードを入力してください。');else{viewerMessagesKey='';chatMessages.textContent='読み込みに失敗しました：'+(e.message||'通信エラー');}}finally{chatLoading=false;}}
+async function refreshChat(){
+ const token=visitorToken;if(!token||chatLoading||visitorDowntimeDialog.open)return;
+ chatLoading=true;
+ try{const r=await readViewerChat(token);if(token!==visitorToken)return;renderChat(Array.isArray(r.messages)?r.messages.filter(item=>!item.private):[]);chatLoaded=true;}
+ catch(e){if(token!==visitorToken)return;if(isVisitorAuthError(e))showVisitorLogin('ログインの有効期限が切れました。もう一度サイトのパスワードを入力してください。');else{viewerMessagesKey='';chatMessages.textContent='読み込みに失敗しました：'+(e.message||'通信エラー');}}
+ finally{chatLoading=false;if(token!==visitorToken&&visitorToken&&!document.hidden)void refreshChat();}
+}
 const viewerChatRealtime = window.createChatRealtime?.(
   async () => {
     const token = visitorToken;
@@ -1254,13 +1261,20 @@ nicknameDialog.querySelector('form').onsubmit=async event=>{
 new MutationObserver(paintVisitorViewCounts).observe($('list'),{childList:true});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&visitorToken)void refreshLinkViewCounts();});
 
-async function ensureVisitorChatProfile(edit=false,mandatory=false){
+let visitorProfileRequest=null;
+function ensureVisitorChatProfile(edit=false,mandatory=false){
+ const token=visitorToken;
+ if(visitorProfileRequest?.token===token)return visitorProfileRequest.promise;
+ const request={token};request.promise=ensureVisitorChatProfileImpl(edit,mandatory).finally(()=>{if(visitorProfileRequest===request)visitorProfileRequest=null;});
+ visitorProfileRequest=request;return request.promise;
+}
+async function ensureVisitorChatProfileImpl(edit=false,mandatory=false){
  if(!visitorToken)return false;
  const token=visitorToken;
  try{
-  if(!visitorChatProfile){visitorChatProfile=await call('getVisitorChatProfile',getNoticeBrowserId(),token);}
+  if(!visitorChatProfile){const profile=await call('getVisitorChatProfile',getNoticeBrowserId(),token);if(token!==visitorToken)return false;visitorChatProfile=profile;}
   if(token!==visitorToken)return false;
-  if(!edit&&visitorChatProfile.school?.trim()&&visitorChatProfile.filter?.trim())return true;
+  if(!edit&&!visitorChatProfile.schoolCorrectionRequired&&!visitorChatProfile.filterCorrectionRequired&&visitorChatProfile.school?.trim()&&visitorChatProfile.filter?.trim())return true;
   setSchoolProfileChoice(visitorChatProfile.school||'');
   $('chatProfileFilter').value=visitorChatProfile.filter||'';
   $('chatProfileStatus').textContent='';
@@ -1284,6 +1298,7 @@ async function ensureVisitorChatProfile(edit=false,mandatory=false){
   const dialog=$('chatProfileDialog');
   const cancel=$('cancelChatProfile');
   cancel.textContent=mandatory?'ログアウト':'キャンセル';
+  $('saveChatProfile').disabled=false;cancel.disabled=false;
   dialog.showModal();
   return await new Promise(resolve=>{
    const form=$('chatProfileForm');
@@ -1298,8 +1313,8 @@ async function ensureVisitorChatProfile(edit=false,mandatory=false){
      if(token!==visitorToken)throw new Error('ログインし直してください。');
      if(!result?.school?.trim()||!result?.filter?.trim())throw new Error('学校名とフィルターの保存を確認できませんでした。');
      visitorChatProfile={...visitorChatProfile,...result};cleanup();dialog.close();resolve(true);
-    }catch(error){$('chatProfileStatus').textContent=error.message||'保存できませんでした。';}
-    finally{button.disabled=false;cancel.disabled=false;}
+    }catch(error){if(token===visitorToken)$('chatProfileStatus').textContent=error.message||'保存できませんでした。';}
+    finally{if(token===visitorToken){button.disabled=false;cancel.disabled=false;}}
    };
    const closed=()=>{cleanup();resolve(false);};
    function cleanup(){
@@ -1310,16 +1325,36 @@ async function ensureVisitorChatProfile(edit=false,mandatory=false){
    form.addEventListener('submit',submit);dialog.addEventListener('close',closed,{once:true});
    dialog.addEventListener('cancel',blockEscape);cancel.addEventListener('click',cancelClick);
   });
- }catch(error){alert('利用者情報を取得できませんでした：'+(error.message||'通信エラー'));return false;}
+ }catch(error){if(token===visitorToken)alert('利用者情報を取得できませんでした：'+(error.message||'通信エラー'));return false;}
 }
 async function openChat(){
  const personalPanel = document.querySelector('#linksPanel .visitor-dm-main');
  if (personalPanel?.open) { personalPanel.classList.remove('open'); personalPanel.close(); }
  document.querySelector('#linksPanel .workspace').hidden = false;
-if(!visitorToken){$('loginError').textContent='先に利用者ログインをしてください。';return;}if(!await ensureVisitorChatProfile())return;markSideTabAsRead('openChat');document.querySelector('#linksPanel .workspace').hidden=true;viewerScrollToLatest=true;chatOverlay.classList.add('open');scrollViewerToLatest();viewerChatRealtime?.start();void refreshChat();}
+const token=visitorToken;if(!token){$('loginError').textContent='先に利用者ログインをしてください。';return;}if(!await ensureVisitorChatProfile()||token!==visitorToken)return;markSideTabAsRead('openChat');document.querySelector('#linksPanel .workspace').hidden=true;viewerScrollToLatest=true;chatOverlay.classList.add('open');scrollViewerToLatest();viewerChatRealtime?.start();void refreshChat();}
 $('editChatProfile').addEventListener('click',()=>{void ensureVisitorChatProfile(true)});
 $('openChat').addEventListener('click',openChat);$('closeChat').addEventListener('click',()=>{chatOverlay.classList.remove('open');document.querySelector('#linksPanel .workspace').hidden=false;viewerChatRealtime?.stop();});
-chatForm.addEventListener('submit',async e=>{e.preventDefault();const message=chatInput.value.trim();if(!message||!visitorToken)return;if(!await ensureVisitorChatProfile())return;chatSend.disabled=true;try{const target=viewerReply?.target;const prefix='【学校名：'+visitorChatProfile.school+'／フィルター：'+visitorChatProfile.filter+'】\n';if(prefix.length+message.length>1000)throw new Error('学校名とフィルター情報を含めて1000文字以内にしてください。');await sendViewerChat(prefix+message,visitorToken);if(viewerReply?.target===target)viewerReply?.clear();chatInput.value='';await refreshChat();}catch(error){if(isVisitorAuthError(error)){showVisitorLogin('ログインの有効期限が切れました。もう一度サイトのパスワードを入力してください。');}else{const s=document.createElement('div');s.className='chat-status';s.textContent=error.message||'送信できませんでした。';chatMessages.appendChild(s);}}finally{chatSend.disabled=false;if(visitorToken)chatInput.focus();}});
+chatForm.addEventListener('submit',async e=>{
+ e.preventDefault();
+ const token=visitorToken,body=chatInput.value,message=body.trim();
+ if(chatSend.disabled||!message||!token)return;
+ chatSend.disabled=true;
+ const target=viewerReply?.target;
+ try{
+  if(!await ensureVisitorChatProfile()||token!==visitorToken)return;
+  const prefix='【学校名：'+visitorChatProfile.school+'／フィルター：'+visitorChatProfile.filter+'】\n';
+  if(prefix.length+message.length>1000)throw new Error('学校名とフィルター情報を含めて1000文字以内にしてください。');
+  await sendViewerChat(prefix+message,token);
+  if(token!==visitorToken)return;
+  if(viewerReply?.target===target)viewerReply?.clear();
+  if(chatInput.value===body)chatInput.value='';
+  await refreshChat();
+ }catch(error){
+  if(token!==visitorToken)return;
+  if(isVisitorAuthError(error))showVisitorLogin('ログインの有効期限が切れました。もう一度サイトのパスワードを入力してください。');
+  else{const notice=document.createElement('div');notice.className='chat-status';notice.textContent=error.message||'送信できませんでした。';chatMessages.appendChild(notice);}
+ }finally{chatSend.disabled=false;if(token===visitorToken&&chatOverlay.classList.contains('open'))chatInput.focus();}
+});
 
 function showChatImageButton(container, messageId) {
   const preview = viewerChatPreviews.create(messageId, '共有されたスクリーンショット', async () => {
