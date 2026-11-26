@@ -25,3 +25,18 @@ html body #list .lc-link-card .lc-avatar{display:none!important}
 
 /* Empty artwork slots do not need the height of a real thumbnail. */
 html body #list .lc-link-card:not(.has-site-thumbnail) .lc-card-media{aspect-ratio:auto;min-height:56px}
+
+/* One shared width policy for visitor and administrator link lists. */
+@media(min-width:961px){
+ html body:has(#list){padding-left:0!important;padding-right:0!important}
+ html body main:has(#list){width:100%;max-width:1228px!important;margin-left:auto!important;margin-right:auto!important;padding-left:24px!important;padding-right:24px!important;box-sizing:border-box}
+ html body .finder-window:has(#list){width:100%!important;max-width:1180px!important;margin-left:auto!important;margin-right:auto!important}
+ html body .finder-window:has(#list) .finder-layout{grid-template-columns:220px minmax(0,1fr)!important}
+ html body .finder-window:has(#list) .finder-content{padding-left:27px!important;padding-right:27px!important}
+ html body.night-mode .finder-window:has(#list) .finder-content{padding-left:23px!important;padding-right:23px!important}
+ html body .finder-window:has(#list) .workspace:has(#list){padding-left:0!important;padding-right:0!important}
+ html body #list:has(.lc-link-card){grid-template-columns:repeat(auto-fill,minmax(245px,1fr))!important;gap:15px!important}
+}
+@media(max-width:960px){
+ html body #list:has(.lc-link-card){grid-template-columns:minmax(0,1fr)!important;gap:12px!important}
+}
