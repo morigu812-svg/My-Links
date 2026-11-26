@@ -29,3 +29,4 @@ export const trainingCar={id:'training',make:'教習所',name:'普通AT教習車
 export const colors=['#51c9bc','#ecece4','#202a38','#c63045','#3369ab','#b0b4bb','#f0bd50'];
 export function vehicleById(id){return vehicles.find(v=>v.id===id)||vehicles[0];}
 export const classNames={kei:'軽自動車',keiVan:'軽ハイトワゴン',keiSuv:'軽SUV',keiSport:'軽スポーツ',hatch:'コンパクト',sedan:'セダン',wagon:'ワゴン',suv:'SUV',van:'ミニバン',sport:'スポーツ',super:'高性能スポーツ',ev:'EV'};
+
