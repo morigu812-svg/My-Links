@@ -4,18 +4,42 @@ const files={"f290b219-4132-45ab-9639-e2bde221d2ea":"f290b219-4132-45ab-9639-e2b
 const root=document.getElementById('list');
 if(!root)return;
 const assetBase=new URL('./assets/site-thumbnails/',document.currentScript.src);
-function decorate(card){
- const id=card.dataset.linkId||card.dataset.id;
- const file=files[id];
- if(!file||card.querySelector('.site-thumbnail'))return;
- const image=document.createElement('img');
- image.className='site-thumbnail';image.alt='';image.width=1672;image.height=941;
- image.loading='lazy';image.decoding='async';
- image.addEventListener('error',()=>{image.remove();card.classList.remove('has-site-thumbnail')},{once:true});
- image.src=new URL(file,assetBase).href;
- card.classList.add('has-site-thumbnail');
- card.prepend(image);
+let measureFrame=0;
+function measureDescriptions(){
+ measureFrame=0;
+ root.querySelectorAll('.lc-card-description').forEach(section=>{
+  const memo=section.querySelector('.memo'),button=section.querySelector('[data-description-toggle]');
+  if(!memo||!button)return;
+  button.hidden=!section.classList.contains('is-expanded')&&memo.scrollHeight<=memo.clientHeight+1;
+ });
 }
+function scheduleMeasure(){if(!measureFrame)measureFrame=requestAnimationFrame(measureDescriptions)}
+function decorate(card){
+ const id=card.dataset.linkId||card.dataset.id,file=files[id];
+ if(file&&!card.querySelector('.site-thumbnail')){
+  const image=document.createElement('img');
+  image.className='site-thumbnail';image.alt='';image.width=1672;image.height=941;
+  image.loading='lazy';image.decoding='async';
+  image.addEventListener('error',()=>{image.remove();card.classList.remove('has-site-thumbnail')},{once:true});
+  image.src=new URL(file,assetBase).href;
+  const media=card.querySelector('.lc-card-media');
+  card.classList.add('has-site-thumbnail');
+  if(media)media.prepend(image);else card.prepend(image);
+ }
+ scheduleMeasure();
+}
+root.addEventListener('click',event=>{
+ const button=event.target.closest('[data-description-toggle]');
+ if(!button||!root.contains(button))return;
+ event.preventDefault();event.stopPropagation();
+ const section=button.closest('.lc-card-description');
+ const expanded=section.classList.toggle('is-expanded');
+ button.setAttribute('aria-expanded',String(expanded));
+ button.textContent=expanded?'閉じる':'もっと見る';
+ scheduleMeasure();
+});
+if(typeof ResizeObserver!=='undefined')new ResizeObserver(scheduleMeasure).observe(root);
+addEventListener('resize',scheduleMeasure,{passive:true});
 function scan(node){
  if(node.nodeType!==1)return;
  if(node.matches('.lc-link-card'))decorate(node);
