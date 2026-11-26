@@ -487,7 +487,7 @@ html body #chatScreenshot:disabled{opacity:.55;cursor:wait}
 html body #chatScreenshotControls{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 html body #chatScreenshotStatus{flex-basis:100%}
 @media(max-width:650px){html body #chatScreenshot{min-height:44px}}
-</style><style>#visitorNicknameBadge{border:1px solid #38728f;border-radius:7px;background:#102a43;color:inherit;font:inherit;font-size:11px;padding:5px 8px;cursor:pointer}.visitor-view-count{margin-top:6px;font-size:11px;color:#95b5c8}</style><style>#visitorDowntimeDialog{z-index:2147483647;max-width:430px}#visitorDowntimeDialog::backdrop{background:#050b16f5}#visitorDowntimeUntil{font-weight:700;color:#71e8c1}</style><style>#visitorWarningScreen{width:min(480px,92vw);padding:30px;border:2px solid #e4a541;border-radius:18px;background:#191a21;color:#fff;text-align:center;max-height:90dvh;overflow:auto}#visitorWarningScreen::backdrop{background:#05070bf0}#visitorWarningScreen h2{color:#ffc65f;font-size:23px}#visitorWarningText{font-size:16px;line-height:1.9;white-space:pre-wrap;overflow-wrap:anywhere}.visitor-warning-symbol{font-size:48px}#visitorWarningAcknowledge{padding:12px 23px;background:#e0a03a;color:#211507;border:0;border-radius:9px;font-weight:700}</style><link rel="stylesheet" href="./site-thumbnails.css?v=4"><script src="./site-thumbnails.js?v=3" defer></script><script src="./sidebar-layout.js?v=1"></script><link rel="stylesheet" href="./sidebar-layout.css?v=1"></head>
+</style><style>#visitorNicknameBadge{border:1px solid #38728f;border-radius:7px;background:#102a43;color:inherit;font:inherit;font-size:11px;padding:5px 8px;cursor:pointer}.visitor-view-count{margin-top:6px;font-size:11px;color:#95b5c8}</style><style>#visitorDowntimeDialog{z-index:2147483647;max-width:430px}#visitorDowntimeDialog::backdrop{background:#050b16f5}#visitorDowntimeUntil{font-weight:700;color:#71e8c1}</style><style>#visitorWarningScreen{width:min(480px,92vw);padding:30px;border:2px solid #e4a541;border-radius:18px;background:#191a21;color:#fff;text-align:center;max-height:90dvh;overflow:auto}#visitorWarningScreen::backdrop{background:#05070bf0}#visitorWarningScreen h2{color:#ffc65f;font-size:23px}#visitorWarningText{font-size:16px;line-height:1.9;white-space:pre-wrap;overflow-wrap:anywhere}.visitor-warning-symbol{font-size:48px}#visitorWarningAcknowledge{padding:12px 23px;background:#e0a03a;color:#211507;border:0;border-radius:9px;font-weight:700}</style><link rel="stylesheet" href="./site-thumbnails.css?v=4"><script src="./site-thumbnails.js?v=3" defer></script><script src="./sidebar-layout.js?v=2"></script><link rel="stylesheet" href="./sidebar-layout.css?v=1"></head>
 <body>
 <main class="wrap">
 <div class="click-log-notice" id="clickLogNotice" role="status" aria-live="polite"></div>
@@ -714,6 +714,10 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)void check
 let favoriteIds=new Set(), favoritesReady=false;
 let pendingFavorites=new Set();
 const isVisitorFavorite=id=>favoriteIds.has(String(id));
+function paintVisitorFavorites(){
+ document.querySelectorAll('#list [data-link-id]').forEach(card=>{const button=card.querySelector('[data-visitor-favorite]');if(!button)return;const id=String(card.dataset.linkId),favorite=isVisitorFavorite(id);button.textContent=favorite?'★':'☆';button.setAttribute('aria-pressed',String(favorite));button.setAttribute('aria-label',favorite?'お気に入りから外す':'お気に入りに追加');button.disabled=!favoritesReady||pendingFavorites.has(id);});
+}
+
 
 async function loadVisitorFavorites(token) {
  if (!token || token !== visitorToken || pendingFavorites.size) return;
@@ -726,7 +730,8 @@ async function loadVisitorFavorites(token) {
   if(!Array.isArray(data?.ids))throw new Error('お気に入りの形式が不正です。');
   favoriteIds=new Set(data.ids.map(String));
   favoritesReady=true;
-  render();
+  if(view==='favorites'&&!selectedCategory&&!$('search').value.trim())render({preservePanels:true});
+  else paintVisitorFavorites();
   $('favoriteStatus').textContent='';
  }catch(error){
   if(token!==visitorToken)return;
@@ -840,11 +845,13 @@ function visibleLinks(){
 }
 let renderedCategories, renderedCategory, renderedNewLinkCount, renderedSidebarLinks;
 window.setupVisitorFilterAccess($('list'),(method,...args)=>call(method,...args,visitorToken));
-function render(){
+function render({preservePanels=false}={}){
+ if(!preservePanels){
  document.getElementById('chatOverlay')?.classList.remove('open');
  document.querySelector('#linksPanel .workspace').hidden = false;
  const personalPanel = document.querySelector('#linksPanel .visitor-dm-main');
  if (personalPanel?.open) { personalPanel.classList.remove('open'); personalPanel.close(); }
+ }
  $('list').setAttribute('aria-busy','false');
  $('list').classList.remove('loading-skeleton');
  const folderIcon="<svg class=\"folder-icon\" viewBox=\"0 0 64 52\" aria-hidden=\"true\"><path d=\"M4 10a5 5 0 0 1 5-5h17l7 7h22a5 5 0 0 1 5 5v4H4z\" fill=\"currentColor\" opacity=\".72\"/><path d=\"M4 17a5 5 0 0 1 5-5h46a5 5 0 0 1 5 5v27a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z\" fill=\"currentColor\"/><path d=\"M4 22h56\" stroke=\"#fff\" stroke-opacity=\".35\" stroke-width=\"2\"/></svg>";
@@ -1367,9 +1374,9 @@ $('search').addEventListener('input', () => {
  if (!searchFrame) searchFrame = requestAnimationFrame(() => { searchFrame = 0; render(); });
 });
 
-$('sideCats').addEventListener('click',event=>{const btn=event.target.closest('[data-category]');if(!btn)return;selectedCategory=btn.dataset.category;view='all';render()});
-$('list').addEventListener('click',event=>{const folder=event.target.closest('[data-open-folder]');if(folder){selectedCategory=folder.dataset.openFolder;view='all';render();return;}if(event.target.closest('[data-folder-back]')){selectedCategory=selectedCategory==='__uncategorized__'?'':folderParent(selectedCategory);view=selectedCategory?'all':'desktop';render();}});
-document.querySelector('.sidebar').addEventListener('click',event=>{const btn=event.target.closest('[data-view]');if(!btn)return;selectedCategory='';view=btn.dataset.view;render()});
+$('sideCats').addEventListener('click',event=>{const btn=event.target.closest('[data-category]');if(!btn)return;$('search').value='';selectedCategory=btn.dataset.category;view='all';render()});
+$('list').addEventListener('click',event=>{const folder=event.target.closest('[data-open-folder]');if(folder){$('search').value='';selectedCategory=folder.dataset.openFolder;view='all';render();return;}if(event.target.closest('[data-folder-back]')){$('search').value='';selectedCategory=selectedCategory==='__uncategorized__'?'':folderParent(selectedCategory);view=selectedCategory?'all':'desktop';render();}});
+document.querySelector('.sidebar').addEventListener('click',event=>{const btn=event.target.closest('[data-view]');if(!btn)return;$('search').value='';selectedCategory='';view=btn.dataset.view;render()});
 $('list').addEventListener('click',async event=>{
  const button=event.target.closest('[data-visitor-favorite]');
  const token=visitorToken;
@@ -1498,8 +1505,10 @@ async function finishVisitorLogin(auth, expiresAt) {
     showVisitorLogin();
   });
   if(!await ensureVisitorChatProfile(false,true)){
-   const token=visitorToken;
+   if(visitorToken!==auth.token)return;
+   const token=auth.token;
    if(token) await call('logoutCurrentSession',token).catch(()=>{});
+   if(visitorToken!==auth.token)return;
    showVisitorLogin('学校名とフィルターを設定するとリンクを閲覧できます。');
    return;
   }
@@ -1596,6 +1605,7 @@ async function checkVisitorBanStatus() {
   checkingVisitorBanStatus=true;
   try {
     const status = await call('checkViewerSession', '', getNoticeBrowserId());
+    if(visitorToken)return; // Login completed while this pre-login request was pending.
     if (status?.banned && !visitorToken) showVisitorBan();
     else if(status?.downtime?.invalid)handleVisitorDowntime(new Error('LINK_BASE_DOWNTIME_CONFIG_ERROR'));
     else if(status?.downtime?.active)handleVisitorDowntime(new Error('LINK_BASE_DOWNTIME:'+status.downtime.until));
@@ -4805,4 +4815,5 @@ body { font-size:15px; line-height:1.7; }
 <link rel="stylesheet" href="./mobile-layout.css?v=1">
 <script src="./mobile-layout.js?v=1"></script>
 <style>#chatProfileDialog select{display:block;width:100%;padding:12px;border:1px solid #527184;border-radius:8px;background:#102638;color:#e8f9ff;font:inherit;margin-top:6px}#chatProfileSchoolRegionFields p{font-size:12px;line-height:1.7}#chatProfileDialog [hidden]{display:none!important}</style></body></html>
+
 

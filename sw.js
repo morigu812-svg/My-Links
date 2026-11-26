@@ -9,13 +9,13 @@
  */
 'use strict';
 
-var CACHE_VERSION = 'link-core-v153';
+var CACHE_VERSION = 'link-core-v154';
 var STATIC_CACHE = 'link-core-static-' + CACHE_VERSION;
 
 /* アプリの殻。相対パスなので、GitHub Pages のプロジェクトサイト
    （例：https://<user>.github.io/My-Links/）でもカスタムドメインでも動く。 */
 var STATIC_ASSETS = [
-  './sidebar-layout.js?v=1',
+  './sidebar-layout.js?v=2',
   './sidebar-layout.css?v=1',
   './site-thumbnails.js?v=3',
   './site-thumbnails.css?v=4',
@@ -141,6 +141,7 @@ self.addEventListener('fetch', function (event) {
 
   /* それ以外（Google Fonts 等の外部リソース）は Service Worker を通さない。 */
 });
+
 
 
 
