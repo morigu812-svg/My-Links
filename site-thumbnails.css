@@ -1,0 +1,6 @@
+/* Fixed geometry reserves space before lazy-loaded artwork arrives. */
+html body #list .lc-link-card.has-site-thumbnail{flex-direction:column!important;overflow:hidden}
+html body #list .lc-link-card>.site-thumbnail{display:block;width:100%;height:auto;aspect-ratio:16/9;object-fit:cover;flex:none;pointer-events:none;background:#0b1727;border-bottom:1px solid #28485c}
+html body #list .lc-link-card.has-site-thumbnail .lc-avatar{display:none!important}
+@media(prefers-reduced-motion:reduce){html body #list .lc-link-card.has-site-thumbnail{transition:none!important}}
+
