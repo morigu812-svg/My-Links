@@ -1226,6 +1226,9 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
 
       <a class="side-item" id="sideVirtualGame" href="./virtual/"><span aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h10l4 8a3 3 0 0 1-5 3l-2-2h-4l-2 2a3 3 0 0 1-5-3l4-8Z"/><path d="M7 10v4m-2-2h4m7-1h.01M18 13h.01"/></svg></span> LINK BASE GAMES</a>
 
+      <div class="side-label">カテゴリ</div>
+      <div id="sideCats" class="side-cats"></div>
+
       <div class="side-label">連絡</div>
       <details class="sidebar-log-folder" id="sidebarChatFolder">
         <summary class="side-item"><span class="side-folder-mini" aria-hidden="true"><svg class="folder-icon" viewBox="0 0 64 52" aria-hidden="true"><path d="M4 10a5 5 0 0 1 5-5h17l7 7h22a5 5 0 0 1 5 5v4H4z" fill="currentColor" opacity=".72"/><path d="M4 17a5 5 0 0 1 5-5h46a5 5 0 0 1 5 5v27a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z" fill="currentColor"/><path d="M4 22h56" stroke="#fff" stroke-opacity=".35" stroke-width="2"/></svg></span> チャット <span class="log-folder-chevron" aria-hidden="true">›</span></summary>
@@ -1237,9 +1240,9 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
       </details>
       <button class="side-item" type="button" id="sideMemos"><span>▤</span> メモ帳</button>
 
-      <div class="side-label">管理</div>
+      <div class="side-label">利用者管理</div>
       <details class="sidebar-log-folder">
-        <summary class="side-item"><span class="side-folder-mini" aria-hidden="true"><svg class="folder-icon" viewBox="0 0 64 52" aria-hidden="true"><path d="M4 10a5 5 0 0 1 5-5h17l7 7h22a5 5 0 0 1 5 5v4H4z" fill="currentColor" opacity=".72"/><path d="M4 17a5 5 0 0 1 5-5h46a5 5 0 0 1 5 5v27a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z" fill="currentColor"/><path d="M4 22h56" stroke="#fff" stroke-opacity=".35" stroke-width="2"/></svg></span> 利用者・報告 <span class="log-folder-chevron" aria-hidden="true">›</span></summary>
+        <summary class="side-item"><span class="side-folder-mini" aria-hidden="true"><svg class="folder-icon" viewBox="0 0 64 52" aria-hidden="true"><path d="M4 10a5 5 0 0 1 5-5h17l7 7h22a5 5 0 0 1 5 5v4H4z" fill="currentColor" opacity=".72"/><path d="M4 17a5 5 0 0 1 5-5h46a5 5 0 0 1 5 5v27a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z" fill="currentColor"/><path d="M4 22h56" stroke="#fff" stroke-opacity=".35" stroke-width="2"/></svg></span> 利用者と報告 <span class="log-folder-chevron" aria-hidden="true">›</span></summary>
         <div class="sidebar-log-items">
           <button class="side-item" type="button" id="sideFilterAccess"><span aria-hidden="true">▥</span> フィルター別アクセス状況</button>
           <button class="side-item" type="button" id="sideVisitorWarning"><span aria-hidden="true">⚠️</span> 警告</button>
@@ -1251,7 +1254,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
         </div>
       </details>
       <details class="sidebar-log-folder">
-        <summary class="side-item"><span class="side-folder-mini" aria-hidden="true"><svg class="folder-icon" viewBox="0 0 64 52" aria-hidden="true"><path d="M4 10a5 5 0 0 1 5-5h17l7 7h22a5 5 0 0 1 5 5v4H4z" fill="currentColor" opacity=".72"/><path d="M4 17a5 5 0 0 1 5-5h46a5 5 0 0 1 5 5v27a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z" fill="currentColor"/><path d="M4 22h56" stroke="#fff" stroke-opacity=".35" stroke-width="2"/></svg></span> ログ <span class="log-folder-chevron" aria-hidden="true">›</span></summary>
+        <summary class="side-item"><span class="side-folder-mini" aria-hidden="true"><svg class="folder-icon" viewBox="0 0 64 52" aria-hidden="true"><path d="M4 10a5 5 0 0 1 5-5h17l7 7h22a5 5 0 0 1 5 5v4H4z" fill="currentColor" opacity=".72"/><path d="M4 17a5 5 0 0 1 5-5h46a5 5 0 0 1 5 5v27a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z" fill="currentColor"/><path d="M4 22h56" stroke="#fff" stroke-opacity=".35" stroke-width="2"/></svg></span> 履歴と分析 <span class="log-folder-chevron" aria-hidden="true">›</span></summary>
         <div class="sidebar-log-items">
           <button class="side-item" type="button" id="sideClickLogs"><span>◷</span> クリック履歴</button>
           <button class="side-item" type="button" id="sideVisitorLogins"><span>◷</span> 利用者ログイン履歴</button>
@@ -1263,10 +1266,15 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
           <button class="side-item" type="button" id="sideVisitorCounter"><span>▥</span> 来客数カウンター</button>
         </div>
       </details>
-      <button class="side-item" type="button" id="sideTrash"><span>🗑</span> ゴミ箱</button>
-      <button class="side-item" type="button" id="sideDiagnosis"><span>🩺</span> リンク診断</button>
+      <details class="sidebar-log-folder">
+        <summary class="side-item"><span aria-hidden="true">⌁</span> リンクの保守 <span class="log-folder-chevron" aria-hidden="true">›</span></summary>
+        <div class="sidebar-log-items">
+          <button class="side-item" type="button" id="sideTrash"><span>🗑</span> ゴミ箱</button>
+          <button class="side-item" type="button" id="sideDiagnosis"><span>🩺</span> リンク診断</button>
+        </div>
+      </details>
 
-      <div class="side-label">設定とヘルプ</div>
+      <div class="side-label">設定・ヘルプ</div>
       <button class="side-item" type="button" id="sideShare"><span>⤴</span> このページを共有</button>
       <button class="side-item" type="button" id="staffBrowserSettings" aria-haspopup="dialog"><span aria-hidden="true">▣</span> サブブラウザを設定</button>
       <button class="side-item" type="button" id="openAdminHelp" aria-haspopup="dialog"><span aria-hidden="true">?</span> 管理者機能の使い方</button>
@@ -1274,10 +1282,13 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
 
       <div class="side-label">アカウント</div>
       <button class="side-item" type="button" id="adminLogout"><span aria-hidden="true">⎋</span> ログアウト</button>
-      <button class="side-item side-danger" type="button" id="logoutAllVisitors"><span aria-hidden="true">⚠</span> 利用者を全員ログアウト</button>
-<button class="side-item side-danger" type="button" id="logoutAllBrowsers"><span aria-hidden="true">⚠</span> 全ブラウザをログアウト</button>
-          <div class="side-label">カテゴリ</div>
-      <div id="sideCats" class="side-cats"></div>
+      <details class="sidebar-log-folder sidebar-danger-group" id="sidebarAccountActions">
+        <summary class="side-item"><span aria-hidden="true">⚠</span> 一括ログアウト <span class="log-folder-chevron" aria-hidden="true">›</span></summary>
+        <div class="sidebar-log-items">
+          <button class="side-item side-danger" type="button" id="logoutAllVisitors"><span aria-hidden="true">⚠</span> 利用者を全員ログアウト</button>
+          <button class="side-item side-danger" type="button" id="logoutAllBrowsers"><span aria-hidden="true">⚠</span> 全ブラウザをログアウト</button>
+        </div>
+      </details>
     </aside>
     <main class="finder-content">
   <section class="workspace" aria-label="リンク一覧">
@@ -8267,8 +8278,92 @@ html body .sidebar .side-danger:hover{background:rgba(255,90,110,.14)!important}
 </style>
 <link rel="stylesheet" href="./mobile-layout.css?v=1">
 <script src="./mobile-layout.js?v=1"></script>
+<style id="admin-navigation-refresh">
+@media (min-width: 761px) {
+  #finderWindow .sidebar {
+    position: sticky;
+    top: 14px;
+    align-self: start;
+    max-height: calc(100dvh - 28px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: #294968 transparent;
+  }
+  #finderWindow .sidebar::-webkit-scrollbar { width: 7px; }
+  #finderWindow .sidebar::-webkit-scrollbar-thumb { border-radius: 8px; background: #294968; }
+  #finderWindow .sidebar .sidebar-log-items {
+    gap: 3px;
+    margin: 3px 0 8px 16px;
+    padding: 2px 0 2px 9px;
+    border-left: 1px solid rgba(93, 153, 190, .24);
+  }
+}
+#finderWindow .sidebar .side-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 17px 10px 6px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(110, 160, 194, .18);
+  color: #8ea9c3 !important;
+  font-size: 10px !important;
+  font-weight: 750;
+  letter-spacing: .09em;
+  line-height: 1.5;
+}
+#finderWindow .sidebar .side-label::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, currentColor, transparent);
+  opacity: .28;
+}
+#finderWindow .sidebar .side-label:first-of-type {
+  margin-top: 11px;
+  padding-top: 0;
+  border-top: 0;
+}
+#finderWindow .sidebar .sidebar-log-folder > summary.side-item {
+  min-height: 38px;
+  font-weight: 700;
+}
+#finderWindow .sidebar .sidebar-log-folder > summary .log-folder-chevron {
+  flex: 0 0 auto;
+  font-size: 18px;
+  transition: transform .16s ease;
+}
+#finderWindow .sidebar .sidebar-log-folder[open] > summary.side-item {
+  color: #dff6ff;
+  background: rgba(47, 130, 177, .10) !important;
+}
+#finderWindow #sidebarAccountActions > summary.side-item,
+#finderWindow #sidebarAccountActions .side-danger {
+  color: #e6b8c0 !important;
+}
+#finderWindow #sidebarAccountActions > summary.side-item > span,
+#finderWindow #sidebarAccountActions .side-danger > span {
+  color: #ee8998 !important;
+}
+#finderWindow #sidebarAccountActions[open] > summary.side-item {
+  background: rgba(159, 51, 75, .12) !important;
+}
+@media (max-width: 760px) {
+  #finderWindow #sidebarAccountActions[open] {
+    display: block !important;
+  }
+  #finderWindow #sidebarAccountActions[open] > .sidebar-log-items {
+    display: grid !important;
+    gap: 4px;
+    padding-inline-start: 10px !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #finderWindow .sidebar .sidebar-log-folder > summary .log-folder-chevron {
+    transition: none;
+  }
+}
+</style>
 </body>
 </html>
-
-
 
