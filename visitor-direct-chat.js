@@ -127,9 +127,10 @@
       let offset = 0;
       do {
         const response = await request({operation:'attachment',browser:targetBrowser,message_id:item.id,offset});
-        if (!(response.nextOffset > offset) || response.nextOffset > item.attachment.size || response.size !== item.attachment.size) throw new Error('添付の取得位置を確認できません。');
+        if (!Number.isSafeInteger(response.nextOffset)||!(response.nextOffset > offset) || response.nextOffset > item.attachment.size || response.size !== item.attachment.size) throw new Error('添付の取得位置を確認できません。');
         if (current !== generation || !panel.open) throw new Error('添付の取得を中止しました。');
         const binary = atob(response.base64);
+        if(binary.length!==response.nextOffset-offset)throw new Error('添付ファイルの分割サイズが一致しません。');
         parts.push(Uint8Array.from(binary, c => c.charCodeAt(0)));
         offset = response.nextOffset;
       } while (offset < item.attachment.size);
@@ -499,11 +500,14 @@
           const file = selectedFile;
           const start = await request({operation:'uploadStart',browser,upload_id:uploadId,
             file:{name:file.name,mime:file.type,size:file.size}});
+          if(current!==generation||!panel.open)return;
+          if(!Number.isSafeInteger(start.offset)||start.offset<0||start.offset>file.size||!Number.isSafeInteger(start.chunkSize)||start.chunkSize<1||start.chunkSize>1024*1024)throw new Error('添付の転送開始位置または分割サイズが不正です。');
           let offset = start.offset;
           let retries = 0;
           while (offset < file.size) {
             status.textContent = '添付を送信中 ' + Math.floor(offset / file.size * 100) + '%';
             const encoded = await asBase64(file.slice(offset,Math.min(file.size,offset + start.chunkSize)));
+            if(current!==generation||!panel.open)return;
             const result = await request({operation:'uploadChunk',browser,upload_id:uploadId,offset,base64:encoded});
             if (!Number.isSafeInteger(result.offset) || result.offset < offset || result.offset > file.size ||
                 (result.offset === offset && ++retries > 2)) throw new Error('添付の転送が進みません。再送してください。');
@@ -511,6 +515,7 @@
             offset = result.offset;
           }
         }
+        if(current!==generation||!panel.open)return;
         const signature = JSON.stringify([message,replyTo,uploadId]);
         if (sendId && signature !== sendSignature && selectedFile) throw new Error('送信確認が完了していません。元の本文と返信先で再送するか、添付を選び直してください。');
         if (!sendId || signature !== sendSignature) sendId = crypto.randomUUID();

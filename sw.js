@@ -9,7 +9,7 @@
  */
 'use strict';
 
-var CACHE_VERSION = 'link-core-v155';
+var CACHE_VERSION = 'link-core-v156';
 var STATIC_CACHE = 'link-core-static-' + CACHE_VERSION;
 
 /* アプリの殻。相対パスなので、GitHub Pages のプロジェクトサイト
@@ -105,37 +105,42 @@ self.addEventListener('fetch', function (event) {
     return;
   }
 
-  // ログイン画面は、オンライン時に最新の HTML を使う。
+  // Navigation fetches update the offline copy too.
   if (request.mode === 'navigate' && url.origin === self.location.origin &&
       url.href.startsWith(self.registration.scope)) {
-    event.respondWith(fetch(request, { cache: 'reload' }).catch(function () {
-      return caches.match(request, { ignoreSearch: true });
+    event.respondWith(fetch(request, {cache:'reload'}).then(function(response) {
+      if(response && response.ok) {
+        var copy=response.clone();
+        event.waitUntil(caches.open(STATIC_CACHE).then(function(cache){return cache.put(new Request(url.origin+url.pathname),copy);}).catch(function(){}));
+      }
+      return response;
+    }).catch(function() {
+      return caches.open(STATIC_CACHE).then(function(cache){
+        return cache.match(request,{ignoreSearch:true});
+      }).then(function(cached) {
+        return cached || new Response('このページはオフラインでは開けません。通信を確認して再度開いてください。',{status:503,headers:{'Content-Type':'text/plain;charset=utf-8'}});
+      });
     }));
     return;
   }
-
-  /* 静的ファイルは cache-first。 */
   if (isStaticAsset(request)) {
-    event.respondWith(
-      caches.match(request).then(function (cached) {
-        if (cached) {
-          /* バックグラウンドで最新版を取りに行く（次回以降に反映される）。 */
-          fetch(request).then(function (response) {
-            if (response && response.ok) {
-              caches.open(STATIC_CACHE).then(function (cache) { cache.put(request, response); });
-            }
-          }).catch(function () { /* オフライン時は無視する */ });
+    event.respondWith(caches.open(STATIC_CACHE).then(function(cache) {
+      return cache.match(request).then(function(cached) {
+        if(cached) {
+          event.waitUntil(fetch(request).then(function(response) {
+            if(response && response.ok)return cache.put(request,response);
+          }).catch(function(){}));
           return cached;
         }
-        return fetch(request).then(function (response) {
-          if (response && response.ok) {
-            var copy = response.clone();
-            caches.open(STATIC_CACHE).then(function (cache) { cache.put(request, copy); });
+        return fetch(request).then(function(response) {
+          if(response && response.ok) {
+            var copy=response.clone();
+            event.waitUntil(cache.put(request,copy).catch(function(){}));
           }
           return response;
         });
-      })
-    );
+      });
+    }));
     return;
   }
 

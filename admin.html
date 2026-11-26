@@ -1158,7 +1158,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
 <script src="./chat-preview.js"></script>
 <script src="./chat-realtime.js?v=staff-relay-1"></script>
 <link rel="stylesheet" href="./visitor-direct-chat.css?v=presence-green1">
-<script src="./visitor-direct-chat.js?v=presence-green1"></script>
+<script src="./visitor-direct-chat.js?v=attachment-guards2"></script>
 <script src="./chat-screenshot.js?v=clipboard1" defer></script>
 <style id="visitor-counter-style">
 .visitor-counter-strip{display:flex;align-items:center;flex-wrap:wrap;gap:10px 20px;margin:11px 0 13px;padding:11px 14px;border:1px solid rgba(53,217,255,.28);border-radius:10px;background:rgba(14,38,51,.65);font-size:12px;color:#a9c7d4}
@@ -3624,26 +3624,31 @@ document.getElementById('authSubmit').disabled = false;
     undoTarget=null;clearTimeout(undoToastTimer);
   }
   async function undoDelete(){
+    const token=adminSession.getItem(ADMIN_TOKEN_KEY);if(!token)return;
     if(!undoTarget||state.busy)return;
     const target=undoTarget;hideUndoToast();
     setBusy(true);setStatus('元に戻しています…');
     try{
-      apply(await serverCall('restoreTrash',target.id));
+      const response=await serverCall('restoreTrash',target.id);if(token!==adminSession.getItem(ADMIN_TOKEN_KEY))return;apply(response);
       trashLoaded=false;
       setStatus('「'+target.title+'」を元に戻しました。','');
     }catch(error){
+      if(token!==adminSession.getItem(ADMIN_TOKEN_KEY))return;
+      showUndoToast(target);
       setStatus('元に戻せませんでした：'+(error.message||'通信エラー'),'error');
     }finally{setBusy(false);}
   }
   async function deleteLinkWithUndo(link){
+    const token=adminSession.getItem(ADMIN_TOKEN_KEY);if(!token)return;
     if(state.busy)return;
     setBusy(true);setStatus('削除中…');
     try{
-      apply(await serverCall('deleteLink',link.id));
+      const response=await serverCall('deleteLink',link.id);if(token!==adminSession.getItem(ADMIN_TOKEN_KEY))return;apply(response);
       trashLoaded=false;
       setStatus('削除しました。ゴミ箱から元に戻せます。','');
       showUndoToast(link);
     }catch(error){
+      if(token!==adminSession.getItem(ADMIN_TOKEN_KEY))return;
       setStatus('削除に失敗しました：'+(error.message||'通信エラー'),'error');
     }finally{setBusy(false);}
   }
@@ -3661,7 +3666,7 @@ document.getElementById('authSubmit').disabled = false;
       const title=document.createElement('td');title.textContent=item.title||'（タイトルなし）';
       const category=document.createElement('td');category.textContent=item.category||'未分類';
       const urlCell=document.createElement('td');urlCell.className='log-url';
-      if(item.url.indexOf('https://')===0||item.url.indexOf('http://')===0){
+      if(/^https?:\/\//i.test(String(item.url||''))){
         const a=document.createElement('a');a.href=item.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent=item.url;urlCell.appendChild(a);
       }else{urlCell.textContent=item.url||'';}
       const actionCell=document.createElement('td');actionCell.className='trash-actions';
@@ -4391,10 +4396,12 @@ $('closeChat').addEventListener('click', closeMainChat);
               if (download.disabled || !adminSession.getItem(ADMIN_TOKEN_KEY)) return;
               download.disabled = true;
               const before = download.textContent;
+              const currentToken=adminSession.getItem(ADMIN_TOKEN_KEY);
               download.textContent = '取得中…';
               try {
                 const result = await fetchAttachment();
-                if (!result) return;
+                if (!result||currentToken!==adminSession.getItem(ADMIN_TOKEN_KEY)) return;
+                if(result.chunked&&(!Number.isSafeInteger(result.size)||result.size<1||result.size>STAFF_MAX_FILE_BYTES))throw new Error('添付ファイルの容量が不正です。');
                 const chunks = [];
                 if (result.chunked) {
                   let offset = 0;
@@ -4402,6 +4409,7 @@ $('closeChat').addEventListener('click', closeMainChat);
                     if (currentToken !== adminSession.getItem(ADMIN_TOKEN_KEY)) return;
                     const part = await serverCall('getStaffChatAttachmentChunk', item.id, offset,
                       ...(staffOwnMailbox ? [staffBrowserId] : []));
+                    if(currentToken!==adminSession.getItem(ADMIN_TOKEN_KEY))return;
                     if (!part?.ok || part.offset !== offset || !part.base64 ||
                         !Number.isSafeInteger(part.nextOffset) || part.nextOffset <= offset ||
                         part.nextOffset > result.size) throw new Error('動画の取得が途中で止まりました。');
@@ -4429,7 +4437,7 @@ $('closeChat').addEventListener('click', closeMainChat);
                 anchor.remove();
                 setTimeout(() => URL.revokeObjectURL(href), 30000);
               } catch (error) {
-                staffStatus.textContent = '添付ファイルの取得に失敗しました：' + (error.message || '通信エラー');
+                if(currentToken===adminSession.getItem(ADMIN_TOKEN_KEY))staffStatus.textContent = '添付ファイルの取得に失敗しました：' + (error.message || '通信エラー');
               } finally {
                 download.disabled = false;
                 download.textContent = before;
@@ -5251,9 +5259,13 @@ $('closeChat').addEventListener('click', closeMainChat);
     }
   }
 
+  let officialMutationBusy=false,officialRevision=0;
   async function loadOfficialCloud() {
+    const token=adminSession.getItem(ADMIN_TOKEN_KEY),revision=officialRevision;
+    if(!token)return;
     try {
       const response = await serverCall('getOfficialLinks');
+      if(token!==adminSession.getItem(ADMIN_TOKEN_KEY)||revision!==officialRevision)return;
       const cloudLinks = Array.isArray(response.links) ? response.links : [];
       const backedUp = preserveLegacyOfficialLinks(cloudLinks);
       // クラウドを正本として扱う。古いローカルキャッシュの自動再移行は、
@@ -5269,6 +5281,7 @@ $('closeChat').addEventListener('click', closeMainChat);
         ''
       );
     } catch (error) {
+      if(token!==adminSession.getItem(ADMIN_TOKEN_KEY)||revision!==officialRevision)return;
       setOfficialStatus('クラウドとの同期に失敗しました：' + error.message, 'error');
       renderOfficialLinks();
     }
@@ -5276,6 +5289,8 @@ $('closeChat').addEventListener('click', closeMainChat);
 
   $('officialAddForm').addEventListener('submit', async event => {
     event.preventDefault();
+    if(officialMutationBusy)return;
+    const token=adminSession.getItem(ADMIN_TOKEN_KEY);if(!token)return;
     if (!officialCloudReady) { alert('クラウド接続が完了してから、もう一度お試しください。'); return; }
     const name = $('officialName').value.trim(), rawUrl = $('officialUrl').value.trim();
     const description = $('officialDesc').value.trim();
@@ -5290,28 +5305,36 @@ $('closeChat').addEventListener('click', closeMainChat);
       name, url: parsedUrl.href, description: description || parsedUrl.hostname,
       icon: name.replace(/\s+/g, '').slice(0,2) || '↗', kind: 'custom'
     };
+    officialMutationBusy=true;officialRevision++;
+    const submit=event.currentTarget.querySelector('[type="submit"]');if(submit)submit.disabled=true;
     try {
       const result = await serverCall('saveOfficialLink', site);
+      if(token!==adminSession.getItem(ADMIN_TOKEN_KEY))return;
       officialLinks = Array.isArray(result.links) ? result.links : officialLinks.concat(site);
-      saveOfficialLinksLocal(); $('officialAddForm').reset(); renderOfficialLinks();
+      saveOfficialLinksLocal(); if($('officialName').value.trim()===name&&$('officialUrl').value.trim()===rawUrl&&$('officialDesc').value.trim()===description)$('officialAddForm').reset(); renderOfficialLinks();
       setOfficialStatus('✓ クラウドに保存しました。', '');
-    } catch (error) { setOfficialStatus('保存に失敗しました：' + error.message, 'error'); }
+    } catch (error) { if(token===adminSession.getItem(ADMIN_TOKEN_KEY))setOfficialStatus('保存に失敗しました：' + error.message, 'error'); }
+    finally{officialMutationBusy=false;if(submit)submit.disabled=false;}
   });
 
   $('officialGrid').addEventListener('click', async event => {
     const button = event.target.closest('[data-remove-official]');
-    if (!button) return;
+    if (!button||officialMutationBusy) return;
+    const token=adminSession.getItem(ADMIN_TOKEN_KEY);if(!token)return;
     if (!officialCloudReady) { alert('クラウド接続が完了してから、もう一度お試しください。'); return; }
     const index = Number(button.dataset.removeOfficial);
     if (!Number.isInteger(index) || index < 0 || index >= officialLinks.length) return;
     const site = officialLinks[index];
     if (!confirm('「' + site.name + '」を公式リンクから削除しますか？')) return;
+    officialMutationBusy=true;officialRevision++;button.disabled=true;
     try {
       const result = await serverCall('deleteOfficialLink', site.id);
+      if(token!==adminSession.getItem(ADMIN_TOKEN_KEY))return;
       officialLinks = Array.isArray(result.links) ? result.links : officialLinks.filter(item => item.id !== site.id);
       saveOfficialLinksLocal(); renderOfficialLinks();
       setOfficialStatus('✓ クラウドから削除しました。', '');
-    } catch (error) { setOfficialStatus('削除に失敗しました：' + error.message, 'error'); }
+    } catch (error) {if(token===adminSession.getItem(ADMIN_TOKEN_KEY))setOfficialStatus('削除に失敗しました：' + error.message, 'error');}
+    finally{officialMutationBusy=false;button.disabled=false;}
   });
   renderOfficialLinks();
 
