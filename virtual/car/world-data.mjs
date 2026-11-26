@@ -10,4 +10,3 @@ export const railway={x:-600,z:100};
 export const railClosed=time=>time%65>36&&time%65<58;
 export function routeHeading(a,b){return Math.atan2(-(b.x-a.x),-(b.z-a.z));}
 export function distanceToRoute(p,route){let best=Infinity;for(let i=1;i<route.length;i++){const a=route[i-1],b=route[i],dx=b.x-a.x,dz=b.z-a.z,t=Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.z-a.z)*dz)/(dx*dx+dz*dz||1)));best=Math.min(best,Math.hypot(p.x-a.x-dx*t,p.z-a.z-dz*t));}return best;}
-

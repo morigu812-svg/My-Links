@@ -1,6 +1,6 @@
 # CITY DRIVE ACADEMY
 
-LINK BASE GAMES用の普通AT教習・自由走行ゲーム。`virtual/car/`を静的配信します。Three.jsは既存の`virtual/vendor/three.module.min.js`を使い、APIやビルドは不要です。
+LINK BASE GAMES用の普通AT教習・自由走行ゲーム。`virtual/car/`を静的配信します。Three.jsは既存の`virtual/vendor/three.module.min.js`を使い、走行自体にビルドは不要です。別ブラウザへの引き継ぎには既存Supabaseの保存APIを使用します。
 
 ## この版で遊べる内容
 
