@@ -11,7 +11,7 @@ export const lessons=[
  {id:'lesson-8',phase:'第2段階',name:'路上走行・左側通行',spawn:{x:-3.5,z:550},goal:'制限速度と左側通行を守り、青い経路を走る。信号を優先。',limit:40,time:360,route:[{x:-3.5,z:440},{x:-3.5,z:340},{x:-3.5,z:240},{x:-3.5,z:160,stop:2}]},
  {id:'lesson-9',phase:'第2段階',name:'一時停止・踏切・危険予測',spawn:{x:-603.5,z:310},goal:'信号、歩行者、踏切を確認。遮断中は停止線で待つ。',limit:30,time:420,route:[{x:-603.5,z:245},{x:-603.5,z:145},{x:-603.5,z:60},{x:-603.5,z:-40,stop:2}]},
  {id:'lesson-10',phase:'第2段階',name:'車間距離・交差点の通行',spawn:{x:3.5,z:-720,heading:Math.PI},goal:'交通の流れに合わせ、車間を確保し、交差点を安全に通過。',limit:40,time:420,route:[{x:3.5,z:-640},{x:40,z:-603.5,turn:1},{x:140,z:-603.5},{x:240,z:-603.5},{x:320,z:-603.5,stop:2}]},
- {id:'lesson-11',phase:'卒業検定',name:'路上総合・最終技能検定',spawn:{x:-3.5,z:740},goal:'約1.3kmを安全に走行。重大ミスなし・85点以上で技能合格。',limit:40,time:700,exam:true,route:[{x:-3.5,z:650},{x:-3.5,z:550},{x:-3.5,z:450},{x:-3.5,z:350},{x:-3.5,z:250},{x:-3.5,z:150},{x:-3.5,z:50},{x:-3.5,z:-50},{x:-3.5,z:-150},{x:-3.5,z:-250},{x:-3.5,z:-350},{x:-3.5,z:-450},{x:-3.5,z:-550,stop:3,park:true}]}
+ {id:'lesson-11',phase:'卒業検定',name:'路上総合・最終技能検定',spawn:{x:-3.5,z:740},goal:'約1.3kmを安全に走行。重大ミスなし・80点以上で技能合格。',limit:40,time:700,exam:true,route:[{x:-3.5,z:650},{x:-3.5,z:550},{x:-3.5,z:450},{x:-3.5,z:350},{x:-3.5,z:250},{x:-3.5,z:150},{x:-3.5,z:50},{x:-3.5,z:-50},{x:-3.5,z:-150},{x:-3.5,z:-250},{x:-3.5,z:-350},{x:-3.5,z:-450},{x:-3.5,z:-550,stop:3,park:true}]}
 ];
 export const quiz=[
  ['赤信号では、停止位置を越えて進んではいけない。',true,'停止線があれば、その直前で停止します。'],
@@ -35,7 +35,7 @@ export const quiz=[
  ['違反点数は持ち点から減る仕組みである。',false,'日本の点数制度は累積加点方式です。'],
  ['免許停止中でも、短距離なら運転できる。',false,'停止中は運転できません。']
 ];
-export function lessonAvailable(profile,index){return index===0||profile.courses[lessons[index-1].id]>=85;}
+export function lessonAvailable(profile,index){return index===0||profile.courses[lessons[index-1].id]>=80;}
 export function newAssessment(lesson){return {lessonId:lesson.id,index:0,scores:{safety:20,control:20,position:20,speed:20,observation:20},events:[],fatal:false,elapsed:0,dwell:0,speedHeld:0,rollback:0,lastZ:null,everMoved:false,checksDone:false};}
 export function assessEvent(a,event){const key=event.code==='speed'?'speed':['wrongWay','offRoad'].includes(event.code)?'position':['signal','observation'].includes(event.code)?'observation':event.code==='rough'?'control':'safety';a.scores[key]=Math.max(0,a.scores[key]-(event.loss||5));a.events.push({name:event.name,loss:event.loss||5});if(event.critical)a.fatal=true;}
 export const assessmentScore=a=>Object.values(a.scores).reduce((sum,v)=>sum+v,0);
@@ -45,12 +45,12 @@ export function evaluateLesson(a,lesson,car,dt,time){a.elapsed+=dt;const speed=M
  if(lesson.speedTask&&speed>=25&&speed<=35)a.speedHeld+=dt;
  if(lesson.slope&&a.index===1&&car.speed<-.1)a.rollback+=Math.abs(car.speed)*dt;
  if(a.rollback>1&&!a.events.some(e=>e.name==='坂道で1m以上後退'))assessEvent(a,{code:'safety',name:'坂道で1m以上後退',loss:30,critical:true});
- const p=lesson.route[a.index];if(!p)return {done:true,passed:!a.fatal&&assessmentScore(a)>=85};
+ const p=lesson.route[a.index];if(!p)return {done:true,passed:!a.fatal&&assessmentScore(a)>=80};
  const distance=Math.hypot(car.x-p.x,car.z-p.z);let valid=distance<(p.stop?2.5:lesson.corridor?4:7);
  if(p.reverse&&!p.park)valid=valid&&car.gear==='R';
  if(p.park)valid=distance<1.25&&Math.abs(car.speed)<.1&&car.gear==='P'&&car.handbrake&&Math.abs(Math.atan2(Math.sin(car.heading-(lesson.spawn.heading||0)),Math.cos(car.heading-(lesson.spawn.heading||0))))<.17;
  if(p.stop){valid=valid&&speed<.5;if(lesson.speedTask&&a.speedHeld<3)valid=false;a.dwell=valid?a.dwell+dt:0;valid=a.dwell>=p.stop;}
  if(valid){if(p.turn&&!(a.events.some(e=>e.name==='曲がる前の確認・合図不足 '+a.index))&&(((car.lastIndicator||car.indicator)!==p.turn||time-(car.lastIndicatorTime||-999)>15)||time-car.lastSafety>10))assessEvent(a,{code:'observation',name:'曲がる前の確認・合図不足 '+a.index,loss:10});a.index++;a.dwell=0;}
  if(a.elapsed>lesson.time){a.fatal=true;if(!a.events.some(e=>e.name==='制限時間超過'))a.events.push({name:'制限時間超過',loss:0});}
- return {done:a.fatal||a.index>=lesson.route.length,passed:!a.fatal&&a.index>=lesson.route.length&&assessmentScore(a)>=85};}
+ return {done:a.fatal||a.index>=lesson.route.length,passed:!a.fatal&&a.index>=lesson.route.length&&assessmentScore(a)>=80};}
 

@@ -1,4 +1,4 @@
-import {sanitizeProfile} from './profile.mjs?v=academy2';
+import {sanitizeProfile} from './profile.mjs?v=pass80';
 const KEY='sb_publishable_uSQ9b6y_QL9GQ9gCa8CTMQ_AGs4jRG8';
 export async function codeDigest(code){
  if(!/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z0-9_-]{12,64}$/.test(code))throw Error('コードは英字と数字を含む半角12〜64文字（- と _ も使用可）で設定してください。');
