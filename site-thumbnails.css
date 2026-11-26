@@ -1,8 +1,8 @@
 /* Card order: favorite + linked title, thumbnail with count, expandable description. */
 html body #list .lc-link-card{display:flex!important;flex-direction:column!important;overflow:hidden;min-width:0;padding:0!important;align-self:start}
-html body #list .lc-card-heading{display:flex!important;align-items:flex-start!important;gap:10px!important;padding:14px!important;margin:0!important;min-width:0;position:relative}
-html body #list .lc-card-heading .lc-link-main{min-width:0;flex:1;margin:0!important;padding:3px 0 0!important}
-html body #linksPanel #list .lc-card-heading .title,html body #list .lc-card-heading .title{display:inline!important;font-size:16px!important;line-height:1.5!important;overflow-wrap:anywhere;white-space:normal;min-height:0!important}
+html body #list .lc-card-heading{display:flex!important;align-items:flex-start!important;gap:8px!important;padding:6px 10px!important;margin:0!important;min-width:0;position:relative}
+html body #list .lc-card-heading .lc-link-main{min-width:0;flex:1;margin:0!important;padding:0!important}
+html body #linksPanel #list .lc-card-heading .title,html body #list .lc-card-heading .title{display:inline!important;font-size:16px!important;line-height:1.4!important;overflow-wrap:anywhere;white-space:normal;min-height:0!important}
 html body #linksPanel #list .lc-card-heading .title::after,html body #list .lc-card-heading .title::after{content:none!important}
 html body #linksPanel #list .lc-card-heading .lc-visitor-favorite{position:relative!important;inset:auto!important;flex:0 0 32px!important;width:32px!important;min-height:32px!important;align-self:flex-start;margin:0!important;padding:0!important;font-size:25px!important;line-height:1;background:transparent!important;border:0!important;box-shadow:none!important;z-index:2}
 html body #list .lc-card-media{position:relative;isolation:isolate;aspect-ratio:16/9;width:100%;flex:none;overflow:hidden;background:#0b1727;border-top:1px solid #28485c;border-bottom:1px solid #28485c}
@@ -10,15 +10,18 @@ html body #list .lc-card-media>.site-thumbnail{display:block;width:100%;height:1
 html body #list .lc-thumbnail-placeholder{position:absolute;inset:0;display:grid;place-items:center;font-size:12px;color:#7892a6}
 html body #list .has-site-thumbnail .lc-thumbnail-placeholder{display:none}
 html body #linksPanel #list .lc-card-media .visitor-view-count{position:absolute!important;top:9px!important;left:10px!important;z-index:2;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;color:#fff!important;font-size:12px!important;line-height:1.5;font-weight:700;text-shadow:0 1px 3px #000,0 0 7px #000;pointer-events:none}
-html body #list .lc-card-description{padding:13px 14px 0;min-width:0}
-html body #linksPanel #list .lc-card-description .memo,html body #list .lc-card-description .memo{display:-webkit-box!important;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden!important;max-height:none!important;margin:0!important;padding:0!important;font-size:13px!important;line-height:1.7!important;white-space:pre-wrap;overflow-wrap:anywhere}
+html body #list .lc-card-description{padding:7px 10px 0;min-width:0}
+html body #linksPanel #list .lc-card-description .memo,html body #list .lc-card-description .memo{display:-webkit-box!important;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden!important;max-height:none!important;margin:0!important;padding:0!important;font-size:13px!important;line-height:1.55!important;white-space:pre-wrap;overflow-wrap:anywhere}
 html body #linksPanel #list .lc-card-description.is-expanded .memo,html body #list .lc-card-description.is-expanded .memo{display:block!important;-webkit-line-clamp:unset;overflow:visible!important}
-html body #list .lc-description-toggle{position:relative;z-index:2;display:inline-block;min-height:36px;padding:7px 0;margin:2px 0 0;border:0;background:transparent;color:#8fe1fa;cursor:pointer;font:inherit;font-size:12px;text-decoration:underline;text-underline-offset:3px}
+html body #list .lc-description-toggle{position:relative;z-index:2;display:inline-block;min-height:30px;padding:4px 0;margin:0;border:0;background:transparent;color:#8fe1fa;cursor:pointer;font:inherit;font-size:12px;text-decoration:underline;text-underline-offset:3px}
 html body #list .lc-description-toggle[hidden]{display:none!important}
 html body #list .lc-description-toggle:focus-visible{outline:2px solid #74dfff;outline-offset:3px;border-radius:3px}
-html body #list .lc-card-footer{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:10px 14px 12px;min-width:0;margin-top:auto}
+html body #list .lc-card-footer{display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:5px 10px 7px;min-width:0;margin-top:auto}
 html body #linksPanel #list .lc-card-footer .meta,html body #list .lc-card-footer .meta{flex:1;min-width:0;margin:0!important;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:11px!important;color:#8ca7bc!important}
 html body #list .lc-card-footer .filter-access-report{position:static!important;inset:auto!important;width:auto!important;padding:0!important;margin:0!important;border:0!important;background:transparent!important}
 html body #list .lc-link-card .lc-avatar{display:none!important}
-@media(max-width:560px){html body #list .lc-card-heading{padding:12px!important}html body #linksPanel #list .lc-card-heading .title{font-size:15px!important}html body #list .lc-card-description{padding:12px 12px 0}html body #list .lc-card-footer{padding:9px 12px 12px}}
+@media(max-width:560px){html body #list .lc-card-heading{padding:6px 10px!important}html body #linksPanel #list .lc-card-heading .title{font-size:15px!important}html body #list .lc-card-description{padding:7px 10px 0}html body #list .lc-card-footer{padding:5px 10px 7px}}
 @media(prefers-reduced-motion:reduce){html body #list .lc-link-card{transition:none!important}}
+
+/* Empty artwork slots do not need the height of a real thumbnail. */
+html body #list .lc-link-card:not(.has-site-thumbnail) .lc-card-media{aspect-ratio:auto;min-height:56px}
