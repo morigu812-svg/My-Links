@@ -4,7 +4,7 @@ const adminPreview=window.LinkBaseCarAdminPreview===true;
 if(!adminPreview)throw new Error('車シミュレーターは管理者確認用として公開中です。');
 import {codeDigest,transferRequest,cloudWriter} from './transfer.mjs?v=academy2';
 import {applyImpact,touchShiftAllowed} from './damage.mjs?v=academy2';
-import {createWorld} from './scene.js?v=umeda1';
+import {createWorld} from './scene.js?v=facade2';
 import {vehicles,trainingCar,vehicleById,colors,classNames} from './catalog.mjs?v=academy2';
 import {createCar,selectGear,stepCar,clamp,wrap,vehiclesOverlap} from './physics.mjs?v=umeda1';
 import {ROAD_COORDS,nearestRoad,groundHeight,roadGrade,distanceToRoute} from './world-data.mjs?v=academy2';
