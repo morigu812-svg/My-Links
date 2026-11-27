@@ -1248,7 +1248,6 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
           <button class="side-item" type="button" id="sideVisitorWarning"><span aria-hidden="true">⚠️</span> 警告</button>
           <button class="side-item" type="button" id="sideVisitorDowntime"><span aria-hidden="true">⌛</span> 休止時間</button>
           <button class="side-item" type="button" id="sideVisitorDirectory"><span aria-hidden="true">▤</span> 利用者一覧</button>
-          <button class="side-item" type="button" id="sideOnlineVisitors"><span aria-hidden="true">●</span> オンラインの利用者</button>
           <button class="side-item" type="button" id="sideBanAppeals" hidden><span aria-hidden="true">⚑</span> 異議申し立て</button>
           <button class="side-item" type="button" id="sideLinkReports"><span>⚑</span> リンク報告 <span id="linkReportBadge" class="new-badge" hidden></span></button>
         </div>
@@ -3148,7 +3147,6 @@ document.getElementById('authSubmit').disabled = false;
     {key:'logDashboard',side:'sideLogDashboard',api:'getLogDashboard',title:'ログ分析',description:'直近30日の利用状況とセキュリティ検知をグラフで確認できます。',columns:['ログの集計']},
     {key:'securityEvents',side:'sideSecurityEvents',api:'getSecurityEvents',title:'セキュリティ検知',description:'認証失敗・試行制限・権限のない操作・識別情報の不一致を表示します。期限切れや入力ミスも含むため、不正アクセスの確定を示すものではありません。同じ種類・対象・匿名識別子の記録は10分間隔にまとめます。直近200件。',columns:['日時','重要度','対象','検知内容','匿名識別子','失敗回数']},
     {key:'visitorDirectory',side:'sideVisitorDirectory',api:'getVisitorDirectory',title:'利用者一覧',description:'ブラウザIDごとに表示します。ログイン日数は保存されている履歴を日本時間で集計します。',columns:['利用者・登録情報','状態・最終ログイン','操作・詳細']},
-  {key:'onlineVisitors',side:'sideOnlineVisitors',api:'getOnlineVisitors',title:'オンラインの利用者',description:'利用者ページを表示中のブラウザです。30秒ごとに更新し、90秒通信がない場合はオフラインになります。同じブラウザの複数タブは1人として数えます。',columns:['利用者・ブラウザID','学校名','フィルターの種類','最終接続（日本時間）','状態']},
   {key:'banAppeals', side:'sideBanAppeals', api:'getBanAppeals', title:'異議申し立て', description:'利用停止の見直しを希望する利用者から届いた申し立てです（直近200件）。', columns:['受信日時','ブラウザID','理由','現在の状態','操作']},
   {key:'linkReports', side:'sideLinkReports', api:'getLinkReports', title:'リンク報告', description:'利用者から届いたリンクです。確認すると通知件数が減ります。', columns:['日時','URL','ブラウザID','状態']},
   {
@@ -3578,12 +3576,6 @@ document.getElementById('authSubmit').disabled = false;
   }
 
 
-  setInterval(() => {
-    if (!document.hidden && activeHistory?.key === 'onlineVisitors' && !clickLogPanel.hidden && !$('otherHistoryView').hidden && !$('refreshOtherHistory').disabled) void refreshOtherHistory();
-  }, 30000);
-  document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && activeHistory?.key === 'onlineVisitors' && !clickLogPanel.hidden && !$('otherHistoryView').hidden) void refreshOtherHistory();
-  });
 
   async function removeVisitorLogins(button, id) {
     const token = adminSession.getItem(ADMIN_TOKEN_KEY);
