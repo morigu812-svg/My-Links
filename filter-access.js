@@ -37,6 +37,7 @@
       dialog.append(title, profile, status);
       try {
         const current = await request('getMyFilterAccessReport', id);
+        window.dispatchEvent(new CustomEvent('link-base-filter-report',{detail:{id,result:current.result,filter:current.filter}}));
         if (!dialog.open) return;
         profile.textContent = '登録フィルター　' + current.filter;
         status.textContent = '現在の報告　' + resultLabel(current.result);
@@ -49,8 +50,9 @@
             status.textContent = '保存中…';
             try {
               const response = await request('saveFilterAccessReport', id, result);
-              if (!dialog.open) return;
               if (!response?.ok) throw new Error('保存を確認できませんでした。');
+              window.dispatchEvent(new CustomEvent('link-base-filter-report',{detail:{id,result,filter:response.filter}}));
+              if (!dialog.open) return;
               status.textContent = result ? response.filter + 'で「' + resultLabel(result) + '」と報告しました。' : '報告を取り消しました。';
 
             } catch (error) {
@@ -196,9 +198,10 @@
     return svg;
   }
 
-  window.setupAdminFilterAccess = (button, request, createPanel) => {
+  window.setupAdminFilterAccess = (button, request, createPanel, options={}) => {
     button.addEventListener('click', () => {
-      const dialog=createPanel?createPanel():modal('フィルター別アクセス状況');
+      const schoolMode=options.mode==='school';
+      const dialog=createPanel?createPanel():modal(schoolMode?'学校別アクセス状況':'フィルター別アクセス状況');
       const container=node('div','fa-dashboard');
       const lead=node('p','fa-lead','利用状況（ログ）と、リンクを開けたかどうかの報告を分けて分析します。');
       const periodTools=node('div','fa-period-tools');
@@ -219,7 +222,7 @@
         return select;
       }
       const filter=selectControl('フィルター');
-      const school=selectControl('学校');
+      const school=selectControl('学校');if(!schoolMode)school.parentElement.hidden=true;
       const metric=selectControl('推移の指標');
       metric.append(new Option('リンククリック回数','clicks'),new Option('ログイン回数','logins'),new Option('日別ブラウザ数','browsers'),new Option('操作合計（クリック＋ログイン）','operations'));
       const reportState=selectControl('報告の状態');
@@ -269,6 +272,8 @@
       const more=node('button','btn','さらに表示');more.type='button';more.hidden=true;detail.append(more);
       const foot=node('p','fa-method');
       container.append(lead,periodTools,tools,controls,status,cards,sectionRow,schoolSection,detail,foot);
+      schoolSection.hidden=!schoolMode;
+      if(schoolMode){lead.textContent='学校別のクリック・ログイン・ブラウザ数を確認できます。';ranking.hidden=true;merge.hidden=true;detail.hidden=true;reportState.parentElement.hidden=true;searchWrapper.hidden=true;sectionRow.style.gridTemplateColumns='1fr';}
       dialog.append(container);
 
       function populate(select,values,label) {
@@ -380,6 +385,10 @@
             }else label.textContent=urlText;
             title.append(label);
           }
+          if(typeof options.onEdit==='function'){
+            const edit=node('button','btn','編集');edit.type='button';edit.setAttribute('aria-label',item.title+'を編集');
+            edit.addEventListener('click',async()=>{if(edit.disabled)return;edit.disabled=true;try{const updated=await options.onEdit(item.id);if(updated&&dialog.open){const existing=(reports.links||[]).find(link=>link.id===updated.id);if(existing)Object.assign(existing,updated);else(reports.links||(reports.links=[])).push(updated);render();}}catch(error){if(dialog.open)status.textContent='編集できませんでした：'+error.message;}finally{edit.disabled=false;}});title.append(edit);
+          }
           row.append(title,node('td','',item.filter),
             node('td','',fmt(item.allowed)),node('td','',fmt(item.blocked)),
             node('td','',percent(item.allowed,item.allowed+item.blocked)),
@@ -459,3 +468,4 @@
     });
   };
 })();
+

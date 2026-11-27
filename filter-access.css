@@ -105,3 +105,6 @@ html body .filter-access-panel h2{margin:0 0 12px}
 @media(prefers-reduced-motion:reduce){.fa-dashboard .fa-skeleton::after{animation:none;transform:none;background:none}}
 
 .filter-access-url a{color:inherit;text-decoration:underline;text-underline-offset:3px;overflow-wrap:anywhere}.filter-access-url a:focus-visible{outline:2px solid currentColor;outline-offset:3px}
+
+.fa-dashboard [hidden]{display:none!important}
+

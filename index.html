@@ -476,8 +476,8 @@ a.admin{color:#68ddff!important}
 #visitorOnlineCount{margin-left:12px;color:#9fe7cf;font-size:12px;font-weight:500;letter-spacing:normal;white-space:nowrap}
 #linksPanel .finder-title{flex-wrap:wrap}
 @media(max-width:600px){#visitorOnlineCount{margin-left:6px;font-size:10px}}
-</style><link rel="stylesheet" href="./filter-access.css?v=8">
-<script src="./filter-access.js?v=9"></script>
+</style><link rel="stylesheet" href="./filter-access.css?v=9">
+<script src="./filter-access.js?v=10"></script>
 <meta name="referrer" content="no-referrer">
 <style>
 html body #chatScreenshot{font:inherit;font-size:12px;line-height:1.4;min-height:36px;padding:9px 12px;border:1px solid #32728b;border-radius:8px;background:#12334d;color:#dff8ff;cursor:pointer}
@@ -487,7 +487,7 @@ html body #chatScreenshot:disabled{opacity:.55;cursor:wait}
 html body #chatScreenshotControls{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 html body #chatScreenshotStatus{flex-basis:100%}
 @media(max-width:650px){html body #chatScreenshot{min-height:44px}}
-</style><style>#visitorNicknameBadge{border:1px solid #38728f;border-radius:7px;background:#102a43;color:inherit;font:inherit;font-size:11px;padding:5px 8px;cursor:pointer}.visitor-view-count{margin-top:6px;font-size:11px;color:#95b5c8}</style><style>#visitorDowntimeDialog{z-index:2147483647;max-width:430px}#visitorDowntimeDialog::backdrop{background:#050b16f5}#visitorDowntimeUntil{font-weight:700;color:#71e8c1}</style><style>#visitorWarningScreen{width:min(480px,92vw);padding:30px;border:2px solid #e4a541;border-radius:18px;background:#191a21;color:#fff;text-align:center;max-height:90dvh;overflow:auto}#visitorWarningScreen::backdrop{background:#05070bf0}#visitorWarningScreen h2{color:#ffc65f;font-size:23px}#visitorWarningText{font-size:16px;line-height:1.9;white-space:pre-wrap;overflow-wrap:anywhere}.visitor-warning-symbol{font-size:48px}#visitorWarningAcknowledge{padding:12px 23px;background:#e0a03a;color:#211507;border:0;border-radius:9px;font-weight:700}</style><link rel="stylesheet" href="./site-thumbnails.css?v=4"><script src="./site-thumbnails.js?v=3" defer></script><script src="./sidebar-layout.js?v=2"></script><link rel="stylesheet" href="./sidebar-layout.css?v=1"></head>
+</style><style>#visitorNicknameBadge{border:1px solid #38728f;border-radius:7px;background:#102a43;color:inherit;font:inherit;font-size:11px;padding:5px 8px;cursor:pointer}.visitor-view-count{margin-top:6px;font-size:11px;color:#95b5c8}</style><style>#visitorDowntimeDialog{z-index:2147483647;max-width:430px}#visitorDowntimeDialog::backdrop{background:#050b16f5}#visitorDowntimeUntil{font-weight:700;color:#71e8c1}</style><style>#visitorWarningScreen{width:min(480px,92vw);padding:30px;border:2px solid #e4a541;border-radius:18px;background:#191a21;color:#fff;text-align:center;max-height:90dvh;overflow:auto}#visitorWarningScreen::backdrop{background:#05070bf0}#visitorWarningScreen h2{color:#ffc65f;font-size:23px}#visitorWarningText{font-size:16px;line-height:1.9;white-space:pre-wrap;overflow-wrap:anywhere}.visitor-warning-symbol{font-size:48px}#visitorWarningAcknowledge{padding:12px 23px;background:#e0a03a;color:#211507;border:0;border-radius:9px;font-weight:700}</style><link rel="stylesheet" href="./site-thumbnails.css?v=4"><script src="./site-thumbnails.js?v=3" defer></script><script src="./sidebar-layout.js?v=2"></script><link rel="stylesheet" href="./sidebar-layout.css?v=1"><script src="./blocked-links.js?v=1"></script></head>
 <body>
 <main class="wrap">
 <div class="click-log-notice" id="clickLogNotice" role="status" aria-live="polite"></div>
@@ -541,7 +541,7 @@ html body #chatScreenshotStatus{flex-basis:100%}
 </section>
 <section class="finder-window hidden" id="linksPanel">
   <div class="finder-toolbar"><div class="traffic-lights" aria-label="ウィンドウ操作"><span class="traffic-red" aria-hidden="true"></span><span class="traffic-yellow" aria-hidden="true"></span><span class="traffic-green" aria-hidden="true"></span></div><div class="finder-title"><span class="folder-glyph">▰</span> My Desktop <span class="toolbar-chevron">›</span><button id="visitorNicknameBadge" type="button" aria-haspopup="dialog">ニックネーム設定</button><span id="visitorOnlineCount" role="status">オンライン人数を確認中…</span></div><div class="toolbar-tools"><span>▤</span><span>☷</span><button class="share-btn" type="button" id="toolbarShareBtn" aria-label="このページを共有する" title="このページを共有する">⤴</button></div><div class="toolbar-search" role="search"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="検索" aria-label="リンクを検索（/ キーで移動）" autocomplete="off" enterkeyhint="search"><button class="lc-search-clear" type="button" aria-label="検索をクリア" hidden>×</button><kbd aria-hidden="true">/</kbd></div></div>
-  <div class="finder-layout"><aside class="sidebar" aria-label="サイドバー"><div class="side-label">リンクを探す</div><button class="side-item selected" type="button" data-view="all"><span>▦</span> すべてのリンク</button><button class="side-item" type="button" data-view="favorites"><span>★</span> お気に入り</button><button class="side-item" type="button" data-view="recent"><span>◷</span> 最近追加した項目</button><button class="side-item" type="button" data-view="desktop"><span>▣</span> フォルダ一覧</button><details class="sidebar-section " open><summary>カテゴリー</summary><div class="sidebar-section-items"><div id="sideCats" class="side-cats"></div></div></details><details class="visitor-chat-folder" open>
+  <div class="finder-layout"><aside class="sidebar" aria-label="サイドバー"><div class="side-label">リンクを探す</div><button class="side-item selected" type="button" data-view="all"><span>▦</span> すべてのリンク</button><button class="side-item" type="button" data-view="favorites"><span>★</span> お気に入り</button><button class="side-item" type="button" data-view="recent"><span>◷</span> 最近追加した項目</button><button class="side-item" type="button" data-view="desktop"><span>▣</span> フォルダ一覧</button><button class="side-item" type="button" data-view="blocked"><span>▰</span> 制限されているリンク</button><details class="sidebar-section " open><summary>カテゴリー</summary><div class="sidebar-section-items"><div id="sideCats" class="side-cats"></div></div></details><details class="visitor-chat-folder" open>
 <summary><span aria-hidden="true">▰</span> チャット</summary>
 <div class="visitor-chat-folder-items">
 <button class="side-item chat-launch" type="button" id="openChat"><span aria-hidden="true">☷</span> みんなのチャット</button>
@@ -836,8 +836,9 @@ function publicLinks(items) {
 }
 function visibleLinks(){
  const q=$('search').value.trim().toLowerCase();
- if(q)return links.filter(x=>[x.title,x.url,x.memo,x.category].some(v=>String(v||'').toLowerCase().includes(q)));
- let items=links;
+ let source=links.filter(x=>view==='blocked'?browserBlockedLinks.has(x.id):!browserBlockedLinks.has(x.id));
+ if(q)return source.filter(x=>[x.title,x.url,x.memo,x.category].some(v=>String(v||'').toLowerCase().includes(q)));
+ let items=source;
  if(selectedCategory==='__uncategorized__')items=items.filter(x=>!folderPath(x.category));
  else if(selectedCategory)items=items.filter(x=>folderPath(x.category)===selectedCategory);
  else if(view==='favorites')items=items.filter(x=>isVisitorFavorite(x.id));
@@ -845,7 +846,9 @@ function visibleLinks(){
  return items;
 }
 let renderedCategories, renderedCategory, renderedNewLinkCount, renderedSidebarLinks;
-window.setupVisitorFilterAccess($('list'),(method,...args)=>call(method,...args,visitorToken));
+const browserBlockedLinks=window.createBrowserBlockedLinks(()=>{renderedSidebarLinks=null;if(visitorToken)render({preservePanels:true});});
+window.addEventListener('link-base-filter-report',event=>{const {id,result,filter}=event.detail||{};if(visitorToken&&id){browserBlockedLinks.configure(getNoticeBrowserId(),filter);browserBlockedLinks.update(id,result,filter);}});
+window.setupVisitorFilterAccess($('list'),async(method,...args)=>{const token=visitorToken;const response=await call(method,...args,token);if(token!==visitorToken)throw new Error('ログイン情報が変わりました。');return response;});
 function render({preservePanels=false}={}){
  if(!preservePanels){
  document.getElementById('chatOverlay')?.classList.remove('open');
@@ -857,22 +860,23 @@ function render({preservePanels=false}={}){
  $('list').classList.remove('loading-skeleton');
  const folderIcon="<svg class=\"folder-icon\" viewBox=\"0 0 64 52\" aria-hidden=\"true\"><path d=\"M4 10a5 5 0 0 1 5-5h17l7 7h22a5 5 0 0 1 5 5v4H4z\" fill=\"currentColor\" opacity=\".72\"/><path d=\"M4 17a5 5 0 0 1 5-5h46a5 5 0 0 1 5 5v27a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z\" fill=\"currentColor\"/><path d=\"M4 22h56\" stroke=\"#fff\" stroke-opacity=\".35\" stroke-width=\"2\"/></svg>";
  const folderButton=(name,key,count)=>'<button type="button" class="folder-card" data-open-folder="'+esc(key)+'">'+folderIcon+'<span class="folder-card-name">'+esc(name)+'</span>'+(hasNewInFolder(key,visible)?'<span class="new-label">NEW</span>':'')+'<span class="folder-card-count">'+count+' 個のリンク</span></button>';
- const visible=links;
+ const visible=links.filter(x=>!browserBlockedLinks.has(x.id));
  if (renderedSidebarLinks !== links || renderedCategories !== categories || renderedCategory !== selectedCategory || renderedNewLinkCount !== readNewLinkIds.size) {
-  $('sideCats').innerHTML=window.LinkBaseSidebar.renderCategories({categories,links:visible,selected:selectedCategory,attribute:'data-category',normalize:folderPath,parts:folderParts,icon:folderIcon,isNew:key=>hasNewInFolder(key,visible)});
+  $('sideCats').innerHTML=window.LinkBaseSidebar.renderCategories({categories:visible.map(x=>x.category).filter(Boolean),links:visible,selected:selectedCategory,attribute:'data-category',normalize:folderPath,parts:folderParts,icon:folderIcon,isNew:key=>hasNewInFolder(key,visible)});
   renderedSidebarLinks = links;
   renderedCategories = categories;
   renderedCategory = selectedCategory;
   renderedNewLinkCount = readNewLinkIds.size;
  }
  document.querySelectorAll('[data-view]').forEach(btn=>btn.classList.toggle('selected',!selectedCategory&&btn.dataset.view===view));
- const titles={desktop:'My Desktop',all:'すべてのリンク',favorites:'お気に入り',recent:'最近追加した項目'};
+ const titles={blocked:'制限されているリンク',desktop:'My Desktop',all:'すべてのリンク',favorites:'お気に入り',recent:'最近追加した項目'};
  const query=$('search').value.trim();
  $('viewTitle').textContent=query?'リンクの検索結果':selectedCategory==='__uncategorized__'?'未分類':(selectedCategory||titles[view]||'すべてのリンク');
  if(!selectedCategory&&(view==='desktop'||view==='all')&&!query){
   const folders=childFolders('',visible);
   const uncategorized=visible.filter(x=>!folderPath(x.category)).length;
   if(uncategorized)folders.push({name:'未分類',key:'__uncategorized__',count:uncategorized});
+  const blockedCount=links.filter(x=>browserBlockedLinks.has(x.id)).length;if(blockedCount)folders.push({name:'制限されているリンク',key:'__blocked__',count:blockedCount});
   $('count').textContent=folders.length+' フォルダ';
   $('loadStatus').textContent='';
   $('list').innerHTML=folders.length?folders.map(f=>folderButton(f.name,f.key,f.count)).join(''):'<div class="empty">フォルダがありません。</div>';
@@ -1011,6 +1015,7 @@ function showVisitorLogin(message){
   document.querySelectorAll('.visitor-view-count').forEach(node=>node.remove());
   links=[];
   categories=[];
+  browserBlockedLinks.reset();
   favoriteIds=new Set();
   pendingFavorites=new Set();
   favoritesReady=false;
@@ -1410,7 +1415,7 @@ $('search').addEventListener('input', () => {
 });
 
 $('sideCats').addEventListener('click',event=>{const btn=event.target.closest('[data-category]');if(!btn)return;$('search').value='';selectedCategory=btn.dataset.category;view='all';render()});
-$('list').addEventListener('click',event=>{const folder=event.target.closest('[data-open-folder]');if(folder){$('search').value='';selectedCategory=folder.dataset.openFolder;view='all';render();return;}if(event.target.closest('[data-folder-back]')){$('search').value='';selectedCategory=selectedCategory==='__uncategorized__'?'':folderParent(selectedCategory);view=selectedCategory?'all':'desktop';render();}});
+$('list').addEventListener('click',event=>{const folder=event.target.closest('[data-open-folder]');if(folder){$('search').value='';const blocked=folder.dataset.openFolder==='__blocked__';selectedCategory=blocked?'':folder.dataset.openFolder;view=blocked?'blocked':'all';render();return;}if(event.target.closest('[data-folder-back]')){$('search').value='';selectedCategory=selectedCategory==='__uncategorized__'?'':folderParent(selectedCategory);view=selectedCategory?'all':'desktop';render();}});
 document.querySelector('.sidebar').addEventListener('click',event=>{const btn=event.target.closest('[data-view]');if(!btn)return;$('search').value='';selectedCategory='';view=btn.dataset.view;render()});
 $('list').addEventListener('click',async event=>{
  const button=event.target.closest('[data-visitor-favorite]');
@@ -1525,6 +1530,8 @@ function applyVisitorLinks(data){
  setVisitorReplyGate(!!data?.replyRequired);
  if(!data||!Array.isArray(data.links))throw new Error('リンク一覧を取得できませんでした。');
  links=publicLinks(data.links);
+ browserBlockedLinks.configure(getNoticeBrowserId(),visitorChatProfile?.filter||'',data.blockedLinkIds);
+ renderedSidebarLinks=null;
  categories=Array.from(new Set(links.map(x=>x.category).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'ja'));
 }
 async function finishVisitorLogin(auth, expiresAt) {
@@ -4850,6 +4857,7 @@ body { font-size:15px; line-height:1.7; }
 <link rel="stylesheet" href="./mobile-layout.css?v=1">
 <script src="./mobile-layout.js?v=1"></script>
 <style>#chatProfileDialog select{display:block;width:100%;padding:12px;border:1px solid #527184;border-radius:8px;background:#102638;color:#e8f9ff;font:inherit;margin-top:6px}#chatProfileSchoolRegionFields p{font-size:12px;line-height:1.7}#chatProfileDialog [hidden]{display:none!important}</style></body></html>
+
 
 
 

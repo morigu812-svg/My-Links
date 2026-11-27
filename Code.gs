@@ -415,7 +415,8 @@ function authenticateVisitor(password, browserId, browserSecret) {
 
   return {
     ok: true, token: token, browserId:browserId, profile:profile, warning:visitorWarning_(browserId), expiresIn: SESSION_TTL_SECONDS,
-    links: initialLinks.links, categories: initialLinks.categories, replyRequired:!!initialLinks.replyRequired, profileRequired:!!initialLinks.profileRequired
+    links: initialLinks.links, categories: initialLinks.categories, replyRequired:!!initialLinks.replyRequired, profileRequired:!!initialLinks.profileRequired,
+    blockedLinkIds:!initialLinks.profileRequired&&!initialLinks.replyRequired?visitorBlockedLinkIds_(browserId,profile.filter,initialLinks.links):[]
   };
 }
 
@@ -951,6 +952,10 @@ function getLinks(viewerToken) {
 
   const performanceData = isAdmin ? { authMs: authMs } : null;
   const result = getLinksForToken_(viewerToken, isAdmin, performanceData);
+  if(!isAdmin&&!result.profileRequired&&!result.replyRequired){
+    const browser=visitorProfileBrowser_('',viewerToken),profile=getVisitorChatProfile(browser,viewerToken);
+    result.blockedLinkIds=visitorBlockedLinkIds_(browser,profile.filter,result.links);
+  }
   if (performanceData) {
     performanceData.serverTotalMs = Date.now() - startedAt;
     performanceData.linkCount = result.links.length;
@@ -4268,6 +4273,15 @@ function filterAccessVisitor_(linkId, token) {
   if (!link) throw new Error('公開リンクが見つかりません。');
   return {browser,profile,link};
 }
+function visitorBlockedLinkIds_(browser, filter, visibleLinks) {
+  const visible=new Set(visibleLinks.map(link=>String(link.id))),latest=new Map();
+  filterAccessRows_(filterAccessSpreadsheet_()).forEach(row=>{
+    if(String(row[0])!==String(browser)||String(row[2])!==String(filter)||!visible.has(String(row[1])))return;
+    const id=String(row[1]),stamp=String(toIso_(row[5])),old=latest.get(id);
+    if(!old||stamp>=old.stamp)latest.set(id,{stamp:stamp,result:row[4]});
+  });
+  return Array.from(latest).filter(entry=>entry[1].result==='blocked').map(entry=>entry[0]);
+}
 function getMyFilterAccessReport(linkId, token) {
   const {browser,profile} = filterAccessVisitor_(linkId, token);
   const rows = filterAccessRows_(filterAccessSpreadsheet_());
@@ -4908,3 +4922,4 @@ function setAdminActivityNickname(browserId,nickname,token){
  return {browserId:browserId,nickname:name};
 }
 function adminActivityDisplayName_(browserId,fallback,names){return String(names['LINK_CORE_AUDIT_NAME_'+browserId]||fallback||'管理者');}
+
