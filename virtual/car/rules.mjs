@@ -1,3 +1,4 @@
+import {exceedsSpeed} from './scenario.mjs?v=preview1';
 import {intersections,signalState,nearestRoad,correctLane,railClosed,railway} from './world-data.mjs?v=academy2';
 export const sources=[['警視庁・交通違反の点数一覧','https://www.keishicho.metro.tokyo.lg.jp/menkyo/torishimari/gyosei/seido/tensu.html'],['警視庁・点数制度','https://www.keishicho.metro.tokyo.lg.jp/menkyo/torishimari/gyosei/seido/gyosei15.html'],['神奈川県警・事故の付加点数','https://www.police.pref.kanagawa.jp/tetsuzuki/menkyo/mes83040.html'],['警察庁・教習の標準','https://www.npa.go.jp/laws/notification/koutuu/menkyo/menkyo20250228_008.pdf']];
 export const violations={red:{name:'信号無視',points:2,loss:35,critical:true},stop:{name:'指定場所一時不停止',points:2,loss:25,critical:true},wrongWay:{name:'通行区分違反',points:2,loss:20,critical:true},crosswalk:{name:'横断歩行者等妨害',points:2,loss:30,critical:true},railStop:{name:'踏切不停止等',points:2,loss:30,critical:true},rail:{name:'遮断踏切立入り',points:2,loss:40,critical:true},belt:{name:'座席ベルト装着義務違反',points:1,loss:10},signal:{name:'合図不履行',points:1,loss:10},headway:{name:'車間距離不保持（一般道路）',points:1,loss:10},safety:{name:'安全運転義務違反',points:2,loss:30,critical:true},speed:{name:'速度超過',points:1,loss:15},offRoad:{name:'コース逸脱',points:0,loss:15,gameOnly:true},observation:{name:'安全確認不足',points:0,loss:10,gameOnly:true},rough:{name:'急な操作',points:0,loss:3,gameOnly:true}};
@@ -12,10 +13,10 @@ export function disposition(points,prior=0){
 }
 export function createRuleTracker(){return {cooldowns:{},stops:{},amber:{},lastSignals:{},durations:{},latched:{},lastHeading:null,turning:false,turnStart:0,turnIndicator:0,turnChecked:false};}
 function trigger(t,code,time,out,detail='',points){if(time<(t.cooldowns[code]||0))return;t.cooldowns[code]=time+12;out.push({...violations[code],code,detail,...(points===undefined?{}:{points})});}
-export function checkRules(tracker,previous,car,time,dt,{campus=false,wet=false,agents=[]}={}){
+export function checkRules(tracker,previous,car,time,dt,{campus=false,wet=false,agents=[],mode='lesson'}={}){
  const out=[],speed=Math.abs(car.speed)*3.6;if(campus)return out;const road=nearestRoad(car);
  function sustained(name,active,seconds,code,detail='',points){if(!active){tracker.durations[name]=0;tracker.latched[name]=false;return;}tracker.durations[name]=(tracker.durations[name]||0)+dt;if(tracker.durations[name]>seconds&&!tracker.latched[name]){trigger(tracker,code,time,out,detail,points);tracker.latched[name]=true;}}
- sustained('speed',speed>road.limit+.5&&road.onRoad,1.2,'speed',`${Math.round(speed)} / 制限${road.limit} km/h`,speedingPoints(speed-road.limit));
+ sustained('speed',exceedsSpeed(speed,road.limit,mode)&&road.onRoad,1.2,'speed',`${Math.round(speed)} / 制限${road.limit} km/h`,speedingPoints(speed-road.limit));
  sustained('belt',!car.belt&&speed>2,1,'belt');sustained('lane',speed>4&&!correctLane(car,road)&&!road.intersection,2,'wrongWay');sustained('off',!road.onRoad&&speed>5,2,'offRoad');
  // Front bumper, not vehicle center, crosses the stop line.
  const f={x:-Math.sin(car.heading),z:-Math.cos(car.heading)},prevFront={x:previous.x+f.x*2.2,z:previous.z+f.z*2.2},front={x:car.x+f.x*2.2,z:car.z+f.z*2.2};
