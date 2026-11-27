@@ -9,12 +9,14 @@
  */
 'use strict';
 
-var CACHE_VERSION = 'link-core-v156';
+var CACHE_VERSION = 'link-core-v157';
 var STATIC_CACHE = 'link-core-static-' + CACHE_VERSION;
 
 /* アプリの殻。相対パスなので、GitHub Pages のプロジェクトサイト
    （例：https://<user>.github.io/My-Links/）でもカスタムドメインでも動く。 */
 var STATIC_ASSETS = [
+  './chat-links.js?v=1',
+  './chat-links.css?v=1',
   './sidebar-layout.js?v=2',
   './sidebar-layout.css?v=1',
   './site-thumbnails.js?v=3',
@@ -32,7 +34,7 @@ var STATIC_ASSETS = [
   './ai-launcher.js',
   './chat-screenshot.js?v=1',
   './chat-realtime.js',
-  './chat-reply.js',
+  './chat-reply.js?v=links1',
   './chat-reply.css',
   './chat-preview.js',
   './chat-preview.css',
@@ -146,6 +148,7 @@ self.addEventListener('fetch', function (event) {
 
   /* それ以外（Google Fonts 等の外部リソース）は Service Worker を通さない。 */
 });
+
 
 
 

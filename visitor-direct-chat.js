@@ -222,7 +222,7 @@
         card.className = 'visitor-dm-message' + (item.own ? ' own' : '');
         card.dataset.messageId = item.id;
         const body = document.createElement('div');
-        body.textContent = item.message;
+        window.LinkBaseChatLinks.render(body,item.message);
         const time = document.createElement('time');
         const date = new Date(item.createdAt);
         if (Number.isFinite(date.getTime())) {
@@ -233,7 +233,7 @@
           const quote = document.createElement('blockquote');
           quote.className = 'visitor-dm-quote';
           const original = messages.find(message => message.id === item.replyTo);
-          quote.textContent = original ? original.message || original.attachment?.name || '添付ファイル' : '以前のメッセージへの返信';
+          window.LinkBaseChatLinks.render(quote,original ? original.message || original.attachment?.name || '添付ファイル' : '以前のメッセージへの返信');
           card.append(quote);
         }
         body.className = 'visitor-dm-body';
@@ -542,3 +542,4 @@
     return {open, refresh, setBrowserName, close:() => { if (panel.open) panel.close(); }};
   };
 })();
+

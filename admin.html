@@ -1153,12 +1153,12 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
 #finderWindow .link-feed-privacy-note a:focus-visible{outline:2px solid #35d9ff;outline-offset:3px}
 </style>
 <link rel="stylesheet" href="./chat-reply.css">
-<script src="./chat-reply.js"></script>
+<script src="./chat-links.js?v=1"></script><link rel="stylesheet" href="./chat-links.css?v=1"><script src="./chat-reply.js?v=links1"></script>
 <link rel="stylesheet" href="./chat-preview.css">
 <script src="./chat-preview.js"></script>
 <script src="./chat-realtime.js?v=staff-relay-1"></script>
 <link rel="stylesheet" href="./visitor-direct-chat.css?v=presence-green1">
-<script src="./visitor-direct-chat.js?v=attachment-guards2"></script>
+<script src="./visitor-direct-chat.js?v=chatlinks1"></script>
 <script src="./chat-screenshot.js?v=clipboard1" defer></script>
 <style id="visitor-counter-style">
 .visitor-counter-strip{display:flex;align-items:center;flex-wrap:wrap;gap:10px 20px;margin:11px 0 13px;padding:11px 14px;border:1px solid rgba(53,217,255,.28);border-radius:10px;background:rgba(14,38,51,.65);font-size:12px;color:#a9c7d4}
@@ -2553,7 +2553,7 @@ document.getElementById('authSubmit').disabled = false;
       if (item.message) {
         const body = document.createElement('div');
         body.className = 'staff-message-body';
-        body.textContent = item.message;
+        window.LinkBaseChatLinks.render(body,item.message);
         bubble.append(body);
       }
       const line = document.createElement('div');
@@ -8390,5 +8390,6 @@ body.night-mode #finderWindow .finder-layout {
 </style>
 </body>
 </html>
+
 
 

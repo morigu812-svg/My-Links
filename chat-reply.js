@@ -38,7 +38,7 @@
       const author = document.createElement('strong');
       author.textContent = item.reply.author || 'メッセージ';
       const text = document.createElement('span');
-      text.textContent = excerpt(item.reply);
+      window.LinkBaseChatLinks.render(text,item.reply.message||item.reply.attachment?.name||'メッセージ',{maxLength:95});
       quote.append(author, text);
       bubble.prepend(quote);
     }
@@ -56,7 +56,7 @@
     let start;
     let suppressTap = false;
     gestureArea.addEventListener('pointerdown', event => {
-      if (event.pointerType !== 'touch' || !event.isPrimary) return;
+      if (event.pointerType !== 'touch' || !event.isPrimary || event.target?.closest?.('a,button,input,textarea,video,audio')) return;
       start = {id:event.pointerId, x:event.clientX, y:event.clientY};
     });
     gestureArea.addEventListener('pointermove', event => {
@@ -98,3 +98,4 @@
     }, true);
   };
 })();
+
