@@ -866,10 +866,10 @@ function render({preservePanels=false}={}){
  $('list').setAttribute('aria-busy','false');
  $('list').classList.remove('loading-skeleton');
  const folderIcon="<svg class=\"folder-icon\" viewBox=\"0 0 64 52\" aria-hidden=\"true\"><path d=\"M4 10a5 5 0 0 1 5-5h17l7 7h22a5 5 0 0 1 5 5v4H4z\" fill=\"currentColor\" opacity=\".72\"/><path d=\"M4 17a5 5 0 0 1 5-5h46a5 5 0 0 1 5 5v27a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z\" fill=\"currentColor\"/><path d=\"M4 22h56\" stroke=\"#fff\" stroke-opacity=\".35\" stroke-width=\"2\"/></svg>";
- const folderButton=(name,key,count)=>'<button type="button" class="folder-card" data-open-folder="'+esc(key)+'">'+folderIcon+'<span class="folder-card-name">'+esc(name)+'</span>'+(hasNewInFolder(key,visible)?'<span class="new-label">NEW</span>':'')+'<span class="folder-card-count">'+count+' 個のリンク</span></button>';
+ const folderButton=(name,key,count)=>'<button type="button" class="folder-card" data-open-folder="'+esc(key)+'">'+folderIcon+'<span class="folder-card-name">'+esc(name)+'</span>'+'<span class="folder-card-count">'+count+' 個のリンク</span></button>';
  const visible=links.filter(x=>!browserBlockedLinks.has(x.id));
  if (renderedSidebarLinks !== links || renderedCategories !== categories || renderedCategory !== selectedCategory || renderedNewLinkCount !== readNewLinkIds.size) {
-  $('sideCats').innerHTML=window.LinkBaseSidebar.renderCategories({categories:visible.map(x=>x.category).filter(Boolean),links:visible,selected:selectedCategory,attribute:'data-category',normalize:folderPath,parts:folderParts,icon:folderIcon,isNew:key=>hasNewInFolder(key,visible)});
+  $('sideCats').innerHTML=window.LinkBaseSidebar.renderCategories({categories:visible.map(x=>x.category).filter(Boolean),links:visible,selected:selectedCategory,attribute:'data-category',normalize:folderPath,parts:folderParts,icon:folderIcon});
   renderedSidebarLinks = links;
   renderedCategories = categories;
   renderedCategory = selectedCategory;
