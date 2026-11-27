@@ -1283,6 +1283,7 @@ body:not(.night-mode) #staffChatOverlay #staffMailboxCopy { background: #122538 
         </div>
       </details>
       <details class="sidebar-section " open><summary>カテゴリー</summary><div class="sidebar-section-items"><div id="sideCats" class="side-cats"></div></div></details>
+      <a class="side-item visitor-page-link" href="index.html">利用者ページへ ↗</a>
     </aside>
     <main class="finder-content">
   <section class="workspace" aria-label="リンク一覧">
@@ -5463,11 +5464,11 @@ $('closeChat').addEventListener('click', closeMainChat);
   })();
 })();
 </script>
-<a class="visitor-page-link" href="index.html">利用者ページへ ↗</a>
+
 <style>
-.visitor-page-link{position:fixed;left:18px;bottom:18px;z-index:9999;display:inline-flex;align-items:center;gap:8px;padding:11px 15px;border:1px solid #286b8c;border-radius:10px;background:linear-gradient(135deg,#10283b,#0a1525);color:#9beaff;text-decoration:none;font:600 12px system-ui,sans-serif;box-shadow:0 0 18px #25c7f51c,inset 0 1px #ffffff0a;transition:border-color .15s,box-shadow .15s,background .15s}
+.visitor-page-link{position:static;left:auto;bottom:auto;margin-top:16px;display:inline-flex;align-items:center;gap:8px;padding:11px 15px;border:1px solid #286b8c;border-radius:10px;background:linear-gradient(135deg,#10283b,#0a1525);color:#9beaff;text-decoration:none;font:600 12px system-ui,sans-serif;box-shadow:0 0 18px #25c7f51c,inset 0 1px #ffffff0a;transition:border-color .15s,box-shadow .15s,background .15s}
 .visitor-page-link:hover{border-color:#35d8ff;background:linear-gradient(135deg,#12364d,#0d1d31);color:#d5f8ff;box-shadow:0 0 22px #25c7f533}
-@media(max-width:650px){.visitor-page-link{left:12px;bottom:12px;padding:10px 12px}}
+@media(max-width:650px){.visitor-page-link{padding:10px 12px}}
 
 /* HARD OVERRIDE: remove remaining green/jade styling across admin UI */
 :root{--accent:#35d9ff!important;--line:#20516c!important}
@@ -8345,11 +8346,15 @@ html body .sidebar .side-danger:hover{background:rgba(255,90,110,.14)!important}
 <style id="admin-navigation-refresh">
 @media (min-width: 761px) {
   #finderWindow .sidebar {
-    position: sticky;
-    top: 14px;
-    align-self: start;
-    max-height: calc(100dvh - 28px);
-    overflow-y: auto;
+    /* Let the whole navigation grow with expanded groups. A viewport-capped
+       sticky box left the lower part of the Finder column empty on iPad. */
+    position: static;
+    top: auto;
+    align-self: stretch;
+    min-height: 0;
+    max-height: none;
+    overflow: visible;
+    box-sizing: border-box;
     overscroll-behavior: contain;
     scrollbar-width: thin;
     scrollbar-color: #294968 transparent;
