@@ -7,7 +7,7 @@ export function selectGear(car,gear){if(!['P','R','N','D','M'].includes(gear))re
 export function stepCar(car,input,dt,v=trainingCar,env={}){
  dt=clamp(Number.isFinite(dt)?dt:0,0,.04);if(!dt)return car;
  const throttle=car.disabled?0:clamp(input.throttle||0,0,1)*(1-(car.damage||0)/160),brake=clamp(input.brake||0,0,1),steering=clamp(input.steer||0,-1,1),mu=(env.wet?.67:1)*v.grip;
- car.steer+=(steering-car.steer)*(1-Math.exp(-5.8*dt));const speed=Math.abs(car.speed);
+ car.steer+=(steering-car.steer)*(1-Math.exp(-9*dt));const speed=Math.abs(car.speed);
  if(car.gear==='D'){if(car.rpm>3600&&car.shift<6)car.shift++;else if(car.rpm<1400&&car.shift>1)car.shift--;}
  if(car.gear==='M')car.shift=clamp(car.manual,1,6);
  const ratio=car.gear==='R'?3.2:ratios[car.shift-1];car.rpm=clamp(Math.max(800,speed/radius*ratio*finalDrive*60/(2*Math.PI)),800,6500);
@@ -23,7 +23,7 @@ export function stepCar(car,input,dt,v=trainingCar,env={}){
  if((brake>.01||car.handbrake||(!drive&&Math.abs(env.grade||0)<.001))&&old*car.speed<0)car.speed=0;
  if(car.gear==='P'||staticHold)car.speed=0;
  car.speed=clamp(car.speed,car.gear==='R'?-8:-2,v.ev?44:car.gear==='R'?2:55);car.acceleration=(car.speed-old)/dt;
- const maxSteer=.58/(1+speed*.035);const ideal=-car.speed/v.wheelbase*Math.tan(car.steer*maxSteer);const maxYaw=mu*9.81/Math.max(speed,1);car.heading=wrap(car.heading+clamp(ideal,-maxYaw,maxYaw)*dt);
+ const maxSteer=.92/(1+speed*.055);car.steeringAngle=car.steer*maxSteer;const ideal=-car.speed/v.wheelbase*Math.tan(car.steer*maxSteer);const maxYaw=mu*9.81/Math.max(speed,1);car.heading=wrap(car.heading+clamp(ideal,-maxYaw,maxYaw)*dt);
  const dx=-Math.sin(car.heading)*car.speed*dt,dz=-Math.cos(car.heading)*car.speed*dt,nx=car.x+dx,nz=car.z+dz,r=v.width/2+.12;
  const obstacle=(env.obstacles||[]).find(o=>!o.destroyed&&nx>o.minX-v.length&&nx<o.maxX+v.length&&nz>o.minZ-v.length&&nz<o.maxZ+v.length&&(!o.polygons||footprintOverlap({x:nx,z:nz,heading:car.heading},v,o.polygons))&&vehiclesOverlap({x:nx,z:nz,heading:car.heading},v,{x:(o.minX+o.maxX)/2,z:(o.minZ+o.maxZ)/2,heading:0},{width:o.maxX-o.minX,length:o.maxZ-o.minZ}));const bounds=env.bounds||{minX:-970,maxX:1480,minZ:-970,maxZ:970};
  car.collision=!!obstacle||nx<bounds.minX||nx>bounds.maxX||nz<bounds.minZ||nz>bounds.maxZ;car.hit=obstacle||null;car.impactSpeed=car.collision?Math.abs(car.speed):0;

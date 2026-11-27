@@ -1,4 +1,4 @@
-import {ROAD_COORDS,intersections,signalState,railClosed,railway} from './world-data.mjs?v=academy2';
+import {ROAD_COORDS,intersections,signalState,railClosed,railway} from './world-data.mjs?v=tuning4';
 import {wrap,clamp} from './physics.mjs?v=academy2';
 export const trafficCounts={none:0,light:12,normal:30,heavy:60};
 export function createTraffic(density='normal',seed=41){let value=seed;const random=()=>{value=value*16807%2147483647;return(value-1)/2147483646};const count=trafficCounts[density]||0;const cars=[];for(let i=0;i<count;i++){const ix=Math.floor(random()*6),iz=Math.floor(random()*6),span=1+Math.floor(random()*2),left=ROAD_COORDS[ix],right=ROAD_COORDS[Math.min(8,ix+span)],top=ROAD_COORDS[iz],bottom=ROAD_COORDS[Math.min(8,iz+span)];const route=[{x:left-3.5,z:top-3.5},{x:right+3.5,z:top-3.5},{x:right+3.5,z:bottom+3.5},{x:left-3.5,z:bottom+3.5}];const segment=i%4,a=route[segment],b=route[(segment+1)%4],t=.1+random()*.8;cars.push({id:'traffic-'+i,kind:'vehicle',x:a.x+(b.x-a.x)*t,z:a.z+(b.z-a.z)*t,heading:Math.atan2(-(b.x-a.x),-(b.z-a.z)),speed:0,target:(segment+1)%4,route,desired:6+random()*3.5,length:4.5,width:1.8});}return cars;}
