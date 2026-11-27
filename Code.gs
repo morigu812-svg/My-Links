@@ -14,7 +14,8 @@ const HEADERS = [
   '更新日時',
   '利用者に公開',
   '開き方',
-  'NEWラベル'
+  'NEWラベル',
+  '非公開フィルター'
 ];
 
 /**
@@ -159,6 +160,28 @@ function toIso_(value) {
  * シートの1行をリンクオブジェクトに変換する。
  * 1行の不正値で全体が失敗しないよう、例外を出さない。
  */
+function publicationFilterKey_(value) {
+  return String(value||'').normalize('NFKC').trim().toLowerCase().replace(/[\s　]+/g,'').replace(/[‐‑‒–—−]/g,'-');
+}
+function normalizeExcludedFilters_(values) {
+  if(!Array.isArray(values)||values.length>50)throw new Error('除外フィルターは50件以内で選択してください。');
+  const unique=new Map();values.forEach(value=>{if(typeof value!=='string')throw new Error('フィルター名が不正です。');const name=value.trim();if(!name||name.length>100)throw new Error('フィルター名は1〜100文字で入力してください。');unique.set(publicationFilterKey_(name),name);});
+  return Array.from(unique.values());
+}
+function parseExcludedFilters_(value) {
+  if(value==null||value==='')return [];
+  try{return normalizeExcludedFilters_(typeof value==='string'?JSON.parse(value):value);}catch{return null;}
+}
+function linkVisibleForFilter_(link,filter) {
+  if(link.visibleToVisitors!==true||link.excludedFilters===null)return false;
+  const excluded=link.excludedFilters||[];
+  if(!excluded.length)return true;
+  const key=publicationFilterKey_(filter);return !!key&&!excluded.some(name=>publicationFilterKey_(name)===key);
+}
+function linkPublicationOptions_(){
+  const names=Array.from(visitorChatProfilesByBrowser_(filterAccessSpreadsheet_()).values(),profile=>profile.filter).filter(Boolean);
+  return Array.from(new Set(names)).sort((a,b)=>a.localeCompare(b,'ja'));
+}
 function rowToLink_(row, columns) {
   const get = header => row[columns[header] - 1];
   const favorite = get('お気に入り');
@@ -172,6 +195,7 @@ function rowToLink_(row, columns) {
     favorite: favorite === true || String(favorite).toLowerCase() === 'true',
     // 公開フラグが明示的に true の場合だけ公開する（空欄・不明値は非公開）。
     visibleToVisitors: get('利用者に公開') === true || String(get('利用者に公開')).toLowerCase() === 'true',
+    excludedFilters: parseExcludedFilters_(get('非公開フィルター')),
     openMode: String(get('開き方') || 'internal').toLowerCase() === 'external' ? 'external' : 'internal',
     isNew: get('NEWラベル') === true || String(get('NEWラベル')).toLowerCase() === 'true',
     createdAt: toIso_(get('作成日時')),
@@ -256,7 +280,7 @@ function removeChunkedJsonCache_(key) {
   cache.removeAll(keys);
 }
 function invalidateLinksCache_() {
-  removeChunkedJsonCache_('LINK_CORE_LINKS_ALL_V2');
+  removeChunkedJsonCache_('LINK_CORE_LINKS_ALL_V3');
 }
 function invalidateChatCache_() {
   CacheService.getScriptCache().remove('LINK_CORE_CHAT_MESSAGES_V1');
@@ -268,7 +292,7 @@ function readLinksFromData_(data) {
   const columns = {};
   headers.forEach((header, index) => { if (header) columns[header] = index + 1; });
   HEADERS.forEach(header => {
-    if (!columns[header]) throw new Error('必要な列がありません: ' + header + '。管理者画面を開いてシート構成を確認してください。');
+    if (header!=='非公開フィルター'&&!columns[header]) throw new Error('必要な列がありません: ' + header + '。管理者画面を開いてシート構成を確認してください。');
   });
   const links = data.slice(1)
     .filter(row => row[columns['ID'] - 1] !== '' && row[columns['ID'] - 1] != null)
@@ -282,7 +306,7 @@ function readLinks_(sheet, columns) {
 }
 function refreshLinksCacheFromSheet_(sheet) {
   const result = readLinks_(sheet);
-  writeChunkedJsonCache_('LINK_CORE_LINKS_ALL_V2', result, LINKS_CACHE_TTL_SECONDS);
+  writeChunkedJsonCache_('LINK_CORE_LINKS_ALL_V3', result, LINKS_CACHE_TTL_SECONDS);
   return result;
 }
 function readLinksForDisplay_() {
@@ -373,13 +397,18 @@ function clearAuthFailures_(state) {
 function authenticateVisitor(password, browserId, browserSecret) {
   if (!/^[A-Za-z0-9_-]{8,100}$/.test(String(browserId || ''))) throw new Error('ブラウザIDを確認できません。');
   if (isVisitorBanned_(browserId)) throw new Error('このブラウザは利用を停止されています。管理者にお問い合わせください。');
-  const generation = sessionGeneration_();
   const expected = PropertiesService.getScriptProperties().getProperty('LINK_CORE_VISITOR_PASSWORD');
   if (!expected) throw new Error('利用者用パスワードが未設定です。管理者が設定を完了するまでお待ちください。');
   if (typeof password !== 'string' || !password || password !== expected) {
     securityEvent_('auth_failed', 'VISITOR');
     throw new Error('サイトのパスワードが違います。');
   }
+  return createVisitorSession_(browserId,browserSecret);
+}
+function createVisitorSession_(browserId,browserSecret){
+  if(!/^[A-Za-z0-9_-]{8,100}$/.test(String(browserId||'')))throw new Error('ブラウザIDを確認できません。');
+  if(isVisitorBanned_(browserId))throw new Error('このブラウザは利用を停止されています。');
+  const generation=sessionGeneration_();
   requireVisitorTimeAllowed_(browserId);
   let directBound = false;
   if (supabaseChatMode_() === 'supabase') {
@@ -420,6 +449,19 @@ function authenticateVisitor(password, browserId, browserSecret) {
   };
 }
 
+function authenticateVisitorFromAdmin(browserId,browserSecret,adminToken){
+  requireAdmin_(adminToken);
+  const cache=CacheService.getScriptCache();
+  const parent=cache.get('LINK_CORE_ADMIN_'+adminToken);
+  const deadline=Number(String(parent||'').split(':')[1]);
+  if(!Number.isFinite(deadline)||deadline<=Date.now())throw new Error('管理者ログインの有効期限が切れました。');
+  const auth=createVisitorSession_(browserId,browserSecret);
+  if(!isSessionValid_('ADMIN',adminToken))throw new Error('管理者ログインの有効期限が切れました。');
+  const ttl=Math.max(1,Math.min(SESSION_TTL_SECONDS,Math.floor((deadline-Date.now())/1000)));
+  cache.put('LINK_CORE_VISITOR_'+auth.token,visitorSessionGeneration_()+':'+Math.min(deadline,Date.now()+ttl*1000)+':'+adminToken,ttl);
+  auth.expiresIn=ttl;return auth;
+}
+
 const SESSION_TTL_SECONDS = 30 * 60;
 const SESSION_GENERATION_PROPERTY = 'LINK_CORE_SESSION_GENERATION';
 
@@ -442,9 +484,10 @@ function isSessionValid_(role, token) {
   if (typeof token !== 'string' || !/^(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}){2}$/i.test(token)) return false;
   const savedGeneration = CacheService.getScriptCache().get('LINK_CORE_' + role + '_' + token);
   if (!savedGeneration) return false;
-  const [generation, expiresAt] = savedGeneration.split(':');
+  const [generation, expiresAt, parentAdminToken] = savedGeneration.split(':');
   if (!(Number(expiresAt) > Date.now() && generation === (role === 'VISITOR' ? visitorSessionGeneration_() : role === 'AUDIT' ? auditGeneration_() : sessionGeneration_()))) return false;
   if (role === 'VISITOR') {
+    if(parentAdminToken&&!isSessionValid_('ADMIN',parentAdminToken))return false;
     const browser = CacheService.getScriptCache().get('LINK_CORE_VISITOR_BROWSER_' + token);
     if(!browser || isVisitorBanned_(browser))return false;
     requireVisitorTimeAllowed_(browser);
@@ -907,7 +950,7 @@ function getLinksForToken_(viewerToken, knownIsAdmin, performanceData) {
   if (!isAdmin && visitorProfileRequired_(viewerToken)) return {links:[], categories:[], profileRequired:true};
   if (!isAdmin && visitorReplyGate_(viewerToken)) return {links:[], categories:[], replyRequired:true};
   const cacheStartedAt = Date.now();
-  let result = readChunkedJsonCache_('LINK_CORE_LINKS_ALL_V2');
+  let result = readChunkedJsonCache_('LINK_CORE_LINKS_ALL_V3');
   if (performanceData) {
     performanceData.cacheReadMs = Date.now() - cacheStartedAt;
     performanceData.cacheHit = !!result;
@@ -918,7 +961,7 @@ function getLinksForToken_(viewerToken, knownIsAdmin, performanceData) {
     result = readLinksForDisplay_();
     if (performanceData) performanceData.sheetReadMs = Date.now() - sheetStartedAt;
     const cacheWriteStartedAt = Date.now();
-    writeChunkedJsonCache_('LINK_CORE_LINKS_ALL_V2', result, LINKS_CACHE_TTL_SECONDS);
+    writeChunkedJsonCache_('LINK_CORE_LINKS_ALL_V3', result, LINKS_CACHE_TTL_SECONDS);
     if (performanceData) performanceData.cacheWriteMs = Date.now() - cacheWriteStartedAt;
   } else if (performanceData) {
     performanceData.sheetReadMs = 0;
@@ -928,7 +971,9 @@ function getLinksForToken_(viewerToken, knownIsAdmin, performanceData) {
   // キャッシュはサーバー内に全件を保持し、利用者には返却直前に公開リンクだけを渡す。
   if (!isAdmin) {
     const filterStartedAt = Date.now();
-    const visibleLinks = result.links.filter(link => link.visibleToVisitors === true);
+    const browser=visitorProfileBrowser_('',viewerToken);
+    const profile=getVisitorChatProfile(browser,viewerToken);
+    const visibleLinks = result.links.filter(link => linkVisibleForFilter_(link,profile.filter));
     const filtered = {
       links: visibleLinks,
       categories: Array.from(new Set(visibleLinks.map(link => link.category).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'ja'))
@@ -961,6 +1006,7 @@ function getLinks(viewerToken) {
     performanceData.linkCount = result.links.length;
     result._performance = performanceData;
   }
+  if(isAdmin){result.publicationRulesVersion=1;try{result.publicationFilters=linkPublicationOptions_();}catch(_){result.publicationFilters=[];}}
   return result;
 }
 
@@ -1021,6 +1067,7 @@ function saveLink(input, adminToken) {
       'カテゴリ': safeCell_(category),
       'メモ': safeCell_(memo),
       '利用者に公開': input.visibleToVisitors !== false,
+      '非公開フィルター': JSON.stringify(normalizeExcludedFilters_(input.excludedFilters===undefined?(parseExcludedFilters_(rowValues[columns['非公開フィルター']-1])||[]):input.excludedFilters)),
       '開き方': input.openMode === 'external' ? 'external' : 'internal',
       'NEWラベル': input.isNew === true,
       '作成日時': createdAt,
@@ -1154,7 +1201,7 @@ function deleteLink(id, adminToken) {
 /* ゴミ箱：削除したリンクを Trash シートへ退避し、復元・完全削除できるようにする。
    対象は通常リンクのみ。公式リンク（OfficialLinks）の削除は従来どおり即削除のまま。 */
 const TRASH_SHEET_NAME = 'Trash';
-const TRASH_HEADERS = ['ID', 'タイトル', 'URL', 'カテゴリ', 'メモ', 'お気に入り', '作成日時', '更新日時', '利用者に公開', '開き方', 'NEWラベル', '削除日時'];
+const TRASH_HEADERS = ['ID', 'タイトル', 'URL', 'カテゴリ', 'メモ', 'お気に入り', '作成日時', '更新日時', '利用者に公開', '開き方', 'NEWラベル', '削除日時', '非公開フィルター'];
 
 function ensureTrashSheet_() {
   const spreadsheetId = PropertiesService
@@ -1200,7 +1247,7 @@ function rowToTrashValues_(rowValues, columns) {
   return [
     get('ID'), get('タイトル'), get('URL'), get('カテゴリ'), get('メモ'),
     get('お気に入り'), get('作成日時'), get('更新日時'), get('利用者に公開'),
-    get('開き方'), get('NEWラベル'), new Date()
+    get('開き方'), get('NEWラベル'), new Date(), get('非公開フィルター')||''
   ];
 }
 
@@ -1225,6 +1272,7 @@ function trashRowToItem_(row, columns) {
     memo: String(get('メモ') || ''),
     favorite: favorite === true || String(favorite).toLowerCase() === 'true',
     visibleToVisitors: get('利用者に公開') === true || String(get('利用者に公開')).toLowerCase() === 'true',
+    excludedFilters: parseExcludedFilters_(get('非公開フィルター')),
     openMode: String(get('開き方') || 'internal').toLowerCase() === 'external' ? 'external' : 'internal',
     isNew: get('NEWラベル') === true || String(get('NEWラベル')).toLowerCase() === 'true',
     createdAt: toIso_(get('作成日時')),
@@ -4922,4 +4970,5 @@ function setAdminActivityNickname(browserId,nickname,token){
  return {browserId:browserId,nickname:name};
 }
 function adminActivityDisplayName_(browserId,fallback,names){return String(names['LINK_CORE_AUDIT_NAME_'+browserId]||fallback||'管理者');}
+
 
