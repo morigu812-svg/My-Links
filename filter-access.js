@@ -369,7 +369,17 @@
           const row=node('tr');
           const title=node('td','fa-link-title');
           title.append(node('strong','',item.title));
-          if(item.url)title.append(node('small','filter-access-url',item.url));
+          if(item.url){
+            const urlText=String(item.url);
+            const label=node('small','filter-access-url');
+            let parsed;try{parsed=new URL(urlText);}catch{}
+            if(parsed&&['http:','https:'].includes(parsed.protocol)){
+              const link=node('a','',urlText);
+              link.href=parsed.href;link.target='_blank';link.rel='noopener noreferrer';
+              link.referrerPolicy='no-referrer';label.append(link);
+            }else label.textContent=urlText;
+            title.append(label);
+          }
           row.append(title,node('td','',item.filter),
             node('td','',fmt(item.allowed)),node('td','',fmt(item.blocked)),
             node('td','',percent(item.allowed,item.allowed+item.blocked)),

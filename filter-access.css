@@ -103,3 +103,5 @@ html body .filter-access-panel h2{margin:0 0 12px}
 .fa-skeleton-table-row{height:42px;margin:9px 0;width:100%}
 @keyframes fa-skeleton-shimmer{to{transform:translateX(100%)}}
 @media(prefers-reduced-motion:reduce){.fa-dashboard .fa-skeleton::after{animation:none;transform:none;background:none}}
+
+.filter-access-url a{color:inherit;text-decoration:underline;text-underline-offset:3px;overflow-wrap:anywhere}.filter-access-url a:focus-visible{outline:2px solid currentColor;outline-offset:3px}
