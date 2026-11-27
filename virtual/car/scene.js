@@ -1,4 +1,4 @@
-import {createUmeda} from './umeda-scene.mjs?v=tuning4';
+import {createUmeda} from './umeda-scene.mjs?v=landmarks1';
 import {repairProgress} from './scenario.mjs?v=preview1';
 import * as THREE from '../vendor/three.module.min.js';
 import {ROAD_COORDS,intersections,signalState,railClosed,groundHeight,railway} from './world-data.mjs?v=tuning4';
