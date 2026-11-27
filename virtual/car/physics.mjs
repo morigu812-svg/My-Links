@@ -12,8 +12,8 @@ export function stepCar(car,input,dt,v=trainingCar,env={}){
  if(car.gear==='M')car.shift=clamp(car.manual,1,6);
  const ratio=car.gear==='R'?3.2:ratios[car.shift-1];car.rpm=clamp(Math.max(800,speed/radius*ratio*finalDrive*60/(2*Math.PI)),800,6500);
  const drive=['D','M','R'].includes(car.gear),direction=car.gear==='R'?-1:1;
- const curve=clamp(1-Math.abs(car.rpm-3200)/6500,.4,1),torque=v.torque*curve;
- let force=drive?throttle*Math.min(torque*ratio*finalDrive*.86/radius,v.power*1000/Math.max(speed,3))*direction:0;
+ const curve=clamp(1-Math.abs(car.rpm-3200)/6500,.4,1),torque=v.torque*curve*1.65;
+ let force=drive?throttle*Math.min(torque*ratio*finalDrive*.86/radius,v.power*1650/Math.max(speed,3))*direction:0;
  if(drive&&!car.disabled&&!car.handbrake&&throttle<.02&&brake<.01&&speed<1.2)force+=direction*v.mass*.65; // torque-converter creep
  const rolling=speed>.04?v.mass*9.81*.012:0,drag=.5*1.225*v.drag*v.area*speed*speed;
  const engineBrake=drive&&throttle<.01?Math.min(650,speed*55):0;
@@ -25,7 +25,7 @@ export function stepCar(car,input,dt,v=trainingCar,env={}){
  car.speed=clamp(car.speed,car.gear==='R'?-8:-2,v.ev?44:car.gear==='R'?2:55);car.acceleration=(car.speed-old)/dt;
  const maxSteer=.58/(1+speed*.035);const ideal=-car.speed/v.wheelbase*Math.tan(car.steer*maxSteer);const maxYaw=mu*9.81/Math.max(speed,1);car.heading=wrap(car.heading+clamp(ideal,-maxYaw,maxYaw)*dt);
  const dx=-Math.sin(car.heading)*car.speed*dt,dz=-Math.cos(car.heading)*car.speed*dt,nx=car.x+dx,nz=car.z+dz,r=v.width/2+.12;
- const obstacle=(env.obstacles||[]).find(o=>!o.destroyed&&nx>o.minX-v.length&&nx<o.maxX+v.length&&nz>o.minZ-v.length&&nz<o.maxZ+v.length&&vehiclesOverlap({x:nx,z:nz,heading:car.heading},v,{x:(o.minX+o.maxX)/2,z:(o.minZ+o.maxZ)/2,heading:0},{width:o.maxX-o.minX,length:o.maxZ-o.minZ}));const bounds=env.bounds||{minX:-970,maxX:1480,minZ:-970,maxZ:970};
+ const obstacle=(env.obstacles||[]).find(o=>!o.destroyed&&nx>o.minX-v.length&&nx<o.maxX+v.length&&nz>o.minZ-v.length&&nz<o.maxZ+v.length&&(!o.polygons||footprintOverlap({x:nx,z:nz,heading:car.heading},v,o.polygons))&&vehiclesOverlap({x:nx,z:nz,heading:car.heading},v,{x:(o.minX+o.maxX)/2,z:(o.minZ+o.maxZ)/2,heading:0},{width:o.maxX-o.minX,length:o.maxZ-o.minZ}));const bounds=env.bounds||{minX:-970,maxX:1480,minZ:-970,maxZ:970};
  car.collision=!!obstacle||nx<bounds.minX||nx>bounds.maxX||nz<bounds.minZ||nz>bounds.maxZ;car.hit=obstacle||null;car.impactSpeed=car.collision?Math.abs(car.speed):0;
  if(car.collision){car.speed=0;car.acceleration=0;}else{car.x=nx;car.z=nz;car.distance+=Math.hypot(dx,dz)}return car;
 }
@@ -36,3 +36,5 @@ export function vehiclesOverlap(a,as,b,bs){
  for(const axis of [ar,af,br,bf]){const extentA=Math.abs(dot(axis,ar))*as.width/2+Math.abs(dot(axis,af))*as.length/2,extentB=Math.abs(dot(axis,br))*bs.width/2+Math.abs(dot(axis,bf))*bs.length/2;if(Math.abs(dx*axis.x+dz*axis.z)>extentA+extentB+.08)return false;}return true;
 }
 
+
+export function footprintOverlap(car,spec,polygons){const sin=Math.sin(car.heading),cos=Math.cos(car.heading),corners=[[-1,-1],[1,-1],[1,1],[-1,1]].map(([x,z])=>[car.x+x*spec.width/2*cos+z*spec.length/2*sin,car.z-x*spec.width/2*sin+z*spec.length/2*cos]);const inside=(p,ring)=>{let hit=false;for(let i=0,j=ring.length-1;i<ring.length;j=i++){const a=ring[i],b=ring[j];if((a[1]>p[1])!==(b[1]>p[1])&&p[0]<(b[0]-a[0])*(p[1]-a[1])/(b[1]-a[1])+a[0])hit=!hit;}return hit;};const cross=(a,b,c)=>(b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]);for(const ring of polygons){if(corners.some(p=>inside(p,ring))||ring.some(p=>inside(p,corners)))return true;for(let i=1;i<ring.length;i++)for(let j=0;j<4;j++){const a=ring[i-1],b=ring[i],c=corners[j],d=corners[(j+1)%4];if(cross(a,b,c)*cross(a,b,d)<0&&cross(c,d,a)*cross(c,d,b)<0)return true;}}return false;}

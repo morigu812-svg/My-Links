@@ -13,7 +13,8 @@ export function disposition(points,prior=0){
 }
 export function createRuleTracker(){return {cooldowns:{},stops:{},amber:{},lastSignals:{},durations:{},latched:{},lastHeading:null,turning:false,turnStart:0,turnIndicator:0,turnChecked:false};}
 function trigger(t,code,time,out,detail='',points){if(time<(t.cooldowns[code]||0))return;t.cooldowns[code]=time+12;out.push({...violations[code],code,detail,...(points===undefined?{}:{points})});}
-export function checkRules(tracker,previous,car,time,dt,{campus=false,wet=false,agents=[],mode='lesson'}={}){
+export function checkRules(tracker,previous,car,time,dt,{campus=false,wet=false,agents=[],mode='lesson',city=null}={}){
+ if(city)return city.checkRules(tracker,car,time,dt,previous);
  const out=[],speed=Math.abs(car.speed)*3.6;if(campus)return out;const road=nearestRoad(car);
  function sustained(name,active,seconds,code,detail='',points){if(!active){tracker.durations[name]=0;tracker.latched[name]=false;return;}tracker.durations[name]=(tracker.durations[name]||0)+dt;if(tracker.durations[name]>seconds&&!tracker.latched[name]){trigger(tracker,code,time,out,detail,points);tracker.latched[name]=true;}}
  sustained('speed',exceedsSpeed(speed,road.limit,mode)&&road.onRoad,1.2,'speed',`${Math.round(speed)} / 制限${road.limit} km/h`,speedingPoints(speed-road.limit));
