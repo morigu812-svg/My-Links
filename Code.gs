@@ -372,7 +372,7 @@ function checkAuthRateLimit_(state) {
   }
 }
 
-function recordAuthFailure_(state) {
+function recordAuthFailure_(state, failureScope) {
   const lock = LockService.getScriptLock();
   lock.waitLock(3000);
   let failureCount = 0;
@@ -386,7 +386,7 @@ function recordAuthFailure_(state) {
   } finally {
     lock.releaseLock();
   }
-  securityEvent_(failureCount >= 5 ? 'auth_repeated' : 'auth_failed', state.scope || 'AUTH', failureCount);
+  securityEvent_(failureCount >= 5 ? 'auth_repeated' : 'auth_failed', failureScope || state.scope || 'AUTH', failureCount);
 }
 
 function clearAuthFailures_(state) {
@@ -758,7 +758,7 @@ function authenticateAdmin(password, includeLinks, activityContext) {
   if (typeof password === 'string' && password.startsWith('K:')) {
     if (!auditPassword) throw new Error('管理者アクティビティのパスワードが未設定です。');
     if (!password.slice(2) || password.slice(2) !== auditPassword) {
-      recordAuthFailure_(rateState);
+      recordAuthFailure_(rateState, 'AUDIT');
       throw new Error('管理者アクティビティのパスワードが違います。');
     }
 
@@ -4525,7 +4525,7 @@ function securityEvent_(code, scope, count) {
     identity_mismatch:['警告','ログイン済み情報とブラウザの識別情報が不一致']
   };
   if (!Object.prototype.hasOwnProperty.call(definitions, code)) return;
-  if (!['ADMIN','VISITOR','MEMO','AUTH'].includes(scope)) scope = 'AUTH';
+  if (!['ADMIN','AUDIT','VISITOR','MEMO','AUTH'].includes(scope)) scope = 'AUTH';
   let lock, acquired = false;
   try {
     const state = getAuthRateState_('SECURITY');
@@ -4562,6 +4562,7 @@ function getSecurityEvents(adminToken) {
   const first = Math.max(2,last-199);
   return {logs:sheet.getRange(first,1,last-first+1,7).getValues().reverse().map(row=>({
     date:toIso_(row[0]),severity:String(row[1]),code:String(row[2]),scope:String(row[3]),
+    authTarget:({ADMIN:'管理者用パスワード・認証',AUDIT:'最高管理者用パスワード（K:）',VISITOR:'利用者用パスワード・認証',MEMO:'メモ帳用パスワード',AUTH:'認証種別不明'})[String(row[3])]||'認証種別不明',
     description:String(row[4]),actor:String(row[5]),failures:Number(row[6]) || 0
   }))};
 }
