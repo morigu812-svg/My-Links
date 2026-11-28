@@ -9,26 +9,21 @@
  */
 'use strict';
 
-var CACHE_VERSION = 'link-core-readable-v1';
+var CACHE_VERSION = 'link-core-workspace-v2';
 var STATIC_CACHE = 'link-core-static-' + CACHE_VERSION;
 
 /* アプリの殻。相対パスなので、GitHub Pages のプロジェクトサイト
    （例：https://<user>.github.io/My-Links/）でもカスタムドメインでも動く。 */
 var STATIC_ASSETS = [
+  './workspace.css?v=2',
+  './workspace.js?v=2',
   './admin-visitor-session.js?v=1',
   './blocked-links.js?v=1',
   './chat-links.js?v=1',
-  './chat-links.css?v=1',
   './sidebar-layout.js?v=2',
-  './sidebar-layout.css?v=1',
   './site-thumbnails.js?v=3',
-  './site-thumbnails.css?v=4',
   './log-dashboard.js?v=5',
-  './log-dashboard.css?v=3',
-  './mobile-layout.css?v=1',
-  './mobile-layout.js?v=1',
   './filter-access.js?v=10',
-  './filter-access.css?v=9',
   './',
   './index.html',
   './admin.html',
@@ -37,11 +32,8 @@ var STATIC_ASSETS = [
   './chat-screenshot.js?v=1',
   './chat-realtime.js',
   './chat-reply.js?v=links1',
-  './chat-reply.css',
   './chat-preview.js',
-  './chat-preview.css',
   './visitor-direct-chat.js',
-  './visitor-direct-chat.css',
   './linkcore-knowledge.js',
   './memos.html',
   './bridge.html',
