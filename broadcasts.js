@@ -26,9 +26,11 @@ window.setupLinkBaseBroadcasts = function ({admin=false,getToken,issueSession}) 
  function render(){
   region.replaceChildren();notices.replaceChildren();region.hidden=true;
   if(!getToken())return;
+  let latestNoticeShown=false;
   for(const item of items.filter(i=>i.active)){
    if(item.kind==='notice'){
-    region.hidden=false;const card=el('article',undefined,'lb-broadcast-card');card.append(el('small','管理者からのお知らせ'),el('h3',item.title),el('p',item.body));region.append(card);
+    if(latestNoticeShown)continue;latestNoticeShown=true;
+    region.hidden=false;const card=el('article',undefined,'lb-broadcast-card');card.append(el('small','管理者からのお知らせ'),el('h3',item.title),el('p',item.body));card.append(button('お知らせ一覧を見る',showAnnouncements));region.append(card);
    }else if(!item.answered){notices.append(button('管理者からアンケートが届いています［'+item.title+'］',()=>answer(item)));}
   }
  }
@@ -48,6 +50,14 @@ window.setupLinkBaseBroadcasts = function ({admin=false,getToken,issueSession}) 
   });
   const send=el('button','回答を送信','btn primary');send.type='submit';form.append(send);dialog.append(form);
   form.onsubmit=async e=>{e.preventDefault();if(send.disabled)return;send.disabled=true;status.textContent='送信中…';try{await rpc('answer',{id:item.id,answers:item.questions.map((_,i)=>form.elements['q'+i].value.trim())});item.answered=true;render();open('回答ありがとうございました');dialog.append(el('p','回答を保存しました。'));last='';void refresh();}catch(error){fail(error);}finally{send.disabled=false;}};
+ }
+ async function showAnnouncements(){
+  open('お知らせ一覧');status.textContent='読み込み中…';
+  try{const token=getToken(),data=await rpc('list');if(token!==getToken())return;items=data;last=JSON.stringify(data);render();status.textContent='';
+   const announcements=items.filter(i=>i.kind==='notice'&&i.active);
+   if(!announcements.length)dialog.append(el('p','現在、お知らせはありません。'));
+   for(const item of announcements){const card=el('article',undefined,'lb-broadcast-card');card.append(el('h3',item.title),el('small',new Date(item.created_at).toLocaleString('ja-JP')),el('p',item.body));dialog.append(card);}
+  }catch(e){fail(e);}
  }
  async function manage(){open('お知らせ・アンケート配信');status.textContent='読み込み中…';try{items=await rpc('list');status.textContent='';}catch(e){fail(e);return;}
   const tabs=el('div',undefined,'lb-broadcast-actions');tabs.append(button('お知らせを作成',()=>compose('notice')),button('アンケートを作成',()=>compose('survey')),button('更新',manage));dialog.append(tabs);
@@ -74,6 +84,7 @@ window.setupLinkBaseBroadcasts = function ({admin=false,getToken,issueSession}) 
   item.questions.forEach((q,i)=>{if(q.type==='choice'){const box=el('article',undefined,'lb-broadcast-card');box.append(el('h3',q.title));q.options.forEach(o=>box.append(el('p',o+'：'+rows.filter(r=>r.answers[i]===o).length+'件')));dialog.append(box);}});
   rows.forEach(r=>{const card=el('article',undefined,'lb-broadcast-card');card.append(el('small',new Date(r.created_at).toLocaleString('ja-JP')));item.questions.forEach((q,i)=>card.append(el('h4',q.title),el('p',r.answers[i])));dialog.append(card);});
  }catch(e){fail(e);}}
+ if(!admin){const sidebar=document.querySelector('#linksPanel .sidebar');const b=button('お知らせ',showAnnouncements);b.classList.add('side-item');b.id='visitorAnnouncementsTab';const anchor=sidebar?.querySelector('.sidebar-section');if(anchor)anchor.before(b);else sidebar?.append(b);}
  if(admin){const sidebar=document.querySelector('#finderWindow .sidebar')||document.querySelector('.sidebar');const b=button('お知らせ・アンケート',manage);b.classList.add('side-item');sidebar?.append(b);}
  setInterval(()=>{if(!document.hidden)void refresh();},20000);
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)void refresh();});
