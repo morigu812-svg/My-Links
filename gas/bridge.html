@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LINK BASE Bridge</title>
+</head>
+<body>
+<script>
+(() => {
+  'use strict';
+
+  // 通信を許可するページのオリジン（末尾のスラッシュなし）。公開先を増やしたらここに追加する。
+  const ALLOWED_ORIGINS = [
+    'https://morigu812-svg.github.io',
+    'https://my-links-phdf.onrender.com',
+    'https://my-links-test.onrender.com',
+    'https://my-links-fzej.onrender.com' // LINK BASE Render版
+  ];
+  const ALLOWED_METHODS = new Set([
+    'getAdminSetupStatus',
+    'attachAdminActivitySession',
+    'recordAdminActivities',
+    'checkAdminAuditSession',
+    'getBroadcastApprovalSession',
+    'logoutAdminAuditSession',
+    'getAdminActivityLogs',
+    'getAdminActivityOverview',
+    'setAdminActivityNickname',
+    'authenticateAdmin',
+    'authenticateAdminWithSupabase',
+    'authenticateVisitor',
+    'authenticateVisitorFromAdmin',
+    'checkViewerSession',
+    'logoutCurrentSession',
+    'logoutAllBrowsers',
+    'logoutAllVisitors',
+    'getVisitorDowntime',
+    'getVisitorWarning',
+    'setVisitorWarning',
+    'saveVisitorDowntime',
+    'getLinkViewCounts',
+    'setLinkViewVisibility',
+    'setVisitorNickname',
+    'getLinks',
+    'getMyFilterAccessReport',
+    'saveFilterAccessReport',
+    'getFilterAccessSummary',
+    'getFilterAccessActivitySummary',
+    'mergeFilterAccessNames',
+    'pulseVisitorOnline',
+    'getOnlineVisitors',
+    'getVisitorDirectory',
+    'requestVisitorSchoolCorrection',
+    'requestVisitorFilterCorrection',
+    'requestVisitorSchoolAndFilterCorrection',
+    'saveLink',
+    'getVisitorFavorites',
+    'setVisitorFavorite',
+    'deleteLink',
+    'submitLinkReport',
+    'submitBanAppeal',
+    'getBanAppeals',
+    'getBanVisitors',
+    'getLinkReports',
+    'markLinkReportChecked',
+    'getLinkOperationLogs',
+    'getVisitorLoginLogs',
+    'getSecurityEvents',
+    'getLogDashboard',
+    'getLinkPageGroups',
+    'setLinkPageGroup',
+    'getVisitorCounterStats',
+    'backfillVisitorCounterFromLogs',
+    'deleteVisitorLoginLog',
+    'deleteVisitorLoginLogs',
+    'getOfficialLinks',
+    'saveOfficialLink',
+    'deleteOfficialLink',
+    'authenticateMemo',
+    'getMemos',
+    'saveMemo',
+    'deleteMemo',
+    'getAdminVisitorChatRead',
+    'markAdminVisitorChatRead',
+    'getChatMessages',
+    'getChatRealtimeSession',
+    'sendChatReply',
+    'visitorDirectChatProxy',
+    'deleteVisitorChatMessage',
+    'getStaffChatMessages',
+    'getStaffChatPresence',
+    'setStaffNickname',
+    'markStaffChatRead',
+    'deleteStaffChatMessage',
+    'sendStaffChatAttachment',
+    'startStaffChatLargeUpload',
+    'appendStaffChatLargeUploadChunk',
+    'finishStaffChatLargeUpload',
+    'getStaffChatAttachmentChunk',
+    'getStaffChatAttachment',
+    'sendStaffChatMessage',
+    'getVisitorChatProfile',
+    'saveVisitorChatProfile',
+    'sendChatMessage',
+    'sendChatScreenshot',
+    'getChatScreenshot',
+    'recordLinkClick',
+    'completeLinkVisit',
+    'getClickLogs',
+    'getClickBrowserNames',
+    'setVisitorBan',
+    'setClickBrowserName',
+    'deleteClickLog',
+    'deleteClickLogs',
+    'getNoticeReadCount',
+    'markNoticeRead',
+    'getTrash',
+    'restoreTrash',
+    'deleteTrashPermanently',
+    'emptyTrash',
+    'diagnoseLinks'
+  ]);
+
+  function send(target, message, origin) {
+    target.postMessage(message, origin);
+  }
+
+  window.addEventListener('message', event => {
+    if (ALLOWED_ORIGINS.indexOf(event.origin) === -1) return;
+    if (event.source !== window.top) return;
+
+    const request = event.data;
+    if (!request || request.type !== 'DAILY_CORE_REQUEST') return;
+
+    const { id, method, args } = request;
+    // 診断情報を返し、古いフロントエンドや別デプロイ版との不一致を特定できるようにする。
+    const validId = typeof id === 'string' && id.length > 0 && id.length <= 128;
+    const validMethod = typeof method === 'string' && ALLOWED_METHODS.has(method);
+    const validArgs = Array.isArray(args) && args.length <= 12;
+    if (!validId || !validMethod || !validArgs) {
+      const detail = [
+        'id=' + (typeof id),
+        'method=' + (typeof method === 'string' ? method : typeof method),
+        'args=' + (Array.isArray(args) ? 'array' : typeof args),
+        'origin=' + event.origin
+      ].join(', ');
+      console.error('[LINK BASE Bridge] Invalid request: ' + detail);
+      send(event.source, {
+        type: 'DAILY_CORE_RESPONSE', id, ok: false,
+        error: '不正なリクエストです。[' + detail + ']'
+      }, event.origin);
+      return;
+    }
+
+    try {
+      const runner = google.script.run
+        .withSuccessHandler(result => send(event.source, {
+          type: 'DAILY_CORE_RESPONSE', id, ok: true, result
+        }, event.origin))
+        .withFailureHandler(error => send(event.source, {
+          type: 'DAILY_CORE_RESPONSE', id, ok: false,
+          error: error && error.message ? error.message : String(error)
+        }, event.origin));
+
+      runner[method](...args);
+    } catch (error) {
+      send(event.source, {
+        type: 'DAILY_CORE_RESPONSE', id, ok: false,
+        error: error && error.message ? error.message : String(error)
+      }, event.origin);
+    }
+  });
+
+  window.addEventListener('load', () => {
+    // 親ページのオリジンは読めないため、許可リストの各オリジン宛てに準備完了を通知する
+    ALLOWED_ORIGINS.forEach(origin => {
+      window.top.postMessage({ type: 'DAILY_CORE_BRIDGE_READY' }, origin);
+    });
+  });
+})();
+</script>
+</body>
+</html>
+
+
+
+
