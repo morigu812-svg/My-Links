@@ -22,14 +22,33 @@ const HEADERS = [
  * ?mode=bridge なら GitHub Pages 用の通信窓口、それ以外はGAS画面を返す。
  */
 function doGet(e) {
-  const params=e&&e.parameter?e.parameter:{};
-  if(params.mode==='bridge')return HtmlService.createHtmlOutputFromFile('bridge').setTitle(APP_TITLE+' Bridge').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  const params = e && e.parameter ? e.parameter : {};
+
+  if (params.mode === 'bridge') {
+    return HtmlService.createHtmlOutputFromFile('bridge')
+      .setTitle(APP_TITLE + ' Bridge')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+
   ensureSheet_();
-  const template=HtmlService.createTemplateFromFile('index');
-  template.gasPage=['viewer','admin','audit','memos'].includes(params.page)?params.page:'viewer';
-  template.gasUrl=ScriptApp.getService().getUrl();
-  template.gasQuery='?page='+template.gasPage+(params.staffAuth==='1'?'&staffAuth=1':'')+(params.embedded==='1'?'&embedded=1':'');
-  return template.evaluate().setTitle(APP_TITLE).addMetaTag('viewport','width=device-width, initial-scale=1, viewport-fit=cover').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+
+  const template = HtmlService.createTemplateFromFile('index');
+  const pages = ['viewer', 'admin', 'audit', 'memos'];
+  template.gasPage = pages.includes(params.page) ? params.page : 'viewer';
+  template.gasUrl = ScriptApp.getService().getUrl();
+  template.gasQuery = '?page=' + template.gasPage
+    + (params.staffAuth === '1' ? '&staffAuth=1' : '')
+    + (params.embedded === '1' ? '&embedded=1' : '');
+
+  // 別デザイン用のCSS・JavaScriptだけを外し、メインのデザインを使う。
+  const html = template.evaluate().getContent()
+    .replace(/<style\b[^>]*data-gas-bundle=["']readable-design\.css["'][^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<script\b[^>]*data-gas-bundle=["']readable-design\.js["'][^>]*>[\s\S]*?<\/script>/gi, '');
+
+  return HtmlService.createHtmlOutput(html)
+    .setTitle(APP_TITLE)
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1, viewport-fit=cover')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
 /**
