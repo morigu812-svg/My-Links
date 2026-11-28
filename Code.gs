@@ -4972,3 +4972,18 @@ function setAdminActivityNickname(browserId,nickname,token){
 function adminActivityDisplayName_(browserId,fallback,names){return String(names['LINK_CORE_AUDIT_NAME_'+browserId]||fallback||'管理者');}
 
 
+
+/** Only the existing, separately authenticated highest administrator may review broadcasts. */
+function getBroadcastApprovalSession(token) {
+  requireAdminAudit_(token);
+  const {url, props} = supabaseChatConfig_();
+  const key=props.getProperty('LINK_CORE_SUPABASE_PUBLISHABLE_KEY');
+  const secret=props.getProperty('LINK_CORE_SUPABASE_JWT_SECRET');
+  if(!key||!secret)throw new Error('配信承認の接続設定を確認してください。');
+  const now=Math.floor(Date.now()/1000),exp=now+120;
+  const encode=value=>Utilities.base64EncodeWebSafe(value).replace(/=+$/,'');
+  const header=encode(JSON.stringify({alg:'HS256',typ:'JWT'}));
+  const claims=encode(JSON.stringify({role:'authenticated',aud:'authenticated',sub:Utilities.getUuid(),iat:now,exp,link_core_topics:['lc-chat-public'],link_base_reviewer:true}));
+  const body=header+'.'+claims;
+  return {enabled:true,url,key,token:body+'.'+encode(Utilities.computeHmacSha256Signature(body,secret)),expiresAt:exp*1000};
+}

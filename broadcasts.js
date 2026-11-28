@@ -1,5 +1,5 @@
 /* Announcements and surveys share the existing short-lived, server-issued login. */
-window.setupLinkBaseBroadcasts = function ({admin=false,getToken,issueSession}) {
+window.setupLinkBaseBroadcasts = function ({admin=false,reviewer=false,mountPanel,getToken,issueSession}) {
  const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
  const button=(text,fn)=>{const b=el('button',text,'btn');b.type='button';b.onclick=fn;return b;};
  let session,sessionToken='',pending,busy=false,items=[],last='',generation=0;
@@ -15,7 +15,7 @@ window.setupLinkBaseBroadcasts = function ({admin=false,getToken,issueSession}) 
    catch(e){error=e;if(e.server)break;/* Relay missing on GitHub Pages: try direct. */}
   }throw error;
  }
- const dialog=el('dialog',undefined,'lb-broadcast-dialog');document.body.append(dialog);
+ const dialog=el(admin?'section':'dialog',undefined,'lb-broadcast-dialog');if(admin){dialog.id='broadcastManagementPanel';if(mountPanel)mountPanel(dialog,'お知らせ・アンケート','broadcastManagementTab');else{dialog.hidden=true;document.querySelector('.finder-content').append(dialog);Object.defineProperty(dialog,'open',{get:()=>!dialog.hidden});dialog.showModal=()=>{document.querySelector('.workspace').hidden=true;dialog.hidden=false;};dialog.close=()=>{dialog.hidden=true;document.querySelector('.workspace').hidden=false;};document.querySelectorAll('.sidebar [data-type]').forEach(b=>b.addEventListener('click',()=>dialog.close()));}}else document.body.append(dialog);
  const status=el('p','','lb-broadcast-status');status.setAttribute('role','status');
  const close=()=>dialog.close();
  function open(title){dialog.replaceChildren(button('閉じる',close),el('h2',title),status);status.textContent='';if(!dialog.open)dialog.showModal();}
@@ -59,11 +59,13 @@ window.setupLinkBaseBroadcasts = function ({admin=false,getToken,issueSession}) 
    for(const item of announcements){const card=el('article',undefined,'lb-broadcast-card');card.append(el('h3',item.title),el('small',new Date(item.created_at).toLocaleString('ja-JP')),el('p',item.body));dialog.append(card);}
   }catch(e){fail(e);}
  }
- async function manage(){open('お知らせ・アンケート配信');status.textContent='読み込み中…';try{items=await rpc('list');status.textContent='';}catch(e){fail(e);return;}
-  const tabs=el('div',undefined,'lb-broadcast-actions');tabs.append(button('お知らせを作成',()=>compose('notice')),button('アンケートを作成',()=>compose('survey')),button('更新',manage));dialog.append(tabs);
-  for(const item of items){const card=el('article',undefined,'lb-broadcast-card');card.append(el('h3',item.title),el('small',(item.kind==='survey'?'アンケート':'お知らせ')+' · '+(item.active?'配信中':'終了')+' · '+new Date(item.created_at).toLocaleString('ja-JP')),el('p',item.body));
+ async function manage(){open(reviewer?'お知らせ・アンケートの承認':'お知らせ・アンケートの配信申請');status.textContent='読み込み中…';try{items=await rpc('list');status.textContent='';}catch(e){fail(e);return;}
+  dialog.append(el('p',reviewer?'内容を確認して承認すると利用者へ配信されます。':'最高管理者の承認後に利用者へ配信されます。'));const tabs=el('div',undefined,'lb-broadcast-actions');tabs.append(button('お知らせを作成',()=>compose('notice')),button('アンケートを作成',()=>compose('survey')),button('更新',manage));dialog.append(tabs);
+  for(const item of items){const card=el('article',undefined,'lb-broadcast-card');card.append(el('h3',item.title),el('small',(item.kind==='survey'?'アンケート':'お知らせ')+' · '+(item.approval_status==='pending'?'承認待ち':item.approval_status==='rejected'?'却下':item.active?'配信中':'終了')+' · '+new Date(item.created_at).toLocaleString('ja-JP')),el('p',item.body));
+   if(item.kind==='survey'){item.questions.forEach((q,i)=>card.append(el('p',(i+1)+'. '+q.title+(q.type==='choice'?'（'+q.options.join(' / ')+'）':''))));} 
    if(item.kind==='survey')card.append(button('回答を見る（'+item.response_count+'件）',()=>results(item)));
-   if(item.active)card.append(button('配信を終了',async()=>{try{await rpc('close',{id:item.id});last='';await manage();}catch(e){fail(e);}}));dialog.append(card);
+   if(reviewer&&item.approval_status==='pending'){for(const [op,label] of [['approve','承認して配信'],['reject','却下']])card.append(button(label,async event=>{const b=event.currentTarget;if(b.disabled)return;b.disabled=true;try{await rpc(op,{id:item.id});last='';await manage();}catch(e){fail(e);}finally{b.disabled=false;}}));}
+   if(reviewer&&item.active)card.append(button('配信を終了',async()=>{try{await rpc('close',{id:item.id});last='';await manage();}catch(e){fail(e);}}));dialog.append(card);
   }
  }
  function compose(kind){
@@ -77,18 +79,19 @@ window.setupLinkBaseBroadcasts = function ({admin=false,getToken,issueSession}) 
    row.append(legend,question,type,options,button('この質問を削除',()=>{questions.splice(questions.indexOf(q),1);row.remove();}));const q={question,type,options};questions.push(q);holder.append(row);
   }
   if(kind==='survey'){add();form.append(button('質問を追加',add));}
-  const send=el('button','配信する','btn primary');send.type='submit';form.append(send);dialog.append(form);
-  form.onsubmit=async e=>{e.preventDefault();if(send.disabled)return;try{const qs=questions.map(q=>({title:q.question.value.trim(),type:q.type.value,options:[...new Set(q.options.value.split('\n').map(s=>s.trim()).filter(Boolean))]}));if(kind==='survey'&&(!qs.length||qs.some(q=>q.type==='choice'&&(q.options.length<2||q.options.length>10))))throw Error('質問と選択肢を確認してください。');send.disabled=true;status.textContent='配信中…';await rpc('publish',{kind,title:title.value.trim(),body:body.value.trim(),questions:qs});last='';await manage();}catch(e){fail(e);}finally{send.disabled=false;}};
+  const send=el('button','最高管理者に配信を申請','btn primary');send.type='submit';form.append(send);dialog.append(form);
+  form.onsubmit=async e=>{e.preventDefault();if(send.disabled)return;try{const qs=questions.map(q=>({title:q.question.value.trim(),type:q.type.value,options:[...new Set(q.options.value.split('\n').map(s=>s.trim()).filter(Boolean))]}));if(kind==='survey'&&(!qs.length||qs.some(q=>q.type==='choice'&&(q.options.length<2||q.options.length>10))))throw Error('質問と選択肢を確認してください。');send.disabled=true;status.textContent='申請中…';await rpc('publish',{kind,title:title.value.trim(),body:body.value.trim(),questions:qs});last='';await manage();}catch(e){fail(e);}finally{send.disabled=false;}};
  }
  async function results(item){open(item.title+' · 回答');status.textContent='読み込み中…';try{const rows=await rpc('results',{id:item.id});status.textContent=rows.length+'件（最大2000件を表示）';
   item.questions.forEach((q,i)=>{if(q.type==='choice'){const box=el('article',undefined,'lb-broadcast-card');box.append(el('h3',q.title));q.options.forEach(o=>box.append(el('p',o+'：'+rows.filter(r=>r.answers[i]===o).length+'件')));dialog.append(box);}});
   rows.forEach(r=>{const card=el('article',undefined,'lb-broadcast-card');card.append(el('small',new Date(r.created_at).toLocaleString('ja-JP')));item.questions.forEach((q,i)=>card.append(el('h4',q.title),el('p',r.answers[i])));dialog.append(card);});
  }catch(e){fail(e);}}
  if(!admin){const sidebar=document.querySelector('#linksPanel .sidebar');const b=button('お知らせ',showAnnouncements);b.classList.add('side-item');b.id='visitorAnnouncementsTab';const anchor=sidebar?.querySelector('.sidebar-section');if(anchor)anchor.before(b);else sidebar?.append(b);}
- if(admin){const sidebar=document.querySelector('#finderWindow .sidebar')||document.querySelector('.sidebar');const b=button('お知らせ・アンケート',manage);b.classList.add('side-item');sidebar?.append(b);}
+ if(admin){const sidebar=document.querySelector('#finderWindow .sidebar')||document.querySelector('.sidebar');const b=button('お知らせ・アンケート',manage);b.classList.add('side-item');b.id='broadcastManagementTab';sidebar?.append(b);}
  setInterval(()=>{if(!document.hidden)void refresh();},20000);
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)void refresh();});
  // Login changes are observed without starting any unauthenticated network request.
  setInterval(()=>{const t=getToken();if(t!==pending){pending=t;generation++;items=[];last='';session=null;render();if(dialog.open)dialog.close();void refresh();}},1500);
  void refresh();
 };
+

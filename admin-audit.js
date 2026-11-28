@@ -60,6 +60,7 @@ $('auditLogout').onclick=async()=>{$('auditLogout').disabled=true;try{await call
 $('auditExport').onclick=()=>{if(!verified||!logs.length||Date.now()>=expiry)return;const escape=value=>{let s=String(value??'');if(/^[=+\-@\t\r]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"'};const rows=[['日時（日本時間）','管理者名','ブラウザID','種別','操作','対象','URL'],...logs.map(e=>[date(e.date),e.name,e.browserId,types[e.type]||e.type,activityAction(e),activityTarget(e),e.url])];const blob=new Blob(['\uFEFF'+rows.map(r=>r.map(escape).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='admin_activity_'+new Date().toISOString().slice(0,10)+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
 function checkExpiry(){if(Date.now()>=expiry)returnToLogin()}setTimeout(checkExpiry,Math.max(0,expiry-Date.now()));document.addEventListener('visibilitychange',checkExpiry);addEventListener('pageshow',checkExpiry);
 (async()=>{try{const result=await call('checkAdminAuditSession');if(!result?.ok||result.role!=='audit')throw Error('監査権限を確認できません。');verified=true;await load(true)}catch(e){status(e.message,true)}})();
+window.setupLinkBaseBroadcasts({admin:true,reviewer:true,getToken:()=>verified&&Date.now()<expiry?token:'',issueSession:()=>call('getBroadcastApprovalSession')});
 })();
 
 
